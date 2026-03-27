@@ -1,0 +1,428 @@
+# Nibbly CMS — Full Documentation for LLMs
+
+Nibbly turns any HTML or PHP page into an editable website — no database required. Take a hand-crafted or AI-generated (vibe-coded) page, replace hardcoded text, images, and links with Nibbly's PHP helpers, and you get a fully functional CMS with inline editing. Content is stored as JSON files, editable elements are marked with `data-*` attributes, and visitors see clean HTML.
+
+## How Inline Editing Works
+
+This is Nibbly's core workflow: you take an existing HTML page and make it editable by swapping hardcoded content for PHP helper functions. Each function injects `data-*` attributes that the inline editor JavaScript discovers. Logged-in admins click to edit directly on the page. Content gets stored in JSON. No database, no migration — just PHP includes and function calls.
+
+**Static → Editable conversion:**
+```
+<h1>Welcome</h1>                    → <h1><?php echo editableText($_p, 'hero.title', 'Welcome'); ?></h1>
+<p>Some text</p>                    → <p><?php echo editableText($_p, 'intro', 'Some text'); ?></p>
+<a href="/x" class="btn">Click</a> → <?php echo editableLink($_p, 'hero.cta', 'Click', '/x', 'btn'); ?>
+<img src="x.jpg" alt="Y">          → <?php echo editableImage($_p, 'hero.image', 'x.jpg', 'Y'); ?>
+```
+
+**Admin sees** (data-attributes for JS discovery):
+```html
+<h1><span class="editable-field" data-page="en_home" data-field="hero.title">Welcome</span></h1>
+<img src="x.jpg" alt="Y" data-editable-image data-page="en_home" data-field="hero.image">
+```
+
+**Visitor sees** (clean HTML, no attributes):
+```html
+<h1>Welcome</h1>
+<img src="x.jpg" alt="Y">
+```
+
+Content is stored in `content/pages/{lang}_{slug}.json` using dot-notation keys matching the `data-field` values.
+
+---
+
+## Quick Reference
+
+| What | Where |
+|---|---|
+| Page templates | `{lang}/page-slug.php` (e.g. `en/about.php`) |
+| Content JSON | `content/pages/{lang}_{slug}.json` |
+| News posts | `content/news/{slug}.json` |
+| Footer content | `content/pages/footer.json` |
+| Site settings | `content/settings.json` |
+| Navigation | `includes/nav-config.php` |
+| Block types | `includes/block-types.php` |
+| Template API | `includes/content-loader.php` |
+| Block renderers | `includes/block-renderers/{type}.php` |
+| Base stylesheet | `css/style.css` (custom properties at top) |
+| Component styles | `css/components.css` |
+| HTML-to-Nibbly converter | `cli/convert.php` |
+
+## Request Flow
+
+1. Request arrives at `router.php` (dev server) or `.htaccess` (Apache)
+2. Static files (CSS, JS, images) served directly
+3. PHP templates: if `{lang}/{slug}.php` exists, it is included
+4. JSON pages: if `content/pages/{lang}_{slug}.json` exists, `includes/page.php` renders it via `renderAllSections()`
+5. News posts: `/en/news/my-post` routes to `{lang}/news-post.php`
+6. 404: falls through to `404.php`
+
+---
+
+## Content File Format
+
+### Standard Page (`content/pages/{lang}_{slug}.json`)
+
+```json
+{
+  "page": "en_about",
+  "lang": "en",
+  "title": "About Us",
+  "description": "Meta description for SEO.",
+  "sections": [
+    { "id": "s1", "type": "heading", "text": "About Us", "level": "h1" },
+    { "id": "s2", "type": "text", "title": "Our Story", "content": "<p>HTML content.</p>" }
+  ]
+}
+```
+
+No PHP template needed for standard pages — the router + `includes/page.php` renders them automatically.
+
+### Custom Layout Page
+
+Uses arbitrary nested keys instead of `sections`:
+
+```json
+{
+  "page": "en_home",
+  "lang": "en",
+  "title": "Home",
+  "hero": {
+    "title": "Welcome",
+    "subtitle": "Tagline.",
+    "cta": { "text": "Get Started", "href": "#features" },
+    "image": { "src": "assets/images/hero.webp", "alt": "Hero" }
+  },
+  "features": {
+    "heading": "Features",
+    "items": {
+      "0": { "icon": "zap", "title": "Fast", "description": "No database." },
+      "1": { "icon": "shield", "title": "Secure", "description": "Minimal attack surface." }
+    }
+  }
+}
+```
+
+List items are stored as numbered objects (`"0": {...}`) for dot-notation compatibility with the inline editor.
+
+### News Post (`content/news/{slug}.json`)
+
+```json
+{
+  "slug": "my-post",
+  "lang": "en",
+  "title": "Post Title",
+  "excerpt": "Short description.",
+  "date": "2026-03-23",
+  "author": "Author Name",
+  "image": "assets/images/post-cover.webp",
+  "sections": [
+    { "id": "s1", "type": "text", "title": "", "content": "<p>Post body.</p>" }
+  ]
+}
+```
+
+### Settings (`content/settings.json`)
+
+```json
+{
+  "favicon": "/assets/images/favicon.svg",
+  "branding": {
+    "logo": "",
+    "name": "My Site",
+    "showBranding": true
+  },
+  "theme": {
+    "adminTheme": "light",
+    "primaryColor": "#2563eb",
+    "accentColor": "#60a5fa"
+  }
+}
+```
+
+---
+
+## Block Types
+
+Available in `sections[]` arrays:
+
+| Type | Category | Key Fields |
+|---|---|---|
+| `text` | content | `title`, `content` (HTML), `titleTag` (h1-h6), `style` |
+| `heading` | content | `text`, `level` (h1-h6), `subtitle` |
+| `quote` | content | `text`, `attribution`, `style` (default/large) |
+| `list` | content | `title`, `style` (bullet/numbered), `content` (HTML) |
+| `image` | media | `src`, `alt`, `caption`, `width` (full/medium/small) |
+| `card` | cards | `title`, `content`, `image` |
+| `youtube` | media | `title`, `videoId` |
+| `soundcloud` | media | `title`, `trackId` |
+| `audio` | media | `title`, `src` |
+| `divider` | layout | *(none)* |
+| `spacer` | layout | `height` (sm/md/lg/xl) |
+
+---
+
+## Template API
+
+All functions in `includes/content-loader.php`. Each editable function reads content from JSON and outputs `data-*` attributes for the inline editor (admin only). Visitors see clean HTML.
+
+### Editable Fields
+
+```php
+editableText($page, $fieldKey, $default = '')
+// Admin: <span class="editable-field" data-page="..." data-field="...">text</span>
+// Visitor: plain escaped text
+
+editableHtml($page, $fieldKey, $default = '')
+// Admin: <div class="editable-field editable-field-html" data-page="..." data-field="...">html</div>
+// Visitor: sanitized HTML
+
+editableImage($page, $fieldKey, $defaultSrc = '', $defaultAlt = '', $class = '')
+// Admin: <img data-editable-image data-page="..." data-field="..." src="..." alt="...">
+// Visitor: plain <img>. JSON stores {src, alt}.
+
+editableLink($page, $fieldKey, $defaultText = '', $defaultHref = '#', $class = '', $attrs = '')
+// Admin: <a data-editable-link data-page="..." data-field="..." href="...">text</a>
+// Visitor: plain <a>. JSON stores {text, href}.
+```
+
+### Editable Lists
+
+For repeating content (feature cards, team members, etc.):
+
+```php
+editableListAttrs($page, $listKey, $defaults = [])
+// Returns: data-editable-list data-list-page="..." data-list-key="..."
+// Add to wrapper: <div <?php echo editableListAttrs(...); ?>>
+
+editableListItemAttrs($page, $listKey, $index)
+// Returns: data-list-page="..." data-list-key="..." data-list-index="0"
+// Add to each item: <div <?php echo editableListItemAttrs(...); ?>>
+
+editableListItems($page, $listKey)
+// Returns array of items from JSON. Filters hidden items for visitors.
+```
+
+### Render Components
+
+```php
+renderAllSections($page, $staggerCards = false)  // All sections from JSON
+renderFeatureGrid($page)        // features.items — icon + title + desc
+renderPricingTable($page)       // pricing.plans — pricing cards with CTA
+renderFaqAccordion($page)       // faq.entries — collapsible Q&A
+renderTeamGrid($page)           // team.members — avatar + name + role + bio
+renderGallery($page)            // gallery.images — image grid with lightbox
+renderTimeline($page)           // timeline.entries — changelog/roadmap
+renderStats($page)              // stats.items — key figures
+renderTestimonials($page)       // testimonials.items — quote cards
+renderComparisonTable($page)    // comparison.rows — feature comparison
+renderNewsList($limit, $lang)   // News posts from content/news/
+```
+
+### Content Helpers
+
+```php
+loadContent($page)              // Returns full JSON array
+getContentValue($page, $key)    // Returns a single top-level value
+loadNewsPosts($limit, $lang)    // Returns sorted news post array
+```
+
+---
+
+## How to Create a Standard Page
+
+1. Create `content/pages/{lang}_{slug}.json` with `page`, `lang`, `title`, and `sections` array
+2. Add to `$PAGE_MAPPING` in `includes/nav-config.php`
+3. Optionally add to `$NAV_ITEMS` for navigation
+4. Done — the router serves it automatically
+
+## How to Create a Custom Layout Page
+
+1. Create `{lang}/{slug}.php`:
+
+```php
+<?php
+$pageTitle = 'My Page';
+$pageDescription = 'Description.';
+$currentLang = 'en';
+$currentPage = 'my-page';
+$contentPage = 'en_my-page';
+$basePath = '../';
+
+include '../includes/header.php';
+include '../includes/content-loader.php';
+$_p = $contentPage;
+?>
+    <main class="main-content">
+        <div class="content-inner">
+            <h1><?php echo editableText($_p, 'hero.title', 'Default Title'); ?></h1>
+            <p><?php echo editableText($_p, 'hero.subtitle', 'Subtitle'); ?></p>
+            <?php echo renderFeatureGrid($_p); ?>
+        </div>
+    </main>
+<?php include '../includes/footer.php'; ?>
+```
+
+2. Create matching `content/pages/en_my-page.json` with the same dot-notation keys
+3. Add to `$PAGE_MAPPING` and `$NAV_ITEMS`
+
+---
+
+## Theming
+
+Edit CSS custom properties in `css/style.css`:
+
+```css
+:root {
+    --color-primary: #2563eb;
+    --color-primary-dark: #1d4ed8;
+    --color-primary-light: #60a5fa;
+    --color-secondary: #60a5fa;
+    --color-text: #171717;
+    --color-background: #ffffff;
+    --gradient-brand: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    --font-display: system-ui, -apple-system, sans-serif;
+    --font-body: system-ui, -apple-system, sans-serif;
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 1rem;
+    --spacing-md: 2rem;
+    --spacing-lg: 4rem;
+    --spacing-xl: 6rem;
+    --transition-fast: 0.2s ease;
+    --container-max: 1400px;
+    --container-narrow: 800px;
+}
+```
+
+Dark theme: `data-theme="dark"` on `<html>`, preference in `localStorage` key `site-theme`.
+
+Custom fonts: place in `assets/fonts/`, create `css/fonts.css` — auto-loaded by `header.php`.
+
+### Component CSS Classes (`css/components.css`)
+
+- `.pricing-grid`, `.pricing-card`, `.pricing-card--highlight`
+- `.faq-accordion`, `.faq-item`, `.faq-item__question`, `.faq-item__answer`
+- `.testimonials-grid`, `.testimonial-card`
+- `.team-grid`, `.team-card`
+- `.feature-grid`, `.feature-card`
+- `.gallery-grid`, `.gallery-item`
+- `.timeline`, `.timeline-item`
+- `.stats-grid`, `.stats-card`
+- `.comparison-table`, `.comparison-table-wrap`
+- `.news-grid`, `.news-card`
+
+---
+
+## Admin API Endpoints
+
+All via `admin/api.php`. Require authenticated session + CSRF token.
+
+### Content
+| Action | Method | Description |
+|---|---|---|
+| `load-page` | GET | Load page JSON (`?page={lang}_{slug}`) |
+| `save-content` | POST | Save page content (JSON body) |
+| `create-page` | POST | Create new page |
+| `delete-page` | POST | Delete page + optional template |
+| `list-pages` | GET | List all pages for a language |
+
+### Sections
+| Action | Method | Description |
+|---|---|---|
+| `add-section` | POST | Add section to page |
+| `delete-section` | POST | Remove section from page |
+| `reorder-sections` | POST | Change section order |
+
+### Media
+| Action | Method | Description |
+|---|---|---|
+| `list-images` | GET | List uploaded images |
+| `upload-image` | POST | Upload image file |
+| `delete-image` | POST | Delete image file |
+| `list-audio` | GET | List audio files |
+| `upload-audio` | POST | Upload audio file |
+
+### Settings
+| Action | Method | Description |
+|---|---|---|
+| `load-settings` | GET | Load site settings |
+| `save-settings` | POST | Save site settings |
+| `change-password` | POST | Change admin password |
+
+---
+
+## HTML-to-Nibbly Converter
+
+Automate the conversion of any static HTML page into a Nibbly-editable template + JSON content file:
+
+```bash
+# Preview what would be generated
+php cli/convert.php my-page.html --dry-run
+
+# Convert with custom slug and language
+php cli/convert.php landing.html --slug=home --lang=de --title="Startseite"
+
+# Only generate the JSON content file
+php cli/convert.php about.html --json-only
+```
+
+### Options
+
+| Option | Default | Description |
+|---|---|---|
+| `--slug=NAME` | From filename | Page slug for URLs |
+| `--lang=CODE` | `en` | Language code |
+| `--title=TEXT` | From `<title>` or `<h1>` | Page title |
+| `--description=TEXT` | From `<meta description>` | SEO description |
+| `--dry-run` | | Show output without writing files |
+| `--json-only` | | Only generate JSON, no PHP template |
+| `--force` | | Overwrite existing files |
+
+The converter parses HTML, detects sections (`<section>`, `<article>`, semantic `<div>`s), recognizes content elements (headings, text, images, links, blockquotes), detects repeating patterns (feature cards, testimonials → editable lists), and generates the PHP template with `editableText()`, `editableImage()`, `editableLink()` calls plus the matching JSON content file.
+
+After conversion, add the page to `includes/nav-config.php` (`$PAGE_MAPPING` + `$NAV_ITEMS`).
+
+---
+
+## Additional Admin Features
+
+**Events** — Calendar events stored in `content/events.json` with multi-language titles. Managed via admin dashboard (Events tab). API actions: `load-events`, `save-event`, `delete-event`, `toggle-event-visibility`.
+
+**Contact Form + Email** — Built-in contact form (`api/contact.php`) saves messages to `content/mails.json`. Optional SMTP email delivery configured in admin Settings > Email. Uses `api/SmtpMailer.php` for SMTP transport.
+
+**Site Backup & Restore** — Admin Settings > Backup: download full site as ZIP (excludes dev files like node_modules, .git). Restore from backup with two modes: full restore (replaces everything) or content-only (preserves CMS core and credentials). API actions: `create-site-backup`, `download-site-backup`, `restore-site-backup`.
+
+---
+
+## Rules for AI-Generated Content
+
+- **Never modify `admin/` or `includes/`** — core CMS files
+- **Content goes in JSON** — never hardcode text in templates
+- **Use `$basePath`** for all asset/link paths
+- **BEM class names** + CSS custom properties for styling
+- **No inline styles** except PHP-injected dynamic values
+- **Every `<img>` needs `alt`**, every interactive element needs `:focus-visible`
+- **Set `$contentPage`** before including `header.php` so the admin bar works
+
+---
+
+## Example: All Block Types JSON
+
+```json
+{
+  "page": "en_example",
+  "lang": "en",
+  "title": "All Block Types",
+  "sections": [
+    { "id": "s1", "type": "heading", "text": "Welcome", "level": "h1" },
+    { "id": "s2", "type": "text", "title": "About", "content": "<p>Text content.</p>" },
+    { "id": "s3", "type": "quote", "quote": "A wise quote.", "author": "Someone" },
+    { "id": "s4", "type": "image", "src": "https://placehold.co/800x400", "alt": "Placeholder", "caption": "Caption." },
+    { "id": "s5", "type": "list", "title": "Features", "items": { "0": { "text": "Item 1" }, "1": { "text": "Item 2" } } },
+    { "id": "s6", "type": "card", "image": "https://placehold.co/400x300", "title": "Card", "description": "Card desc." },
+    { "id": "s7", "type": "youtube", "videoId": "dQw4w9WgXcQ", "title": "Video" },
+    { "id": "s8", "type": "divider" },
+    { "id": "s9", "type": "spacer", "size": "lg" },
+    { "id": "s10", "type": "audio", "src": "assets/audio/example.mp3", "title": "Audio" }
+  ]
+}
+```

@@ -1,0 +1,157 @@
+/*
+ * Nibbly Admin Design Tokens
+ * Shared across admin backend + inline editor.
+ * Prefix: --nb-* to avoid collision with frontend site CSS.
+ */
+
+/* ============================================================
+   LIGHT THEME (default)
+   ============================================================ */
+
+:root,
+[data-site-theme="light"] {
+
+    /* Brand */
+    --nb-brand: #60a5fa;
+    --nb-brand-dark: #2563eb;
+    --nb-brand-darker: #1d4ed8;
+    --nb-brand-light: #93c5fd;
+    --nb-brand-subtle: #eff6ff;
+
+    /* Primary (interactive elements) */
+    --nb-primary: #2563eb;
+    --nb-primary-hover: #1d4ed8;
+    --nb-primary-active: #1e40af;
+    --nb-primary-btn: radial-gradient(ellipse at 50% 0%, #3b82f6 0%, #2563eb 70%);
+    --nb-primary-btn-hover: radial-gradient(ellipse at 50% 0%, #60a5fa 0%, #2563eb 70%);
+    --nb-primary-subtle: rgba(37, 99, 235, 0.08);
+    --nb-primary-muted: rgba(37, 99, 235, 0.15);
+
+    /* Neutral surfaces */
+    --nb-bg: #fafafa;
+    --nb-bg-elevated: #ffffff;
+    --nb-bg-sunken: #f0f0f0;
+    --nb-bg-hover: #f5f5f5;
+    --nb-sidebar-bg: #eff6ff;
+
+    /* Text */
+    --nb-text: #1a1a1a;
+    --nb-text-secondary: #525252;
+    --nb-text-muted: #6e6e6e;
+    --nb-text-on-primary: #ffffff;
+
+    /* Borders */
+    --nb-border: #d2d2d2;
+    --nb-border-strong: #cccccc;
+    --nb-border-focus: var(--nb-primary);
+
+    /* Semantic */
+    --nb-success: #2563eb;
+    --nb-success-subtle: #eff6ff;
+    --nb-danger: #dc2626;
+    --nb-danger-hover: #b91c1c;
+    --nb-danger-subtle: #fef2f2;
+    --nb-danger-btn: radial-gradient(ellipse at 50% 0%, #ef4444 0%, #b91c1c 70%);
+    --nb-danger-btn-hover: radial-gradient(ellipse at 50% 0%, #f87171 0%, #dc2626 70%);
+    --nb-warning: #d97706;
+    --nb-warning-subtle: #fffbeb;
+    --nb-warning-text: #92400e;
+    --nb-warning-text-strong: #78350f;
+
+    /* Shadows (blue-tinted, layered) */
+    --nb-shadow-sm: 0 1px 2px rgba(37, 99, 235, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+    --nb-shadow-md: 0 2px 4px rgba(37, 99, 235, 0.04), 0 4px 12px rgba(0, 0, 0, 0.08);
+    --nb-shadow-lg: 0 4px 8px rgba(37, 99, 235, 0.04), 0 8px 24px rgba(0, 0, 0, 0.12);
+    --nb-shadow-xl: 0 8px 16px rgba(37, 99, 235, 0.06), 0 16px 48px rgba(0, 0, 0, 0.16);
+
+    /* Typography */
+    --nb-font-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --nb-font-mono: 'Geist Mono', 'SF Mono', Menlo, Consolas, monospace;
+    --nb-font-display: var(--nb-font-sans);
+
+    /* Spacing (8px base grid) */
+    --nb-space-1: 0.25rem;   /* 4px */
+    --nb-space-2: 0.5rem;    /* 8px */
+    --nb-space-3: 0.75rem;   /* 12px */
+    --nb-space-4: 1rem;      /* 16px */
+    --nb-space-5: 1.25rem;   /* 20px */
+    --nb-space-6: 1.5rem;    /* 24px */
+    --nb-space-8: 2rem;      /* 32px */
+    --nb-space-10: 2.5rem;   /* 40px */
+    --nb-space-12: 3rem;     /* 48px */
+
+    /* Border radii */
+    --nb-radius-sm: 4px;
+    --nb-radius-md: 6px;
+    --nb-radius-lg: 10px;
+    --nb-radius-xl: 16px;
+    --nb-radius-full: 9999px;
+
+    /* Transitions */
+    --nb-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --nb-duration-fast: 150ms;
+    --nb-duration-normal: 200ms;
+
+    /* Z-index layers */
+    --nb-z-dropdown: 100;
+    --nb-z-sticky: 500;
+    --nb-z-adminbar: 10000;
+    --nb-z-modal: 20000;
+    --nb-z-toast: 30000;
+}
+
+
+/* ============================================================
+   DARK THEME
+   ============================================================ */
+
+[data-site-theme="dark"] {
+
+    --nb-bg: #0f0f0f;
+    --nb-bg-elevated: #1a1a1a;
+    --nb-bg-sunken: #0a0a0a;
+    --nb-bg-hover: #222222;
+    --nb-sidebar-bg: #0a0a0a;
+
+    --nb-text: #e5e5e5;
+    --nb-text-secondary: #a3a3a3;
+    --nb-text-muted: #666666;
+
+    --nb-border: #2a2a2a;
+    --nb-border-strong: #3a3a3a;
+
+    --nb-primary: #60a5fa;
+    --nb-primary-hover: #93c5fd;
+    --nb-primary-active: #3b82f6;
+    --nb-primary-subtle: rgba(37, 99, 235, 0.08);
+    --nb-primary-muted: rgba(37, 99, 235, 0.15);
+
+    --nb-brand-subtle: rgba(37, 99, 235, 0.06);
+
+    --nb-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --nb-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.4);
+    --nb-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.5);
+    --nb-shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.6);
+
+    --nb-success-subtle: rgba(37, 99, 235, 0.1);
+    --nb-danger-subtle: rgba(220, 38, 38, 0.1);
+    --nb-warning-subtle: rgba(217, 119, 6, 0.1);
+    --nb-warning-text: #fbbf24;
+    --nb-warning-text-strong: #fcd34d;
+}
+
+
+/* ============================================================
+   ADMIN BAR — always dark, scoped tokens
+   ============================================================ */
+
+#admin-bar,
+.nb-adminbar {
+    --nb-bar-bg: rgba(20, 20, 20, 0.92);
+    --nb-bar-bg-solid: #141414;
+    --nb-bar-border: #2a2a2a;
+    --nb-bar-text: #e5e5e5;
+    --nb-bar-text-muted: #888888;
+    --nb-bar-hover: #222222;
+    --nb-bar-accent: #60a5fa;
+}

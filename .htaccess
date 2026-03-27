@@ -1,0 +1,71 @@
+# Nibbly CMS - .htaccess
+# Apache mod_rewrite required
+
+RewriteEngine On
+
+# ============================================
+# Clean URLs - Remove .php extension
+# ============================================
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.+)$ $1.php [L]
+
+# ============================================
+# Primary Language Root Access
+# ============================================
+# Primary language pages live in /{LANG}/ directory but are
+# accessible from root without prefix.
+# Example: /example -> /en/example.php (if en is primary)
+#
+# IMPORTANT: Change "en" in the RewriteRule below to match
+# your SITE_LANG_DEFAULT if you use a different primary language.
+#
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php !-f
+RewriteCond %{DOCUMENT_ROOT}/en/%1.php -f
+RewriteRule ^([a-zA-Z0-9_-]+)/?$ en/$1.php [L]
+
+# ============================================
+# News / Blog Post Routes
+# ============================================
+# /en/news/slug -> en/news-post.php?slug=slug
+# /news/slug    -> en/news-post.php?slug=slug (primary language)
+RewriteRule ^([a-z]{2})/news/([a-z0-9-]+)/?$ $1/news-post.php?slug=$2 [L,QSA]
+RewriteRule ^news/([a-z0-9-]+)/?$ en/news-post.php?slug=$1 [L,QSA]
+
+# ============================================
+# Front Controller - JSON-based pages
+# ============================================
+# If no physical PHP file exists, check for JSON content via route.php.
+# Handles both /en/slug and /slug (primary language root access).
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php !-f
+RewriteRule ^([a-z]{2})/([a-zA-Z0-9_-]+)/?$ route.php?lang=$1&slug=$2 [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php !-f
+RewriteRule ^([a-zA-Z0-9_-]+)/?$ route.php?lang=en&slug=$1 [L,QSA]
+
+# ============================================
+# Security - Protect sensitive files
+# ============================================
+
+# Deny access to config files
+<FilesMatch "^(config\.php|smtp-config\.php)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Deny access to JSON content files, backups, and trash directories
+RewriteRule ^content/ - [F,L]
+RewriteRule ^backups/ - [F,L]
+RewriteRule ^(.*/-trash/) - [F,L]
+
+# ============================================
+# Error Pages
+# ============================================
+ErrorDocument 404 /404.php

@@ -1,0 +1,41 @@
+# Nibbly CMS
+
+> Nibbly turns any HTML or PHP page into an editable website — no database required. Take a hand-crafted or AI-generated (vibe-coded) page, replace hardcoded text, images, and links with Nibbly's PHP helpers, and you get a fully functional CMS with inline editing. Content is stored as JSON files, editable elements are marked with `data-*` attributes, and visitors see clean HTML.
+
+## Core Concepts
+
+- **Flat-file**: No database — all content lives in JSON files under `content/`
+- **PHP templates**: Pages are plain PHP files that include header/footer and use editable helper functions
+- **JSON content**: Each page has a matching `content/pages/{lang}_{slug}.json` file with sections or custom keys
+- **Inline editing via data-attributes**: Replace hardcoded text/images/links with PHP helpers (`editableText()`, `editableImage()`, `editableLink()`) that inject `data-*` attributes. The inline editor JS discovers these attributes and makes elements clickable/editable for logged-in admins. Visitors see clean HTML with no editor markup. This is Nibbly's main purpose: making any HTML page editable.
+- **CSS Custom Properties**: All design tokens defined in `css/style.css` — override in a separate stylesheet for custom branding
+- **Multi-language**: Pages organized by language directories (`en/`, `de/`, etc.)
+- **Events**: Calendar events with multi-language titles, stored in `content/events.json`
+- **Contact form + Email**: Built-in contact form with file-based inbox (`content/mails.json`), optional SMTP via `api/SmtpMailer.php`
+- **Site backup & restore**: Download full site as ZIP from admin panel, restore from backup (full or content-only)
+
+## Documentation
+
+- [Full documentation for LLMs](llms-full.txt) — complete reference in a single file (< 15k tokens)
+- [CLAUDE.md](CLAUDE.md) — AI agent quick-start guide (block types, template API, theming, rules)
+- [Architecture Reference](architecture.md) — request flow, content format, API endpoints, inline editor internals
+- [AI Agent Skills](SKILLS.md) — step-by-step instructions for common tasks (create page, add section, change theme, etc.)
+
+## Examples
+
+- [Example templates](examples/templates/) — standard page, custom layout, news listing
+- [Example content](examples/content/) — all block types JSON, custom layout JSON
+
+## Quick Start
+
+```bash
+# Start dev server
+php -S localhost:3000 router.php
+
+# Visit /admin/setup.php to create your first admin account
+
+# Convert an existing HTML page to editable Nibbly template + JSON
+php cli/convert.php my-page.html --slug=about --lang=en --dry-run
+```
+
+Create a page by adding a JSON file to `content/pages/` — no PHP template needed for standard pages. Or use `cli/convert.php` to automatically convert an existing HTML page into an editable template. See CLAUDE.md for details.

@@ -1,0 +1,3137 @@
+/**
+ * Inline Editor Styles
+ * Flexible and reusable for other websites
+ */
+
+/* Colors — editor-primary can be overridden via settings.json (injected in header.php) */
+:root {
+    --editor-primary: #2563eb;
+    --editor-primary-hover: #1d4ed8;
+    --editor-primary-light: #60a5fa;
+    --editor-bar-bg: #23282d;
+    --editor-bar-hover: #32373c;
+    --editor-success: #2563eb;
+    --editor-danger: #dc3545;
+    --editor-danger-hover: #c82333;
+    --editor-btn-glow: 1;
+    --editor-btn-radius: 6px;
+}
+
+/*
+ * Fix: background-clip:text + editable-field child.
+ * When editableText() wraps text in <span class="editable-field">,
+ * gradient-text effects break because background-clip doesn't inherit.
+ * This rule makes the child span inherit the gradient text properties.
+ */
+.editable-field {
+    background: inherit;
+    -webkit-background-clip: inherit;
+    -webkit-text-fill-color: inherit;
+    background-clip: inherit;
+}
+
+/* ============================================================
+   ADMIN BAR
+   ============================================================ */
+
+#admin-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: var(--editor-bar-bg);
+    color: #fff;
+    z-index: 10000;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+}
+
+.admin-bar-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 8px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.admin-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.admin-bar-center {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-bar-right {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.admin-bar-logo-icon {
+    display: block;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.admin-bar-info {
+    opacity: 0.8;
+}
+
+.admin-bar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-bar-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
+    padding: 4px 10px;
+    border-radius: 3px;
+    transition: background 0.2s, color 0.2s;
+}
+
+.admin-bar-link:hover {
+    background: var(--editor-bar-hover);
+    color: #fff;
+}
+
+body.has-admin-bar {
+    padding-top: 40px;
+}
+
+body.has-admin-bar .site-header {
+    top: 40px;
+}
+
+body.has-admin-bar .mobile-nav-overlay {
+    top: 40px;
+}
+
+/* ============================================================
+   EDITIERBARE SECTIONS
+   ============================================================ */
+
+.editable-section {
+    position: relative;
+    border-radius: 0;
+}
+
+body.edit-mode-active .editable-section {
+    cursor: pointer;
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    transition: outline-color 0.2s ease;
+}
+
+body.edit-mode-active .editable-section:hover {
+    outline-color: var(--editor-primary);
+}
+
+/* About-Section spezifisch */
+.editable-about-section {
+    padding: 4px;
+    margin: -4px;
+}
+
+/* Leere Sections im Edit-Mode */
+body.edit-mode-active .editable-section.editable-empty {
+    min-height: 60px;
+    border: 2px dashed rgba(13, 156, 144, 0.3);
+    background: rgba(13, 156, 144, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.editable-placeholder {
+    color: rgba(13, 156, 144, 0.6);
+    font-size: 14px;
+    font-style: italic;
+}
+
+body.edit-mode-active .editable-section.editable-empty:hover {
+    border-color: var(--editor-primary);
+    background: rgba(13, 156, 144, 0.1);
+}
+
+/* ============================================================
+   OVERLAY WITH BUTTONS (Edit, Delete, Drag Handle)
+   ============================================================ */
+
+.editable-overlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: var(--editor-primary);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 0 4px 0 4px;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    z-index: 10;
+}
+
+body.edit-mode-active .editable-section:hover .editable-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Button-Overlay Variante */
+.editable-overlay-buttons {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px;
+    background: rgba(35, 40, 45, 0.95);
+    border-radius: 4px;
+}
+
+.overlay-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: white;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background 0.2s, color 0.2s;
+}
+
+.overlay-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+.overlay-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.overlay-btn-edit:hover {
+    background: var(--editor-primary);
+}
+
+.overlay-btn-delete:hover {
+    background: var(--editor-danger);
+}
+
+.overlay-btn-hide {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.overlay-btn-hide:hover {
+    background: rgba(255, 200, 0, 0.3);
+    color: #ffc800;
+}
+
+.overlay-drag-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 28px;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: grab;
+}
+
+.overlay-drag-handle svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.overlay-drag-handle:hover {
+    color: white;
+}
+
+.editable-icon {
+    display: inline-block;
+}
+
+/* ============================================================
+   ADD BUTTONS BELOW SECTIONS
+   ============================================================ */
+
+.section-add-buttons {
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s, bottom 0.2s;
+    z-index: 15;
+    pointer-events: none;
+}
+
+body.edit-mode-active .editable-section:hover .section-add-buttons {
+    opacity: 1;
+    bottom: -24px;
+    pointer-events: auto;
+}
+
+.section-add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 2px solid var(--editor-primary);
+    background: white;
+    color: var(--editor-primary);
+    cursor: pointer;
+    border-radius: 50%;
+    transition: all 0.2s;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.section-add-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.section-add-btn:hover {
+    background: var(--editor-primary);
+    color: white;
+    transform: scale(1.1);
+}
+
+/* ============================================================
+   DRAG & DROP
+   ============================================================ */
+
+.editable-section.dragging {
+    opacity: 0.5;
+    outline: 2px solid var(--editor-primary);
+    outline-offset: 2px;
+}
+
+.editable-section.drag-over {
+    background: rgba(13, 156, 144, 0.1);
+}
+
+.editable-section.drag-over-top {
+    box-shadow: inset 0 3px 0 var(--editor-primary);
+}
+
+.editable-section.drag-over-bottom {
+    box-shadow: inset 0 -3px 0 var(--editor-primary);
+}
+
+/* ============================================================
+   CLICK BLOCKER FOR IFRAMES (important for Drag & Drop!)
+   ============================================================ */
+
+.editable-section .audio-embed,
+.editable-section .video-container {
+    position: relative;
+    pointer-events: none; /* Verhindert dass iframes Drag abfangen */
+}
+
+.editable-section .audio-embed::after,
+.editable-section .video-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: transparent;
+    cursor: pointer;
+    z-index: 5;
+    pointer-events: auto; /* Pseudo-element catches clicks */
+}
+
+body.edit-mode-active .editable-section:hover .audio-embed::after,
+body.edit-mode-active .editable-section:hover .video-container::after {
+    background: rgba(13, 156, 144, 0.1);
+}
+
+/* Completely block iframes during dragging */
+.editable-section.dragging .audio-embed,
+.editable-section.dragging .video-container,
+.editable-section.dragging iframe {
+    pointer-events: none !important;
+}
+
+/* ============================================================
+   MODAL
+   ============================================================ */
+
+.editor-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20000;
+    font-family: 'Geist', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #1a1a1a;
+}
+
+.editor-modal.active {
+    display: block;
+}
+
+.editor-modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.6);
+    animation: fadeIn 0.2s ease;
+}
+
+.editor-modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 8px 16px rgba(13, 149, 156, 0.04), 0 16px 48px rgba(0, 0, 0, 0.16);
+    width: 90%;
+    max-width: 700px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    animation: slideIn 0.2s ease;
+}
+
+.editor-modal-small {
+    max-width: 400px;
+}
+
+.editor-modal-wide {
+    max-width: 900px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+.editor-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    border-bottom: 1px solid #e2e2e2;
+}
+
+.editor-modal-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-family: inherit;
+    font-weight: 600;
+    color: #1a1a1a;
+    letter-spacing: -0.01em;
+}
+
+.editor-close-btn {
+    background: none;
+    border: none;
+    font-size: 22px;
+    color: #8a8a8a;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.editor-close-btn:hover {
+    background: #f5f5f5;
+    color: #1a1a1a;
+}
+
+.editor-modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.editor-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 24px;
+    border-top: 1px solid #e2e2e2;
+    background: #f5f5f5;
+    border-radius: 0 0 12px 12px;
+}
+
+/* Image Manager Footer mit Auswahl-Info */
+.image-manager-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.image-selection-info {
+    flex: 1;
+    min-width: 200px;
+}
+
+.image-selection-path {
+    font-size: 13px;
+    color: #999;
+    font-style: italic;
+}
+
+.image-selection-path.has-selection {
+    color: #333;
+    font-style: normal;
+    font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+    font-size: 12px;
+    background: #f0f0f0;
+    padding: 6px 10px;
+    border-radius: 4px;
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.image-selection-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.image-selection-actions .editor-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ============================================================
+   ADD SECTION MODAL
+   ============================================================ */
+
+.add-section-search {
+    margin-bottom: 16px;
+}
+
+.add-section-search input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid #e2e2e2;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+    background: #fff;
+    color: #333;
+}
+
+.add-section-search input:focus {
+    border-color: var(--editor-primary);
+}
+
+.add-section-category {
+    margin-bottom: 16px;
+}
+
+.add-section-category:last-child {
+    margin-bottom: 0;
+}
+
+.add-section-category-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #888;
+    margin-bottom: 8px;
+    padding-left: 2px;
+}
+
+.add-section-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+}
+
+.add-section-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 10px;
+    border: 2px solid #e2e2e2;
+    background: #ffffff;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s, background-color 0.15s;
+}
+
+.add-section-option:hover {
+    border-color: var(--editor-primary);
+    background: rgba(13, 156, 144, 0.05);
+}
+
+.add-section-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: var(--editor-primary);
+}
+
+.add-section-icon svg {
+    width: 26px;
+    height: 26px;
+    fill: currentColor;
+}
+
+.add-section-option:hover .add-section-icon {
+    color: var(--editor-primary-hover);
+}
+
+.add-section-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #333;
+    text-align: center;
+    line-height: 1.2;
+}
+
+/* ============================================================
+   FORMULAR-FELDER
+   ============================================================ */
+
+.editor-field {
+    margin-bottom: 20px;
+}
+
+.editor-field:last-child {
+    margin-bottom: 0;
+}
+
+.editor-field label {
+    display: block;
+    font-family: inherit;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: #525252;
+    font-size: 13px;
+}
+
+/* Titel-Zeile mit Input und Select */
+.editor-title-row {
+    display: flex;
+    gap: 10px;
+}
+
+.editor-title-row input[type="text"] {
+    flex: 1;
+}
+
+.editor-title-tag-select {
+    width: 180px;
+    padding: 10px 14px;
+    border: 1px solid #e2e2e2;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.editor-title-tag-select:focus {
+    outline: none;
+    border-color: var(--editor-primary);
+    box-shadow: 0 0 0 3px rgba(13, 149, 156, 0.15);
+}
+
+.editor-field input[type="text"],
+.editor-field input[type="url"],
+.editor-field input[type="date"],
+.editor-field input[type="time"],
+.editor-field textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #e2e2e2;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #1a1a1a;
+    background: #ffffff;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.editor-field input[type="text"]::placeholder,
+.editor-field input[type="url"]::placeholder,
+.editor-field textarea::placeholder {
+    color: #8a8a8a;
+}
+
+.editor-field input[type="text"]:focus,
+.editor-field input[type="url"]:focus,
+.editor-field input[type="date"]:focus,
+.editor-field input[type="time"]:focus,
+.editor-field textarea:focus {
+    outline: none;
+    border-color: var(--editor-primary);
+    box-shadow: 0 0 0 3px rgba(13, 149, 156, 0.15);
+}
+
+.editor-field textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.editor-field small {
+    display: block;
+    margin-top: 6px;
+    color: #8a8a8a;
+    font-size: 13px;
+}
+
+/* Zwei-Spalten-Layout */
+.editor-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.editor-row .editor-field {
+    margin-bottom: 0;
+}
+
+/* ============================================================
+   WYSIWYG TOOLBAR & EDITOR
+   ============================================================ */
+
+.editor-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+}
+
+.editor-toolbar button {
+    background: white;
+    border: 1px solid #ddd;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    min-width: 32px;
+    transition: all 0.2s;
+}
+
+.editor-toolbar button:hover {
+    background: var(--editor-primary);
+    border-color: var(--editor-primary);
+    color: white;
+}
+
+/* Eraser Button mit SVG Icon */
+.editor-toolbar-eraser {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 8px;
+}
+
+.editor-toolbar-eraser svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+.editor-toolbar-separator {
+    width: 1px;
+    height: 24px;
+    background: #ddd;
+    margin: 0 8px;
+}
+
+.editor-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 13px;
+    color: #666;
+}
+
+.editor-toggle input {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--editor-primary);
+}
+
+/* Checkbox label for options below the editor */
+.editor-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+    padding: 10px 12px;
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+}
+
+.editor-checkbox-label:hover {
+    background: #f0f0f0;
+    border-color: #ccc;
+}
+
+.editor-checkbox-label input {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--color-primary, #60c8cd);
+}
+
+.editor-checkbox-label span {
+    font-weight: 500;
+    color: #333;
+}
+
+.editor-checkbox-label small {
+    color: #888;
+    font-size: 12px;
+}
+
+.editor-checkbox-label input:checked + span {
+    color: var(--color-primary, #60c8cd);
+}
+
+.editor-wysiwyg {
+    min-height: 400px;
+    max-height: 600px;
+    overflow-y: auto;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 0 0 4px 4px;
+    font-size: 14px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    background: white;
+}
+
+.editor-wysiwyg:focus {
+    outline: none;
+    border-color: var(--editor-primary);
+    box-shadow: 0 0 0 2px rgba(13, 156, 144, 0.2);
+}
+
+.editor-wysiwyg p {
+    margin: 0 0 1em 0;
+}
+
+.editor-wysiwyg p:last-child {
+    margin-bottom: 0;
+}
+
+.editor-wysiwyg ul, .editor-wysiwyg ol {
+    margin: 0 0 1em 0;
+    padding-left: 1.5em;
+}
+
+.editor-wysiwyg a {
+    color: var(--editor-primary);
+}
+
+/* HTML Editor */
+.editor-html {
+    width: 100%;
+    min-height: 400px;
+    max-height: 600px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 0 0 4px 4px;
+    font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    resize: vertical;
+    background: #1e1e1e;
+    color: #d4d4d4;
+}
+
+.editor-html:focus {
+    outline: none;
+    border-color: var(--editor-primary);
+}
+
+/* ============================================================
+   MEDIA PREVIEW
+   ============================================================ */
+
+.editor-media-preview {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 4px;
+    border: 1px solid #eee;
+}
+
+.preview-placeholder {
+    color: #999;
+    text-align: center;
+    margin: 0;
+    padding: 30px;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+
+.editor-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: var(--editor-btn-radius, 6px);
+    font-size: 14px;
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.editor-btn-primary {
+    background: var(--editor-primary);
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    position: relative;
+    overflow: hidden;
+    z-index: 0;
+    transition: box-shadow 800ms cubic-bezier(0.22, 1, 0.36, 1) 250ms,
+                transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.editor-btn-primary::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--editor-primary-light, #60a5fa);
+    opacity: 0;
+    transition: opacity 800ms cubic-bezier(0.22, 1, 0.36, 1) 250ms;
+    z-index: -1;
+}
+
+.editor-btn-primary:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15),
+                0 4px 20px color-mix(in srgb, var(--editor-primary) 35%, transparent);
+    transition: box-shadow 800ms cubic-bezier(0.22, 1, 0.36, 1),
+                transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.editor-btn-primary:hover::after {
+    opacity: 0.3;
+    transition: opacity 800ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Flat mode: disable glow effect */
+.editor-flat .editor-btn-primary:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.editor-flat .editor-btn-primary:hover::after {
+    opacity: 0;
+}
+
+.editor-btn-secondary {
+    background: #f0f0f0;
+    color: #525252;
+    border: 1px solid #e2e2e2;
+}
+
+.editor-btn-secondary:hover {
+    background: #e5e5e5;
+    border-color: #ccc;
+    color: #1a1a1a;
+}
+
+.editor-btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    min-width: 38px;
+    padding: 0;
+    background: #e0e0e0;
+    color: #333;
+}
+
+.editor-btn-icon:hover {
+    background: var(--editor-primary);
+    color: white;
+}
+
+.editor-btn-icon svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.editor-btn-danger {
+    background: var(--editor-danger);
+    color: white;
+}
+
+.editor-btn-danger:hover {
+    background: var(--editor-danger-hover);
+}
+
+/* ============================================================
+   TOAST NACHRICHTEN
+   ============================================================ */
+
+.editor-toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 4px;
+    color: white;
+    font-size: 14px;
+    z-index: 30000;
+    animation: slideInToast 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.editor-toast-success {
+    background: var(--editor-success);
+}
+
+.editor-toast-error {
+    background: var(--editor-danger);
+}
+
+@keyframes slideInToast {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Toast mit Undo-Button */
+.editor-toast-success {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.toast-message {
+    flex: 1;
+}
+
+
+/* ============================================================
+   ADMIN BAR BUTTON
+   ============================================================ */
+
+.admin-bar-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 3px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.admin-bar-btn:hover {
+    background: var(--editor-bar-hover);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: #60c8cd;
+}
+
+.admin-bar-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+.admin-bar-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.admin-bar-btn:disabled:hover {
+    background: transparent;
+    color: #fff;
+}
+
+.admin-bar-btn-edit {
+    background: var(--editor-primary);
+    border-color: var(--editor-primary);
+    font-weight: 600;
+}
+
+.admin-bar-btn-edit:hover {
+    background: var(--editor-primary-hover);
+    border-color: var(--editor-primary-hover);
+    color: #fff;
+}
+
+.admin-bar-btn-content-editor {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+    box-sizing: border-box;
+}
+
+.admin-bar-btn-content-editor:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+.admin-bar-btn-save {
+    background: var(--editor-success);
+    border-color: var(--editor-success);
+    font-weight: 600;
+}
+
+.admin-bar-btn-save:hover {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+    color: #fff;
+}
+
+
+.admin-bar-btn-cancel {
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.admin-bar-btn-undo,
+.admin-bar-btn-redo {
+    padding: 4px 8px;
+}
+
+.admin-bar-edit-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.admin-bar-view-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* ============================================================
+   VERLAUF-MODAL (History)
+   ============================================================ */
+
+.editor-modal-medium {
+    max-width: 550px;
+}
+
+.history-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.history-page-header {
+    font-size: 12px;
+    font-weight: 600;
+    color: #8a8a8a;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 0 6px;
+    border-bottom: 1px solid #e2e2e2;
+    margin-bottom: 8px;
+}
+
+.history-page-header:not(:first-child) {
+    margin-top: 20px;
+}
+
+.history-entry {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: #f5f5f5;
+    border-radius: 6px;
+    margin-bottom: 6px;
+}
+
+.history-entry:hover {
+    background: #ebebeb;
+}
+
+.history-entry-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.history-entry-date {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1a1a1a;
+}
+
+.history-entry-action {
+    font-size: 12px;
+    color: #8a8a8a;
+}
+
+.editor-btn-small {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.history-empty {
+    text-align: center;
+    color: #999;
+    padding: 40px 20px;
+    font-style: italic;
+}
+
+/* ============================================================
+   CONFIRM DIALOG
+   ============================================================ */
+
+.confirm-dialog-content {
+    text-align: center;
+    padding: 10px 0;
+}
+
+.confirm-dialog-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 15px;
+    color: var(--editor-danger);
+}
+
+.confirm-dialog-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+}
+
+.confirm-dialog-message {
+    font-size: 15px;
+    color: #1a1a1a;
+    margin-bottom: 5px;
+}
+
+.confirm-dialog-hint {
+    font-size: 13px;
+    color: #8a8a8a;
+    margin: 0;
+}
+
+.confirm-dialog-footer {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px 24px;
+    border-top: 1px solid #e2e2e2;
+    background: #f5f5f5;
+    border-radius: 0 0 12px 12px;
+}
+
+/* ============================================================
+   PROMPT DIALOG (for links etc.)
+   ============================================================ */
+
+.prompt-dialog-content {
+    padding: 10px 0;
+}
+
+.prompt-dialog-label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: #525252;
+    font-size: 13px;
+}
+
+.prompt-dialog-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #e2e2e2;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #1a1a1a;
+}
+
+.prompt-dialog-input:focus {
+    outline: none;
+    border-color: var(--editor-primary);
+    box-shadow: 0 0 0 3px rgba(13, 149, 156, 0.15);
+}
+
+/* ============================================================
+   EDITIERBARE KONZERTE
+   ============================================================ */
+
+.editable-event {
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+body.edit-mode-active .editable-event {
+    cursor: pointer;
+}
+
+body.edit-mode-active .editable-event:hover {
+    outline: 2px dashed var(--editor-primary);
+    outline-offset: 4px;
+    background: rgba(13, 156, 144, 0.03);
+}
+
+.editable-event .editable-overlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: var(--editor-primary);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 0 4px 0 4px;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    z-index: 10;
+}
+
+body.edit-mode-active .editable-event:hover .editable-overlay {
+    opacity: 1;
+}
+
+/* ============================================================
+   EDITIERBARE FOOTER-FELDER
+   ============================================================ */
+
+.editable-footer-active {
+    position: relative;
+    border-radius: 3px;
+}
+
+body.edit-mode-active .editable-footer-active {
+    cursor: pointer;
+    transition: outline-color 0.2s ease;
+}
+
+body.edit-mode-active .editable-footer-active:hover {
+    outline: 2px dashed var(--editor-primary);
+    outline-offset: 2px;
+    background: rgba(13, 156, 144, 0.1);
+}
+
+.editable-footer-active::after {
+    content: '✎';
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--editor-primary);
+    color: white;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+
+body.edit-mode-active .editable-footer-active:hover::after {
+    opacity: 1;
+}
+
+/* ============================================================
+   EDITABLE FIELDS (Custom Layouts)
+   ============================================================ */
+
+.editable-field-active {
+    position: relative;
+    display: inline-block; /* Outline around entire element, not per line */
+}
+
+body.edit-mode-active .editable-field-active {
+    cursor: text;
+    outline: 2px solid transparent;
+    outline-offset: 1px;
+    transition: outline-color 0.2s ease;
+}
+
+body.edit-mode-active .editable-field-active:hover {
+    outline-color: var(--editor-primary);
+}
+
+/* HTML fields keep pointer cursor (open modal) */
+body.edit-mode-active .editable-field-html.editable-field-active {
+    cursor: pointer;
+    display: block;
+}
+
+/* Reset gradient-text when admin is logged in (editable-field spans
+   inside gradient-clip parents inherit transparent fill and become invisible) */
+.hero-title:has(.editable-field),
+.trust-value:has(.editable-field),
+.step-number:has(.editable-field),
+.metric-value:has(.editable-field),
+.cta-heading:has(.editable-field),
+.section-label:has(.editable-field) {
+    -webkit-text-fill-color: initial !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+    background: none !important;
+    color: var(--color-text-on-dark, #e4e4e7) !important;
+}
+
+/* Light theme: use dark text color instead */
+[data-theme="light"] .hero-title:has(.editable-field),
+[data-theme="light"] .trust-value:has(.editable-field),
+[data-theme="light"] .step-number:has(.editable-field),
+[data-theme="light"] .metric-value:has(.editable-field),
+[data-theme="light"] .cta-heading:has(.editable-field),
+[data-theme="light"] .section-label:has(.editable-field),
+.landing-comparison-light .hero-title:has(.editable-field),
+.landing-comparison-light .trust-value:has(.editable-field),
+.landing-comparison-light .cta-heading:has(.editable-field),
+.landing-comparison-light .section-label:has(.editable-field) {
+    color: var(--color-text, #1a1a25) !important;
+}
+
+/* Accordions: show all content in edit mode */
+
+/* FAQ accordion */
+body.edit-mode-active .faq-item {
+    overflow: visible !important;
+}
+
+body.edit-mode-active .faq-item__answer {
+    display: block !important;
+    max-height: none !important;
+    opacity: 1 !important;
+    overflow: visible !important;
+}
+
+body.edit-mode-active .faq-item__answer[hidden] {
+    display: block !important;
+}
+
+/* Vibecoding accordion (grid-template-rows animation) */
+body.edit-mode-active .vibecoding-card-body {
+    grid-template-rows: 1fr !important;
+    transition: none !important;
+}
+
+body.edit-mode-active .vibecoding-card-body > * {
+    overflow: visible !important;
+    padding-bottom: 1rem;
+}
+
+/* Landing sections: allow overflow for add-buttons in edit mode */
+body.edit-mode-active .landing-hero,
+body.edit-mode-active .landing-features,
+body.edit-mode-active .landing-cta,
+body.edit-mode-active .landing-dark,
+body.edit-mode-active .landing-trust,
+body.edit-mode-active .landing-steps,
+body.edit-mode-active .landing-vibecoding,
+body.edit-mode-active .landing-comparison-dark,
+body.edit-mode-active .landing-comparison-light,
+body.edit-mode-active .landing-metrics,
+body.edit-mode-active .feature-card,
+body.edit-mode-active .vibecoding-card {
+    overflow: visible !important;
+}
+
+/* Aktiver Bearbeitungsmodus (contentEditable) */
+.editable-field-editing {
+    outline: 2px solid var(--editor-primary) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    caret-color: var(--editor-primary);
+    min-width: 20px;
+    /* Reset gradient-text so content is visible on white editing bg */
+    -webkit-text-fill-color: initial !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+    color: #1f2937 !important;
+}
+
+/* Sichtbare Schreibmarke */
+.editable-field-editing:focus {
+    caret-color: #000;
+}
+
+/* Landing page dark sections: editable fields need readable outlines */
+.page-landing body.edit-mode-active .editable-field-active:hover,
+.page-showcase body.edit-mode-active .editable-field-active:hover {
+    outline-color: #60a5fa;
+}
+
+/* Landing page: non-editing gradient text fields must stay visible in edit mode */
+.page-landing body.edit-mode-active .editable-field-active {
+    cursor: text;
+}
+
+/* ============================================================
+   EDITABLE LISTS (Repeatable Items)
+   ============================================================ */
+
+.editable-list-item {
+    position: relative;
+    border-radius: 0;
+}
+
+body.edit-mode-active .editable-list-item {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    transition: outline-color 0.2s ease;
+}
+
+body.edit-mode-active .editable-list-item:hover {
+    outline-color: var(--editor-primary, #0073aa);
+}
+
+/* Overlay controls (top-right) */
+.editable-list-overlay {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    padding: 3px;
+    background: rgba(35, 40, 45, 0.95);
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    z-index: 10;
+}
+
+body.edit-mode-active .editable-list-item:hover .editable-list-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.editable-list-overlay .overlay-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 0;
+    transition: background 0.2s, color 0.2s;
+}
+
+.editable-list-overlay .overlay-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+.editable-list-overlay .overlay-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.editable-list-overlay .overlay-btn-delete:hover {
+    background: var(--editor-danger, #e74c3c);
+}
+
+.editable-list-overlay .list-drag-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 28px;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: grab;
+}
+
+.editable-list-overlay .list-drag-handle svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.editable-list-overlay .list-drag-handle:hover {
+    color: #fff;
+}
+
+/* Drag & Drop visual feedback */
+.editable-list-item.dragging {
+    opacity: 0.5;
+    outline: 2px solid var(--editor-primary, #0073aa);
+    outline-offset: 2px;
+}
+
+.editable-list-item.drag-over-top {
+    box-shadow: inset 0 3px 0 var(--editor-primary, #0073aa);
+}
+
+.editable-list-item.drag-over-bottom {
+    box-shadow: inset 0 -3px 0 var(--editor-primary, #0073aa);
+}
+
+/* Add button per item (circular + at bottom edge, visible on hover) */
+.list-item-add-btn {
+    position: absolute;
+    bottom: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 28px;
+    height: 28px;
+    border: 2px solid var(--editor-primary, #0073aa);
+    background: #fff;
+    color: var(--editor-primary, #0073aa);
+    cursor: pointer;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s, background 0.2s, color 0.2s;
+    z-index: 15;
+    pointer-events: none;
+    padding: 0;
+}
+
+.list-item-add-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+body.edit-mode-active .editable-list-item:hover .list-item-add-btn {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.list-item-add-btn:hover {
+    background: var(--editor-primary, #0073aa);
+    color: #fff;
+    transform: translateX(-50%) scale(1.15);
+}
+
+/* ============================================================
+   BILDVERWALTUNG
+   ============================================================ */
+
+.image-manager-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    flex-wrap: wrap;
+}
+
+.image-upload-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.image-upload-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.image-manager-info {
+    font-size: 13px;
+    color: #666;
+}
+
+/* Suchfeld */
+.image-manager-search {
+    flex: 1;
+    min-width: 150px;
+    max-width: 300px;
+}
+
+.image-search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.image-search-input:focus {
+    outline: none;
+    border-color: var(--editor-primary);
+    box-shadow: 0 0 0 2px rgba(13, 156, 144, 0.15);
+}
+
+.image-search-input::placeholder {
+    color: #999;
+}
+
+/* Ansicht-Umschalter (Grid/Liste) */
+.image-manager-view-toggle {
+    display: flex;
+    gap: 2px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    padding: 2px;
+}
+
+.view-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: #666;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s;
+}
+
+.view-toggle-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.view-toggle-btn:hover {
+    color: var(--editor-primary);
+}
+
+.view-toggle-btn.active {
+    background: white;
+    color: var(--editor-primary);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Container for grid and list */
+.image-manager-container {
+    max-height: 450px;
+    overflow-y: auto;
+}
+
+/* Grid-Ansicht */
+.image-manager-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+}
+
+.image-manager-grid.hidden {
+    display: none;
+}
+
+.image-manager-item {
+    background: #f5f5f5;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.image-manager-item:hover {
+    border-color: var(--editor-primary);
+    box-shadow: 0 2px 8px rgba(13, 156, 144, 0.2);
+}
+
+.image-manager-item.selected {
+    border-color: var(--editor-primary);
+    box-shadow: 0 0 0 3px rgba(13, 156, 144, 0.3);
+}
+
+/* Selection Checkbox - runder Kreis oben rechts */
+.image-selection-checkbox {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 22px;
+    height: 22px;
+    border: 2px solid white;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.2s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.image-selection-checkbox:hover {
+    background: rgba(13, 156, 144, 0.5);
+    border-color: white;
+}
+
+.image-selection-checkbox.checked {
+    background: var(--editor-primary);
+    border-color: white;
+}
+
+.image-selection-checkbox.checked::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 8px;
+    height: 5px;
+    border: 2px solid white;
+    border-top: none;
+    border-right: none;
+    transform: translate(-50%, -60%) rotate(-45deg);
+}
+
+.image-manager-thumb {
+    height: 100px;
+    background-size: cover;
+    background-position: center;
+    background-color: #e0e0e0;
+    position: relative;
+}
+
+.image-manager-name {
+    padding: 8px;
+    font-size: 11px;
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: white;
+}
+
+.image-manager-actions {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px;
+    background: white;
+    border-top: 1px solid #eee;
+}
+
+.image-action-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.image-action-btn svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+}
+
+.image-action-select {
+    background: var(--editor-success);
+    color: white;
+}
+
+.image-action-select:hover {
+    background: #1d4ed8;
+}
+
+.image-action-preview {
+    background: #f0f0f0;
+    color: #666;
+}
+
+.image-action-preview:hover {
+    background: var(--editor-primary);
+    color: white;
+}
+
+.image-action-replace {
+    background: #f0f0f0;
+    color: #666;
+}
+
+.image-action-replace:hover {
+    background: #17b0b8;
+    color: white;
+}
+
+.image-action-delete {
+    background: #f0f0f0;
+    color: #666;
+}
+
+.image-action-delete:hover {
+    background: var(--editor-danger);
+    color: white;
+}
+
+/* Listen-Ansicht */
+.image-manager-list {
+    display: none;
+}
+
+.image-manager-list.active {
+    display: block;
+}
+
+.image-list-header {
+    display: grid;
+    grid-template-columns: 40px 60px 1fr 100px 140px 120px;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #f5f5f5;
+    border-radius: 6px 6px 0 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #ddd;
+}
+
+.image-list-header-col {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    user-select: none;
+    transition: color 0.2s;
+}
+
+.image-list-header-col:hover {
+    color: var(--editor-primary);
+}
+
+.image-list-header-col.sortable::after {
+    content: '↕';
+    opacity: 0.4;
+    font-size: 10px;
+}
+
+.image-list-header-col.sorted-asc::after {
+    content: '↑';
+    opacity: 1;
+    color: var(--editor-primary);
+}
+
+.image-list-header-col.sorted-desc::after {
+    content: '↓';
+    opacity: 1;
+    color: var(--editor-primary);
+}
+
+.image-list-header-col:first-child,
+.image-list-header-col:last-child {
+    cursor: default;
+}
+
+.image-list-header-col:first-child::after,
+.image-list-header-col:last-child::after {
+    display: none;
+}
+
+.image-list-body {
+    border: 1px solid #eee;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+}
+
+.image-list-row {
+    display: grid;
+    grid-template-columns: 40px 60px 1fr 100px 140px 120px;
+    gap: 10px;
+    padding: 8px 12px;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    transition: background 0.2s;
+    cursor: pointer;
+}
+
+.image-list-row:last-child {
+    border-bottom: none;
+}
+
+.image-list-row:hover {
+    background: #f9f9f9;
+}
+
+.image-list-row.selected {
+    background: rgba(13, 156, 144, 0.1);
+}
+
+.image-list-checkbox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.image-list-checkbox .image-selection-checkbox {
+    position: static;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ccc;
+    background: white;
+    box-shadow: none;
+}
+
+.image-list-checkbox .image-selection-checkbox:hover {
+    border-color: var(--editor-primary);
+    background: rgba(13, 156, 144, 0.1);
+}
+
+.image-list-checkbox .image-selection-checkbox.checked {
+    background: var(--editor-primary);
+    border-color: var(--editor-primary);
+}
+
+.image-list-thumb {
+    width: 50px;
+    height: 40px;
+    background-size: cover;
+    background-position: center;
+    background-color: #e0e0e0;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.image-list-name {
+    font-size: 13px;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.image-list-size {
+    font-size: 12px;
+    color: #666;
+}
+
+.image-list-date {
+    font-size: 12px;
+    color: #666;
+}
+
+.image-list-actions {
+    display: flex;
+    gap: 4px;
+    justify-content: flex-end;
+}
+
+/* Loading, Empty, Error States */
+.image-manager-loading,
+.image-manager-empty,
+.image-manager-error {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+}
+
+.image-manager-error {
+    color: var(--editor-danger);
+}
+
+/* Lightbox */
+.image-lightbox {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30000;
+    background: rgba(0, 0, 0, 0.9);
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+
+.image-lightbox.active {
+    display: flex;
+}
+
+.image-lightbox-content {
+    position: relative;
+    max-width: 90vw;
+    max-height: 90vh;
+}
+
+.image-lightbox-content img {
+    max-width: 100%;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+}
+
+.image-lightbox-close {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 32px;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+
+.image-lightbox-close:hover {
+    transform: scale(1.2);
+}
+
+.image-lightbox-info {
+    position: absolute;
+    bottom: -35px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 13px;
+}
+
+/* Ersetzen-Dialog */
+.replace-dialog-options {
+    margin: 20px 0;
+}
+
+.replace-dialog-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.replace-dialog-option:hover {
+    border-color: var(--editor-primary);
+    background: rgba(13, 156, 144, 0.03);
+}
+
+.replace-dialog-option.selected {
+    border-color: var(--editor-primary);
+    background: rgba(13, 156, 144, 0.08);
+}
+
+.replace-dialog-option input[type="radio"] {
+    margin-top: 2px;
+    accent-color: var(--editor-primary);
+}
+
+.replace-dialog-option-content {
+    flex: 1;
+}
+
+.replace-dialog-option-title {
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.replace-dialog-option-desc {
+    font-size: 12px;
+    color: #666;
+}
+
+.replace-dialog-newname {
+    margin-top: 10px;
+    display: none;
+}
+
+.replace-dialog-option.selected .replace-dialog-newname {
+    display: block;
+}
+
+.replace-dialog-newname input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.replace-dialog-newname input:focus {
+    outline: none;
+    border-color: var(--editor-primary);
+}
+
+.replace-dialog-file {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.replace-dialog-file label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: var(--editor-primary);
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.replace-dialog-file label:hover {
+    background: var(--editor-primary-hover);
+}
+
+.replace-dialog-file label svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.replace-dialog-file input[type="file"] {
+    display: none;
+}
+
+.replace-dialog-filename {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #666;
+}
+
+/* Bild-Auswahl im Editor */
+.editor-image-row {
+    display: flex;
+    gap: 10px;
+}
+
+.editor-image-row input[type="text"] {
+    flex: 1;
+}
+
+.editor-image-row .editor-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.editor-image-row .editor-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+.editor-image-preview {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 4px;
+    border: 1px solid #eee;
+    text-align: center;
+}
+
+.editor-image-preview img {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 4px;
+}
+
+/* Audio-Manager Liste */
+.audio-manager-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.audio-manager-list .image-list-header {
+    grid-template-columns: 40px 1fr 100px 140px 120px;
+}
+
+.audio-manager-list .image-list-row {
+    grid-template-columns: 40px 1fr 100px 140px 120px;
+}
+
+.audio-list-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--editor-primary);
+}
+
+.audio-list-icon svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+}
+
+/* Audio-Editor Buttons Layout */
+.editor-audio-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+/* Inline Button mit Icon links und Text rechts */
+.editor-btn-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.editor-btn-inline svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    fill: currentColor;
+}
+
+.editor-btn-primary.editor-btn-inline {
+    color: white;
+}
+
+/* Label als Button: margin-bottom entfernen */
+label.editor-btn-inline {
+    margin-bottom: 0;
+}
+
+/* ============================================================
+   KONZERT-BEARBEITUNG
+   ============================================================ */
+
+/* "New Event" Button */
+.event-add-wrapper {
+    margin-bottom: 20px;
+}
+
+.event-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, rgba(13, 156, 144, 0.2) 0%, rgba(13, 156, 144, 0.1) 100%);
+    border: 2px dashed rgba(13, 156, 144, 0.5);
+    border-radius: 12px;
+    color: var(--editor-primary);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.event-add-btn:hover {
+    background: linear-gradient(135deg, rgba(13, 156, 144, 0.3) 0%, rgba(13, 156, 144, 0.2) 100%);
+    border-color: var(--editor-primary);
+    transform: translateY(-2px);
+}
+
+/* Event card in edit mode */
+.event-card-editable {
+    position: relative;
+}
+
+body.edit-mode-active .event-card-editable {
+    cursor: pointer;
+}
+
+body.edit-mode-active .event-card-editable:hover {
+    outline: 2px dashed var(--editor-primary);
+    outline-offset: 4px;
+    border-radius: 8px;
+    background: rgba(13, 149, 156, 0.03);
+}
+
+/* Edit/delete buttons on event card */
+.event-edit-buttons {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px;
+    background: rgba(35, 40, 45, 0.95);
+    border-radius: 6px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 10;
+}
+
+body.edit-mode-active .event-card-editable:hover .event-edit-buttons {
+    opacity: 1;
+}
+
+.event-edit-btn,
+.event-hide-btn,
+.event-delete-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, color 0.2s ease;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.event-edit-btn svg,
+.event-hide-btn svg,
+.event-delete-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.event-edit-btn:hover {
+    background: rgba(13, 149, 156, 0.2);
+    color: var(--editor-primary);
+}
+
+.event-hide-btn:hover {
+    background: rgba(13, 149, 156, 0.2);
+    color: var(--editor-primary);
+}
+
+.event-delete-btn:hover {
+    background: rgba(220, 53, 69, 0.3);
+    color: #dc3545;
+}
+
+/* Hidden event card styling */
+body.edit-mode-active .event-card-hidden {
+    opacity: 0.4;
+}
+
+body.edit-mode-active .event-card-hidden .event-edit-buttons {
+    opacity: 1;
+}
+
+body.edit-mode-active .event-card-hidden .event-hide-btn {
+    color: var(--editor-primary);
+}
+
+/* Event Editor Language Tabs */
+.event-lang-section {
+    margin-top: 16px;
+    border: 1px solid #e2e2e2;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.event-lang-tabs {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: #f5f5f5;
+    border-bottom: 1px solid #e2e2e2;
+}
+
+.event-lang-tab {
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    color: #8a8a8a;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: color 0.2s, background 0.2s;
+    border-bottom: 2px solid transparent;
+}
+
+.event-lang-tab:hover {
+    color: #1a1a1a;
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.event-lang-tab.active {
+    color: var(--editor-primary, #0d959c);
+    border-bottom-color: var(--editor-primary, #0d959c);
+    background: rgba(13, 149, 156, 0.06);
+}
+
+.event-lang-copy-btn {
+    margin-left: auto;
+    padding: 6px 12px;
+    border: 1px solid #e2e2e2;
+    border-radius: 6px;
+    background: transparent;
+    color: #8a8a8a;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 8px;
+    white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+}
+
+.event-lang-copy-btn:hover {
+    color: var(--editor-primary, #0d959c);
+    border-color: var(--editor-primary, #0d959c);
+    background: rgba(13, 149, 156, 0.06);
+}
+
+.event-lang-copy-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.event-lang-panel {
+    padding: 16px;
+}
+
+.event-lang-panel .editor-field + .editor-field {
+    margin-top: 12px;
+}
+
+/* ============================================================
+   RESIZABLE MODALS
+   ============================================================ */
+
+.editor-modal-content {
+    position: absolute;
+    /* Resize-Eigenschaften */
+    min-width: 320px;
+    min-height: 200px;
+}
+
+.editor-modal-content.resizable {
+    resize: none; /* Browser-Resize deaktivieren, wir machen es selbst */
+}
+
+.modal-resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    cursor: nwse-resize;
+    z-index: 10;
+    background: transparent;
+}
+
+.modal-resize-handle::before {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 12px;
+    height: 12px;
+    border-right: 2px solid #ccc;
+    border-bottom: 2px solid #ccc;
+}
+
+.modal-resize-handle::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 6px;
+    height: 6px;
+    border-right: 2px solid #ccc;
+    border-bottom: 2px solid #ccc;
+}
+
+.modal-resize-handle:hover::before,
+.modal-resize-handle:hover::after {
+    border-color: var(--editor-primary);
+}
+
+.editor-modal-content.resizing {
+    user-select: none;
+}
+
+/* When modal is resized, remove transform for simpler positioning */
+.editor-modal-content.custom-size {
+    transform: none;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 768px) {
+    .admin-bar-inner {
+        flex-wrap: wrap;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .admin-bar-info {
+        flex: none;
+        width: 100%;
+        order: 3;
+        margin-top: 5px;
+    }
+
+    .editor-modal-content {
+        width: 95%;
+        max-height: 95vh;
+    }
+
+    .editor-toolbar {
+        flex-wrap: wrap;
+    }
+
+    .editor-row {
+        grid-template-columns: 1fr;
+    }
+
+    .editor-modal-footer {
+        flex-wrap: wrap;
+    }
+
+    .editor-modal-footer .editor-btn-danger {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    .add-section-options {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .section-add-buttons {
+        bottom: -30px;
+    }
+
+    body.edit-mode-active .editable-section:hover .section-add-buttons {
+        bottom: -34px;
+    }
+}
+
+/* ============================================================
+   HIDDEN ELEMENTS
+   ============================================================ */
+
+/* Edit mode: show hidden elements at reduced opacity */
+body.edit-mode-active [data-hidden="true"] {
+    opacity: 0.35;
+}
+
+body.edit-mode-active [data-hidden="true"]:hover {
+    opacity: 0.55;
+}
+
+/* Editable field wrapper (for text/link hide buttons) */
+.editable-field-wrapper {
+    position: relative;
+    display: inline;
+}
+
+.editable-field-wrapper:has(> .btn) {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* Field hide button — small eye icon */
+.field-hide-btn {
+    display: none;
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    z-index: 10;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(35, 40, 45, 0.9);
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s, opacity 0.15s;
+}
+
+.field-hide-btn svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+}
+
+body.edit-mode-active .editable-field-wrapper:hover .field-hide-btn,
+body.edit-mode-active .editable-image-wrapper:hover .field-hide-btn {
+    display: flex;
+}
+
+.field-hide-btn:hover {
+    background: rgba(255, 200, 0, 0.3);
+    color: #ffc800;
+}
+
+/* Always show the hide button when the element is hidden (so user can unhide) */
+body.edit-mode-active [data-hidden="true"] ~ .field-hide-btn,
+body.edit-mode-active .editable-field-wrapper:has([data-hidden="true"]) .field-hide-btn,
+body.edit-mode-active .editable-image-wrapper:has([data-hidden="true"]) .field-hide-btn {
+    display: flex;
+    color: #ffc800;
+}
+
+/* Comparison table: label cell gets relative positioning for eye button */
+body.edit-mode-active .comparison-label-with-eye {
+    position: relative;
+    padding-left: 28px;
+}
+
+/* Comparison table row hide button — positioned at left edge of label cell */
+.comparison-row-hide-btn {
+    display: none;
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 3px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s, background 0.15s;
+    z-index: 2;
+}
+
+.comparison-row-hide-btn svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+}
+
+body.edit-mode-active .comparison-row-hide-btn {
+    display: inline-flex;
+}
+
+.comparison-row-hide-btn:hover {
+    color: #ffc800;
+    background: rgba(255, 200, 0, 0.15);
+}
+
+/* Hidden row: show button in yellow */
+body.edit-mode-active tr[data-hidden="true"] .comparison-row-hide-btn {
+    color: #ffc800;
+}
+
+/* Comparison cell: icon visible outside edit mode, hidden in edit mode */
+.cell-type-icon {
+    font-size: 1.1em;
+}
+
+body.edit-mode-active .cell-type-icon {
+    display: none;
+}
+
+/* In non-edit mode: hide editable span for yes/no cells (icon shown instead) */
+td[data-cell-type="yes"] > .editable-field,
+td[data-cell-type="no"] > .editable-field {
+    display: none;
+}
+
+/* In edit mode: show editable span only for text-type cells, below the buttons */
+body.edit-mode-active td[data-cell-type="text"] > .editable-field {
+    display: block;
+}
+
+body.edit-mode-active .cell-text-hidden {
+    display: none !important;
+}
+
+/* Placeholder for empty text fields in comparison cells */
+body.edit-mode-active td[data-cell-type] .editable-field[data-empty="true"]:empty::after,
+body.edit-mode-active td[data-cell-type] .editable-field[data-empty="true"]:not(.cell-text-hidden)::after {
+    content: 'enter text…';
+    color: rgba(255, 255, 255, 0.3);
+    font-style: italic;
+    pointer-events: none;
+}
+
+[data-theme="light"] body.edit-mode-active td[data-cell-type] .editable-field[data-empty="true"]::after {
+    color: rgba(0, 0, 0, 0.3);
+}
+
+/* Comparison cell toggle buttons (yes / no / text) */
+.cell-toggle-group {
+    display: none;
+    gap: 2px;
+}
+
+body.edit-mode-active .cell-toggle-group {
+    display: inline-flex;
+}
+
+.cell-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 20px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #a1a1aa;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    line-height: 1;
+}
+
+.cell-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #e4e4e7;
+}
+
+.cell-toggle-btn--active[data-mode="yes"] {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: rgba(34, 197, 94, 0.5);
+    color: #22c55e;
+}
+
+.cell-toggle-btn--active[data-mode="no"] {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #ef4444;
+}
+
+.cell-toggle-btn--active[data-mode="text"] {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
+    color: #3b82f6;
+}
+
+/* Light theme overrides for toggle buttons */
+[data-theme="light"] .cell-toggle-btn {
+    border-color: rgba(0, 0, 0, 0.15);
+    background: rgba(0, 0, 0, 0.04);
+    color: #71717a;
+}
+
+[data-theme="light"] .cell-toggle-btn:hover {
+    background: rgba(0, 0, 0, 0.08);
+    color: #3f3f46;
+}
+
+/* ============================================================
+   DARK MODE — Admin Theme for Editor Modals
+   ============================================================ */
+
+[data-site-theme="dark"] .editor-modal {
+    color: #e5e5e5;
+}
+
+[data-site-theme="dark"] .editor-modal-content {
+    background: #1a1a1a;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+
+[data-site-theme="dark"] .editor-modal-header {
+    border-bottom-color: #2a2a2a;
+}
+
+[data-site-theme="dark"] .editor-modal-header h3 {
+    color: #e5e5e5;
+}
+
+[data-site-theme="dark"] .editor-close-btn {
+    color: #a3a3a3;
+}
+
+[data-site-theme="dark"] .editor-close-btn:hover {
+    background: #2a2a2a;
+    color: #e5e5e5;
+}
+
+[data-site-theme="dark"] .editor-modal-footer {
+    border-top-color: #2a2a2a;
+    background: #141414;
+}
+
+/* Form fields */
+[data-site-theme="dark"] .editor-modal input[type="text"],
+[data-site-theme="dark"] .editor-modal input[type="url"],
+[data-site-theme="dark"] .editor-modal input[type="date"],
+[data-site-theme="dark"] .editor-modal input[type="time"],
+[data-site-theme="dark"] .editor-modal textarea,
+[data-site-theme="dark"] .editor-modal select {
+    background: #0f0f0f;
+    color: #e5e5e5;
+    border-color: #2a2a2a;
+}
+
+[data-site-theme="dark"] .editor-modal input::placeholder,
+[data-site-theme="dark"] .editor-modal textarea::placeholder {
+    color: #666;
+}
+
+[data-site-theme="dark"] .editor-modal input:focus,
+[data-site-theme="dark"] .editor-modal textarea:focus,
+[data-site-theme="dark"] .editor-modal select:focus {
+    border-color: var(--editor-primary);
+    outline: none;
+}
+
+[data-site-theme="dark"] .editor-modal label {
+    color: #a3a3a3;
+}
+
+/* Secondary buttons in modals */
+[data-site-theme="dark"] .editor-btn-secondary {
+    background: #2a2a2a;
+    color: #e5e5e5;
+    border-color: #3a3a3a;
+}
+
+[data-site-theme="dark"] .editor-btn-secondary:hover {
+    background: #333;
+    border-color: #444;
+}
+
+/* Danger buttons */
+[data-site-theme="dark"] .editor-btn-danger {
+    background: #7f1d1d;
+    color: #fca5a5;
+}
+
+[data-site-theme="dark"] .editor-btn-danger:hover {
+    background: #991b1b;
+}
+
+/* Image Manager */
+[data-site-theme="dark"] .image-manager-container {
+    background: #0f0f0f;
+}
+
+[data-site-theme="dark"] .image-manager-item {
+    background: #1a1a1a;
+    border-color: #2a2a2a;
+}
+
+[data-site-theme="dark"] .image-manager-item:hover {
+    border-color: var(--editor-primary);
+}
+
+[data-site-theme="dark"] .image-manager-filename {
+    color: #e5e5e5;
+}
+
+[data-site-theme="dark"] .image-manager-meta {
+    color: #666;
+}
+
+[data-site-theme="dark"] .image-manager-toolbar {
+    border-bottom-color: #2a2a2a;
+}
+
+[data-site-theme="dark"] .image-search-input {
+    background: #0f0f0f;
+    color: #e5e5e5;
+    border-color: #2a2a2a;
+}
+
+[data-site-theme="dark"] .image-manager-list-item {
+    border-bottom-color: #2a2a2a;
+}
+
+[data-site-theme="dark"] .image-manager-list-item:hover {
+    background: #222;
+}
+
+/* Event editor tabs */
+[data-site-theme="dark"] .event-lang-section {
+    border-color: #2a2a2a;
+}
+
+[data-site-theme="dark"] .event-lang-tabs {
+    background: #0f0f0f;
+    border-bottom-color: #2a2a2a;
+}
+
+[data-site-theme="dark"] .event-lang-tab {
+    color: #a3a3a3;
+}
+
+[data-site-theme="dark"] .event-lang-tab:hover {
+    color: #e5e5e5;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+[data-site-theme="dark"] .event-lang-tab.active {
+    background: #1a1a1a;
+    color: #60c8cd;
+    border-bottom-color: #60c8cd;
+}
+
+[data-site-theme="dark"] .event-lang-copy-btn {
+    color: #666;
+    border-color: #3a3a3a;
+}
+
+[data-site-theme="dark"] .event-lang-copy-btn:hover {
+    color: #60c8cd;
+    border-color: #60c8cd;
+    background: rgba(96, 200, 205, 0.08);
+}
+
+[data-site-theme="dark"] .event-lang-panel {
+    background: #1a1a1a;
+}
+
+/* Preview areas */
+[data-site-theme="dark"] .preview-container {
+    background: #0f0f0f;
+    border-color: #2a2a2a;
+}
+
+[data-site-theme="dark"] .preview-placeholder {
+    color: #666;
+}
+
+/* Editor field labels and sections */
+[data-site-theme="dark"] .editor-field-label {
+    color: #a3a3a3;
+}
+
+[data-site-theme="dark"] .editor-field-group {
+    border-color: #2a2a2a;
+}
+
+/* Image preview in event editor */
+[data-site-theme="dark"] .editor-image-preview {
+    background: #0f0f0f;
+    border-color: #2a2a2a;
+}
+
+/* Confirm/prompt dialogs */
+[data-site-theme="dark"] .confirm-dialog-message {
+    color: #e5e5e5;
+}
+
+[data-site-theme="dark"] .confirm-dialog-hint {
+    color: #666;
+}
+
+[data-site-theme="dark"] .confirm-dialog-footer {
+    background: #141414;
+    border-top-color: #2a2a2a;
+}
+
+[data-site-theme="dark"] .prompt-dialog-label {
+    color: #a3a3a3;
+}
+
+[data-site-theme="dark"] .prompt-dialog-input {
+    background: #0f0f0f;
+    color: #e5e5e5;
+    border-color: #2a2a2a;
+}
+
+[data-site-theme="dark"] .image-selection-path.has-selection {
+    background: #0f0f0f;
+    color: #e5e5e5;
+}
+
+/* News Post Inline Editing */
+body.edit-mode-active .news-editable {
+    outline: 2px dashed rgba(14, 165, 233, 0.4);
+    outline-offset: 4px;
+    border-radius: 4px;
+    transition: outline-color 0.2s;
+    min-height: 1em;
+}
+
+body.edit-mode-active .news-editable:hover,
+body.edit-mode-active .news-editable:focus {
+    outline-color: rgba(14, 165, 233, 0.8);
+}
+
+body.edit-mode-active .news-editable:focus {
+    outline-style: solid;
+}

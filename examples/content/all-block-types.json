@@ -1,0 +1,72 @@
+{
+  "page": "en_example",
+  "lang": "en",
+  "title": "All Block Types",
+  "lastModified": null,
+  "sections": [
+    {
+      "id": "section_heading",
+      "type": "heading",
+      "text": "Welcome to Nibbly",
+      "level": "h1"
+    },
+    {
+      "id": "section_text",
+      "type": "text",
+      "title": "About",
+      "content": "<p>This page demonstrates every available block type in Nibbly CMS. Each section below uses a different <code>type</code> value in the JSON content file.</p>"
+    },
+    {
+      "id": "section_quote",
+      "type": "quote",
+      "quote": "The best CMS is the one you don't have to think about.",
+      "author": "A wise developer"
+    },
+    {
+      "id": "section_image",
+      "type": "image",
+      "src": "https://placehold.co/800x400",
+      "alt": "Placeholder image",
+      "caption": "An optional caption below the image."
+    },
+    {
+      "id": "section_list",
+      "type": "list",
+      "title": "Key Features",
+      "items": {
+        "0": { "text": "No database required" },
+        "1": { "text": "Inline editing" },
+        "2": { "text": "Automatic backups" },
+        "3": { "text": "Multi-language support" }
+      }
+    },
+    {
+      "id": "section_card",
+      "type": "card",
+      "image": "https://placehold.co/400x300",
+      "title": "Card Title",
+      "description": "A card with an image, title, and description. Useful for team members, services, or featured content."
+    },
+    {
+      "id": "section_youtube",
+      "type": "youtube",
+      "videoId": "dQw4w9WgXcQ",
+      "title": "YouTube Embed"
+    },
+    {
+      "id": "section_divider",
+      "type": "divider"
+    },
+    {
+      "id": "section_spacer",
+      "type": "spacer",
+      "size": "lg"
+    },
+    {
+      "id": "section_audio",
+      "type": "audio",
+      "src": "assets/audio/example.mp3",
+      "title": "Audio Player"
+    }
+  ]
+}

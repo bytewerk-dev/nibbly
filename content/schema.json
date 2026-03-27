@@ -1,0 +1,682 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nibbly.dev/content/schema.json",
+  "title": "Nibbly CMS Content Schema",
+  "description": "Schema for Nibbly CMS content files (pages, news posts, settings).",
+
+  "$defs": {
+    "sectionBase": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique section identifier within the page (e.g. 's1', 'section_heading')."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["text", "heading", "quote", "list", "image", "card", "youtube", "soundcloud", "audio", "divider", "spacer"]
+        },
+        "hidden": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, section is hidden from visitors but visible to admins."
+        }
+      }
+    },
+
+    "sectionText": {
+      "allOf": [
+        { "$ref": "#/$defs/sectionBase" },
+        {
+          "properties": {
+            "type": { "const": "text" },
+            "title": { "type": "string", "default": "" },
+            "titleTag": {
+              "type": "string",
+              "enum": ["h1", "h2", "h3", "h4", "h5", "h6"],
+              "default": "h2"
+            },
+            "content": {
+              "type": "string",
+              "description": "HTML content.",
+              "default": "<p></p>"
+            },
+            "style": {
+              "type": "string",
+              "enum": ["", "highlight"],
+              "default": ""
+            }
+          }
+        }
+      ]
+    },
+
+    "sectionHeading": {
+      "allOf": [
+        { "$ref": "#/$defs/sectionBase" },
+        {
+          "properties": {
+            "type": { "const": "heading" },
+            "text": { "type": "string", "description": "Heading text." },
+            "level": {
+              "type": "string",
+              "enum": ["h1", "h2", "h3", "h4", "h5", "h6"],
+              "default": "h2"
+            },
+            "subtitle": { "type": "string", "default": "" }
+          },
+          "required": ["text"]
+        }
+      ]
+    },
+
+    "sectionQuote": {
+      "allOf": [
+        { "$ref": "#/$defs/sectionBase" },
+        {
+          "properties": {
+            "type": { "const": "quote" },
+            "text": { "type": "string", "description": "Quote text. Legacy key 'quote' also supported." },
+            "quote": { "type": "string", "description": "Legacy alias for 'text'." },
+            "attribution": { "type": "string", "default": "", "description": "Attribution. Legacy key 'author' also supported." },
+            "author": { "type": "string", "description": "Legacy alias for 'attribution'." },
+            "style": {
+              "type": "string",
+              "enum": ["default", "large"],
+              "default": "default"
+            }
+          }
+        }
+      ]
+    },
+
+    "sectionList": {
+      "allOf": [
+        { "$ref": "#/$defs/sectionBase" },
+        {
+          "properties": {
+            "type": { "const": "list" },
+            "title": { "type": "string", "default": "" },
+            "style": {
+              "type": "string",
+              "enum": ["bullet", "numbered"],
+              "default": "bullet"
+            },
+            "content": {
+              "type": "string",
+              "description": "HTML list content (<ul>/<ol> with <li> elements).",
+              "default": "<ul><li></li></ul>"
+            },
+            "items": {
+              "type": "object",
+              "description": "Alternative: numbered-object format for inline editor compatibility.",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "text": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "sectionImage": {
+      "allOf": [
+        { "$ref": "#/$defs/sectionBase" },
+        {
+          "properties": {
+            "type": { "const": "image" },
+            "src": { "type": "string", "description": "Image URL or path." },
+            "alt": { "type": "string", "default": "" },
+            "caption": { "type": "string", "default": "" },
+            "width": {
+              "type": "string",
+              "enum": ["full", "medium", "small"],
+              "default": "full"
+            }
+          },
+          "required": ["src"]
+        }
+      ]
+    },
+
+    "sectionCard": {
+      "allOf": [
+        { "$ref": "#/$defs/sectionBase" },
+        {
+          "properties": {
+            "type": { "const": "card" },
+            "title": { "type": "string", "default": "" },
+            "content": { "type": "string", "default": "", "description": "Card description text." },
+            "description": { "type": "string", "description": "Alias for 'content'." },
+            "image": { "type": "string", "default": "" }
+          }
+        }
+      ]
+    },
+
+    "sectionYoutube": {
+      "allOf": [
+        { "$ref": "#/$defs/sectionBase" },
+        {
+          "properties": {
+            "type": { "const": "youtube" },
+            "title": { "type": "string", "default": "" },
+            "videoId": { "type": "string", "description": "YouTube video ID (e.g. 'dQw4w9WgXcQ')." }
+          },
+          "required": ["videoId"]
+        }
+      ]
+    },
+
+    "sectionSoundcloud": {
+      "allOf": [
+        { "$ref": "#/$defs/sectionBase" },
+        {
+          "properties": {
+            "type": { "const": "soundcloud" },
+            "title": { "type": "string", "default": "" },
+            "trackId": { "type": "string", "description": "SoundCloud track ID." }
+          },
+          "required": ["trackId"]
+        }
+      ]
+    },
+
+    "sectionAudio": {
+      "allOf": [
+        { "$ref": "#/$defs/sectionBase" },
+        {
+          "properties": {
+            "type": { "const": "audio" },
+            "title": { "type": "string", "default": "" },
+            "src": { "type": "string", "description": "Path to audio file." }
+          },
+          "required": ["src"]
+        }
+      ]
+    },
+
+    "sectionDivider": {
+      "allOf": [
+        { "$ref": "#/$defs/sectionBase" },
+        {
+          "properties": {
+            "type": { "const": "divider" }
+          }
+        }
+      ]
+    },
+
+    "sectionSpacer": {
+      "allOf": [
+        { "$ref": "#/$defs/sectionBase" },
+        {
+          "properties": {
+            "type": { "const": "spacer" },
+            "height": {
+              "type": "string",
+              "enum": ["sm", "md", "lg", "xl"],
+              "default": "md"
+            },
+            "size": {
+              "type": "string",
+              "enum": ["sm", "md", "lg", "xl"],
+              "description": "Alias for 'height'."
+            }
+          }
+        }
+      ]
+    },
+
+    "section": {
+      "oneOf": [
+        { "$ref": "#/$defs/sectionText" },
+        { "$ref": "#/$defs/sectionHeading" },
+        { "$ref": "#/$defs/sectionQuote" },
+        { "$ref": "#/$defs/sectionList" },
+        { "$ref": "#/$defs/sectionImage" },
+        { "$ref": "#/$defs/sectionCard" },
+        { "$ref": "#/$defs/sectionYoutube" },
+        { "$ref": "#/$defs/sectionSoundcloud" },
+        { "$ref": "#/$defs/sectionAudio" },
+        { "$ref": "#/$defs/sectionDivider" },
+        { "$ref": "#/$defs/sectionSpacer" }
+      ]
+    },
+
+    "editableImageValue": {
+      "type": "object",
+      "properties": {
+        "src": { "type": "string" },
+        "alt": { "type": "string", "default": "" }
+      },
+      "required": ["src"]
+    },
+
+    "editableLinkValue": {
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "href": { "type": "string" }
+      },
+      "required": ["text", "href"]
+    },
+
+    "numberedObjectList": {
+      "type": "object",
+      "description": "Items stored as numbered keys for dot-notation compatibility: { \"0\": {...}, \"1\": {...} }.",
+      "patternProperties": {
+        "^[0-9]+$": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+
+    "featureItem": {
+      "type": "object",
+      "properties": {
+        "icon": { "type": "string", "description": "Lucide icon name (e.g. 'zap', 'shield')." },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "desc": { "type": "string", "description": "Alias for 'description'." },
+        "hidden": { "type": "boolean", "default": false }
+      }
+    },
+
+    "pricingPlan": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "price": { "type": "string" },
+        "period": { "type": "string" },
+        "desc": { "type": "string" },
+        "features": { "type": "string", "description": "Newline-separated feature list." },
+        "cta": { "$ref": "#/$defs/editableLinkValue" },
+        "highlight": { "type": "boolean", "default": false },
+        "badge": { "type": "string" },
+        "hidden": { "type": "boolean", "default": false }
+      }
+    },
+
+    "faqEntry": {
+      "type": "object",
+      "properties": {
+        "question": { "type": "string" },
+        "answer": { "type": "string" },
+        "hidden": { "type": "boolean", "default": false }
+      },
+      "required": ["question", "answer"]
+    },
+
+    "teamMember": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "bio": { "type": "string" },
+        "image": { "type": "string" },
+        "hidden": { "type": "boolean", "default": false }
+      }
+    },
+
+    "galleryImage": {
+      "type": "object",
+      "properties": {
+        "src": { "type": "string" },
+        "alt": { "type": "string" },
+        "caption": { "type": "string" },
+        "hidden": { "type": "boolean", "default": false }
+      },
+      "required": ["src"]
+    },
+
+    "timelineEntry": {
+      "type": "object",
+      "properties": {
+        "date": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "hidden": { "type": "boolean", "default": false }
+      }
+    },
+
+    "statsItem": {
+      "type": "object",
+      "properties": {
+        "value": { "type": "string" },
+        "label": { "type": "string" },
+        "hidden": { "type": "boolean", "default": false }
+      }
+    },
+
+    "testimonialItem": {
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "author": { "type": "string" },
+        "role": { "type": "string" },
+        "image": { "type": "string" },
+        "hidden": { "type": "boolean", "default": false }
+      }
+    }
+  },
+
+  "oneOf": [
+    {
+      "title": "Standard Page",
+      "type": "object",
+      "required": ["page", "lang", "title", "sections"],
+      "properties": {
+        "page": {
+          "type": "string",
+          "pattern": "^[a-z]{2}_[a-z0-9-]+$",
+          "description": "Page identifier: {lang}_{slug}"
+        },
+        "lang": {
+          "type": "string",
+          "pattern": "^[a-z]{2}$",
+          "description": "ISO 639-1 language code."
+        },
+        "title": { "type": "string" },
+        "description": { "type": "string", "description": "SEO meta description." },
+        "lastModified": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "sections": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/section" }
+        }
+      }
+    },
+    {
+      "title": "Custom Layout Page",
+      "type": "object",
+      "required": ["page", "lang", "title"],
+      "properties": {
+        "page": {
+          "type": "string",
+          "pattern": "^[a-z]{2}_[a-z0-9-]+$"
+        },
+        "lang": {
+          "type": "string",
+          "pattern": "^[a-z]{2}$"
+        },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "lastModified": { "type": ["string", "null"] },
+        "hero": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "subtitle": { "type": "string" },
+            "cta": { "$ref": "#/$defs/editableLinkValue" },
+            "image": {
+              "oneOf": [
+                { "$ref": "#/$defs/editableImageValue" },
+                { "type": "string" }
+              ]
+            },
+            "image_alt": { "type": "string" }
+          }
+        },
+        "features": {
+          "type": "object",
+          "properties": {
+            "heading": { "type": "string" },
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "patternProperties": { "^[0-9]+$": { "$ref": "#/$defs/featureItem" } },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/featureItem" }
+                }
+              ]
+            }
+          }
+        },
+        "faq": {
+          "type": "object",
+          "properties": {
+            "heading": { "type": "string" },
+            "entries": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "patternProperties": { "^[0-9]+$": { "$ref": "#/$defs/faqEntry" } },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/faqEntry" }
+                }
+              ]
+            }
+          }
+        },
+        "pricing": {
+          "type": "object",
+          "properties": {
+            "plans": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "patternProperties": { "^[0-9]+$": { "$ref": "#/$defs/pricingPlan" } },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/pricingPlan" }
+                }
+              ]
+            }
+          }
+        },
+        "team": {
+          "type": "object",
+          "properties": {
+            "heading": { "type": "string" },
+            "members": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "patternProperties": { "^[0-9]+$": { "$ref": "#/$defs/teamMember" } },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/teamMember" }
+                }
+              ]
+            }
+          }
+        },
+        "gallery": {
+          "type": "object",
+          "properties": {
+            "heading": { "type": "string" },
+            "images": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "patternProperties": { "^[0-9]+$": { "$ref": "#/$defs/galleryImage" } },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/galleryImage" }
+                }
+              ]
+            }
+          }
+        },
+        "timeline": {
+          "type": "object",
+          "properties": {
+            "heading": { "type": "string" },
+            "entries": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "patternProperties": { "^[0-9]+$": { "$ref": "#/$defs/timelineEntry" } },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/timelineEntry" }
+                }
+              ]
+            }
+          }
+        },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "heading": { "type": "string" },
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "patternProperties": { "^[0-9]+$": { "$ref": "#/$defs/statsItem" } },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/statsItem" }
+                }
+              ]
+            }
+          }
+        },
+        "testimonials": {
+          "type": "object",
+          "properties": {
+            "heading": { "type": "string" },
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "patternProperties": { "^[0-9]+$": { "$ref": "#/$defs/testimonialItem" } },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/testimonialItem" }
+                }
+              ]
+            }
+          }
+        },
+        "comparison": {
+          "type": "object",
+          "properties": {
+            "heading": { "type": "string" },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "feature": { "type": "string" },
+                  "values": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    {
+      "title": "News Post",
+      "type": "object",
+      "required": ["slug", "lang", "title", "date", "sections"],
+      "properties": {
+        "slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+        "lang": { "type": "string", "pattern": "^[a-z]{2}$" },
+        "title": { "type": "string" },
+        "excerpt": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "author": { "type": "string" },
+        "image": { "type": "string" },
+        "hidden": { "type": "boolean", "default": false },
+        "sections": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/section" }
+        }
+      }
+    },
+    {
+      "title": "Settings",
+      "type": "object",
+      "properties": {
+        "favicon": { "type": "string", "description": "Path to favicon file." },
+        "branding": {
+          "type": "object",
+          "properties": {
+            "logo": { "type": "string", "description": "Path to logo image. Empty = text only." },
+            "name": { "type": "string", "description": "Site name for header and admin." },
+            "showBranding": { "type": "boolean", "default": true }
+          }
+        },
+        "theme": {
+          "type": "object",
+          "properties": {
+            "adminTheme": {
+              "type": "string",
+              "enum": ["light", "dark", "system"],
+              "default": "light"
+            },
+            "primaryColor": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+            "accentColor": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" }
+          }
+        }
+      }
+    },
+    {
+      "title": "Footer",
+      "type": "object",
+      "description": "Multilingual footer content (content/pages/footer.json).",
+      "properties": {
+        "tagline": { "type": "object", "additionalProperties": { "type": "string" } },
+        "services": { "type": "object", "additionalProperties": { "type": "string" } },
+        "claim": { "type": "object", "additionalProperties": { "type": "string" } },
+        "contact": {
+          "type": "object",
+          "properties": {
+            "phone": { "type": "string" },
+            "email": { "type": "string" }
+          }
+        },
+        "contactHeading": { "type": "object", "additionalProperties": { "type": "string" } },
+        "legalHeading": { "type": "object", "additionalProperties": { "type": "string" } },
+        "legalLinks": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "text": { "type": "object", "additionalProperties": { "type": "string" } },
+              "href": { "type": "object", "additionalProperties": { "type": "string" } }
+            }
+          }
+        },
+        "copyright": { "type": "string" },
+        "credit": {
+          "type": "object",
+          "properties": {
+            "text": { "type": "string" },
+            "link": { "type": "string" },
+            "linkText": { "type": "string" }
+          }
+        }
+      }
+    }
+  ]
+}

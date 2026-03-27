@@ -1,0 +1,72 @@
+{
+  "page": "en_custom",
+  "lang": "en",
+  "title": "Custom Layout Example",
+  "lastModified": null,
+  "hero": {
+    "title": "Build something great",
+    "subtitle": "A modern website built with Nibbly CMS.",
+    "cta": { "text": "Get Started", "href": "#features" },
+    "image": "https://placehold.co/800x400",
+    "image_alt": "Hero image"
+  },
+  "features": {
+    "heading": "Features",
+    "items": [
+      {
+        "icon": "zap",
+        "title": "Fast",
+        "description": "No database means instant page loads."
+      },
+      {
+        "icon": "shield",
+        "title": "Secure",
+        "description": "No SQL injection possible. Minimal attack surface."
+      },
+      {
+        "icon": "edit",
+        "title": "Easy Editing",
+        "description": "Edit content directly on the page when logged in."
+      }
+    ]
+  },
+  "faq": {
+    "heading": "Frequently Asked Questions",
+    "entries": [
+      {
+        "question": "How do I install Nibbly?",
+        "answer": "Upload the files to your server and visit /admin/setup.php in your browser."
+      },
+      {
+        "question": "Do I need a database?",
+        "answer": "No. Nibbly stores all content as JSON files. No database setup required."
+      },
+      {
+        "question": "Can I use my own design?",
+        "answer": "Yes. Edit the CSS custom properties in style.css to match your brand colors and fonts."
+      }
+    ]
+  },
+  "pricing": {
+    "plans": [
+      {
+        "name": "Free",
+        "price": "$0",
+        "period": "forever",
+        "desc": "Everything you need to get started.",
+        "features": "Unlimited pages\nInline editor\nAutomatic backups\nMulti-language support",
+        "cta": { "text": "Download", "href": "#" }
+      },
+      {
+        "name": "Pro",
+        "price": "$49",
+        "period": "/month",
+        "desc": "For teams and businesses.",
+        "highlight": true,
+        "badge": "Popular",
+        "features": "Everything in Free\nPriority support\nCustom integrations\nAdvanced analytics",
+        "cta": { "text": "Get Started", "href": "#" }
+      }
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+# Excluded from release archives (git archive / GitHub ZIP download)
+website/                export-ignore
+screenshots/            export-ignore
+reference/              export-ignore
+nibbly-backup/          export-ignore
+.claude/                export-ignore
+node_modules/           export-ignore
+package.json            export-ignore
+package-lock.json       export-ignore
+screenshot.mjs          export-ignore
+screenshot-section.mjs  export-ignore
