@@ -2453,6 +2453,7 @@ a:hover {
     padding: var(--nb-space-2) var(--nb-space-3);
     text-align: left;
     border-bottom: 1px solid var(--nb-border);
+    font-size: var(--nb-text-sm);
 }
 
 .users-table th {
@@ -2477,23 +2478,48 @@ a:hover {
 
 .role-badge {
     display: inline-block;
-    padding: 2px 8px;
-    border-radius: var(--nb-radius-sm);
     font-size: var(--nb-text-xs);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+    font-weight: 500;
+    letter-spacing: 0.01em;
 }
 
 .role-badge--admin {
-    background: var(--nb-primary);
-    color: #fff;
+    color: var(--nb-primary);
 }
 
 .role-badge--editor {
+    color: var(--nb-text-secondary);
+}
+
+.users-table__actions .btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--nb-border);
+    border-radius: var(--nb-radius-sm);
     background: var(--nb-bg-elevated);
     color: var(--nb-text-secondary);
-    border: 1px solid var(--nb-border);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.users-table__actions .btn-icon:hover {
+    background: var(--nb-bg-sunken);
+    color: var(--nb-text);
+}
+
+.users-table__actions .btn-icon--danger:hover {
+    background: var(--nb-danger-subtle);
+    color: var(--nb-danger);
+}
+
+.users-table__actions .btn-icon svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
 }
 
 /* Forgot Password */

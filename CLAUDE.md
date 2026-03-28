@@ -162,6 +162,47 @@ The pattern is always the same:
 | `data-list-index` | list items | Numeric index (0, 1, 2...) |
 | `data-hidden` | any | Hides element from visitors when `"true"` |
 
+## Data-First Principle (CRITICAL)
+
+Nibbly follows a strict **data-first** approach. All editable text, images, links, and lists for a page **must be declared in the corresponding JSON file** (e.g. `content/pages/en_home.json`) from the start.
+
+### Why this matters
+
+Nibbly has two editors:
+1. **Visual Editor** (frontend) — inline editing directly on the rendered page
+2. **Content Editor** (backend dashboard) — structured form built from the JSON file
+
+The Content Editor generates its form fields by iterating over the JSON structure. If a field only exists as a PHP fallback (`editableText($page, 'key', 'Fallback')`) but is **not declared in the JSON**, it will render on the page but **will not appear in the Content Editor**. This breaks the expectation that both editors can manage the same content.
+
+### The rule
+
+When creating or converting a page, **always populate the JSON file with all editable content first**, then reference those keys in the PHP template. Never rely on fallback defaults as the primary content source.
+
+**Wrong — content only in PHP fallbacks:**
+```php
+<h1><?php echo editableText($_p, 'hero.title', 'Welcome'); ?></h1>
+<p><?php echo editableText($_p, 'hero.subtitle', 'We build great things.'); ?></p>
+```
+```json
+{}
+```
+
+**Correct — content declared in JSON, PHP fallbacks are just safety nets:**
+```php
+<h1><?php echo editableText($_p, 'hero.title', 'Welcome'); ?></h1>
+<p><?php echo editableText($_p, 'hero.subtitle', 'We build great things.'); ?></p>
+```
+```json
+{
+  "hero": {
+    "title": "Welcome",
+    "subtitle": "We build great things."
+  }
+}
+```
+
+This applies to all page types — standard pages using `sections[]`, custom layout pages with dot-notation keys, and editable lists. The JSON file is the single source of truth.
+
 ## Template API (content-loader.php)
 
 ### Editable Fields
@@ -360,6 +401,24 @@ See `cli/README.md` for full options (`--dry-run`, `--json-only`, `--no-css`, `-
 - `examples/templates/page-news.php` - News listing page
 - `examples/content/all-block-types.json` - Every block type in one JSON file
 - `examples/content/custom-layout.json` - JSON for a custom layout page
+
+## Setup & First Run
+
+When converting an HTML page to Nibbly or setting up a fresh installation, the setup wizard at `/admin/setup.php` creates the initial configuration. **After setup completes, report the credentials back to the user:**
+
+1. Run the setup wizard (visit `/admin/setup.php` in the browser or via the dev server)
+2. Choose a username (default: `admin`)
+3. Generate a strong, unique password using `crypto.getRandomValues()` or equivalent
+4. Complete the setup form
+5. **Always report back** the username and generated password so the user can log in:
+   ```
+   Admin login credentials:
+   URL:      http://localhost:3000/admin/
+   Username: admin
+   Password: <the generated password>
+   ```
+
+Never use weak or predictable passwords. The setup wizard enforces: 8+ characters, uppercase, lowercase, digit, and special character.
 
 ## Rules
 

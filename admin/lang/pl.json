@@ -376,6 +376,9 @@
 
     "settings.users": "Użytkownicy",
     "settings.users_desc": "Zarządzaj kontami użytkowników, którzy mają dostęp do panelu administracyjnego.",
+    "settings.email_missing_title": "Brak adresu email",
+    "settings.email_missing_text": "Twoje konto nie ma adresu email. Bez niego resetowanie hasła przez email nie będzie działać.",
+    "settings.email_missing_link": "Dodaj adres email teraz",
     "settings.add_user": "Dodaj użytkownika",
     "settings.edit_user": "Edytuj użytkownika",
     "settings.delete_user": "Usuń użytkownika",
@@ -402,6 +405,7 @@
     "login.reset_email_label": "Adres email",
     "login.reset_send": "Wyślij link resetujący",
     "login.reset_sent": "Jeśli istnieje konto z tym adresem email, link resetujący został wysłany.",
+    "login.reset_rate_limit": "Zbyt wiele żądań. Spróbuj ponownie później.",
     "login.reset_invalid_token": "Ten link resetujący jest nieprawidłowy lub wygasł.",
     "login.reset_password_mismatch": "Hasła nie są zgodne.",
     "login.reset_password_weak": "Hasło nie spełnia wymagań.",

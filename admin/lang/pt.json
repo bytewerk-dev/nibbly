@@ -376,6 +376,9 @@
 
     "settings.users": "Usuários",
     "settings.users_desc": "Gerencie as contas de usuário que podem acessar o painel de administração.",
+    "settings.email_missing_title": "Endereço de email em falta",
+    "settings.email_missing_text": "A sua conta não tem endereço de email. Sem ele, a redefinição de senha por email não funcionará.",
+    "settings.email_missing_link": "Adicionar endereço de email agora",
     "settings.add_user": "Adicionar usuário",
     "settings.edit_user": "Editar usuário",
     "settings.delete_user": "Excluir usuário",
@@ -402,6 +405,7 @@
     "login.reset_email_label": "Endereço de email",
     "login.reset_send": "Enviar link de redefinição",
     "login.reset_sent": "Se existir uma conta com esse email, um link de redefinição foi enviado.",
+    "login.reset_rate_limit": "Muitas solicitações. Tente novamente mais tarde.",
     "login.reset_invalid_token": "Este link de redefinição é inválido ou expirou.",
     "login.reset_password_mismatch": "As senhas não coincidem.",
     "login.reset_password_weak": "A senha não atende aos requisitos.",

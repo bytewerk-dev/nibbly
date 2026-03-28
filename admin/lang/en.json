@@ -376,6 +376,9 @@
 
     "settings.users": "Users",
     "settings.users_desc": "Manage user accounts and roles. Admins can manage all settings; editors can edit content only.",
+    "settings.email_missing_title": "Email address missing",
+    "settings.email_missing_text": "Your account has no email address. Without it, password reset via email won't work.",
+    "settings.email_missing_link": "Add email address now",
     "settings.add_user": "Add User",
     "settings.edit_user": "Edit User",
     "settings.delete_user": "Delete User",
@@ -405,6 +408,7 @@
     "login.reset_email_label": "Email Address",
     "login.reset_send": "Send Reset Link",
     "login.reset_sent": "If an account with that email exists, a reset link has been sent.",
+    "login.reset_rate_limit": "Too many reset requests. Please try again later.",
     "login.reset_invalid_token": "This reset link is invalid or has expired.",
     "login.reset_password_mismatch": "Passwords do not match.",
     "login.reset_password_weak": "Password does not meet requirements.",

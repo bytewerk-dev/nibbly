@@ -376,6 +376,9 @@
 
     "settings.users": "Utenti",
     "settings.users_desc": "Gestisci gli account utente che possono accedere al pannello di amministrazione.",
+    "settings.email_missing_title": "Indirizzo email mancante",
+    "settings.email_missing_text": "Il tuo account non ha un indirizzo email. Senza di esso, il ripristino della password tramite email non funzionerà.",
+    "settings.email_missing_link": "Aggiungi indirizzo email ora",
     "settings.add_user": "Aggiungi utente",
     "settings.edit_user": "Modifica utente",
     "settings.delete_user": "Elimina utente",
@@ -402,6 +405,7 @@
     "login.reset_email_label": "Indirizzo email",
     "login.reset_send": "Invia link di reimpostazione",
     "login.reset_sent": "Se esiste un account con quell'indirizzo email, è stato inviato un link di reimpostazione.",
+    "login.reset_rate_limit": "Troppe richieste. Riprova più tardi.",
     "login.reset_invalid_token": "Questo link di reimpostazione non è valido o è scaduto.",
     "login.reset_password_mismatch": "Le password non corrispondono.",
     "login.reset_password_weak": "La password non soddisfa i requisiti.",

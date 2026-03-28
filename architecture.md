@@ -99,6 +99,10 @@ Custom layout pages use arbitrary nested keys instead of `sections`:
 
 List items are stored as numbered objects (`"0": {...}, "1": {...}`) for dot-notation compatibility with the inline editor.
 
+### Data-First Principle
+
+All editable content must be declared in the JSON file before being referenced in PHP templates. The backend Content Editor generates its form fields by iterating the JSON structure — fields that exist only as PHP fallback defaults will render on the page but won't appear in the Content Editor. When creating or converting a page, always populate the JSON with all content first. The JSON file is the single source of truth.
+
 ### News Post JSON (`content/news/{slug}.json`)
 
 ```json

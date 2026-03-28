@@ -376,6 +376,9 @@
 
     "settings.users": "Usuarios",
     "settings.users_desc": "Gestiona las cuentas de usuario que pueden acceder al panel de administración.",
+    "settings.email_missing_title": "Falta la dirección de correo",
+    "settings.email_missing_text": "Tu cuenta no tiene dirección de correo electrónico. Sin ella, el restablecimiento de contraseña por correo no funcionará.",
+    "settings.email_missing_link": "Añadir dirección de correo ahora",
     "settings.add_user": "Añadir usuario",
     "settings.edit_user": "Editar usuario",
     "settings.delete_user": "Eliminar usuario",
@@ -402,6 +405,7 @@
     "login.reset_email_label": "Dirección de email",
     "login.reset_send": "Enviar enlace de restablecimiento",
     "login.reset_sent": "Si existe una cuenta con ese email, se ha enviado un enlace de restablecimiento.",
+    "login.reset_rate_limit": "Demasiadas solicitudes. Inténtalo de nuevo más tarde.",
     "login.reset_invalid_token": "Este enlace de restablecimiento no es válido o ha expirado.",
     "login.reset_password_mismatch": "Las contraseñas no coinciden.",
     "login.reset_password_weak": "La contraseña no cumple los requisitos.",

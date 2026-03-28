@@ -376,6 +376,9 @@
 
     "settings.users": "Benutzer",
     "settings.users_desc": "Benutzerkonten und Rollen verwalten. Admins können alle Einstellungen ändern; Editoren können nur Inhalte bearbeiten.",
+    "settings.email_missing_title": "E-Mail-Adresse fehlt",
+    "settings.email_missing_text": "Dein Konto hat keine E-Mail-Adresse. Ohne sie funktioniert das Zurücksetzen des Passworts per E-Mail nicht.",
+    "settings.email_missing_link": "Jetzt E-Mail-Adresse hinterlegen",
     "settings.add_user": "Benutzer hinzufügen",
     "settings.edit_user": "Benutzer bearbeiten",
     "settings.delete_user": "Benutzer löschen",
@@ -405,6 +408,7 @@
     "login.reset_email_label": "E-Mail-Adresse",
     "login.reset_send": "Link senden",
     "login.reset_sent": "Falls ein Konto mit dieser E-Mail existiert, wurde ein Link zum Zurücksetzen versendet.",
+    "login.reset_rate_limit": "Zu viele Anfragen. Bitte versuche es später erneut.",
     "login.reset_invalid_token": "Dieser Link ist ungültig oder abgelaufen.",
     "login.reset_password_mismatch": "Passwörter stimmen nicht überein.",
     "login.reset_password_weak": "Passwort erfüllt nicht die Anforderungen.",

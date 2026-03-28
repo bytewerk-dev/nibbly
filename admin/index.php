@@ -127,6 +127,54 @@ function resetAttempts() {
     saveAttempts($data);
 }
 
+/**
+ * Separate rate-limiting for password reset requests.
+ * Uses a "reset_" prefix to avoid sharing counters with login attempts.
+ * More lenient: 5 attempts per hour.
+ */
+function checkResetRateLimit() {
+    $key = 'reset_' . getIpHash();
+    $data = loadAttempts();
+    $entry = $data[$key] ?? null;
+
+    if ($entry === null) {
+        return ['allowed' => true];
+    }
+
+    $now = time();
+    $count = $entry['count'] ?? 0;
+    $firstAttempt = $entry['first'] ?? $now;
+
+    // Reset counter after 1 hour
+    if ($now - $firstAttempt > 3600) {
+        unset($data[$key]);
+        saveAttempts($data);
+        return ['allowed' => true];
+    }
+
+    // Allow 5 attempts per hour
+    if ($count >= 5) {
+        return ['allowed' => false];
+    }
+
+    return ['allowed' => true];
+}
+
+function recordResetAttempt() {
+    $key = 'reset_' . getIpHash();
+    $data = loadAttempts();
+    $now = time();
+
+    if (!isset($data[$key])) {
+        $data[$key] = ['count' => 0, 'first' => $now, 'last' => $now];
+    }
+
+    $data[$key]['count']++;
+    $data[$key]['last'] = $now;
+
+    saveAttempts($data);
+}
+
 // ============================================================
 // PASSWORD STRENGTH CHECK
 // ============================================================
@@ -277,9 +325,9 @@ $resetError = '';
 
 // Handle reset request (email form submission)
 if ($resetAction === 'reset-request' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $bruteCheck = checkBruteForce();
-    if (!$bruteCheck['allowed']) {
-        $resetError = t('login.error_too_many');
+    $resetRateCheck = checkResetRateLimit();
+    if (!$resetRateCheck['allowed']) {
+        $resetError = t('login.reset_rate_limit');
     } else {
         $resetEmail = trim($_POST['reset_email'] ?? '');
         // Always show same message to prevent user enumeration
@@ -331,8 +379,8 @@ if ($resetAction === 'reset-request' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
-        // Record attempt to rate-limit
-        recordFailedAttempt();
+        // Record attempt to rate-limit (separate counter from login)
+        recordResetAttempt();
     }
 }
 

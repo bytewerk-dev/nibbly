@@ -376,6 +376,9 @@
 
     "settings.users": "Uživatelé",
     "settings.users_desc": "Spravuj uživatelské účty s přístupem do administrace.",
+    "settings.email_missing_title": "Chybí e-mailová adresa",
+    "settings.email_missing_text": "Váš účet nemá e-mailovou adresu. Bez ní nebude fungovat resetování hesla e-mailem.",
+    "settings.email_missing_link": "Přidat e-mailovou adresu",
     "settings.add_user": "Přidat uživatele",
     "settings.edit_user": "Upravit uživatele",
     "settings.delete_user": "Smazat uživatele",
@@ -402,6 +405,7 @@
     "login.reset_email_label": "E-mailová adresa",
     "login.reset_send": "Odeslat odkaz pro reset",
     "login.reset_sent": "Pokud existuje účet s touto e-mailovou adresou, byl odeslán odkaz pro resetování.",
+    "login.reset_rate_limit": "Příliš mnoho žádostí. Zkuste to prosím později.",
     "login.reset_invalid_token": "Tento odkaz pro reset je neplatný nebo vypršel.",
     "login.reset_password_mismatch": "Hesla se neshodují.",
     "login.reset_password_weak": "Heslo nesplňuje požadavky.",

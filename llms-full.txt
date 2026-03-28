@@ -161,6 +161,14 @@ Available in `sections[]` arrays:
 
 ---
 
+## Data-First Principle
+
+All editable content **must be declared in the JSON file** before being referenced in PHP templates. Nibbly has two editors: the Visual Editor (frontend inline editing) and the Content Editor (backend dashboard forms). The Content Editor builds its UI from the JSON structure — fields that only exist as PHP fallbacks (`editableText($page, 'key', 'Fallback')`) but are missing from the JSON will render on the page but **won't appear in the Content Editor**.
+
+**Rule:** When creating or converting a page, populate the JSON file with all content first, then reference those keys in the template. The JSON file is the single source of truth — PHP fallback defaults are safety nets, not primary content.
+
+---
+
 ## Template API
 
 All functions in `includes/content-loader.php`. Each editable function reads content from JSON and outputs `data-*` attributes for the inline editor (admin only). Visitors see clean HTML.

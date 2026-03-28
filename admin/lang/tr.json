@@ -376,6 +376,9 @@
 
     "settings.users": "Kullanıcılar",
     "settings.users_desc": "Yönetim paneline erişebilen kullanıcı hesaplarını yönet.",
+    "settings.email_missing_title": "E-posta adresi eksik",
+    "settings.email_missing_text": "Hesabınızda e-posta adresi yok. E-posta ile şifre sıfırlama bu olmadan çalışmaz.",
+    "settings.email_missing_link": "Şimdi e-posta adresi ekle",
     "settings.add_user": "Kullanıcı Ekle",
     "settings.edit_user": "Kullanıcıyı Düzenle",
     "settings.delete_user": "Kullanıcıyı Sil",
@@ -402,6 +405,7 @@
     "login.reset_email_label": "E-posta Adresi",
     "login.reset_send": "Sıfırlama Bağlantısı Gönder",
     "login.reset_sent": "Bu e-posta adresine sahip bir hesap varsa, sıfırlama bağlantısı gönderildi.",
+    "login.reset_rate_limit": "Çok fazla istek. Lütfen daha sonra tekrar deneyin.",
     "login.reset_invalid_token": "Bu sıfırlama bağlantısı geçersiz veya süresi dolmuş.",
     "login.reset_password_mismatch": "Şifreler eşleşmiyor.",
     "login.reset_password_weak": "Şifre gereksinimleri karşılamıyor.",

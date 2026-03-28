@@ -235,16 +235,20 @@ function editableText($page, $fieldKey, $default = '') {
 
     $hidden = isFieldHidden($data, $fieldKey);
 
+    // Decode HTML entities first (e.g. &rarr; → →), then escape for safe output.
+    // This prevents double-encoding when content contains named entities.
+    $safeValue = htmlspecialchars(html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
     if (isAdminLoggedIn()) {
         $hiddenAttr = $hidden ? ' data-hidden="true"' : '';
         return '<span class="editable-field" data-page="' . htmlspecialchars($page) . '" data-field="' . htmlspecialchars($fieldKey) . '"' . $hiddenAttr . '>'
-            . htmlspecialchars($value)
+            . $safeValue
             . '</span>';
     }
 
     // Hidden fields are not rendered for visitors
     if ($hidden) return '';
-    return htmlspecialchars($value);
+    return $safeValue;
 }
 
 /**
@@ -308,16 +312,20 @@ function editableLink($page, $fieldKey, $defaultText = '', $defaultHref = '#', $
     $classAttr = $class ? ' class="' . htmlspecialchars($class) . '"' : '';
     $extraAttrs = $attrs ? ' ' . $attrs : '';
 
+    // Decode HTML entities first (e.g. &rarr; → →), then escape for safe output.
+    // This prevents double-encoding: &rarr; would become &amp;rarr; without decode.
+    $safeText = htmlspecialchars(html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
     if (isAdminLoggedIn()) {
         $hiddenAttr = $hidden ? ' data-hidden="true"' : '';
         return '<a href="' . htmlspecialchars($href) . '"' . $classAttr . $extraAttrs
             . ' data-editable-link data-page="' . htmlspecialchars($page) . '" data-field="' . htmlspecialchars($fieldKey) . '"' . $hiddenAttr . '>'
-            . htmlspecialchars($text) . '</a>';
+            . $safeText . '</a>';
     }
 
     if ($hidden) return '';
     return '<a href="' . htmlspecialchars($href) . '"' . $classAttr . $extraAttrs . '>'
-        . htmlspecialchars($text) . '</a>';
+        . $safeText . '</a>';
 }
 
 /**

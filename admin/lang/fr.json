@@ -376,6 +376,9 @@
 
     "settings.users": "Utilisateurs",
     "settings.users_desc": "Gérez les comptes utilisateurs ayant accès au panneau d'administration.",
+    "settings.email_missing_title": "Adresse e-mail manquante",
+    "settings.email_missing_text": "Votre compte n'a pas d'adresse e-mail. Sans elle, la réinitialisation du mot de passe par e-mail ne fonctionnera pas.",
+    "settings.email_missing_link": "Ajouter une adresse e-mail maintenant",
     "settings.add_user": "Ajouter un utilisateur",
     "settings.edit_user": "Modifier l'utilisateur",
     "settings.delete_user": "Supprimer l'utilisateur",
@@ -402,6 +405,7 @@
     "login.reset_email_label": "Adresse e-mail",
     "login.reset_send": "Envoyer le lien de réinitialisation",
     "login.reset_sent": "Si un compte avec cette adresse e-mail existe, un lien de réinitialisation a été envoyé.",
+    "login.reset_rate_limit": "Trop de demandes. Veuillez réessayer plus tard.",
     "login.reset_invalid_token": "Ce lien de réinitialisation est invalide ou a expiré.",
     "login.reset_password_mismatch": "Les mots de passe ne correspondent pas.",
     "login.reset_password_weak": "Le mot de passe ne répond pas aux exigences.",

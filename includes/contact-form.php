@@ -11,19 +11,19 @@ $_cfBasePath = $basePath ?? '';
 // Translations
 $_cfStrings = [
     'de' => [
-        'heading'     => 'Schreib uns ein paar Bytes',
+        'heading'     => 'Schreib mir ein paar Bytes',
         'name'        => 'Name',
         'email'       => 'E-Mail',
         'phone'       => 'Telefon',
         'message'     => 'Nachricht',
         'send'        => 'Nachricht senden',
         'sending'     => 'Wird gesendet…',
-        'success'     => 'Vielen Dank für Ihre Nachricht!',
-        'error'       => 'Fehler beim Senden. Bitte versuchen Sie es später erneut.',
+        'success'     => 'Vielen Dank für deine Nachricht!',
+        'error'       => 'Fehler beim Senden. Bitte versuch es später noch mal.',
         'occasion'    => 'Kontaktanfrage',
     ],
     'en' => [
-        'heading'     => 'Drop us a few bytes',
+        'heading'     => 'Drop me a few bytes',
         'name'        => 'Name',
         'email'       => 'Email',
         'phone'       => 'Phone',

@@ -176,6 +176,23 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     </aside>
 
     <div class="admin-main" id="adminMain">
+    <?php
+    // Check if current user has no email address (only relevant when email is active)
+    $currentUserId = $_SESSION['admin_user_id'] ?? '';
+    $currentUserData = $currentUserId ? findUserById($currentUserId) : null;
+    $siteSettings = file_exists(SETTINGS_PATH) ? json_decode(file_get_contents(SETTINGS_PATH), true) : [];
+    $emailMethod = $siteSettings['email']['method'] ?? 'inactive';
+    $emailMissing = $emailMethod !== 'inactive' && $currentUserData && empty($currentUserData['email']);
+    ?>
+    <?php if ($emailMissing): ?>
+    <div class="password-warning" id="emailWarning">
+        <div class="password-warning-inner">
+            <strong>&#9888; <?php echo t('settings.email_missing_title'); ?></strong>
+            <?php echo t('settings.email_missing_text'); ?>
+            <br><a href="#" onclick="switchTab('settings'); document.querySelector('[data-settings-tab=&quot;users&quot;]').click(); return false;"><?php echo t('settings.email_missing_link'); ?> &rarr;</a>
+        </div>
+    </div>
+    <?php endif; ?>
     <?php if (!empty($_SESSION['password_warning'])): ?>
     <div class="password-warning" id="passwordWarning">
         <div class="password-warning-inner">
@@ -832,6 +849,41 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeUserModal()"><?php echo t('btn.cancel'); ?></button>
                     <button type="submit" class="btn btn-primary" id="userFormSubmit"><?php echo t('btn.save'); ?></button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reset Password Modal -->
+    <div class="modal-overlay" id="resetPwModalOverlay" style="display: none;">
+        <div class="modal modal-large">
+            <h3 id="resetPwModalTitle"><?php echo t('settings.reset_password'); ?></h3>
+            <form id="resetPwForm">
+                <input type="hidden" id="resetPwUserId" value="">
+                <div class="modal-form">
+                    <label class="modal-label"><?php echo t('login.password'); ?>
+                        <div class="password-field-row">
+                            <input type="password" id="resetPwInput" class="modal-input" required minlength="8" autocomplete="new-password">
+                            <button type="button" class="btn btn-secondary btn-sm" id="resetPwGenBtn"><?php echo t('setup.generate'); ?></button>
+                        </div>
+                    </label>
+                    <div class="generated-password" id="resetPwGenerated" style="display: none;">
+                        <code id="resetPwGeneratedText"></code>
+                    </div>
+                    <div class="password-requirements" id="resetPwReqs">
+                        <small><?php echo t('settings.pw_requirements'); ?></small>
+                        <ul>
+                            <li class="requirement" data-req="length"><?php echo t('settings.pw_length'); ?></li>
+                            <li class="requirement" data-req="upper"><?php echo t('settings.pw_upper'); ?></li>
+                            <li class="requirement" data-req="lower"><?php echo t('settings.pw_lower'); ?></li>
+                            <li class="requirement" data-req="digit"><?php echo t('settings.pw_digit'); ?></li>
+                            <li class="requirement" data-req="special"><?php echo t('settings.pw_special'); ?></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeResetPwModal()"><?php echo t('btn.cancel'); ?></button>
+                    <button type="submit" class="btn btn-primary"><?php echo t('btn.save'); ?></button>
                 </div>
             </form>
         </div>
@@ -4492,15 +4544,16 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             var isCurrentUser = user.id === CURRENT_USER_ID;
             var tr = document.createElement('tr');
             if (isCurrentUser) tr.classList.add('users-table__current');
+            var roleLabel = user.role.charAt(0).toUpperCase() + user.role.slice(1);
             tr.innerHTML =
                 '<td>' + escapeHtml(user.username) + (isCurrentUser ? ' <em>(' + t('settings.user_you') + ')</em>' : '') + '</td>' +
                 '<td>' + escapeHtml(user.email || '—') + '</td>' +
-                '<td><span class="role-badge role-badge--' + user.role + '">' + user.role + '</span></td>' +
+                '<td><span class="role-badge role-badge--' + user.role + '">' + roleLabel + '</span></td>' +
                 '<td>' + (user.lastLogin ? new Date(user.lastLogin).toLocaleString() : '—') + '</td>' +
                 '<td class="users-table__actions">' +
                     '<button class="btn btn-sm btn-secondary" onclick="editUser(\'' + user.id + '\')" title="' + t('pages.edit') + '">' + t('pages.edit') + '</button> ' +
-                    '<button class="btn btn-sm btn-secondary" onclick="resetUserPassword(\'' + user.id + '\', \'' + escapeHtml(user.username) + '\')" title="' + t('settings.reset_password') + '">🔑</button> ' +
-                    (isCurrentUser ? '' : '<button class="btn btn-sm btn-danger" onclick="deleteUserConfirm(\'' + user.id + '\', \'' + escapeHtml(user.username) + '\')" title="' + t('btn.delete') + '">✕</button>') +
+                    '<button class="btn-icon" onclick="resetUserPassword(\'' + user.id + '\', \'' + escapeHtml(user.username) + '\')" title="' + t('settings.reset_password') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button> ' +
+                    (isCurrentUser ? '' : '<button class="btn-icon btn-icon--danger" onclick="deleteUserConfirm(\'' + user.id + '\', \'' + escapeHtml(user.username) + '\')" title="' + t('btn.delete') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>') +
                 '</td>';
             tbody.appendChild(tr);
         });
@@ -4623,8 +4676,59 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     // Reset password for a user
     function resetUserPassword(userId, username) {
-        var pw = prompt(t('settings.reset_password_prompt', {username: username}));
-        if (!pw) return;
+        document.getElementById('resetPwUserId').value = userId;
+        document.getElementById('resetPwInput').value = '';
+        document.getElementById('resetPwGenerated').style.display = 'none';
+        document.getElementById('resetPwModalTitle').textContent = t('settings.reset_password') + ' — ' + username;
+        // Reset requirement indicators
+        document.querySelectorAll('#resetPwReqs .requirement').forEach(function(el) { el.classList.remove('met'); });
+        document.getElementById('resetPwModalOverlay').style.display = 'flex';
+        setTimeout(function() { document.getElementById('resetPwInput').focus(); }, 100);
+    }
+
+    function closeResetPwModal() {
+        document.getElementById('resetPwModalOverlay').style.display = 'none';
+    }
+
+    // Generate password in reset modal
+    document.getElementById('resetPwGenBtn').addEventListener('click', function() {
+        var pw = generatePassword();
+        document.getElementById('resetPwInput').value = pw;
+        document.getElementById('resetPwInput').type = 'text';
+        document.getElementById('resetPwGeneratedText').textContent = pw;
+        document.getElementById('resetPwGenerated').style.display = 'flex';
+        validatePasswordRequirements(pw, '#resetPwReqs');
+        setTimeout(function() {
+            document.getElementById('resetPwInput').type = 'password';
+        }, 30000);
+    });
+
+    // Live validation for reset password
+    document.getElementById('resetPwInput').addEventListener('input', function() {
+        validatePasswordRequirements(this.value, '#resetPwReqs');
+    });
+
+    function validatePasswordRequirements(pw, containerSel) {
+        var container = document.querySelector(containerSel);
+        if (!container) return;
+        var checks = {
+            length: pw.length >= 8,
+            upper: /[A-Z]/.test(pw),
+            lower: /[a-z]/.test(pw),
+            digit: /[0-9]/.test(pw),
+            special: /[^A-Za-z0-9]/.test(pw)
+        };
+        Object.keys(checks).forEach(function(key) {
+            var el = container.querySelector('[data-req="' + key + '"]');
+            if (el) el.classList.toggle('met', checks[key]);
+        });
+    }
+
+    // Submit reset password form
+    document.getElementById('resetPwForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var userId = document.getElementById('resetPwUserId').value;
+        var pw = document.getElementById('resetPwInput').value;
 
         var formData = new FormData();
         formData.append('action', 'admin-reset-password');
@@ -4632,16 +4736,19 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         formData.append('user_id', userId);
         formData.append('password', pw);
 
-        fetch('api.php', { method: 'POST', body: formData })
-            .then(r => r.json())
-            .then(result => {
-                if (result.success) {
-                    showToast(result.message, 'success');
-                } else {
-                    showToast(result.message, 'error');
-                }
-            });
-    }
+        try {
+            var response = await fetch('api.php', { method: 'POST', body: formData });
+            var result = await response.json();
+            if (result.success) {
+                closeResetPwModal();
+                showToast(result.message, 'success');
+            } else {
+                showToast(result.message, 'error');
+            }
+        } catch (error) {
+            showToast(t('toast.error_generic', {message: error.message}), 'error');
+        }
+    });
 
     // Delete user
     function deleteUserConfirm(userId, username) {
