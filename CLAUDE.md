@@ -12,6 +12,7 @@ Nibbly turns any HTML or PHP page into an editable website — no database requi
 | Footer content | `content/pages/footer.json` |
 | Site settings | `content/settings.json` |
 | Navigation | `includes/nav-config.php` |
+| Site page hook | `includes/site-page-hook.php` (optional, survives core updates) |
 | Block types | `includes/block-types.php` |
 | Template API | `includes/content-loader.php` |
 | Block renderers | `includes/block-renderers/{type}.php` |
@@ -240,6 +241,12 @@ editableListItemAttrs($page, $listKey, $index)
 
 editableListItems($page, $listKey)
 // Returns array of items from JSON. Filters hidden items for visitors.
+
+editableTextList($page, $listKey, $defaults = ['content' => ''])
+// Renders a list of editable HTML paragraphs with add/remove/reorder controls.
+// Each item is a single editableHtml() field. Admins get inline editing with
+// a floating toolbar (Bold, Italic, Link, Clean). Visitors see clean HTML.
+// JSON stores: {"0": {"content": "..."}, "1": {"content": "..."}}
 ```
 
 **List usage pattern:**
@@ -252,6 +259,23 @@ editableListItems($page, $listKey)
         </div>
     <?php endforeach; ?>
 </div>
+```
+
+**Paragraph list usage pattern:**
+```php
+<div class="about-text">
+    <?php echo editableTextList($_p, 'about.paragraphs'); ?>
+</div>
+```
+```json
+{
+  "about": {
+    "paragraphs": {
+      "0": { "content": "First paragraph text..." },
+      "1": { "content": "Second paragraph with <strong>formatting</strong>..." }
+    }
+  }
+}
 ```
 
 ### Render Components
@@ -343,6 +367,7 @@ Custom fonts: place files in `assets/fonts/`, create `css/fonts.css` — `includ
 ```json
 {
     "favicon": "/assets/images/favicon.svg",
+    "favicon_png": "/assets/images/favicon.png",
     "branding": {
         "logo": "",
         "name": "My Site",
@@ -356,10 +381,37 @@ Custom fonts: place files in `assets/fonts/`, create `css/fonts.css` — `includ
 }
 ```
 
+- `favicon` — path to primary favicon (SVG or PNG); `type` attribute is set automatically
+- `favicon_png` — optional PNG fallback for browsers that don't support SVG favicons; also used as `apple-touch-icon`
 - `branding.logo` — path to logo image (empty = text-only)
 - `branding.name` — site name shown in header and admin
 - `theme.adminTheme` — `"light"` or `"dark"` for admin panel
 - `theme.primaryColor` / `accentColor` — used by admin dashboard color picker
+
+## Page Template Variables
+
+Templates can set these variables before `header.php` / `footer.php` to control page behavior:
+
+| Variable | Where | Purpose |
+|---|---|---|
+| `$pageExternalStyles` | header.php | Array of external CSS URLs (e.g. Google Fonts CDN) |
+| `$pageExternalScripts` | footer.php | Array of external JS URLs (e.g. map libraries) |
+| `$pageStylesheet` | header.php | Path to a page-specific CSS file |
+| `$pageClass` | header.php | Extra CSS class on `<body>` |
+
+## Site Page Hook
+
+For standard pages (served via `includes/page.php` + `renderAllSections()`), create `includes/site-page-hook.php` to add per-page logic without modifying core files. The hook runs after `$slug`, `$lang`, `$data`, and `$basePath` are set but before `header.php`:
+
+```php
+<?php
+// Example: Load a map library only on specific pages
+if (in_array($slug, ['home', 'contact'])) {
+    $pageExternalScripts = ['https://cdn.example.com/map.js'];
+}
+```
+
+This file survives core updates since it's not part of the Nibbly distribution.
 
 ## Component CSS Classes
 

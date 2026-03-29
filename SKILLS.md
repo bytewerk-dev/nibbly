@@ -58,7 +58,7 @@ Every piece of content that should be editable needs to be wrapped in an editabl
 
 2. **Replace every hardcoded text** with `editableText()` or `editableHtml()`:
    - Use `editableText()` for single-line text (headings, labels, short paragraphs)
-   - Use `editableHtml()` for multi-paragraph rich content with formatting
+   - Use `editableHtml()` for rich content with formatting (admin gets a floating toolbar with Bold, Italic, Link, Clean)
    - Choose meaningful dot-notation keys: `section.field` (e.g. `hero.title`, `about.content`, `pricing.heading`)
 
 3. **Replace every hardcoded link** with `editableLink()`:
@@ -87,7 +87,18 @@ Every piece of content that should be editable needs to be wrapped in an editabl
    </div>
    ```
 
-6. **Create the matching JSON file** `content/pages/{lang}_{slug}.json` with all the keys used in the template:
+6. **For editable paragraph blocks** (multiple paragraphs that admins can add, delete, and reorder), use `editableTextList()`:
+   ```php
+   <div class="about-text">
+       <?php echo editableTextList($_p, 'about.paragraphs'); ?>
+   </div>
+   ```
+   Each paragraph gets inline editing with the floating toolbar. JSON structure:
+   ```json
+   { "about": { "paragraphs": { "0": { "content": "First paragraph..." }, "1": { "content": "Second..." } } } }
+   ```
+
+7. **Create the matching JSON file** `content/pages/{lang}_{slug}.json` with all the keys used in the template:
    ```json
    {
      "page": "en_my-page",
@@ -110,7 +121,7 @@ Every piece of content that should be editable needs to be wrapped in an editabl
    ```
    Note: List items use numbered-object format (`"0": {...}`) not arrays.
 
-7. **Register the page** in `includes/nav-config.php` (`$PAGE_MAPPING` and optionally `$NAV_ITEMS`).
+8. **Register the page** in `includes/nav-config.php` (`$PAGE_MAPPING` and optionally `$NAV_ITEMS`).
 
 ### What NOT to make editable
 - Navigation structure (handled by `nav-config.php`)

@@ -748,6 +748,74 @@ body.edit-mode-active .editable-section:hover .video-container::after {
 }
 
 /* ============================================================
+   FLOATING TOOLBAR (inline rich text editing)
+   ============================================================ */
+
+.floating-toolbar {
+    position: fixed;
+    z-index: 10001;
+    display: none;
+    align-items: center;
+    gap: 1px;
+    padding: 4px;
+    background: rgba(35, 40, 45, 0.95);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    animation: floatingToolbarIn 0.15s ease;
+}
+
+@keyframes floatingToolbarIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.floating-toolbar button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: #ccc;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: background 0.15s, color 0.15s;
+    padding: 0;
+}
+
+.floating-toolbar button:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+.floating-toolbar button:active {
+    background: var(--editor-primary);
+    color: #fff;
+}
+
+.floating-toolbar button svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+.floating-toolbar-separator {
+    width: 1px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.15);
+    margin: 0 4px;
+}
+
+/* ============================================================
    WYSIWYG TOOLBAR & EDITOR
    ============================================================ */
 
@@ -1297,6 +1365,16 @@ body.edit-mode-active .editable-section:hover .video-container::after {
     color: #1a1a1a;
 }
 
+select.prompt-dialog-input {
+    padding-right: 32px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23666'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    cursor: pointer;
+}
+
 .prompt-dialog-input:focus {
     outline: none;
     border-color: var(--editor-primary);
@@ -1655,6 +1733,23 @@ body.edit-mode-active .editable-list-item:hover .list-item-add-btn {
     background: var(--editor-primary, #0073aa);
     color: #fff;
     transform: translateX(-50%) scale(1.15);
+}
+
+/* ============================================================
+   EDITABLE TEXT LIST (paragraph blocks)
+   ============================================================ */
+
+.editable-text-list-item {
+    position: relative;
+}
+
+.editable-text-list-item > .editable-field-html {
+    min-height: 1.5em;
+}
+
+/* For visitors: container is invisible */
+.editable-text-list:not([data-editable-list]) {
+    display: contents;
 }
 
 /* ============================================================

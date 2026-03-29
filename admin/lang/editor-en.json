@@ -158,5 +158,9 @@
     "toast.error_deleting": "Error deleting: {message}",
 
     "nav.unsaved_changes": "You have unsaved changes. Really leave this page?",
-    "nav.edit_mode_active": "You are in edit mode. Really leave this page?"
+    "nav.edit_mode_active": "You are in edit mode. Really leave this page?",
+
+    "link_target": "Link target",
+    "link_external": "External URL",
+    "link_internal": "Site pages"
 }
