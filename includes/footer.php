@@ -431,6 +431,12 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
     })();
     </script>
 
+    <?php if (!empty($pageExternalScripts)): ?>
+    <?php foreach ($pageExternalScripts as $_extScript): ?>
+    <script src="<?php echo htmlspecialchars($_extScript); ?>"></script>
+    <?php endforeach; ?>
+    <?php endif; ?>
+
     <!-- Custom Audio Player -->
     <script src="<?php echo $basePath; ?>js/audio-player.js"></script>
 
