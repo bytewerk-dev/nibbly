@@ -1519,7 +1519,6 @@ body.edit-mode-active .vibecoding-card {
 
 .editable-list-item {
     position: relative;
-    border-radius: 0;
 }
 
 body.edit-mode-active .editable-list-item {
