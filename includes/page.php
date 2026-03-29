@@ -47,6 +47,13 @@ if (!isset($basePath)) {
     $basePath = '../';
 }
 
+// Site-specific page customizations (survives core updates).
+// Use this to set $pageExternalStyles, $pageExternalScripts, $pageClass, etc.
+$_sitePageHook = $_includeBase . 'includes/site-page-hook.php';
+if (file_exists($_sitePageHook)) {
+    include $_sitePageHook;
+}
+
 // Render page
 include $_includeBase . 'includes/header.php';
 include $_includeBase . 'includes/content-loader.php';

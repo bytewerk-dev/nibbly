@@ -93,9 +93,11 @@ $navItems = $NAV_ITEMS[$currentLang] ?? $NAV_ITEMS[$defaultLang] ?? [];
 $_settingsPath = __DIR__ . '/../content/settings.json';
 $_settings = [];
 $_favicon = 'assets/images/favicon.svg';
+$_faviconPng = '';
 if (file_exists($_settingsPath)) {
     $_settings = json_decode(file_get_contents($_settingsPath), true) ?: [];
     if (!empty($_settings['favicon'])) $_favicon = ltrim($_settings['favicon'], '/');
+    if (!empty($_settings['favicon_png'])) $_faviconPng = ltrim($_settings['favicon_png'], '/');
 }
 $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme']['buttonGlow'];
 ?>
@@ -107,8 +109,14 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
     <meta name="description" content="<?php echo htmlspecialchars($pageDescription ?? ''); ?>">
     <meta name="robots" content="index, follow">
     <meta name="generator" content="Nibbly <?php echo defined('NIBBLY_VERSION') ? NIBBLY_VERSION : ''; ?>">
-    <link rel="icon" href="<?php echo $basePath . htmlspecialchars($_favicon); ?>">
+    <?php $_faviconType = pathinfo($_favicon, PATHINFO_EXTENSION) === 'svg' ? 'image/svg+xml' : 'image/png'; ?>
+    <link rel="icon" href="<?php echo $basePath . htmlspecialchars($_favicon); ?>" type="<?php echo $_faviconType; ?>">
+    <?php if ($_faviconPng): ?>
+    <link rel="alternate icon" href="<?php echo $basePath . htmlspecialchars($_faviconPng); ?>" type="image/png">
+    <link rel="apple-touch-icon" href="<?php echo $basePath . htmlspecialchars($_faviconPng); ?>">
+    <?php else: ?>
     <link rel="apple-touch-icon" href="<?php echo $basePath . htmlspecialchars($_favicon); ?>">
+    <?php endif; ?>
 
     <!-- Optional: uncomment to load custom fonts -->
     <!-- <link rel="stylesheet" href="<?php echo $basePath; ?>css/fonts.css"> -->
