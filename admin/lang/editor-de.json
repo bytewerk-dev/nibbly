@@ -158,5 +158,9 @@
     "toast.error_deleting": "Fehler beim Löschen: {message}",
 
     "nav.unsaved_changes": "Du hast ungespeicherte Änderungen. Seite wirklich verlassen?",
-    "nav.edit_mode_active": "Du bist im Bearbeitungsmodus. Seite wirklich verlassen?"
+    "nav.edit_mode_active": "Du bist im Bearbeitungsmodus. Seite wirklich verlassen?",
+
+    "link_target": "Linkziel",
+    "link_external": "Externe URL",
+    "link_internal": "Seiten"
 }

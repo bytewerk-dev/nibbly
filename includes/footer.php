@@ -467,6 +467,21 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
     require_once __DIR__ . '/../admin/lang/i18n.php';
     ?>
     window.NB_LANG = <?php echo json_encode(tEditorAll(), JSON_UNESCAPED_UNICODE); ?>;
+    <?php
+    // Build lightweight page list for link picker (slug → title for current language)
+    $_linkPages = [];
+    $_linkLang = $currentLang ?? (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en');
+    $_linkDefaultLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
+    foreach (glob(__DIR__ . '/../content/pages/' . $_linkLang . '_*.json') as $_pf) {
+        $_slug = preg_replace('/^' . $_linkLang . '_/', '', basename($_pf, '.json'));
+        $_pd = json_decode(file_get_contents($_pf), true);
+        $_title = $_pd['title'] ?? ucfirst(str_replace('-', ' ', $_slug));
+        $_href = $_slug === 'home' ? '/' : ($_linkLang === $_linkDefaultLang ? '/' . $_slug : '/' . $_linkLang . '/' . $_slug);
+        $_linkPages[] = ['slug' => $_slug, 'title' => $_title, 'href' => $_href];
+    }
+    usort($_linkPages, function($a, $b) { return strcasecmp($a['title'], $b['title']); });
+    ?>
+    window.NB_PAGES = <?php echo json_encode($_linkPages, JSON_UNESCAPED_UNICODE); ?>;
     function t(key, params) {
         let s = (window.NB_LANG && window.NB_LANG[key]) || key;
         if (params) { for (const [k, v] of Object.entries(params)) { s = s.replace('{' + k + '}', v); } }

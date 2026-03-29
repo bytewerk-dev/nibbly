@@ -126,6 +126,7 @@ List items are stored as numbered objects (`"0": {...}`) for dot-notation compat
 ```json
 {
   "favicon": "/assets/images/favicon.svg",
+  "favicon_png": "/assets/images/favicon.png",
   "branding": {
     "logo": "",
     "name": "My Site",
@@ -138,6 +139,12 @@ List items are stored as numbered objects (`"0": {...}`) for dot-notation compat
   }
 }
 ```
+
+`favicon_png` is optional — provides a PNG fallback for SVG favicons and is used as `apple-touch-icon`.
+
+### Page Template Variables
+
+Templates can set `$pageExternalStyles` (array of CSS URLs, loaded in `<head>`) and `$pageExternalScripts` (array of JS URLs, loaded in footer). For standard pages, create `includes/site-page-hook.php` to set these per page without modifying core files.
 
 ---
 
@@ -181,7 +188,9 @@ editableText($page, $fieldKey, $default = '')
 // Visitor: plain escaped text
 
 editableHtml($page, $fieldKey, $default = '')
-// Admin: <div class="editable-field editable-field-html" data-page="..." data-field="...">html</div>
+// Rich HTML with inline editing. Admin clicks to edit directly on the page;
+// a floating mini-toolbar appears (Bold, Italic, Link, Clean, HTML source).
+// Admin: <div class="editable-field editable-field-html" ...>html</div>
 // Visitor: sanitized HTML
 
 editableImage($page, $fieldKey, $defaultSrc = '', $defaultAlt = '', $class = '')
@@ -208,6 +217,11 @@ editableListItemAttrs($page, $listKey, $index)
 
 editableListItems($page, $listKey)
 // Returns array of items from JSON. Filters hidden items for visitors.
+
+editableTextList($page, $listKey, $defaults = ['content' => ''])
+// Renders a list of editable HTML paragraphs with add/remove/reorder controls.
+// Each paragraph gets inline editing with the floating toolbar.
+// JSON: {"0": {"content": "..."}, "1": {"content": "..."}}
 ```
 
 ### Render Components

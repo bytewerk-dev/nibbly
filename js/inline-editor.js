@@ -1932,50 +1932,47 @@
     }
 
     /**
-     * Bereinigt HTML-Inhalt von Formatierungen
-     * Removes: style/class attributes, DIV/SPAN tags (keeps content)
-     * Keeps: P, H1-H6, A, B, STRONG, I, EM, BR, UL, OL, LI
+     * Sanitizes an HTML string: removes style/class attributes, unwraps disallowed tags.
+     * Keeps: P, H1-H6, A, B, STRONG, I, EM, BR, UL, OL, LI, IMG
+     * @param {string} html - Raw HTML string
+     * @returns {string} Cleaned HTML string
      */
-    function cleanHtml() {
-        const wysiwyg = document.getElementById('editor-wysiwyg');
-        let html = wysiwyg.innerHTML;
-
-        // Create temporary DOM element for processing
+    function sanitizeHtmlString(html) {
         const temp = document.createElement('div');
         temp.innerHTML = html;
 
-        // Recursive function to sanitize
         function cleanNode(node) {
-            // Iterate child nodes (backwards, since we may remove nodes)
             const children = Array.from(node.childNodes);
             children.forEach(child => {
                 if (child.nodeType === Node.ELEMENT_NODE) {
                     const tagName = child.tagName.toLowerCase();
-
-                    // Erlaubte Tags
                     const allowedTags = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'b', 'strong', 'i', 'em', 'br', 'ul', 'ol', 'li', 'img'];
 
                     if (allowedTags.includes(tagName)) {
-                        // Allowed tag: remove all attributes except href on links and src/alt on images
                         const attrs = Array.from(child.attributes);
                         attrs.forEach(attr => {
-                            if (tagName === 'a' && attr.name === 'href') {
-                                // href bei Links behalten
+                            if (tagName === 'a' && (attr.name === 'href' || attr.name === 'target' || attr.name === 'rel')) {
+                                // keep href, target, rel on links
                             } else if (tagName === 'img' && (attr.name === 'src' || attr.name === 'alt')) {
-                                // Keep src and alt on images
+                                // keep src/alt on images
                             } else {
                                 child.removeAttribute(attr.name);
                             }
                         });
-
-                        // Recursively sanitize children
+                        // Auto-set target="_blank" for external links
+                        if (tagName === 'a') {
+                            const href = child.getAttribute('href') || '';
+                            if (/^https?:\/\//i.test(href)) {
+                                child.setAttribute('target', '_blank');
+                                child.setAttribute('rel', 'noopener');
+                            } else {
+                                child.removeAttribute('target');
+                                child.removeAttribute('rel');
+                            }
+                        }
                         cleanNode(child);
                     } else {
-                        // Disallowed tag (DIV, SPAN, etc.): replace with content
-                        // First sanitize children
                         cleanNode(child);
-
-                        // Then replace the tag with its children
                         while (child.firstChild) {
                             node.insertBefore(child.firstChild, child);
                         }
@@ -1986,12 +1983,243 @@
         }
 
         cleanNode(temp);
+        return temp.innerHTML;
+    }
 
-        // Write result back
-        wysiwyg.innerHTML = temp.innerHTML;
+    /**
+     * Cleans HTML in the WYSIWYG modal editor (uses sanitizeHtmlString internally)
+     */
+    function cleanHtml() {
+        const wysiwyg = document.getElementById('editor-wysiwyg');
+        wysiwyg.innerHTML = sanitizeHtmlString(wysiwyg.innerHTML);
         wysiwyg.focus();
-
         showToast(t('toast.formatting_cleaned'), 'success');
+    }
+
+    // ============================================================
+    // FLOATING TOOLBAR (inline rich text editing)
+    // ============================================================
+
+    let floatingToolbar = null;
+    let activeHtmlField = null;
+
+    function createFloatingToolbar() {
+        if (floatingToolbar) return floatingToolbar;
+
+        const toolbar = document.createElement('div');
+        toolbar.className = 'floating-toolbar';
+        toolbar.innerHTML = `
+            <button type="button" data-command="bold" title="${t('bold')} (Ctrl+B)"><b>B</b></button>
+            <button type="button" data-command="italic" title="${t('italic')} (Ctrl+I)"><i>I</i></button>
+            <button type="button" data-action="link" title="${t('insert_link')}"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg></button>
+            <button type="button" data-command="removeFormat" title="${t('clean_formatting')}">${Icons.eraser}</button>
+            <span class="floating-toolbar-separator"></span>
+            <button type="button" data-action="html-source" title="HTML">&lt;/&gt;</button>
+        `;
+
+        // Prevent blur on toolbar button clicks
+        toolbar.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+        });
+
+        // Handle button clicks
+        toolbar.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn || !activeHtmlField) return;
+
+            const command = btn.dataset.command;
+            const action = btn.dataset.action;
+
+            if (command) {
+                document.execCommand(command, false, null);
+                activeHtmlField.focus();
+            } else if (action === 'link') {
+                insertLinkInField(activeHtmlField);
+            } else if (action === 'html-source') {
+                // Finish inline editing first, then open modal
+                const field = activeHtmlField;
+                finishInlineHtmlEdit(field, field._originalHtml, false);
+                openFieldHtmlEditor(field);
+            }
+        });
+
+        document.body.appendChild(toolbar);
+        floatingToolbar = toolbar;
+        return toolbar;
+    }
+
+    function insertLinkInField(field) {
+        const selection = window.getSelection();
+        let savedRange = null;
+
+        if (selection.rangeCount > 0) {
+            savedRange = selection.getRangeAt(0).cloneRange();
+        }
+
+        const selectedText = selection.toString();
+        if (!selectedText) {
+            showToast(t('toast.select_text_first'), 'error');
+            return;
+        }
+
+        // Reuse the link editor modal with page picker
+        createLinkEditorDialog();
+        initPagePicker('link-editor-page-select', 'link-editor-href');
+
+        document.getElementById('link-editor-text').value = selectedText;
+        document.getElementById('link-editor-text').readOnly = true;
+        document.getElementById('link-editor-text').style.opacity = '0.6';
+        syncPagePicker('link-editor-page-select', 'link-editor-href', '');
+
+        const modal = document.getElementById('link-editor-modal');
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        // Override save to insert link via execCommand
+        modal._editTarget = null;
+        modal._inlineInsert = { field, savedRange };
+
+        setTimeout(() => {
+            const select = document.getElementById('link-editor-page-select');
+            if (select) select.focus();
+        }, 100);
+    }
+
+    function positionFloatingToolbar(field) {
+        const toolbar = createFloatingToolbar();
+        const rect = field.getBoundingClientRect();
+        toolbar.style.display = 'flex';
+
+        // Measure toolbar
+        const tbRect = toolbar.getBoundingClientRect();
+        const gap = 8;
+
+        // Center horizontally above field
+        let left = rect.left + (rect.width / 2) - (tbRect.width / 2);
+        let top = rect.top - tbRect.height - gap;
+
+        // If no room above, place below
+        if (top < 50) {
+            top = rect.bottom + gap;
+        }
+
+        // Keep within viewport horizontally
+        left = Math.max(8, Math.min(left, window.innerWidth - tbRect.width - 8));
+
+        toolbar.style.left = left + 'px';
+        toolbar.style.top = top + 'px';
+    }
+
+    function hideFloatingToolbar() {
+        if (floatingToolbar) {
+            floatingToolbar.style.display = 'none';
+        }
+        if (activeHtmlField && activeHtmlField._scrollHandler) {
+            window.removeEventListener('scroll', activeHtmlField._scrollHandler, true);
+            window.removeEventListener('resize', activeHtmlField._scrollHandler);
+            delete activeHtmlField._scrollHandler;
+        }
+        activeHtmlField = null;
+    }
+
+    function startInlineHtmlEdit(field) {
+        // Finish any other active inline HTML edit
+        if (activeHtmlField && activeHtmlField !== field) {
+            finishInlineHtmlEdit(activeHtmlField, activeHtmlField._originalHtml, false);
+        }
+
+        const originalHtml = field.innerHTML;
+        field._originalHtml = originalHtml;
+        field.contentEditable = 'true';
+        field.classList.add('editable-field-editing');
+
+        // Show and position toolbar
+        activeHtmlField = field;
+        positionFloatingToolbar(field);
+
+        // Reposition on scroll/resize
+        const scrollHandler = () => positionFloatingToolbar(field);
+        field._scrollHandler = scrollHandler;
+        window.addEventListener('scroll', scrollHandler, true);
+        window.addEventListener('resize', scrollHandler);
+
+        // Keyboard handler
+        const keyHandler = (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                cancelInlineHtmlEdit(field, originalHtml);
+            } else if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                finishInlineHtmlEdit(field, originalHtml, false);
+                saveAllChanges();
+            }
+            // Bold/Italic/etc. handled by browser natively in contentEditable
+        };
+
+        // Blur handler
+        const blurHandler = () => {
+            setTimeout(() => {
+                // Check if focus moved to toolbar or prompt dialog
+                const active = document.activeElement;
+                if (floatingToolbar && floatingToolbar.contains(active)) return;
+                if (document.querySelector('.prompt-dialog-overlay')) return;
+                if (field.isContentEditable) {
+                    finishInlineHtmlEdit(field, originalHtml, false);
+                }
+            }, 200);
+        };
+
+        // Paste handler — sanitize pasted HTML
+        const pasteHandler = (e) => {
+            e.preventDefault();
+            const html = e.clipboardData.getData('text/html');
+            const text = e.clipboardData.getData('text/plain');
+
+            if (html) {
+                const clean = sanitizeHtmlString(html);
+                document.execCommand('insertHTML', false, clean);
+            } else if (text) {
+                document.execCommand('insertText', false, text);
+            }
+        };
+
+        field.addEventListener('keydown', keyHandler);
+        field.addEventListener('blur', blurHandler);
+        field.addEventListener('paste', pasteHandler);
+        field._inlineHtmlHandlers = { keyHandler, blurHandler, pasteHandler };
+
+        field.focus();
+    }
+
+    function finishInlineHtmlEdit(field, originalHtml, cancelled) {
+        if (!field.isContentEditable) return;
+
+        const newHtml = sanitizeHtmlString(field.innerHTML).trim();
+        field.contentEditable = 'false';
+        field.classList.remove('editable-field-editing');
+        cleanupInlineHtmlHandlers(field);
+        hideFloatingToolbar();
+
+        if (!cancelled && newHtml !== originalHtml) {
+            saveField(field.dataset.page, field.dataset.field, newHtml, field, true);
+        } else if (cancelled) {
+            field.innerHTML = originalHtml;
+        }
+    }
+
+    function cancelInlineHtmlEdit(field, originalHtml) {
+        finishInlineHtmlEdit(field, originalHtml, true);
+    }
+
+    function cleanupInlineHtmlHandlers(field) {
+        if (field._inlineHtmlHandlers) {
+            field.removeEventListener('keydown', field._inlineHtmlHandlers.keyHandler);
+            field.removeEventListener('blur', field._inlineHtmlHandlers.blurHandler);
+            field.removeEventListener('paste', field._inlineHtmlHandlers.pasteHandler);
+            delete field._inlineHtmlHandlers;
+        }
+        delete field._originalHtml;
+        delete field._scrollHandler;
     }
 
     function insertLink() {
@@ -2612,9 +2840,9 @@
             if (field.classList.contains('editable-field-html')) {
                 field.addEventListener('click', (e) => {
                     if (!EditorConfig.editMode) return;
-                    e.preventDefault();
                     e.stopPropagation();
-                    openFieldHtmlEditor(field);
+                    if (field.isContentEditable) return;
+                    startInlineHtmlEdit(field);
                 });
                 return;
             }
@@ -2832,6 +3060,79 @@
         });
     }
 
+    /**
+     * Builds HTML for a page picker: dropdown for internal pages + URL input.
+     */
+    function buildPagePickerHtml(selectId, inputId) {
+        const pages = window.NB_PAGES || [];
+        let options = `<option value="">${t('link_external') || 'External URL'}</option>`;
+        if (pages.length) {
+            options += `<option disabled value="">──── ${t('link_internal') || 'Site pages'} ────</option>`;
+            pages.forEach(p => {
+                options += `<option value="${p.href}">${p.title}</option>`;
+            });
+        }
+        return `
+            <select class="prompt-dialog-input link-page-select" id="${selectId}">
+                ${options}
+            </select>
+            <input type="text" class="prompt-dialog-input" id="${inputId}" placeholder="https://..." style="margin-top: 8px;">
+        `;
+    }
+
+    /**
+     * Wires up page-select ↔ URL-input sync after DOM insertion.
+     */
+    function initPagePicker(selectId, inputId) {
+        const select = document.getElementById(selectId);
+        const input = document.getElementById(inputId);
+        if (!select || !input) return;
+
+        select.addEventListener('change', () => {
+            if (select.value) {
+                input.value = select.value;
+                input.readOnly = true;
+                input.style.opacity = '0.6';
+            } else {
+                input.value = '';
+                input.readOnly = false;
+                input.style.opacity = '1';
+                input.focus();
+            }
+        });
+
+        // On input change, reset select if user types a custom URL
+        input.addEventListener('input', () => {
+            if (!input.readOnly) {
+                select.value = '';
+            }
+        });
+    }
+
+    /**
+     * Syncs page picker state when modal opens with an existing URL.
+     */
+    function syncPagePicker(selectId, inputId, currentHref) {
+        const select = document.getElementById(selectId);
+        const input = document.getElementById(inputId);
+        if (!select || !input) return;
+
+        input.value = currentHref;
+
+        // Check if currentHref matches a page
+        const pages = window.NB_PAGES || [];
+        const match = pages.find(p => p.href === currentHref);
+        if (match) {
+            select.value = match.href;
+            input.readOnly = true;
+            input.style.opacity = '0.6';
+        } else {
+            select.value = '';
+            input.readOnly = false;
+            input.style.opacity = '1';
+        }
+    }
+
     function openLinkEditor(element) {
         const page = element.dataset.page;
         const fieldKey = element.dataset.field;
@@ -2839,9 +3140,10 @@
         const currentHref = element.getAttribute('href') || '';
 
         createLinkEditorDialog();
+        initPagePicker('link-editor-page-select', 'link-editor-href');
 
         document.getElementById('link-editor-text').value = currentText;
-        document.getElementById('link-editor-href').value = currentHref;
+        syncPagePicker('link-editor-page-select', 'link-editor-href', currentHref);
 
         const modal = document.getElementById('link-editor-modal');
         modal.classList.add('active');
@@ -2872,8 +3174,8 @@
                     <div class="prompt-dialog-content">
                         <label class="prompt-dialog-label">Text</label>
                         <input type="text" class="prompt-dialog-input" id="link-editor-text">
-                        <label class="prompt-dialog-label" style="margin-top: 12px;">URL</label>
-                        <input type="text" class="prompt-dialog-input" id="link-editor-href" placeholder="https://...">
+                        <label class="prompt-dialog-label" style="margin-top: 12px;">${t('link_target') || 'Link target'}</label>
+                        ${buildPagePickerHtml('link-editor-page-select', 'link-editor-href')}
                     </div>
                 </div>
                 <div class="editor-modal-footer">
@@ -2902,16 +3204,41 @@
         if (modal) {
             modal.classList.remove('active');
             document.body.style.overflow = '';
+            // Reset text input state
+            const textInput = document.getElementById('link-editor-text');
+            if (textInput) { textInput.readOnly = false; textInput.style.opacity = '1'; }
+            modal._inlineInsert = null;
         }
     }
 
     function saveLinkEditor() {
         const modal = document.getElementById('link-editor-modal');
-        const { element, page, fieldKey } = modal._editTarget;
         const newText = document.getElementById('link-editor-text').value;
         const newHref = document.getElementById('link-editor-href').value;
 
+        // Reset text input state
+        const textInput = document.getElementById('link-editor-text');
+        textInput.readOnly = false;
+        textInput.style.opacity = '1';
+
         closeLinkEditor();
+
+        // Mode: inline insert (from floating toolbar)
+        if (modal._inlineInsert) {
+            const { field, savedRange } = modal._inlineInsert;
+            modal._inlineInsert = null;
+            if (newHref && savedRange) {
+                field.focus();
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(savedRange);
+                document.execCommand('createLink', false, newHref);
+            }
+            return;
+        }
+
+        // Mode: editableLink field
+        const { element, page, fieldKey } = modal._editTarget;
 
         // Push undo state
         pushUndoState();

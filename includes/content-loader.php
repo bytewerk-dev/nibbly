@@ -449,6 +449,45 @@ function editableListItems($page, $listKey) {
 }
 
 /**
+ * Render an editable paragraph list — a list of HTML blocks that admins can
+ * add, remove, reorder, and edit inline (with the floating toolbar).
+ *
+ * Uses the existing editable list system internally. Each item is a single
+ * editableHtml() field with key "{listKey}.{index}.content".
+ *
+ * @param string $page      Content page identifier (e.g. 'en_about')
+ * @param string $listKey   Dot-notation key to the items object (e.g. 'intro.paragraphs')
+ * @param array  $defaults  Default values for new items (default: ['content' => ''])
+ * @return string HTML output
+ */
+function editableTextList($page, $listKey, $defaults = ['content' => '']) {
+    $items = editableListItems($page, $listKey);
+    $output = '';
+
+    if (isAdminLoggedIn()) {
+        // Admin: wrap in list container with editing attributes
+        $output .= '<div class="editable-text-list" ' . editableListAttrs($page, $listKey, $defaults) . '>';
+        foreach ($items as $i => $item) {
+            $content = is_array($item) ? ($item['content'] ?? '') : '';
+            $output .= '<div class="editable-text-list-item" ' . editableListItemAttrs($page, $listKey, $i) . '>';
+            $output .= editableHtml($page, "$listKey.$i.content", $content);
+            $output .= '</div>';
+        }
+        $output .= '</div>';
+    } else {
+        // Visitors: output clean HTML content only
+        foreach ($items as $item) {
+            $content = is_array($item) ? ($item['content'] ?? '') : '';
+            if ($content !== '') {
+                $output .= $content;
+            }
+        }
+    }
+
+    return $output;
+}
+
+/**
  * Map an icon identifier to SVG path markup.
  * Used for feature cards and similar elements where icons are stored as IDs in JSON.
  *
