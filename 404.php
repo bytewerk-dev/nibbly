@@ -4,16 +4,8 @@
  */
 http_response_code(404);
 
-$basePath = '';
-$currentLang = 'en';
 $currentPage = '404';
 $pageTitle = 'Page Not Found';
-
-// Try to detect language from URL
-$requestUri = $_SERVER['REQUEST_URI'] ?? '';
-if (preg_match('#^/([a-z]{2})/#', $requestUri, $m)) {
-    $currentLang = $m[1];
-}
 
 // Load config if available
 $configPath = __DIR__ . '/admin/config.php';
@@ -21,14 +13,17 @@ if (file_exists($configPath) && !defined('SITE_LANG_DEFAULT')) {
     require_once $configPath;
 }
 
-if (defined('SITE_LANG_DEFAULT')) {
-    $currentLang = $currentLang ?: SITE_LANG_DEFAULT;
+// Detect language: default to SITE_LANG_DEFAULT, override if URL has language prefix
+$currentLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
+$requestUri = $_SERVER['REQUEST_URI'] ?? '';
+if (preg_match('#^/([a-z]{2})/#', $requestUri, $m)) {
+    $currentLang = $m[1];
 }
 
-// Determine basePath for language-prefixed URLs
-if (preg_match('#^/[a-z]{2}/#', $requestUri)) {
-    $basePath = '../';
-}
+// Calculate basePath dynamically from URL depth
+$trimmedUri = trim(parse_url($requestUri, PHP_URL_PATH) ?? '', '/');
+$depth = $trimmedUri === '' ? 0 : substr_count($trimmedUri, '/') + 1;
+$basePath = $depth > 0 ? str_repeat('../', $depth) : '';
 
 // Translations
 $strings = [

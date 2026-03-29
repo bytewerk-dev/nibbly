@@ -139,21 +139,35 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
     <?php endif; ?>
 
     <?php
-    // Inject editor-only theme variables from settings (does NOT affect site design)
+    // Build editor theme variables from settings (injected in footer.php AFTER inline-editor.css)
     $_editorVars = [];
     if (!empty($_settings['theme']['primaryColor'])) {
         $pc = $_settings['theme']['primaryColor'];
         $_editorVars[] = '--editor-primary:' . htmlspecialchars($pc);
         $r = hexdec(substr($pc, 1, 2)); $g = hexdec(substr($pc, 3, 2)); $b = hexdec(substr($pc, 5, 2));
-        $_editorVars[] = '--editor-primary-hover:#' . sprintf('%02x%02x%02x', max(0,$r-15), max(0,$g-15), max(0,$b-15));
-        $_editorVars[] = '--editor-primary-light:#' . sprintf('%02x%02x%02x', min(255,$r+40), min(255,$g+40), min(255,$b+40));
+        $pcHover = '#' . sprintf('%02x%02x%02x', max(0,$r-15), max(0,$g-15), max(0,$b-15));
+        $pcLight = '#' . sprintf('%02x%02x%02x', min(255,$r+30), min(255,$g+30), min(255,$b+30));
+        $pcLightHover = '#' . sprintf('%02x%02x%02x', min(255,$r+50), min(255,$g+50), min(255,$b+50));
+        $_editorVars[] = '--editor-primary-hover:' . $pcHover;
+        if (!empty($_settings['theme']['accentColor'])) {
+            $_editorVars[] = '--editor-primary-light:' . htmlspecialchars($_settings['theme']['accentColor']);
+        } else {
+            $_editorVars[] = '--editor-primary-light:#' . sprintf('%02x%02x%02x', min(255,$r+40), min(255,$g+40), min(255,$b+40));
+        }
+        // Button background: gradient (glow) or flat color
+        $buttonGlow = $_settings['theme']['buttonGlow'] ?? true;
+        if ($buttonGlow) {
+            $_editorVars[] = '--editor-btn-bg:radial-gradient(ellipse at 50% 0%, ' . $pcLight . ' 0%, ' . htmlspecialchars($pc) . ' 70%)';
+            $_editorVars[] = '--editor-btn-bg-hover:radial-gradient(ellipse at 50% 0%, ' . $pcLightHover . ' 0%, ' . htmlspecialchars($pc) . ' 70%)';
+        } else {
+            $_editorVars[] = '--editor-btn-bg:' . htmlspecialchars($pc);
+            $_editorVars[] = '--editor-btn-bg-hover:' . $pcHover;
+        }
     }
     if (isset($_settings['theme']['buttonRadius'])) {
         $_editorVars[] = '--editor-btn-radius:' . intval($_settings['theme']['buttonRadius']) . 'px';
     }
-    if ($_editorVars): ?>
-    <style>:root{<?php echo implode(';', $_editorVars); ?>}</style>
-    <?php endif; ?>
+    ?>
 
     <!-- Prevent FOUC: apply stored theme before paint -->
     <script>

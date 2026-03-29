@@ -10,10 +10,11 @@
     --editor-primary-light: #60a5fa;
     --editor-bar-bg: #23282d;
     --editor-bar-hover: #32373c;
-    --editor-success: #2563eb;
+    --editor-success: var(--editor-primary);
     --editor-danger: #dc3545;
     --editor-danger-hover: #c82333;
-    --editor-btn-glow: 1;
+    --editor-btn-bg: radial-gradient(ellipse at 50% 0%, #4580ed 0%, #2563eb 70%);
+    --editor-btn-bg-hover: radial-gradient(ellipse at 50% 0%, #5d94ef 0%, #2563eb 70%);
     --editor-btn-radius: 6px;
 }
 
@@ -948,46 +949,21 @@ body.edit-mode-active .editable-section:hover .video-container::after {
 }
 
 .editor-btn-primary {
-    background: var(--editor-primary);
+    background: var(--editor-btn-bg);
     color: white;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    position: relative;
-    overflow: hidden;
-    z-index: 0;
-    transition: box-shadow 800ms cubic-bezier(0.22, 1, 0.36, 1) 250ms,
-                transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.editor-btn-primary::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: var(--editor-primary-light, #60a5fa);
-    opacity: 0;
-    transition: opacity 800ms cubic-bezier(0.22, 1, 0.36, 1) 250ms;
-    z-index: -1;
+    transition: box-shadow 0.2s, transform 0.15s;
 }
 
 .editor-btn-primary:hover {
+    background: var(--editor-btn-bg-hover);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15),
                 0 4px 20px color-mix(in srgb, var(--editor-primary) 35%, transparent);
-    transition: box-shadow 800ms cubic-bezier(0.22, 1, 0.36, 1),
-                transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.editor-btn-primary:hover::after {
-    opacity: 0.3;
-    transition: opacity 800ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-/* Flat mode: disable glow effect */
 .editor-flat .editor-btn-primary:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.editor-flat .editor-btn-primary:hover::after {
-    opacity: 0;
 }
 
 .editor-btn-secondary {
@@ -1093,7 +1069,7 @@ body.edit-mode-active .editable-section:hover .video-container::after {
     border: 1px solid rgba(255, 255, 255, 0.3);
     color: #fff;
     padding: 4px 12px;
-    border-radius: 3px;
+    border-radius: var(--editor-btn-radius, 6px);
     font-size: 13px;
     cursor: pointer;
     transition: all 0.2s;
@@ -1122,13 +1098,13 @@ body.edit-mode-active .editable-section:hover .video-container::after {
 }
 
 .admin-bar-btn-edit {
-    background: var(--editor-primary);
+    background: var(--editor-btn-bg);
     border-color: var(--editor-primary);
     font-weight: 600;
 }
 
 .admin-bar-btn-edit:hover {
-    background: var(--editor-primary-hover);
+    background: var(--editor-btn-bg-hover);
     border-color: var(--editor-primary-hover);
     color: #fff;
 }
@@ -1147,14 +1123,14 @@ body.edit-mode-active .editable-section:hover .video-container::after {
 }
 
 .admin-bar-btn-save {
-    background: var(--editor-success);
-    border-color: var(--editor-success);
+    background: var(--editor-btn-bg);
+    border-color: var(--editor-primary);
     font-weight: 600;
 }
 
 .admin-bar-btn-save:hover {
-    background: #1d4ed8;
-    border-color: #1d4ed8;
+    background: var(--editor-btn-bg-hover);
+    border-color: var(--editor-primary-hover);
     color: #fff;
 }
 
@@ -1902,12 +1878,12 @@ body.edit-mode-active .editable-list-item:hover .list-item-add-btn {
 }
 
 .image-action-select {
-    background: var(--editor-success);
+    background: var(--editor-primary);
     color: white;
 }
 
 .image-action-select:hover {
-    background: #1d4ed8;
+    background: var(--editor-primary-hover);
 }
 
 .image-action-preview {

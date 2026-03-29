@@ -451,6 +451,9 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
     <meta name="site-languages" content="<?php echo htmlspecialchars(json_encode($SITE_LANGUAGES ?? ['en' => 'English'])); ?>">
     <meta name="site-lang-default" content="<?php echo htmlspecialchars(defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en'); ?>">
     <link rel="stylesheet" href="<?php echo $basePath; ?>css/inline-editor.css">
+    <?php if (!empty($_editorVars)): ?>
+    <style>:root{<?php echo implode(';', $_editorVars); ?>}</style>
+    <?php endif; ?>
     <script>
     window.BlockTypeRegistry = <?php echo json_encode(getBlockTypes(), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT); ?>;
     <?php

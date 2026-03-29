@@ -272,7 +272,7 @@ a:hover {
     background: var(--nb-primary-btn);
     color: var(--nb-text-on-primary);
     text-shadow: 0 1px 1px rgba(255,255,255,0.25), 0 -1px 1px rgba(0,0,0,0.15);
-    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--nb-primary) 15%, transparent);
     position: relative;
     overflow: hidden;
     z-index: 0;
@@ -291,7 +291,7 @@ a:hover {
 }
 
 .btn-primary:hover {
-    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.35);
+    box-shadow: 0 4px 20px color-mix(in srgb, var(--nb-primary) 35%, transparent);
     transition: box-shadow 800ms var(--nb-ease),
                 transform var(--nb-duration-fast) var(--nb-ease);
 }
@@ -2013,7 +2013,7 @@ a:hover {
     justify-content: center;
     background: var(--nb-bg-sunken);
     border: 1px solid var(--nb-border);
-    border-radius: var(--nb-radius-md);
+    border-radius: 0;
     overflow: hidden;
 }
 

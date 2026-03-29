@@ -1079,7 +1079,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 actions.appendChild(sep1);
 
                 const viewLink = document.createElement('a');
-                const frontendPath = (viewLang === DEFAULT_LANG) ? '../' + page.slug : '../' + viewLang + '/' + page.slug;
+                const frontendPath = page.slug === 'home'
+                    ? ((viewLang === DEFAULT_LANG) ? '../' : '../' + viewLang + '/')
+                    : ((viewLang === DEFAULT_LANG) ? '../' + page.slug : '../' + viewLang + '/' + page.slug);
                 viewLink.href = frontendPath;
                 viewLink.target = '_blank';
                 viewLink.className = 'page-list-row-action';
