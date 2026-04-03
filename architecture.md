@@ -99,9 +99,11 @@ Custom layout pages use arbitrary nested keys instead of `sections`:
 
 List items are stored as numbered objects (`"0": {...}, "1": {...}`) for dot-notation compatibility with the inline editor.
 
-### Data-First Principle
+### Data-First Principle & Auto-Generation
 
-All editable content must be declared in the JSON file before being referenced in PHP templates. The backend Content Editor generates its form fields by iterating the JSON structure — fields that exist only as PHP fallback defaults will render on the page but won't appear in the Content Editor. When creating or converting a page, always populate the JSON with all content first. The JSON file is the single source of truth.
+The JSON file is the single source of truth. Best practice is to populate JSON with all content before referencing it in PHP templates.
+
+However, **missing fields are auto-generated**: when an admin visits a page, any `editableText`, `editableHtml`, `editableLink`, or `editableImage` call whose key doesn't exist in JSON will automatically create the key using the PHP fallback value. This means an AI agent can write PHP templates freely and the JSON structure wires itself up on first admin visit. The auto-generated values appear in both the Visual Editor and the Content Editor immediately.
 
 ### News Post JSON (`content/news/{slug}.json`)
 
@@ -455,6 +457,23 @@ echo renderNewsList(3, 'en'); // Latest 3 posts
 - Standard: simple content pages (about, legal notices, basic articles)
 - Custom: landing pages, homepages, pages with specific layouts, pages using render components
 
+## CLI Tools
+
+### `cli/make.php` — Page Scaffolding
+
+Generates page boilerplate with a single command:
+
+```bash
+php cli/make.php --slug=about --lang=en --title="About Us"                  # Standard (JSON only)
+php cli/make.php --slug=services --lang=de --type=custom --title="Dienste"  # Custom (PHP + JSON)
+```
+
+Options: `--slug` (required), `--lang`, `--type` (standard/custom), `--title`, `--description`, `--hide-nav`, `--dry-run`, `--force`.
+
+### `cli/convert.php` — HTML to Nibbly Converter
+
+Converts a static HTML page into an editable PHP template + JSON content file + extracted CSS. See `cli/README.md` for full options.
+
 ## Inline Editor System
 
 When an admin is logged in (`$_SESSION['admin_logged_in'] === true`), the editable field functions add `data-*` attributes that the inline editor JavaScript uses to enable on-page editing.
@@ -478,7 +497,15 @@ When an admin is logged in (`$_SESSION['admin_logged_in'] === true`), the editab
 
 ## Navigation System
 
+### Auto-Discovery
+
+Pages with JSON content files are automatically added to navigation by `header.php`. The system scans `content/pages/{lang}_*.json` and appends any page not already listed in `$NAV_ITEMS`. System partials (`home`, `footer`, `sidebar`, `header`) are excluded automatically.
+
+To hide a page from auto-discovery, set `"hideFromNav": true` in its JSON file. The title for auto-discovered pages is read from the JSON `title` field, with a fallback to the titlecased slug.
+
 ### `includes/nav-config.php`
+
+Optional — only needed for explicit ordering, custom labels, or the language switcher's page mapping.
 
 Two main data structures:
 
@@ -491,7 +518,7 @@ $PAGE_MAPPING = [
 ];
 ```
 
-**`$NAV_ITEMS`** - Navigation items per language. Each item has `href`, `label`, and `page` (slug for active state highlighting).
+**`$NAV_ITEMS`** - Navigation items per language. Each item has `href`, `label`, and `page` (slug for active state highlighting). Pages listed here appear first; auto-discovered pages are appended after.
 
 ```php
 $NAV_ITEMS = [

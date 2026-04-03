@@ -22,6 +22,7 @@ Nibbly turns any HTML or PHP page into an editable website — no database requi
 | Example templates | `examples/templates/` |
 | Example content | `examples/content/` |
 | HTML converter | `cli/convert.php` |
+| Page scaffolding | `cli/make.php` |
 | Events | `content/events.json` |
 | Email config | `content/settings.json` → `email` section |
 | SMTP mailer | `api/SmtpMailer.php` |
@@ -38,7 +39,18 @@ The `router.php` handles clean URLs, language routing, and news post URLs withou
 
 ## How to Create a Standard Page
 
-1. Create the content file `content/pages/{lang}_{slug}.json`:
+The fastest way is with the scaffolding tool:
+
+```bash
+php cli/make.php --slug=about --lang=en --title="About Us"
+```
+
+This creates `content/pages/en_about.json` with a heading and text section. The router + front controller (`includes/page.php`) will automatically serve `/about` or `/en/about` using `renderAllSections()`. No PHP template file needed.
+
+The page appears in navigation automatically via auto-discovery. To hide it from nav, add `--hide-nav` or set `"hideFromNav": true` in the JSON.
+
+To create the JSON manually instead:
+
 ```json
 {
   "page": "en_about",
@@ -46,19 +58,25 @@ The `router.php` handles clean URLs, language routing, and news post URLs withou
   "title": "About Us",
   "description": "Learn more about us.",
   "sections": [
-    { "id": "s1", "type": "heading", "heading": "About Us", "level": "h1" },
+    { "id": "s1", "type": "heading", "text": "About Us", "level": "h1" },
     { "id": "s2", "type": "text", "title": "", "content": "<p>Our story...</p>" }
   ]
 }
 ```
 
-2. That's it. The router + front controller (`includes/page.php`) will automatically serve `/about` or `/en/about` using `renderAllSections()`. No PHP template file needed.
-
-3. To add it to navigation, edit `includes/nav-config.php` and add entries to `$PAGE_MAPPING` and `$NAV_ITEMS`.
+To control navigation order or labels explicitly, edit `includes/nav-config.php` (`$PAGE_MAPPING` and `$NAV_ITEMS`). Pages listed there take priority; auto-discovered pages are appended after.
 
 ## How to Create a Custom Layout Page
 
 When you need full control over the HTML structure (hero sections, grids, custom components):
+
+```bash
+php cli/make.php --slug=your-page --lang=en --type=custom --title="My Page"
+```
+
+This creates both `en/your-page.php` and `content/pages/en_your-page.json` with hero + content boilerplate. Edit the PHP template to customize the layout.
+
+To create manually instead:
 
 1. Create `{lang}/your-page.php`:
 ```php
@@ -163,46 +181,21 @@ The pattern is always the same:
 | `data-list-index` | list items | Numeric index (0, 1, 2...) |
 | `data-hidden` | any | Hides element from visitors when `"true"` |
 
-## Data-First Principle (CRITICAL)
+## Data-First Principle
 
-Nibbly follows a strict **data-first** approach. All editable text, images, links, and lists for a page **must be declared in the corresponding JSON file** (e.g. `content/pages/en_home.json`) from the start.
+Nibbly follows a **data-first** approach: all editable content should be declared in the JSON file, then referenced in PHP templates. The JSON file is the single source of truth.
 
-### Why this matters
+### Auto-generation of JSON keys
 
-Nibbly has two editors:
-1. **Visual Editor** (frontend) — inline editing directly on the rendered page
-2. **Content Editor** (backend dashboard) — structured form built from the JSON file
+When an admin visits a page, missing editable fields are **automatically created** in the JSON file using the PHP fallback value. This means you can write PHP templates freely — the JSON structure wires itself up on first admin visit.
 
-The Content Editor generates its form fields by iterating over the JSON structure. If a field only exists as a PHP fallback (`editableText($page, 'key', 'Fallback')`) but is **not declared in the JSON**, it will render on the page but **will not appear in the Content Editor**. This breaks the expectation that both editors can manage the same content.
-
-### The rule
-
-When creating or converting a page, **always populate the JSON file with all editable content first**, then reference those keys in the PHP template. Never rely on fallback defaults as the primary content source.
-
-**Wrong — content only in PHP fallbacks:**
+For example, if you write:
 ```php
 <h1><?php echo editableText($_p, 'hero.title', 'Welcome'); ?></h1>
-<p><?php echo editableText($_p, 'hero.subtitle', 'We build great things.'); ?></p>
 ```
-```json
-{}
-```
+and `hero.title` doesn't exist in the JSON, Nibbly will automatically add `{"hero": {"title": "Welcome"}}` when an admin loads the page. This works for `editableText`, `editableHtml`, `editableLink`, and `editableImage`.
 
-**Correct — content declared in JSON, PHP fallbacks are just safety nets:**
-```php
-<h1><?php echo editableText($_p, 'hero.title', 'Welcome'); ?></h1>
-<p><?php echo editableText($_p, 'hero.subtitle', 'We build great things.'); ?></p>
-```
-```json
-{
-  "hero": {
-    "title": "Welcome",
-    "subtitle": "We build great things."
-  }
-}
-```
-
-This applies to all page types — standard pages using `sections[]`, custom layout pages with dot-notation keys, and editable lists. The JSON file is the single source of truth.
+**Best practice** is still to populate JSON upfront (use `cli/make.php` or write it manually), but auto-generation means a missing key won't break anything — it will be created on first admin visit.
 
 ## Template API (content-loader.php)
 
@@ -427,6 +420,44 @@ Component styles live in `css/components.css`. Key classes:
 - `.stats-grid`, `.stats-card`
 - `.comparison-table`, `.comparison-table-wrap`
 - `.news-grid`, `.news-card`
+
+## Page Scaffolding Tool
+
+Generate page boilerplate with a single command:
+
+```bash
+# Standard page (JSON only — front controller serves it)
+php cli/make.php --slug=about --lang=en --title="About Us"
+
+# Custom layout page (PHP template + JSON)
+php cli/make.php --slug=services --lang=de --type=custom --title="Unsere Dienste"
+
+# Preview without writing files
+php cli/make.php --slug=pricing --lang=en --dry-run
+
+# Hide from navigation
+php cli/make.php --slug=terms --lang=en --hide-nav
+```
+
+Options: `--slug` (required), `--lang` (default: en), `--type` (standard/custom), `--title`, `--description`, `--hide-nav`, `--dry-run`, `--force`.
+
+## Navigation Auto-Discovery
+
+Pages with JSON content files are **automatically added to navigation** without requiring `nav-config.php` entries. The system scans `content/pages/{lang}_*.json` and adds any page not already listed in `$NAV_ITEMS`.
+
+To hide a page from auto-discovery, add `"hideFromNav": true` to its JSON file:
+```json
+{
+  "page": "en_terms",
+  "title": "Terms of Service",
+  "hideFromNav": true,
+  "sections": [...]
+}
+```
+
+System partials (`home`, `footer`, `sidebar`, `header`) are excluded automatically.
+
+`nav-config.php` is still used for: explicit navigation ordering, custom labels, the language switcher's `$PAGE_MAPPING`, and pages that need different slugs per language.
 
 ## HTML-to-Nibbly Converter
 

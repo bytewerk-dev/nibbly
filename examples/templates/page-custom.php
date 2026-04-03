@@ -6,6 +6,7 @@
  * while keeping content editable via the inline editor and admin dashboard.
  *
  * Usage: Copy to {lang}/your-page.php and customize the layout.
+ * Or generate with: php cli/make.php --slug=your-page --lang=en --type=custom
  * Create matching content at content/pages/{lang}_your-page.json.
  */
 $pageTitle = 'Custom Page';
@@ -24,20 +25,21 @@ $_p = $contentPage;
     <main class="main-content">
         <div class="content-inner">
 
-            <!-- Hero section with editable text -->
+            <!-- Hero section with editable text and link -->
             <section class="hero">
                 <h1><?php echo editableText($_p, 'hero.title', 'Welcome'); ?></h1>
                 <p><?php echo editableText($_p, 'hero.subtitle', 'Your tagline here.'); ?></p>
-                <a href="<?php echo editableText($_p, 'hero.cta.href', '#'); ?>" class="btn btn-primary">
-                    <?php echo editableText($_p, 'hero.cta.text', 'Get Started'); ?>
-                </a>
+                <?php echo editableLink($_p, 'hero.cta', 'Get Started', '#features', 'btn btn-primary'); ?>
             </section>
 
             <!-- Editable image -->
-            <figure>
-                <img <?php echo editableImage($_p, 'hero.image', 'https://placehold.co/800x400'); ?>
-                     alt="<?php echo editableText($_p, 'hero.image_alt', 'Hero image'); ?>">
-            </figure>
+            <?php echo editableImage($_p, 'hero.image', 'https://placehold.co/800x400', 'Hero image', 'hero__img'); ?>
+
+            <!-- Rich text paragraphs (add/remove/reorder) -->
+            <section>
+                <h2><?php echo editableText($_p, 'about.heading', 'About'); ?></h2>
+                <?php echo editableTextList($_p, 'about.paragraphs'); ?>
+            </section>
 
             <!-- Feature grid component -->
             <section>

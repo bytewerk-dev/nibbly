@@ -7,49 +7,55 @@
     "title": "Build something great",
     "subtitle": "A modern website built with Nibbly CMS.",
     "cta": { "text": "Get Started", "href": "#features" },
-    "image": "https://placehold.co/800x400",
-    "image_alt": "Hero image"
+    "image": { "src": "https://placehold.co/800x400", "alt": "Hero image" }
+  },
+  "about": {
+    "heading": "About",
+    "paragraphs": {
+      "0": { "content": "Nibbly turns any HTML page into an editable website. No database, no build tools, no complexity." },
+      "1": { "content": "Edit content directly on the page when logged in. Visitors see clean HTML with <strong>zero editor markup</strong>." }
+    }
   },
   "features": {
     "heading": "Features",
-    "items": [
-      {
+    "items": {
+      "0": {
         "icon": "zap",
         "title": "Fast",
-        "description": "No database means instant page loads."
+        "desc": "No database means instant page loads."
       },
-      {
+      "1": {
         "icon": "shield",
         "title": "Secure",
-        "description": "No SQL injection possible. Minimal attack surface."
+        "desc": "No SQL injection possible. Minimal attack surface."
       },
-      {
+      "2": {
         "icon": "edit",
         "title": "Easy Editing",
-        "description": "Edit content directly on the page when logged in."
+        "desc": "Edit content directly on the page when logged in."
       }
-    ]
+    }
   },
   "faq": {
     "heading": "Frequently Asked Questions",
-    "entries": [
-      {
+    "entries": {
+      "0": {
         "question": "How do I install Nibbly?",
         "answer": "Upload the files to your server and visit /admin/setup.php in your browser."
       },
-      {
+      "1": {
         "question": "Do I need a database?",
         "answer": "No. Nibbly stores all content as JSON files. No database setup required."
       },
-      {
+      "2": {
         "question": "Can I use my own design?",
         "answer": "Yes. Edit the CSS custom properties in style.css to match your brand colors and fonts."
       }
-    ]
+    }
   },
   "pricing": {
-    "plans": [
-      {
+    "plans": {
+      "0": {
         "name": "Free",
         "price": "$0",
         "period": "forever",
@@ -57,7 +63,7 @@
         "features": "Unlimited pages\nInline editor\nAutomatic backups\nMulti-language support",
         "cta": { "text": "Download", "href": "#" }
       },
-      {
+      "1": {
         "name": "Pro",
         "price": "$49",
         "period": "/month",
@@ -67,6 +73,6 @@
         "features": "Everything in Free\nPriority support\nCustom integrations\nAdvanced analytics",
         "cta": { "text": "Get Started", "href": "#" }
       }
-    ]
+    }
   }
 }

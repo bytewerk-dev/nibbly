@@ -38,4 +38,4 @@ php -S localhost:3000 router.php
 php cli/convert.php my-page.html --slug=about --lang=en --dry-run
 ```
 
-Create a page by adding a JSON file to `content/pages/` — no PHP template needed for standard pages. Or use `cli/convert.php` to automatically convert an existing HTML page into an editable template. See CLAUDE.md for details.
+Create a page with `php cli/make.php --slug=about --lang=en` or by adding a JSON file to `content/pages/` — no PHP template needed for standard pages. Pages appear in navigation automatically. Use `cli/convert.php` to convert an existing HTML page into an editable template. See CLAUDE.md for details.

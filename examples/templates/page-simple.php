@@ -2,8 +2,12 @@
 /**
  * Simple page template — renders all sections from JSON.
  *
- * Usage: Copy to {lang}/your-page.php and update the variables below.
- * Create matching content at content/pages/{lang}_your-page.json.
+ * For standard pages, you don't need a PHP template at all.
+ * Just create content/pages/{lang}_{slug}.json and the front controller
+ * serves it automatically. This file only exists as an example of
+ * how a PHP template wrapper would look if you needed one.
+ *
+ * Preferred: php cli/make.php --slug=your-page --lang=en --title="Page Title"
  */
 $pageTitle = 'Page Title';
 $pageDescription = 'Page description for search engines.';
