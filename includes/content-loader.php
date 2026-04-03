@@ -200,12 +200,52 @@ function getNestedValue($data, $dotKey) {
  * Load content with per-request caching.
  * Prevents re-reading JSON on every editableText() call.
  */
-function loadContentCached($page) {
+function &loadContentCached($page) {
     static $cache = [];
     if (!isset($cache[$page])) {
         $cache[$page] = loadContent($page);
     }
     return $cache[$page];
+}
+
+/**
+ * Set a nested value using dot notation for auto-generation.
+ */
+function setNestedValue(&$data, $dotKey, $value) {
+    if (!is_array($data)) $data = [];
+    $keys = explode('.', $dotKey);
+    $current = &$data;
+    foreach ($keys as $i => $key) {
+        if ($i === count($keys) - 1) {
+            $current[$key] = $value;
+        } else {
+            if (!isset($current[$key]) || !is_array($current[$key])) {
+                $current[$key] = [];
+            }
+            $current = &$current[$key];
+        }
+    }
+}
+
+/**
+ * Auto-generate a missing field in the JSON file during admin browsing.
+ */
+function autoGenerateContentField($page, $fieldKey, $value) {
+    if (empty($page) || empty($fieldKey)) return;
+    
+    $cache = &loadContentCached($page);
+    
+    if (!is_array($cache) || empty($cache['page'])) {
+        $lang = substr($page, 0, 2);
+        $cache['page'] = $page;
+        $cache['lang'] = preg_match('/^[a-z]{2}$/', $lang) ? $lang : 'en';
+    }
+    
+    setNestedValue($cache, $fieldKey, $value);
+    $cache['lastModified'] = date('c');
+    
+    $filepath = CONTENT_BASE_PATH . $page . '.json';
+    file_put_contents($filepath, json_encode($cache, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
 }
 
 /**
@@ -231,6 +271,9 @@ function editableText($page, $fieldKey, $default = '') {
     $value = getNestedValue($data, $fieldKey);
     if ($value === null) {
         $value = $default;
+        if (isAdminLoggedIn()) {
+            autoGenerateContentField($page, $fieldKey, $value);
+        }
     }
 
     $hidden = isFieldHidden($data, $fieldKey);
@@ -266,6 +309,9 @@ function editableHtml($page, $fieldKey, $default = '') {
     $value = getNestedValue($data, $fieldKey);
     if ($value === null) {
         $value = $default;
+        if (isAdminLoggedIn()) {
+            autoGenerateContentField($page, $fieldKey, $value);
+        }
     }
 
     $hidden = isFieldHidden($data, $fieldKey);
@@ -298,6 +344,13 @@ function editableHtml($page, $fieldKey, $default = '') {
 function editableLink($page, $fieldKey, $defaultText = '', $defaultHref = '#', $class = '', $attrs = '') {
     $data = loadContentCached($page);
     $linkData = getNestedValue($data, $fieldKey);
+
+    if ($linkData === null) {
+        $linkData = ['text' => $defaultText, 'href' => $defaultHref];
+        if (isAdminLoggedIn()) {
+            autoGenerateContentField($page, $fieldKey, $linkData);
+        }
+    }
 
     $text = $defaultText;
     $href = $defaultHref;
@@ -344,6 +397,13 @@ function editableLink($page, $fieldKey, $defaultText = '', $defaultHref = '#', $
 function editableImage($page, $fieldKey, $defaultSrc = '', $defaultAlt = '', $class = '') {
     $data = loadContentCached($page);
     $imgData = getNestedValue($data, $fieldKey);
+
+    if ($imgData === null) {
+        $imgData = ['src' => $defaultSrc, 'alt' => $defaultAlt];
+        if (isAdminLoggedIn()) {
+            autoGenerateContentField($page, $fieldKey, $imgData);
+        }
+    }
 
     $src = $defaultSrc;
     $alt = $defaultAlt;
