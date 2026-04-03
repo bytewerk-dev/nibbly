@@ -89,6 +89,29 @@ if (!isset($NAV_ITEMS)) {
 
 $navItems = $NAV_ITEMS[$currentLang] ?? $NAV_ITEMS[$defaultLang] ?? [];
 
+// Auto-discover pages not explicitly listed in NAV_ITEMS (Directory-based routing/nav)
+$_existingPages = array_column($navItems, 'page');
+$_pageFiles = glob($_contentPath . $currentLang . '_*.json');
+if ($_pageFiles) {
+    foreach ($_pageFiles as $_pf) {
+        $_basename = basename($_pf, '.json');
+        $_slug = substr($_basename, strlen($currentLang) + 1);
+        
+        // Skip common partials/components
+        if (in_array($_slug, ['home', 'footer', 'sidebar', 'header'])) continue;
+        
+        if (!in_array($_slug, $_existingPages)) {
+            $_data = json_decode(file_get_contents($_pf), true);
+            // Hide pages that explicitly set hideFromNav: true
+            if ($_data && empty($_data['hideFromNav'])) {
+                $_title = $_data['title'] ?? ucfirst(str_replace('-', ' ', $_slug));
+                $_href = ($currentLang === $defaultLang) ? $_slug : $currentLang . '/' . $_slug;
+                $navItems[] = ['href' => $_href, 'label' => $_title, 'page' => $_slug];
+            }
+        }
+    }
+}
+
 // Load site settings (used for favicon, theme colors, editor button style)
 $_settingsPath = __DIR__ . '/../content/settings.json';
 $_settings = [];
@@ -207,7 +230,7 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
                     <?php foreach ($navItems as $item): ?>
                     <li>
                         <a href="<?php echo $basePath . $item['href']; ?>"<?php echo ($currentPage ?? '') === $item['page'] ? ' class="active"' : ''; ?>>
-                            <?php echo $item['label']; ?>
+                            <?php echo htmlspecialchars($item['label']); ?>
                         </a>
                     </li>
                     <?php endforeach; ?>
@@ -247,7 +270,7 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
                 <?php foreach ($navItems as $item): ?>
                 <li>
                     <a href="<?php echo $basePath . $item['href']; ?>"<?php echo ($currentPage ?? '') === $item['page'] ? ' class="active"' : ''; ?>>
-                        <?php echo $item['label']; ?>
+                        <?php echo htmlspecialchars($item['label']); ?>
                     </a>
                 </li>
                 <?php endforeach; ?>
