@@ -181,21 +181,68 @@ The pattern is always the same:
 | `data-list-index` | list items | Numeric index (0, 1, 2...) |
 | `data-hidden` | any | Hides element from visitors when `"true"` |
 
-## Data-First Principle
+## JSON Is the Source of Truth
 
-Nibbly follows a **data-first** approach: all editable content should be declared in the JSON file, then referenced in PHP templates. The JSON file is the single source of truth.
+The JSON file (`content/pages/{lang}_{slug}.json`) is the single source of truth for all editable content. Both the Visual Editor (frontend) and the Content Editor (backend dashboard) read from it.
 
-### Auto-generation of JSON keys
+### Auto-Write: How Missing Fields Get Populated
 
-When an admin visits a page, missing editable fields are **automatically created** in the JSON file using the PHP fallback value. This means you can write PHP templates freely — the JSON structure wires itself up on first admin visit.
+When an admin browses a page, every `editableText()`, `editableHtml()`, `editableImage()`, and `editableLink()` call checks whether its key exists in the JSON file. If the key is missing, Nibbly **automatically writes the fallback value to the JSON file**. This means:
 
-For example, if you write:
+- An agent (or human) can focus on the PHP template — just use `editableText($_p, 'hero.title', 'Welcome to My Site')` with a good fallback value.
+- On first admin page view, any missing keys are written to the JSON using those fallback values.
+- The Content Editor will then show all fields, because the JSON is now populated.
+- A toast notification tells the admin how many fields were auto-generated (e.g. "Auto-wrote 4 missing fields to en_about.json").
+
+**This is the intended workflow.** Auto-write exists so you don't have to maintain content in two places.
+
+### What This Means for Agents
+
+1. **Always provide meaningful fallback values** — they become the initial content in the JSON. Write fallbacks as if they were the real content, not just "Default Title".
+2. **You don't need to pre-populate the JSON file** for custom layout pages. The PHP template + fallbacks are enough. The JSON will be populated on first admin render.
+3. **For standard pages using `sections[]`**, you still create the JSON with the sections array, because `renderAllSections()` iterates over it — there are no PHP fallbacks for section structure.
+4. **For editable lists**, the list structure must exist in JSON (since `editableListItems()` returns `[]` for missing keys and does not auto-write). Individual item fields within an existing list do auto-write.
+
+### Example: Custom Layout Page
+
+The agent writes the PHP template with good fallbacks:
 ```php
-<h1><?php echo editableText($_p, 'hero.title', 'Welcome'); ?></h1>
+<h1><?php echo editableText($_p, 'hero.title', 'Welcome to My Site'); ?></h1>
+<p><?php echo editableText($_p, 'hero.subtitle', 'We build great things.'); ?></p>
+<?php echo editableLink($_p, 'hero.cta', 'Get Started', '/pricing', 'btn'); ?>
 ```
-and `hero.title` doesn't exist in the JSON, Nibbly will automatically add `{"hero": {"title": "Welcome"}}` when an admin loads the page. This works for `editableText`, `editableHtml`, `editableLink`, and `editableImage`.
 
-**Best practice** is still to populate JSON upfront (use `cli/make.php` or write it manually), but auto-generation means a missing key won't break anything — it will be created on first admin visit.
+The JSON file can start minimal (just metadata):
+```json
+{
+  "page": "en_about",
+  "lang": "en",
+  "title": "About Us",
+  "description": "Learn more about us."
+}
+```
+
+After the first admin page view, the JSON is automatically populated:
+```json
+{
+  "page": "en_about",
+  "lang": "en",
+  "title": "About Us",
+  "description": "Learn more about us.",
+  "hero": {
+    "title": "Welcome to My Site",
+    "subtitle": "We build great things.",
+    "cta": { "text": "Get Started", "href": "/pricing" }
+  },
+  "lastModified": "2026-04-04T12:00:00+00:00"
+}
+```
+
+### When You Must Pre-Populate JSON
+
+- **Standard pages with `sections[]`** — `renderAllSections()` needs the sections array to exist.
+- **Editable lists** — `editableListItems()` returns `[]` for missing keys; the list structure (with at least one item) must be in the JSON.
+- **Any field that should have content different from the PHP fallback** — the fallback is just the initial value; edit the JSON directly if you want different content.
 
 ## Template API (content-loader.php)
 
@@ -502,6 +549,82 @@ When converting an HTML page to Nibbly or setting up a fresh installation, the s
    ```
 
 Never use weak or predictable passwords. The setup wizard enforces: 8+ characters, uppercase, lowercase, digit, and special character.
+
+## Common Mistakes to Avoid
+
+### `editableImage()` returns a full `<img>` tag
+
+Do NOT wrap it in another `<img>`:
+```php
+<!-- WRONG — produces <img <img src="..."> -->
+<img <?php echo editableImage($_p, 'hero.image', 'photo.jpg', 'Alt text'); ?>>
+
+<!-- CORRECT — editableImage() outputs the complete <img> element -->
+<?php echo editableImage($_p, 'hero.image', 'photo.jpg', 'Alt text'); ?>
+```
+
+### `editableLink()` returns a full `<a>` tag
+
+Same pattern — do NOT wrap it:
+```php
+<!-- WRONG -->
+<a href="#"><?php echo editableLink($_p, 'cta', 'Click', '/page'); ?></a>
+
+<!-- CORRECT -->
+<?php echo editableLink($_p, 'cta', 'Click', '/page', 'btn'); ?>
+```
+
+### Block type field names must match the renderer
+
+These are the exact field names each block renderer reads. Using different names (e.g. `"description"` instead of `"content"`, `"quote"` instead of `"text"`) will silently produce empty output.
+
+| Type | Required fields |
+|---|---|
+| `text` | `title`, `content` (HTML), `titleTag`, `style` |
+| `heading` | `text`, `level` (h1-h6) |
+| `quote` | `text`, `attribution`, `style` |
+| `list` | `title`, `style` (bullet/numbered), `content` (HTML: `<ul><li>...</li></ul>`) |
+| `image` | `src`, `alt`, `caption`, `width` |
+| `card` | `title`, `content`, `image` |
+| `youtube` | `videoId`, `title` |
+| `soundcloud` | `trackId`, `title` |
+| `audio` | `src`, `title` |
+| `spacer` | `height` (sm/md/lg/xl) |
+| `divider` | *(none)* |
+
+### Lists use numbered objects, not arrays
+
+```json
+// WRONG — JSON array
+"items": [{"title": "A"}, {"title": "B"}]
+
+// CORRECT — numbered object keys
+"items": {"0": {"title": "A"}, "1": {"title": "B"}}
+```
+
+Dot-notation addressing requires object keys (`features.items.0.title`). JSON arrays don't support this.
+
+### Auto-write only fires for logged-in admins
+
+Visitor traffic never populates the JSON. After creating a new page, an admin must visit it once to trigger auto-write of missing fields.
+
+### `editableListItems()` does NOT auto-write
+
+Unlike `editableText()`/`editableImage()`/`editableLink()`, `editableListItems()` returns `[]` for missing keys without creating them in JSON. Editable list **structures** (with at least one item) must exist in the JSON file.
+
+### `renderNewsList()` signature is `($limit, $lang)`
+
+Not `($lang, $basePath)`. Use `renderNewsList(0, $currentLang)` for all posts.
+
+### Always use `$contentPage` variable, not hardcoded page names
+
+```php
+// WRONG
+<?php echo renderAllSections('en_your-page'); ?>
+
+// CORRECT
+<?php echo renderAllSections($contentPage); ?>
+```
 
 ## Rules
 

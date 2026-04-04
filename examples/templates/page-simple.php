@@ -22,7 +22,7 @@ include '../includes/content-loader.php';
 
     <main class="main-content">
         <div class="content-inner">
-            <?php echo renderAllSections('en_your-page'); ?>
+            <?php echo renderAllSections($contentPage); ?>
         </div>
     </main>
 

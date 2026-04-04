@@ -21,7 +21,7 @@ include '../includes/content-loader.php';
     <main class="main-content">
         <div class="content-inner">
             <h1 class="page-title"><?php echo editableText($contentPage, 'title', 'News'); ?></h1>
-            <?php echo renderNewsList($currentLang, $basePath); ?>
+            <?php echo renderNewsList(0, $currentLang); ?>
         </div>
     </main>
 

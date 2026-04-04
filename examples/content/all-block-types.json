@@ -19,8 +19,8 @@
     {
       "id": "section_quote",
       "type": "quote",
-      "quote": "The best CMS is the one you don't have to think about.",
-      "author": "A wise developer"
+      "text": "The best CMS is the one you don't have to think about.",
+      "attribution": "A wise developer"
     },
     {
       "id": "section_image",
@@ -33,19 +33,15 @@
       "id": "section_list",
       "type": "list",
       "title": "Key Features",
-      "items": {
-        "0": { "text": "No database required" },
-        "1": { "text": "Inline editing" },
-        "2": { "text": "Automatic backups" },
-        "3": { "text": "Multi-language support" }
-      }
+      "style": "bullet",
+      "content": "<ul><li>No database required</li><li>Inline editing</li><li>Automatic backups</li><li>Multi-language support</li></ul>"
     },
     {
       "id": "section_card",
       "type": "card",
       "image": "https://placehold.co/400x300",
       "title": "Card Title",
-      "description": "A card with an image, title, and description. Useful for team members, services, or featured content."
+      "content": "A card with an image, title, and description. Useful for team members, services, or featured content."
     },
     {
       "id": "section_youtube",
@@ -60,7 +56,7 @@
     {
       "id": "section_spacer",
       "type": "spacer",
-      "size": "lg"
+      "height": "lg"
     },
     {
       "id": "section_audio",

@@ -266,7 +266,7 @@ Add a render component (FAQ, Pricing, Team, Gallery, etc.) to a custom layout pa
 
    | Component | JSON Key | Item Structure |
    |---|---|---|
-   | `renderFeatureGrid()` | `features.items` | `{icon, title, description}` |
+   | `renderFeatureGrid()` | `features.items` | `{icon, title, desc}` |
    | `renderPricingTable()` | `pricing.plans` | `{name, price, period, desc, features, cta}` |
    | `renderFaqAccordion()` | `faq.entries` | `{question, answer}` |
    | `renderTeamGrid()` | `team.members` | `{name, role, bio, image}` |
@@ -419,7 +419,7 @@ Create a page with a custom PHP template (hero sections, grids, components) inst
      },
      "features": {
        "heading": "Features",
-       "items": { "0": { "icon": "zap", "title": "Fast", "description": "No database." } }
+       "items": { "0": { "icon": "zap", "title": "Fast", "desc": "No database." } }
      },
      "faq": {
        "heading": "FAQ",
