@@ -49,15 +49,13 @@ if (is_file($phpFile)) {
 // Helper: load primary language from config
 function _routerGetPrimaryLang() {
     global $root;
-    $primaryLang = 'en';
+    if (defined('SITE_LANG_DEFAULT')) return SITE_LANG_DEFAULT;
     $configPath = $root . '/admin/config.php';
     if (is_file($configPath)) {
-        $configContent = file_get_contents($configPath);
-        if (preg_match("/define\('SITE_LANG_DEFAULT',\s*'([^']+)'\)/", $configContent, $m)) {
-            $primaryLang = $m[1];
-        }
+        require_once $configPath;
+        if (defined('SITE_LANG_DEFAULT')) return SITE_LANG_DEFAULT;
     }
-    return $primaryLang;
+    return 'en';
 }
 
 $cleanUri = trim($uri, '/');

@@ -218,7 +218,8 @@ switch ($action) {
 
         $result = file_put_contents(
             $filepath,
-            json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+            json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
+            LOCK_EX
         );
 
         if ($result === false) {
@@ -270,7 +271,8 @@ switch ($action) {
 
         $result = file_put_contents(
             $targetFile,
-            json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+            json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
+            LOCK_EX
         );
 
         if ($result === false) {
@@ -351,7 +353,8 @@ switch ($action) {
 
         $result = file_put_contents(
             CONTENT_PATH . $newPage . '.json',
-            json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+            json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
+            LOCK_EX
         );
 
         if ($result === false) {
@@ -523,7 +526,8 @@ switch ($action) {
 
         $result = file_put_contents(
             $filepath,
-            json_encode($contentData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+            json_encode($contentData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
+            LOCK_EX
         );
 
         if ($result === false) {
@@ -719,7 +723,8 @@ switch ($action) {
 
         $result = file_put_contents(
             EVENTS_PATH,
-            json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+            json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
+            LOCK_EX
         );
 
         if ($result === false) {
@@ -762,7 +767,8 @@ switch ($action) {
 
         $result = file_put_contents(
             EVENTS_PATH,
-            json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+            json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
+            LOCK_EX
         );
 
         if ($result === false) {
@@ -811,7 +817,8 @@ switch ($action) {
 
         $result = file_put_contents(
             EVENTS_PATH,
-            json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+            json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
+            LOCK_EX
         );
 
         if ($result === false) {
@@ -1292,7 +1299,8 @@ switch ($action) {
         $filepath = $newsDir . $postId . '.json';
         $result = file_put_contents(
             $filepath,
-            json_encode($sanitized, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            json_encode($sanitized, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            LOCK_EX
         );
 
         if ($result === false) {
@@ -1329,7 +1337,8 @@ switch ($action) {
 
         $result = file_put_contents(
             $filepath,
-            json_encode($post, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            json_encode($post, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            LOCK_EX
         );
 
         if ($result === false) {
@@ -1408,7 +1417,7 @@ switch ($action) {
             jsonResponse(false, null, 'Mail not found');
         }
 
-        file_put_contents($mailsFile, json_encode($mails, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        file_put_contents($mailsFile, json_encode($mails, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
         jsonResponse(true, null, 'Mail marked as read');
         break;
 
@@ -1429,7 +1438,7 @@ switch ($action) {
         }
         unset($mail);
 
-        file_put_contents($mailsFile, json_encode($mails, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        file_put_contents($mailsFile, json_encode($mails, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
         jsonResponse(true, null, 'All mails marked as read');
         break;
 
@@ -1461,7 +1470,7 @@ switch ($action) {
 
         $mails = array_values($mails);
 
-        file_put_contents($mailsFile, json_encode($mails, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        file_put_contents($mailsFile, json_encode($mails, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
         jsonResponse(true, null, 'Mail deleted');
         break;
 
@@ -1719,7 +1728,8 @@ switch ($action) {
 
         $result = file_put_contents(
             SETTINGS_PATH,
-            json_encode($merged, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            json_encode($merged, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            LOCK_EX
         );
 
         if ($result === false) {

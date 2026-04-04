@@ -1,54 +1,10 @@
 # Nibbly CMS - .htaccess
 # Apache mod_rewrite required
+#
+# All routing logic lives in route.php — this file is language-agnostic
+# and never needs to be edited when changing SITE_LANG_DEFAULT.
 
 RewriteEngine On
-
-# ============================================
-# Clean URLs - Remove .php extension
-# ============================================
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_FILENAME}.php -f
-RewriteRule ^(.+)$ $1.php [L]
-
-# ============================================
-# Primary Language Root Access
-# ============================================
-# Primary language pages live in /{LANG}/ directory but are
-# accessible from root without prefix.
-# Example: /example -> /en/example.php (if en is primary)
-#
-# IMPORTANT: Change "en" in the RewriteRule below to match
-# your SITE_LANG_DEFAULT if you use a different primary language.
-#
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_FILENAME}.php !-f
-RewriteCond %{DOCUMENT_ROOT}/en/%1.php -f
-RewriteRule ^([a-zA-Z0-9_-]+)/?$ en/$1.php [L]
-
-# ============================================
-# News / Blog Post Routes
-# ============================================
-# /en/news/slug -> en/news-post.php?slug=slug
-# /news/slug    -> en/news-post.php?slug=slug (primary language)
-RewriteRule ^([a-z]{2})/news/([a-z0-9-]+)/?$ $1/news-post.php?slug=$2 [L,QSA]
-RewriteRule ^news/([a-z0-9-]+)/?$ en/news-post.php?slug=$1 [L,QSA]
-
-# ============================================
-# Front Controller - JSON-based pages
-# ============================================
-# If no physical PHP file exists, check for JSON content via route.php.
-# Handles both /en/slug and /slug (primary language root access).
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_FILENAME}.php !-f
-RewriteRule ^([a-z]{2})/([a-zA-Z0-9_-]+)/?$ route.php?lang=$1&slug=$2 [L,QSA]
-
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_FILENAME}.php !-f
-RewriteRule ^([a-zA-Z0-9_-]+)/?$ route.php?lang=en&slug=$1 [L,QSA]
 
 # ============================================
 # Security - Protect sensitive files
@@ -64,6 +20,30 @@ RewriteRule ^([a-zA-Z0-9_-]+)/?$ route.php?lang=en&slug=$1 [L,QSA]
 RewriteRule ^content/ - [F,L]
 RewriteRule ^backups/ - [F,L]
 RewriteRule ^(.*/-trash/) - [F,L]
+
+# ============================================
+# Static files & directories
+# ============================================
+
+# Serve existing files directly (CSS, JS, images, fonts, etc.)
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# Serve directories that have an index.php (e.g. /admin/)
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteCond %{REQUEST_FILENAME}/index.php -f
+RewriteRule ^ - [L]
+
+# Clean URLs: if slug.php exists as a file, serve it directly
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.+)$ $1.php [L]
+
+# ============================================
+# Front Controller
+# ============================================
+
+# Everything else goes to route.php (language routing, news, JSON pages)
+RewriteRule ^(.*)$ route.php [L,QSA]
 
 # ============================================
 # Error Pages

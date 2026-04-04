@@ -35,6 +35,17 @@
     }
 
     // ============================================================
+    // HELPERS
+    // ============================================================
+
+    /** Escape a string for safe insertion into HTML via innerHTML / template literals. */
+    function escHtml(str) {
+        const d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+    }
+
+    // ============================================================
     // CONFIGURATION
     // ============================================================
 
@@ -520,6 +531,16 @@
             attachComparisonRowHandlers();
             attachComparisonCellToggles();
             showAdminBar();
+
+            // Notify admin about auto-generated content fields
+            if (window.NB_AUTO_GENERATED && window.NB_AUTO_GENERATED.length > 0) {
+                const count = window.NB_AUTO_GENERATED.length;
+                const pages = [...new Set(window.NB_AUTO_GENERATED.map(f => f.page))];
+                const msg = count === 1
+                    ? `Auto-wrote 1 missing field to ${pages[0]}.json`
+                    : `Auto-wrote ${count} missing fields to ${pages.join(', ')}.json`;
+                setTimeout(() => showToast(msg, 'info'), 500);
+            }
 
             // Auto-restore edit mode after structural-change reload
             if (sessionStorage.getItem('site-edit-mode') === 'true') {
@@ -2287,7 +2308,7 @@
 
         if (videoId) {
             preview.innerHTML = `
-                <iframe src="https://www.youtube-nocookie.com/embed/${videoId}"
+                <iframe src="https://www.youtube-nocookie.com/embed/${escHtml(videoId)}"
                     frameborder="0" allowfullscreen style="width:100%;height:200px;"></iframe>
             `;
         } else {
@@ -2303,7 +2324,7 @@
         if (trackId) {
             preview.innerHTML = `
                 <iframe width="100%" height="120" scrolling="no" frameborder="no"
-                    src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/${trackId}&color=%233b82f6&inverse=true&auto_play=false&show_user=true">
+                    src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/${escHtml(trackId)}&color=%233b82f6&inverse=true&auto_play=false&show_user=true">
                 </iframe>
             `;
         } else {
@@ -2319,7 +2340,7 @@
         if (src) {
             preview.innerHTML = `
                 <audio controls preload="metadata" style="width:100%;">
-                    <source src="${src}" type="audio/mpeg">
+                    <source src="${escHtml(src)}" type="audio/mpeg">
                     Your browser does not support audio.
                 </audio>
             `;
@@ -4216,7 +4237,12 @@
         const imagePath = input.value.trim();
 
         if (imagePath) {
-            preview.innerHTML = `<img src="${imagePath}" alt="Preview" onerror="this.parentNode.innerHTML='<p class=\\'preview-placeholder\\'>Image not found</p>'">`;
+            const img = document.createElement('img');
+            img.src = imagePath;
+            img.alt = 'Preview';
+            img.onerror = function() { preview.innerHTML = '<p class="preview-placeholder">Image not found</p>'; };
+            preview.innerHTML = '';
+            preview.appendChild(img);
         } else {
             preview.innerHTML = '<p class="preview-placeholder">' + t('image.no_selection') + '</p>';
         }
