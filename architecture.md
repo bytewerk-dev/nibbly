@@ -501,7 +501,7 @@ When an admin is logged in (`$_SESSION['admin_logged_in'] === true`), the editab
 
 Pages with JSON content files are automatically added to navigation by `header.php`. The system scans `content/pages/{lang}_*.json` and appends any page not already listed in `$NAV_ITEMS`. System partials (`home`, `footer`, `sidebar`, `header`) are excluded automatically.
 
-To hide a page from auto-discovery, set `"hideFromNav": true` in its JSON file. The title for auto-discovered pages is read from the JSON `title` field, with a fallback to the titlecased slug.
+To control which menus a page appears in, set `"nav": ["header", "footer"]` in its JSON file. Use `"nav": []` to hide from all menus. Default (no field): `["header"]`. The title for auto-discovered pages is read from the JSON `title` field, with a fallback to the titlecased slug.
 
 ### `includes/nav-config.php`
 

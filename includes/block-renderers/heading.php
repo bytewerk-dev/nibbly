@@ -18,7 +18,7 @@ $subtitle = $section['subtitle'] ?? '';
 
 $html .= '<div class="block-heading">' . "\n";
 $html .= "    <{$level}>" . htmlspecialchars($text) . "</{$level}>\n";
-if (!empty($subtitle)) {
+if (!empty($subtitle) || $editable) {
     $html .= '    <p class="block-heading__subtitle">' . htmlspecialchars($subtitle) . '</p>' . "\n";
 }
 $html .= '</div>' . "\n";

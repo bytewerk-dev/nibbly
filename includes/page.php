@@ -62,6 +62,7 @@ include $_includeBase . 'includes/content-loader.php';
     <!-- Main Content -->
     <main class="main-content">
         <div class="content-inner">
+            <?php echo renderBreadcrumb($contentPage, $basePath); ?>
             <?php echo renderAllSections($contentPage); ?>
             <?php if (!empty($data['contactForm']) || $slug === 'contact' || $slug === 'kontakt' || $slug === 'contacto'): ?>
                 <?php include $_includeBase . 'includes/contact-form.php'; ?>

@@ -427,6 +427,7 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
                 $siteSettings[$key] = array_replace($defaults, $loadedSettings[$key]);
             }
         }
+        if (!empty($loadedSettings['favicon'])) $siteSettings['favicon'] = $loadedSettings['favicon'];
     }
 }
 $adminTheme = $siteSettings['theme']['adminTheme'] ?? 'light';
@@ -441,6 +442,11 @@ $brandName = $siteSettings['branding']['name'] ?? (defined('SITE_NAME') ? SITE_N
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>Admin Login - <?php echo defined('SITE_NAME') ? SITE_NAME : 'CMS'; ?></title>
+    <?php
+    $_loginFavicon = $siteSettings['favicon'] ?? $brandLogo;
+    $_loginFaviconType = pathinfo($_loginFavicon, PATHINFO_EXTENSION) === 'svg' ? 'image/svg+xml' : 'image/png';
+    ?>
+    <link rel="icon" href="<?php echo htmlspecialchars($_loginFavicon); ?>" type="<?php echo $_loginFaviconType; ?>">
     <link rel="stylesheet" href="style.css">
     <?php if ($adminTheme === 'system'): ?>
     <script>
@@ -454,8 +460,11 @@ $brandName = $siteSettings['branding']['name'] ?? (defined('SITE_NAME') ? SITE_N
     <?php if ($siteSettings['theme']['primaryColor'] !== '#2563eb' || $siteSettings['theme']['accentColor'] !== '#60a5fa'): ?>
     <style>
     :root {
+        <?php $pc = htmlspecialchars($siteSettings['theme']['primaryColor']); ?>
         <?php if ($siteSettings['theme']['primaryColor'] !== '#2563eb'): ?>
-        --nb-primary: <?php echo htmlspecialchars($siteSettings['theme']['primaryColor']); ?>;
+        --nb-primary: <?php echo $pc; ?>;
+        --nb-primary-btn: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $pc; ?> 70%, white) 0%, <?php echo $pc; ?> 70%);
+        --nb-primary-btn-hover: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $pc; ?> 50%, white) 0%, <?php echo $pc; ?> 70%);
         <?php endif; ?>
         <?php if ($siteSettings['theme']['accentColor'] !== '#60a5fa'): ?>
         --nb-brand: <?php echo htmlspecialchars($siteSettings['theme']['accentColor']); ?>;

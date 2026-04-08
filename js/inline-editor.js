@@ -2285,7 +2285,7 @@
         EditorConfig.isHtmlMode = toggle.checked;
 
         if (EditorConfig.isHtmlMode) {
-            html.value = wysiwyg.innerHTML;
+            html.value = formatHtml(wysiwyg.innerHTML);
             wysiwyg.style.display = 'none';
             html.style.display = 'block';
             html.focus();
@@ -2712,24 +2712,6 @@
             return;
         }
 
-        // Legal link fields: edit text + href (text is lang-dependent)
-        if (fieldName.startsWith('legalLinks.')) {
-            const linkKey = fieldName.split('.')[1]; // 'impressum' or 'datenschutz'
-            const currentText = field.textContent.trim();
-            const currentHref = linkHref || field.getAttribute('href') || '';
-            showPromptDialog(t('footer.edit'), t('footer.link_text_lang', { lang }), currentText, (newText) => {
-                if (newText === null) return;
-                showPromptDialog(t('footer.edit'), t('footer.link_url'), currentHref, (newHref) => {
-                    if (newHref === null) return;
-                    saveFooterLegalLink(linkKey, lang, newText, newHref, field);
-                    field.textContent = newText;
-                    field.href = newHref;
-                    field.dataset.linkHref = newHref;
-                });
-            });
-            return;
-        }
-
         // Copyright field: edit raw shortcode text
         if (fieldName === 'copyright') {
             // Get the raw shortcode text from JSON (innerHTML contains rendered HTML)
@@ -2818,21 +2800,6 @@
     }
 
     // Save legal link (lang-dependent text + flat href)
-    function saveFooterLegalLink(linkKey, lang, text, href, element) {
-        pushUndoState();
-
-        if (!EditorConfig.contentData['footer']) EditorConfig.contentData['footer'] = {};
-        const footerData = EditorConfig.contentData['footer'];
-        if (!footerData.legalLinks) footerData.legalLinks = {};
-        if (!footerData.legalLinks[linkKey]) footerData.legalLinks[linkKey] = {};
-        if (!footerData.legalLinks[linkKey].text) footerData.legalLinks[linkKey].text = {};
-        footerData.legalLinks[linkKey].text[lang] = text;
-        footerData.legalLinks[linkKey].href = href;
-
-        EditorConfig.dirtyPages.add('footer');
-        updateUndoRedoButtons();
-    }
-
     // Save a direct (non-nested, non-lang) footer field
     function saveFooterFieldDirect(fieldName, newValue, element) {
         pushUndoState();
@@ -3007,11 +2974,119 @@
         const currentValue = field.innerHTML.trim();
         const label = fieldKey.split('.').pop();
 
-        showPromptDialog('Edit HTML', label, currentValue, (newValue) => {
+        createHtmlSourceDialog();
+
+        const titleEl = document.getElementById('html-source-dialog-title');
+        const textarea = document.getElementById('html-source-textarea');
+        const modal = document.getElementById('html-source-dialog-modal');
+
+        titleEl.textContent = `HTML — ${label}`;
+        textarea.value = formatHtml(currentValue);
+
+        _htmlSourceCallback = (newValue) => {
             if (newValue !== null && newValue !== currentValue) {
                 saveField(page, fieldKey, newValue, field, true);
             }
+        };
+
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(0, 0);
+        }, 100);
+    }
+
+    var _htmlSourceCallback = null;
+
+    function createHtmlSourceDialog() {
+        if (document.getElementById('html-source-dialog-modal')) return;
+
+        const modal = document.createElement('div');
+        modal.id = 'html-source-dialog-modal';
+        modal.className = 'editor-modal';
+        modal.innerHTML = `
+            <div class="editor-modal-backdrop"></div>
+            <div class="editor-modal-content editor-modal-wide">
+                <div class="editor-modal-header">
+                    <h3 id="html-source-dialog-title">HTML</h3>
+                    <button type="button" class="editor-close-btn" onclick="InlineEditor.closeHtmlSourceDialog(null)">&times;</button>
+                </div>
+                <div class="editor-modal-body" style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
+                    <textarea id="html-source-textarea" class="html-source-textarea" spellcheck="false"></textarea>
+                </div>
+                <div class="editor-modal-footer">
+                    <button type="button" class="editor-btn editor-btn-secondary" onclick="InlineEditor.closeHtmlSourceDialog(null)">${t('cancel') || 'Cancel'}</button>
+                    <button type="button" class="editor-btn editor-btn-primary" onclick="InlineEditor.submitHtmlSourceDialog()">OK</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        modal.querySelector('.editor-modal-backdrop').addEventListener('click', () => closeHtmlSourceDialog(null));
+
+        // Ctrl+Enter to confirm
+        document.getElementById('html-source-textarea').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                submitHtmlSourceDialog();
+            }
+            // Tab inserts spaces instead of moving focus
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const ta = e.target;
+                const start = ta.selectionStart;
+                const end = ta.selectionEnd;
+                ta.value = ta.value.substring(0, start) + '  ' + ta.value.substring(end);
+                ta.selectionStart = ta.selectionEnd = start + 2;
+            }
         });
+
+        ModalResize.init(modal.querySelector('.editor-modal-content'));
+    }
+
+    function closeHtmlSourceDialog(value) {
+        const modal = document.getElementById('html-source-dialog-modal');
+        modal.classList.remove('active');
+        ModalResize.reset(modal.querySelector('.editor-modal-content'));
+        document.body.style.overflow = '';
+
+        if (_htmlSourceCallback) {
+            const cb = _htmlSourceCallback;
+            _htmlSourceCallback = null;
+            cb(value);
+        }
+    }
+
+    function submitHtmlSourceDialog() {
+        const value = document.getElementById('html-source-textarea').value;
+        closeHtmlSourceDialog(value);
+    }
+
+    function formatHtml(html) {
+        // Simple HTML formatter for readability in the source editor
+        let formatted = '';
+        let indent = 0;
+        const tokens = html.replace(/>\s*</g, '>\n<').split('\n');
+
+        for (let token of tokens) {
+            token = token.trim();
+            if (!token) continue;
+
+            // Closing tag or self-closing: decrease indent first
+            if (/^<\//.test(token)) {
+                indent = Math.max(0, indent - 1);
+            }
+
+            formatted += '  '.repeat(indent) + token + '\n';
+
+            // Opening tag (not self-closing, not void): increase indent
+            if (/^<[a-z][^\/]*>$/i.test(token) && !/^<(br|hr|img|input|meta|link|source)\b/i.test(token)) {
+                indent++;
+            }
+        }
+        return formatted.trim();
     }
 
     function setNestedValue(obj, dotKey, value) {
@@ -3298,6 +3373,13 @@
 
             wrapper.classList.add('editable-field-active');
 
+            // Add placeholder for empty images so they're visible and clickable
+            if (!img.getAttribute('src') || img.getAttribute('src') === '' || img.getAttribute('src') === '/') {
+                wrapper.classList.add('editable-image-empty');
+            }
+            img.addEventListener('error', () => wrapper.classList.add('editable-image-empty'));
+            img.addEventListener('load', () => wrapper.classList.remove('editable-image-empty'));
+
             // Add hide toggle button for image
             const isHidden = img.dataset.hidden === 'true';
             const hideBtn = document.createElement('button');
@@ -3326,13 +3408,19 @@
         const page = imgElement.dataset.page;
         const fieldKey = imgElement.dataset.field;
         const currentAlt = imgElement.getAttribute('alt') || '';
+        const isStringFormat = imgElement.dataset.imageFormat === 'string';
 
         openImageManager((imagePath) => {
-            // After image selected, ask for alt text
-            showPromptDialog('Alt text', 'Alt text', currentAlt, (newAlt) => {
-                if (newAlt === null) newAlt = currentAlt;
-                saveImageField(page, fieldKey, imagePath, newAlt, imgElement);
-            });
+            if (isStringFormat) {
+                // String-format images (e.g. news cover): save path directly, no alt dialog
+                saveImageField(page, fieldKey, imagePath, currentAlt, imgElement);
+            } else {
+                // Object-format images: ask for alt text
+                showPromptDialog('Alt text', 'Alt text', currentAlt, (newAlt) => {
+                    if (newAlt === null) newAlt = currentAlt;
+                    saveImageField(page, fieldKey, imagePath, newAlt, imgElement);
+                });
+            }
         });
     }
 
@@ -3340,9 +3428,17 @@
         // Push undo state
         pushUndoState();
 
-        // Update in-memory contentData
-        if (!EditorConfig.contentData[page]) EditorConfig.contentData[page] = {};
-        setNestedValue(EditorConfig.contentData[page], fieldKey, { src: newSrc, alt: newAlt });
+        // Check if this is a string-format image (e.g. news post cover)
+        const isStringFormat = element.dataset.imageFormat === 'string';
+
+        // Update in-memory data
+        if (page === '__news_post__' && EditorConfig.newsPostData) {
+            // News post: save image path as flat string
+            EditorConfig.newsPostData[fieldKey] = newSrc;
+        } else {
+            if (!EditorConfig.contentData[page]) EditorConfig.contentData[page] = {};
+            setNestedValue(EditorConfig.contentData[page], fieldKey, isStringFormat ? newSrc : { src: newSrc, alt: newAlt });
+        }
 
         // Mark as dirty
         EditorConfig.dirtyPages.add(page);
@@ -3350,6 +3446,11 @@
         // Update DOM
         element.setAttribute('src', newSrc);
         element.setAttribute('alt', newAlt);
+        // Remove empty placeholder class if image was set
+        const wrapper = element.closest('.editable-image-wrapper');
+        if (wrapper) wrapper.classList.remove('editable-image-empty');
+        const heroDiv = element.closest('.news-post-page__hero--empty');
+        if (heroDiv) heroDiv.classList.remove('news-post-page__hero--empty');
 
         updateUndoRedoButtons();
     }
@@ -5459,6 +5560,8 @@
         closeConfirmDialog: closeConfirmDialog,
         closePromptDialog: closePromptDialog,
         submitPromptDialog: submitPromptDialog,
+        closeHtmlSourceDialog: closeHtmlSourceDialog,
+        submitHtmlSourceDialog: submitHtmlSourceDialog,
         // News post editing
         enableNewsPostEditing: enableNewsPostEditing,
         disableNewsPostEditing: disableNewsPostEditing,

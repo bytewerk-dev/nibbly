@@ -18,7 +18,6 @@
     "btn.restore": "Obnovit",
     "btn.saving": "Ukládání...",
     "btn.changing": "Měním...",
-
     "pages.title": "Stránky",
     "pages.new_page": "+ Nová stránka",
     "pages.trash": "Koš",
@@ -30,14 +29,12 @@
     "pages.create": "+ Vytvořit",
     "pages.all_pages": "Všechny stránky",
     "pages.back_to_pages": "Zpět na stránky",
-
     "trash.title": "Koš",
     "trash.col_page": "Stránka",
     "trash.col_deleted": "Smazáno",
     "trash.col_actions": "Akce",
     "trash.empty": "Koš je prázdný.",
     "trash.empty_trash": "Vysypat koš",
-
     "editor.title": "Editor obsahu",
     "editor.expand_all": "Rozbalit vše",
     "editor.collapse_all": "Sbalit vše",
@@ -53,7 +50,6 @@
     "editor.add_item": "+ Přidat položku",
     "editor.add_section": "Přidat novou sekci:",
     "editor.select_image": "Vybrat obrázek",
-
     "events.title": "Události",
     "events.new_event": "+ Nová událost",
     "events.no_events": "Zatím žádné události.",
@@ -64,7 +60,6 @@
     "events.url": "URL",
     "events.untitled": "(bez názvu)",
     "events.save_events": "Uložit události",
-
     "mails.title": "Kontaktní zprávy",
     "mails.mark_all_read": "Označit vše jako přečtené",
     "mails.no_messages": "Žádné zprávy",
@@ -75,7 +70,6 @@
     "mails.phone": "Telefon:",
     "mails.preferred_date": "Preferovaný termín:",
     "mails.message": "Zpráva:",
-
     "settings.title": "Nastavení",
     "settings.branding": "Branding",
     "settings.branding_desc": "Uprav logo, název a viditelnost brandingu. Vypni branding pro white-label použití.",
@@ -85,7 +79,6 @@
     "settings.show_branding": "Zobrazit branding",
     "settings.branding_hint": "Když je vypnuto, logo a název Nibbly se skryjí z admin lišty a přihlašovací stránky.",
     "settings.save_branding": "Uložit branding",
-
     "settings.theme": "Vzhled",
     "settings.theme_desc": "Zvol vzhled administrace a uprav barvy značky.",
     "settings.admin_theme": "Vzhled administrace",
@@ -105,13 +98,11 @@
     "settings.preview_secondary": "Sekundární tlačítko",
     "settings.save_theme": "Uložit vzhled",
     "settings.invalid_color": "Neplatný formát barvy. Použij hex (#RRGGBB).",
-
     "settings.language": "Jazyk",
     "settings.admin_language": "Jazyk administrace",
     "settings.admin_language_hint": "Jazyk rozhraní administrace. Výchozí se řídí primárním jazykem webu.",
     "settings.admin_language_default": "Výchozí ({lang})",
     "settings.save_language": "Uložit jazyk",
-
     "settings.password": "Heslo",
     "settings.change_password": "Změnit heslo",
     "settings.current_password": "Současné heslo",
@@ -124,7 +115,6 @@
     "settings.pw_digit": "Číslice",
     "settings.pw_special": "Speciální znak",
     "settings.pw_match": "Hesla se shodují",
-
     "settings.email": "E-mail",
     "settings.email_desc": "Nastav odesílání e-mailů z kontaktního formuláře. Zprávy se vždy ukládají lokálně v administraci, i když odeslání selže.",
     "settings.email_method": "Způsob odesílání",
@@ -150,7 +140,6 @@
     "settings.test_email_error": "Odeslání testovacího e-mailu selhalo.",
     "settings.recipient_required": "Nejdříve zadej e-mailovou adresu příjemce.",
     "toast.email_saved": "Nastavení e-mailu uloženo",
-
     "settings.danger_zone": "Nebezpečná zóna",
     "settings.danger_zone_desc": "Nevratné akce. Postupuj s maximální opatrností.",
     "settings.total_reset": "Úplný reset",
@@ -161,18 +150,15 @@
     "settings.total_reset_btn": "Resetovat vše",
     "settings.total_reset_mismatch": "Pro potvrzení napiš přesně DELETE.",
     "toast.total_reset_success": "Instalace resetována. Přesměrování na průvodce nastavením...",
-
     "security.warning": "Bezpečnostní upozornění:",
     "security.weak_password": "Tvé současné heslo nesplňuje minimální bezpečnostní požadavky (alespoň 8 znaků s kombinací velkých a malých písmen, číslic a speciálních znaků).",
     "security.change_now": "Změň ho prosím okamžitě",
     "security.change_link": "Změnit heslo v Nastavení",
-
     "backups.title": "Zálohy",
     "backups.no_backups": "Žádné zálohy nejsou k dispozici",
     "backups.view": "Zobrazit",
     "backups.restore": "Obnovit",
     "backups.delete": "Smazat",
-
     "toast.saved": "Úspěšně uloženo!",
     "toast.page_duplicated": "Stránka duplikována: {slug}",
     "toast.page_trashed": "Stránka přesunuta do koše",
@@ -198,7 +184,6 @@
     "toast.error_loading_settings": "Chyba při načítání nastavení: {message}",
     "toast.events_date_required": "Datum a název jsou povinné",
     "toast.language_saved": "Jazyk uložen",
-
     "modal.new_page": "Nová stránka",
     "modal.new_page_title": "Název",
     "modal.new_page_title_placeholder": "Moje nová stránka",
@@ -217,7 +202,6 @@
     "modal.delete_message": "Smazat zprávu",
     "modal.delete_message_confirm": "Opravdu chceš smazat tuto zprávu?",
     "modal.select_logo": "Vybrat logo",
-
     "login.title": "Přihlášení",
     "login.username": "Uživatelské jméno",
     "login.password": "Heslo",
@@ -231,7 +215,6 @@
     "login.error_invalid": "Neplatné uživatelské jméno nebo heslo",
     "login.hour": "h",
     "login.minute": "min",
-
     "setup.page_title": "Nastavení - Nibbly CMS",
     "setup.complete_title": "Nastavení dokončeno",
     "setup.complete_message": "Nibbly CMS byl úspěšně nakonfigurován.",
@@ -265,7 +248,6 @@
     "setup.error_write": "Nepodařilo se zapsat config.php. Zkontroluj prosím, zda je adresář admin/ zapisovatelný webovým serverem.",
     "setup.copied": "Zkopírováno!",
     "setup.copy": "Kopírovat",
-
     "block.text": "Text",
     "block.youtube": "YouTube",
     "block.soundcloud": "SoundCloud",
@@ -277,7 +259,6 @@
     "block.list": "Seznam",
     "block.divider": "Oddělovač",
     "block.spacer": "Mezera",
-
     "field.title": "Název",
     "field.heading_level": "Úroveň nadpisu",
     "field.content": "Obsah",
@@ -299,7 +280,6 @@
     "field.title_optional": "Název (volitelné)",
     "field.list_items": "Položky seznamu",
     "field.height": "Výška",
-
     "option.default": "Výchozí",
     "option.highlight": "Zvýrazněný",
     "option.large": "Velký",
@@ -315,7 +295,6 @@
     "option.small": "Malý",
     "option.medium": "Střední",
     "option.extra_large": "Extra velký",
-
     "news.title": "Novinky",
     "news.new_post": "+ Nový příspěvek",
     "news.no_posts": "Zatím žádné příspěvky.",
@@ -338,16 +317,13 @@
     "news.view": "Zobrazit",
     "news.all_posts": "Všechny novinky",
     "news.read_more": "Číst dále",
-
     "toast.news_saved": "Příspěvek uložen!",
     "toast.news_deleted": "Příspěvek smazán",
     "toast.news_created": "Příspěvek vytvořen",
     "toast.error_loading_news": "Chyba při načítání novinek: {message}",
     "toast.news_date_required": "Datum a název jsou povinné",
-
     "modal.delete_post": "Smazat příspěvek",
     "modal.delete_post_confirm": "Opravdu chceš smazat \"{title}\"? Tuto akci nelze vrátit zpět.",
-
     "settings.backup": "Backup",
     "settings.backup_desc": "Díky souborové architektuře Nibbly jsou zálohy rychlé a jednoduché — stáhni si kompletní kopii webu včetně veškerého obsahu, šablon, obrázků a konfigurace.",
     "settings.backup_site": "Záloha webu",
@@ -357,7 +333,6 @@
     "settings.backup_downloading": "Stahuji…",
     "toast.backup_site_created": "Záloha vytvořena — stahování zahájeno.",
     "toast.backup_site_failed": "Záloha selhala: {message}",
-
     "settings.restore_title": "Obnovení ze zálohy",
     "settings.restore_desc": "Nahraj dříve stažený ZIP zálohy Nibbly pro obnovení webu.",
     "settings.restore_full": "Úplné obnovení",
@@ -373,7 +348,6 @@
     "toast.restore_success_full": "Úplné obnovení dokončeno — obnoveno {extracted} souborů.",
     "toast.restore_success_content": "Obsah obnoven — aktualizováno {extracted} souborů.",
     "toast.restore_failed": "Obnovení selhalo: {message}",
-
     "settings.users": "Uživatelé",
     "settings.users_desc": "Spravuj uživatelské účty s přístupem do administrace.",
     "settings.email_missing_title": "Chybí e-mailová adresa",
@@ -396,6 +370,11 @@
     "toast.user_deleted": "Uživatel smazán",
     "settings.email_inactive": "Neaktivní",
     "settings.email_inactive_hint": "Odesílání e-mailů je vypnuto. Zprávy z kontaktního formuláře se uloží lokálně, ale žádné e-maily nebudou odeslány.",
+    "settings.menus": "Menu",
+    "settings.menus_desc": "Spravujte pořadí stránek v jednotlivých navigačních menu.",
+    "settings.menu_select": "Vybrat menu",
+    "settings.menu_order_empty": "V tomto menu nejsou žádné stránky.",
+    "settings.menu_order_saved": "Pořadí menu uloženo.",
     "setup.admin_email": "E-mail (volitelné)",
     "setup.admin_email_placeholder": "admin@example.com",
     "setup.admin_email_hint": "Používá se pro resetování hesla. Lze přidat později v Nastavení.",
@@ -414,5 +393,16 @@
     "login.reset_success": "Heslo bylo úspěšně resetováno. Nyní se můžeš přihlásit.",
     "login.reset_email_subject": "Resetování hesla",
     "login.reset_email_body": "Ahoj {username},\n\nPožádal jsi o resetování hesla. Klikni na odkaz níže pro nastavení nového hesla:\n\n{url}\n\nTento odkaz vyprší za 1 hodinu.\n\nPokud jsi o to nežádal, můžeš tento e-mail ignorovat.",
-    "login.session_expired": "Tvoje relace vypršela. Přihlas se prosím znovu."
+    "login.session_expired": "Tvoje relace vypršela. Přihlas se prosím znovu.",
+    "editor.page_settings": "Page Settings",
+    "editor.meta_title": "Title",
+    "editor.meta_description": "Description",
+    "editor.nav_locations": "Navigation",
+    "editor.nav_custom_hint": "Custom, e.g. sidebar",
+    "editor.breadcrumb": "Breadcrumb",
+    "editor.breadcrumb_label": "Label",
+    "editor.breadcrumb_href": "Link (slug)",
+    "editor.breadcrumb_add": "Add item",
+    "editor.breadcrumb_hint": "Last item is the current page (no link needed).",
+    "editor.nav_add_custom": "Add menu"
 }

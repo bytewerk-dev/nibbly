@@ -18,7 +18,6 @@
     "btn.restore": "Wiederherstellen",
     "btn.saving": "Speichern...",
     "btn.changing": "Ändern...",
-
     "pages.title": "Seiten",
     "pages.new_page": "+ Neue Seite",
     "pages.trash": "Papierkorb",
@@ -30,14 +29,12 @@
     "pages.create": "+ Erstellen",
     "pages.all_pages": "Alle Seiten",
     "pages.back_to_pages": "Zurück zu Seiten",
-
     "trash.title": "Papierkorb",
     "trash.col_page": "Seite",
     "trash.col_deleted": "Gelöscht",
     "trash.col_actions": "Aktionen",
     "trash.empty": "Papierkorb ist leer.",
     "trash.empty_trash": "Papierkorb leeren",
-
     "editor.title": "Inhaltseditor",
     "editor.expand_all": "Alle aufklappen",
     "editor.collapse_all": "Alle zuklappen",
@@ -53,7 +50,16 @@
     "editor.add_item": "+ Eintrag hinzufügen",
     "editor.add_section": "Neuen Abschnitt hinzufügen:",
     "editor.select_image": "Bild auswählen",
-
+    "editor.page_settings": "Seiteneinstellungen",
+    "editor.meta_title": "Titel",
+    "editor.meta_description": "Beschreibung",
+    "editor.nav_locations": "Navigation",
+    "editor.nav_custom_hint": "Eigene, z.B. sidebar",
+    "editor.breadcrumb": "Breadcrumb",
+    "editor.breadcrumb_label": "Bezeichnung",
+    "editor.breadcrumb_href": "Link (Slug)",
+    "editor.breadcrumb_add": "Eintrag hinzufügen",
+    "editor.breadcrumb_hint": "Der letzte Eintrag ist die aktuelle Seite (kein Link nötig).",
     "events.title": "Termine",
     "events.new_event": "+ Neuer Termin",
     "events.no_events": "Noch keine Termine.",
@@ -64,7 +70,6 @@
     "events.url": "URL",
     "events.untitled": "(ohne Titel)",
     "events.save_events": "Termine speichern",
-
     "mails.title": "Kontaktnachrichten",
     "mails.mark_all_read": "Alle als gelesen markieren",
     "mails.no_messages": "Keine Nachrichten",
@@ -75,7 +80,6 @@
     "mails.phone": "Telefon:",
     "mails.preferred_date": "Wunschtermin:",
     "mails.message": "Nachricht:",
-
     "settings.title": "Einstellungen",
     "settings.branding": "Branding",
     "settings.branding_desc": "Logo, Name und Sichtbarkeit des Brandings anpassen. Branding deaktivieren für White-Label-Nutzung.",
@@ -85,7 +89,6 @@
     "settings.show_branding": "Branding anzeigen",
     "settings.branding_hint": "Wenn deaktiviert, werden Logo und Name in der Admin-Leiste und auf der Login-Seite ausgeblendet.",
     "settings.save_branding": "Branding speichern",
-
     "settings.theme": "Design",
     "settings.theme_desc": "Erscheinungsbild des Admin-Bereichs und Markenfarben anpassen.",
     "settings.admin_theme": "Admin-Design",
@@ -105,13 +108,11 @@
     "settings.preview_secondary": "Sekundär-Button",
     "settings.save_theme": "Design speichern",
     "settings.invalid_color": "Ungültiges Farbformat. Verwende Hex (#RRGGBB).",
-
     "settings.language": "Sprache",
     "settings.admin_language": "Admin-Sprache",
     "settings.admin_language_hint": "Sprache für den Admin-Bereich. Standard folgt der Primärsprache der Website.",
     "settings.admin_language_default": "Standard ({lang})",
     "settings.save_language": "Sprache speichern",
-
     "settings.password": "Passwort",
     "settings.change_password": "Passwort ändern",
     "settings.current_password": "Aktuelles Passwort",
@@ -124,7 +125,6 @@
     "settings.pw_digit": "Ziffer",
     "settings.pw_special": "Sonderzeichen",
     "settings.pw_match": "Passwörter stimmen überein",
-
     "settings.email": "E-Mail",
     "settings.email_desc": "Konfigurieren Sie den E-Mail-Versand für das Kontaktformular. Nachrichten werden immer lokal im Admin-Posteingang gespeichert, auch wenn der Versand fehlschlägt.",
     "settings.email_method": "Versandmethode",
@@ -150,7 +150,6 @@
     "settings.test_email_error": "Test-E-Mail konnte nicht gesendet werden.",
     "settings.recipient_required": "Bitte zuerst eine Empfänger-E-Mail-Adresse eingeben.",
     "toast.email_saved": "E-Mail-Einstellungen gespeichert",
-
     "settings.danger_zone": "Gefahrenzone",
     "settings.danger_zone_desc": "Unwiderrufliche Aktionen. Mit äußerster Vorsicht vorgehen.",
     "settings.total_reset": "Komplett-Reset",
@@ -161,18 +160,15 @@
     "settings.total_reset_btn": "Alles zurücksetzen",
     "settings.total_reset_mismatch": "Bitte tippe DELETE exakt ein, um zu bestätigen.",
     "toast.total_reset_success": "Installation zurückgesetzt. Weiterleitung zum Setup-Assistenten...",
-
     "security.warning": "Sicherheitswarnung:",
     "security.weak_password": "Dein aktuelles Passwort erfüllt nicht die Mindestanforderungen (mindestens 8 Zeichen mit Groß-/Kleinbuchstaben, Ziffern und Sonderzeichen).",
     "security.change_now": "Bitte ändere es sofort",
     "security.change_link": "Passwort in den Einstellungen ändern",
-
     "backups.title": "Backups",
     "backups.no_backups": "Keine Backups vorhanden",
     "backups.view": "Ansehen",
     "backups.restore": "Wiederherstellen",
     "backups.delete": "Löschen",
-
     "toast.saved": "Erfolgreich gespeichert!",
     "toast.page_duplicated": "Seite dupliziert: {slug}",
     "toast.page_trashed": "Seite in den Papierkorb verschoben",
@@ -198,7 +194,6 @@
     "toast.error_loading_settings": "Fehler beim Laden der Einstellungen: {message}",
     "toast.events_date_required": "Datum und Titel sind erforderlich",
     "toast.language_saved": "Sprache gespeichert",
-
     "modal.new_page": "Neue Seite",
     "modal.new_page_title": "Titel",
     "modal.new_page_title_placeholder": "Meine neue Seite",
@@ -217,7 +212,6 @@
     "modal.delete_message": "Nachricht löschen",
     "modal.delete_message_confirm": "Möchtest du diese Nachricht wirklich löschen?",
     "modal.select_logo": "Logo auswählen",
-
     "login.title": "Anmelden",
     "login.username": "Benutzername",
     "login.password": "Passwort",
@@ -231,7 +225,6 @@
     "login.error_invalid": "Ungültiger Benutzername oder Passwort",
     "login.hour": "Std.",
     "login.minute": "Min.",
-
     "setup.page_title": "Setup - Nibbly CMS",
     "setup.complete_title": "Setup abgeschlossen",
     "setup.complete_message": "Nibbly CMS wurde erfolgreich konfiguriert.",
@@ -265,7 +258,6 @@
     "setup.error_write": "config.php konnte nicht geschrieben werden. Bitte stelle sicher, dass das admin/-Verzeichnis vom Webserver beschreibbar ist.",
     "setup.copied": "Kopiert!",
     "setup.copy": "Kopieren",
-
     "block.text": "Text",
     "block.youtube": "YouTube",
     "block.soundcloud": "SoundCloud",
@@ -277,7 +269,6 @@
     "block.list": "Liste",
     "block.divider": "Trennlinie",
     "block.spacer": "Abstand",
-
     "field.title": "Titel",
     "field.heading_level": "Überschrift-Ebene",
     "field.content": "Inhalt",
@@ -299,7 +290,6 @@
     "field.title_optional": "Titel (optional)",
     "field.list_items": "Listeneinträge",
     "field.height": "Höhe",
-
     "option.default": "Standard",
     "option.highlight": "Hervorgehoben",
     "option.large": "Groß",
@@ -315,7 +305,6 @@
     "option.small": "Klein",
     "option.medium": "Mittel",
     "option.extra_large": "Sehr groß",
-
     "news.title": "News",
     "news.new_post": "+ Neuer Beitrag",
     "news.no_posts": "Noch keine Beiträge.",
@@ -338,16 +327,13 @@
     "news.view": "Ansehen",
     "news.all_posts": "Alle News",
     "news.read_more": "Weiterlesen",
-
     "toast.news_saved": "Beitrag gespeichert!",
     "toast.news_deleted": "Beitrag gelöscht",
     "toast.news_created": "Beitrag erstellt",
     "toast.error_loading_news": "Fehler beim Laden der News: {message}",
     "toast.news_date_required": "Datum und Titel sind erforderlich",
-
     "modal.delete_post": "Beitrag löschen",
     "modal.delete_post_confirm": "Möchtest du \"{title}\" wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
-
     "settings.backup": "Backup",
     "settings.backup_desc": "Dank Nibblys Flat-File-Architektur sind Backups schnell und unkompliziert — lade eine vollständige Kopie deiner Website herunter, inklusive aller Inhalte, Templates, Bilder und Konfiguration.",
     "settings.backup_site": "Website-Backup",
@@ -357,7 +343,6 @@
     "settings.backup_downloading": "Download läuft…",
     "toast.backup_site_created": "Backup erstellt — Download gestartet.",
     "toast.backup_site_failed": "Backup fehlgeschlagen: {message}",
-
     "settings.restore_title": "Aus Backup wiederherstellen",
     "settings.restore_desc": "Lade eine zuvor heruntergeladene Nibbly-Backup-ZIP hoch, um deine Website wiederherzustellen.",
     "settings.restore_full": "Vollständige Wiederherstellung",
@@ -373,7 +358,6 @@
     "toast.restore_success_full": "Vollständige Wiederherstellung abgeschlossen — {extracted} Dateien wiederhergestellt.",
     "toast.restore_success_content": "Inhalte wiederhergestellt — {extracted} Dateien aktualisiert.",
     "toast.restore_failed": "Wiederherstellung fehlgeschlagen: {message}",
-
     "settings.users": "Benutzer",
     "settings.users_desc": "Benutzerkonten und Rollen verwalten. Admins können alle Einstellungen ändern; Editoren können nur Inhalte bearbeiten.",
     "settings.email_missing_title": "E-Mail-Adresse fehlt",
@@ -394,14 +378,16 @@
     "toast.user_created": "Benutzer erstellt",
     "toast.user_updated": "Benutzer aktualisiert",
     "toast.user_deleted": "Benutzer gelöscht",
-
     "settings.email_inactive": "Inaktiv",
     "settings.email_inactive_hint": "E-Mail-Versand ist deaktiviert. Kontaktformular-Eingaben werden lokal gespeichert, aber es werden keine E-Mails versendet. Aktiviere SMTP oder Sendmail, um E-Mails zu versenden.",
-
+    "settings.menus": "Menüs",
+    "settings.menus_desc": "Reihenfolge der Seiten in den Navigationsmenüs verwalten.",
+    "settings.menu_select": "Menü auswählen",
+    "settings.menu_order_empty": "Keine Seiten in diesem Menü.",
+    "settings.menu_order_saved": "Menüreihenfolge gespeichert.",
     "setup.admin_email": "E-Mail (optional)",
     "setup.admin_email_placeholder": "admin@example.com",
     "setup.admin_email_hint": "Wird für Passwort-Zurücksetzung benötigt. Kann später in den Einstellungen hinzugefügt werden.",
-
     "login.forgot_password": "Passwort vergessen?",
     "login.back_to_login": "Zurück zum Login",
     "login.reset_desc": "Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Zurücksetzen deines Passworts.",
@@ -417,5 +403,6 @@
     "login.reset_success": "Passwort wurde erfolgreich zurückgesetzt. Du kannst dich jetzt anmelden.",
     "login.reset_email_subject": "Passwort zurücksetzen",
     "login.reset_email_body": "Hallo {username},\n\nDu hast eine Passwort-Zurücksetzung angefordert. Klicke auf den folgenden Link, um ein neues Passwort zu setzen:\n\n{url}\n\nDieser Link ist 1 Stunde gültig.\n\nWenn du dies nicht angefordert hast, kannst du diese E-Mail ignorieren.",
-    "login.session_expired": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an."
+    "login.session_expired": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
+    "editor.nav_add_custom": "Menü hinzufügen"
 }

@@ -18,7 +18,6 @@
     "btn.restore": "Geri Yükle",
     "btn.saving": "Kaydediliyor...",
     "btn.changing": "Değiştiriliyor...",
-
     "pages.title": "Sayfalar",
     "pages.new_page": "+ Yeni Sayfa",
     "pages.trash": "Çöp Kutusu",
@@ -30,14 +29,12 @@
     "pages.create": "+ Oluştur",
     "pages.all_pages": "Tüm Sayfalar",
     "pages.back_to_pages": "Sayfalara Dön",
-
     "trash.title": "Çöp Kutusu",
     "trash.col_page": "Sayfa",
     "trash.col_deleted": "Silinme Tarihi",
     "trash.col_actions": "İşlemler",
     "trash.empty": "Çöp kutusu boş.",
     "trash.empty_trash": "Çöp Kutusunu Boşalt",
-
     "editor.title": "İçerik Düzenleyici",
     "editor.expand_all": "Tümünü Genişlet",
     "editor.collapse_all": "Tümünü Daralt",
@@ -53,7 +50,6 @@
     "editor.add_item": "+ Öğe ekle",
     "editor.add_section": "Yeni bölüm ekle:",
     "editor.select_image": "Görsel Seç",
-
     "events.title": "Etkinlikler",
     "events.new_event": "+ Yeni Etkinlik",
     "events.no_events": "Henüz etkinlik yok.",
@@ -64,7 +60,6 @@
     "events.url": "URL",
     "events.untitled": "(başlıksız)",
     "events.save_events": "Etkinlikleri Kaydet",
-
     "mails.title": "İletişim Mesajları",
     "mails.mark_all_read": "Tümünü okundu işaretle",
     "mails.no_messages": "Mesaj yok",
@@ -75,7 +70,6 @@
     "mails.phone": "Telefon:",
     "mails.preferred_date": "Tercih Edilen Tarih:",
     "mails.message": "Mesaj:",
-
     "settings.title": "Ayarlar",
     "settings.branding": "Marka",
     "settings.branding_desc": "Logo, site adı ve marka görünürlüğünü özelleştir. Beyaz etiket kullanımı için markayı devre dışı bırakabilirsin.",
@@ -85,7 +79,6 @@
     "settings.show_branding": "Markayı Göster",
     "settings.branding_hint": "Devre dışı bırakıldığında, Nibbly logosu ve adı yönetim çubuğunda ve giriş sayfasında gizlenir.",
     "settings.save_branding": "Markayı Kaydet",
-
     "settings.theme": "Tema",
     "settings.theme_desc": "Yönetim paneli görünümünü ve marka renklerini özelleştir.",
     "settings.admin_theme": "Yönetim Teması",
@@ -105,13 +98,11 @@
     "settings.preview_secondary": "İkincil Buton",
     "settings.save_theme": "Temayı Kaydet",
     "settings.invalid_color": "Geçersiz renk formatı. Hex (#RRGGBB) kullan.",
-
     "settings.language": "Dil",
     "settings.admin_language": "Yönetim Dili",
     "settings.admin_language_hint": "Yönetim panelinin dili. Varsayılan olarak sitenin birincil dilini takip eder.",
     "settings.admin_language_default": "Varsayılan ({lang})",
     "settings.save_language": "Dili Kaydet",
-
     "settings.password": "Şifre",
     "settings.change_password": "Şifre Değiştir",
     "settings.current_password": "Mevcut Şifre",
@@ -124,7 +115,6 @@
     "settings.pw_digit": "Rakam",
     "settings.pw_special": "Özel karakter",
     "settings.pw_match": "Şifreler eşleşiyor",
-
     "settings.email": "E-posta",
     "settings.email_desc": "İletişim formunun e-postaları nasıl göndereceğini yapılandır. Mesajlar, gönderim başarısız olsa bile her zaman yönetim gelen kutusuna kaydedilir.",
     "settings.email_method": "Gönderim Yöntemi",
@@ -150,7 +140,6 @@
     "settings.test_email_error": "Test e-postası gönderilemedi.",
     "settings.recipient_required": "Lütfen önce bir alıcı e-posta adresi gir.",
     "toast.email_saved": "E-posta ayarları kaydedildi",
-
     "settings.danger_zone": "Tehlikeli Bölge",
     "settings.danger_zone_desc": "Geri alınamaz işlemler. Son derece dikkatli ol.",
     "settings.total_reset": "Tam Sıfırlama",
@@ -161,18 +150,15 @@
     "settings.total_reset_btn": "Her Şeyi Sıfırla",
     "settings.total_reset_mismatch": "Onaylamak için lütfen tam olarak DELETE yaz.",
     "toast.total_reset_success": "Kurulum sıfırlandı. Kurulum sihirbazına yönlendiriliyorsun...",
-
     "security.warning": "Güvenlik Uyarısı:",
     "security.weak_password": "Mevcut şifren minimum güvenlik gereksinimlerini karşılamıyor (en az 8 karakter, büyük harf, küçük harf, rakam ve özel karakter karışımı).",
     "security.change_now": "Lütfen hemen değiştir",
     "security.change_link": "Şifreni Ayarlar'dan değiştir",
-
     "backups.title": "Yedekler",
     "backups.no_backups": "Yedek bulunmuyor",
     "backups.view": "Görüntüle",
     "backups.restore": "Geri Yükle",
     "backups.delete": "Sil",
-
     "toast.saved": "Başarıyla kaydedildi!",
     "toast.page_duplicated": "Sayfa kopyalandı: {slug}",
     "toast.page_trashed": "Sayfa çöp kutusuna taşındı",
@@ -198,7 +184,6 @@
     "toast.error_loading_settings": "Ayar yükleme hatası: {message}",
     "toast.events_date_required": "Tarih ve başlık gereklidir",
     "toast.language_saved": "Dil kaydedildi",
-
     "modal.new_page": "Yeni Sayfa",
     "modal.new_page_title": "Başlık",
     "modal.new_page_title_placeholder": "Yeni Sayfam",
@@ -217,7 +202,6 @@
     "modal.delete_message": "Mesajı Sil",
     "modal.delete_message_confirm": "Bu mesajı silmek istediğinden emin misin?",
     "modal.select_logo": "Logo Seç",
-
     "login.title": "Giriş Yap",
     "login.username": "Kullanıcı Adı",
     "login.password": "Şifre",
@@ -231,7 +215,6 @@
     "login.error_invalid": "Geçersiz kullanıcı adı veya şifre",
     "login.hour": "sa",
     "login.minute": "dk",
-
     "setup.page_title": "Kurulum - Nibbly CMS",
     "setup.complete_title": "Kurulum Tamamlandı",
     "setup.complete_message": "Nibbly CMS başarıyla yapılandırıldı.",
@@ -265,7 +248,6 @@
     "setup.error_write": "config.php yazılamadı. Lütfen admin/ dizininin web sunucusu tarafından yazılabilir olduğunu kontrol et.",
     "setup.copied": "Kopyalandı!",
     "setup.copy": "Kopyala",
-
     "block.text": "Metin",
     "block.youtube": "YouTube",
     "block.soundcloud": "SoundCloud",
@@ -277,7 +259,6 @@
     "block.list": "Liste",
     "block.divider": "Ayırıcı",
     "block.spacer": "Boşluk",
-
     "field.title": "Başlık",
     "field.heading_level": "Başlık Seviyesi",
     "field.content": "İçerik",
@@ -299,7 +280,6 @@
     "field.title_optional": "Başlık (isteğe bağlı)",
     "field.list_items": "Liste Öğeleri",
     "field.height": "Yükseklik",
-
     "option.default": "Varsayılan",
     "option.highlight": "Vurgulu",
     "option.large": "Büyük",
@@ -315,7 +295,6 @@
     "option.small": "Küçük",
     "option.medium": "Orta",
     "option.extra_large": "Çok Büyük",
-
     "news.title": "Haberler",
     "news.new_post": "+ Yeni Yazı",
     "news.no_posts": "Henüz yazı yok.",
@@ -338,16 +317,13 @@
     "news.view": "Görüntüle",
     "news.all_posts": "Tüm Haberler",
     "news.read_more": "Devamını oku",
-
     "toast.news_saved": "Yazı kaydedildi!",
     "toast.news_deleted": "Yazı silindi",
     "toast.news_created": "Yazı oluşturuldu",
     "toast.error_loading_news": "Haber yükleme hatası: {message}",
     "toast.news_date_required": "Tarih ve başlık gereklidir",
-
     "modal.delete_post": "Yazıyı Sil",
     "modal.delete_post_confirm": "\"{title}\" yazısını silmek istediğinden emin misin? Bu işlem geri alınamaz.",
-
     "settings.backup": "Backup",
     "settings.backup_desc": "Nibbly'nin dosya tabanlı mimarisi sayesinde yedeklemeler hızlı ve kolaydır — tüm içerik, şablonlar, görseller ve yapılandırma dahil sitenin eksiksiz bir kopyasını indir.",
     "settings.backup_site": "Site Backup",
@@ -357,7 +333,6 @@
     "settings.backup_downloading": "İndiriliyor…",
     "toast.backup_site_created": "Backup oluşturuldu — indirme başladı.",
     "toast.backup_site_failed": "Backup başarısız: {message}",
-
     "settings.restore_title": "Backup'tan Geri Yükle",
     "settings.restore_desc": "Siteni geri yüklemek için daha önce indirilen bir Nibbly backup ZIP'i yükle.",
     "settings.restore_full": "Tam Geri Yükleme",
@@ -373,7 +348,6 @@
     "toast.restore_success_full": "Tam geri yükleme tamamlandı — {extracted} dosya geri yüklendi.",
     "toast.restore_success_content": "İçerik geri yüklendi — {extracted} dosya güncellendi.",
     "toast.restore_failed": "Geri yükleme başarısız: {message}",
-
     "settings.users": "Kullanıcılar",
     "settings.users_desc": "Yönetim paneline erişebilen kullanıcı hesaplarını yönet.",
     "settings.email_missing_title": "E-posta adresi eksik",
@@ -396,6 +370,11 @@
     "toast.user_deleted": "Kullanıcı silindi",
     "settings.email_inactive": "Pasif",
     "settings.email_inactive_hint": "E-posta gönderimi devre dışı. İletişim formu gönderimleri yerel olarak kaydedilecek ancak e-posta gönderilmeyecektir.",
+    "settings.menus": "Menüler",
+    "settings.menus_desc": "Her navigasyon menüsündeki sayfa sıralamasını yönetin.",
+    "settings.menu_select": "Menü seçin",
+    "settings.menu_order_empty": "Bu menüde sayfa yok.",
+    "settings.menu_order_saved": "Menü sıralaması kaydedildi.",
     "setup.admin_email": "E-posta (isteğe bağlı)",
     "setup.admin_email_placeholder": "admin@example.com",
     "setup.admin_email_hint": "Şifre sıfırlama için kullanılır. Daha sonra Ayarlar'dan eklenebilir.",
@@ -414,5 +393,16 @@
     "login.reset_success": "Şifre başarıyla sıfırlandı. Artık giriş yapabilirsin.",
     "login.reset_email_subject": "Şifre Sıfırlama",
     "login.reset_email_body": "Merhaba {username},\n\nŞifre sıfırlama talebinde bulundun. Yeni şifreni belirlemek için aşağıdaki bağlantıya tıkla:\n\n{url}\n\nBu bağlantının süresi 1 saat içinde dolacaktır.\n\nBu talebi sen yapmadıysan, bu e-postayı görmezden gelebilirsin.",
-    "login.session_expired": "Oturumun sona erdi. Lütfen tekrar giriş yap."
+    "login.session_expired": "Oturumun sona erdi. Lütfen tekrar giriş yap.",
+    "editor.page_settings": "Page Settings",
+    "editor.meta_title": "Title",
+    "editor.meta_description": "Description",
+    "editor.nav_locations": "Navigation",
+    "editor.nav_custom_hint": "Custom, e.g. sidebar",
+    "editor.breadcrumb": "Breadcrumb",
+    "editor.breadcrumb_label": "Label",
+    "editor.breadcrumb_href": "Link (slug)",
+    "editor.breadcrumb_add": "Add item",
+    "editor.breadcrumb_hint": "Last item is the current page (no link needed).",
+    "editor.nav_add_custom": "Add menu"
 }

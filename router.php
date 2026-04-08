@@ -10,6 +10,7 @@ $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $root = __DIR__;
 $filePath = $root . $uri;
 
+
 // Block access to sensitive paths BEFORE serving any files
 if (preg_match('#^/(content|backups)/|-trash/#', $uri)) {
     http_response_code(403);
