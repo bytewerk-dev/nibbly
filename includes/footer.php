@@ -27,18 +27,6 @@ $creditText = $footerData['credit']['text'] ?? '';
 $creditLink = $footerData['credit']['link'] ?? '';
 $creditLinkText = $footerData['credit']['linkText'] ?? '';
 $contactHeading = $footerData['contactHeading'][$currentLang] ?? 'Contact';
-$legalHeading = $footerData['legalHeading'][$currentLang] ?? 'Info';
-
-// Legal links (support both array and string href formats)
-$legalLinks = [];
-if (!empty($footerData['legalLinks'])) {
-    foreach ($footerData['legalLinks'] as $key => $link) {
-        $text = $link['text'][$currentLang] ?? $link['text']['en'] ?? ucfirst($key);
-        $hrefRaw = $link['href'] ?? '';
-        $href = $basePath . (is_array($hrefRaw) ? ($hrefRaw[$currentLang] ?? $hrefRaw[array_key_first($hrefRaw)] ?? '') : $hrefRaw);
-        $legalLinks[] = ['text' => $text, 'href' => $href, 'key' => $key];
-    }
-}
 
 $copyrightVal = $footerData['copyright'] ?? '&copy; [id="adminAccess"]' . date('Y') . '[/id]';
 $copyrightRaw = is_array($copyrightVal) ? ($copyrightVal[$currentLang] ?? $copyrightVal[array_key_first($copyrightVal)] ?? '') : $copyrightVal;
@@ -98,30 +86,33 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
             </div>
 
             <?php
-            // Page links column — read from nav config
-            $footerNavItems = $NAV_ITEMS[$currentLang] ?? [];
-            if ($footerNavItems):
+            // Footer nav columns — driven by menu registry (all menus except header)
+            require_once __DIR__ . '/menu-helpers.php';
+            $_footerMenuIds = array_filter(getRegisteredMenuIds(), fn($id) => $id !== 'header');
+            $_footerAllNavItems = $NAV_ITEMS[$currentLang] ?? [];
+            foreach ($_footerMenuIds as $_menuId):
+                $_menuItems = getMenuItems($_menuId, $currentLang, $basePath, $_footerAllNavItems);
+                // Flatten children for footer (no dropdowns)
+                $_flat = [];
+                foreach ($_menuItems as $_mi) {
+                    if (!empty($_mi['children'])) {
+                        foreach ($_mi['children'] as $_child) $_flat[] = $_child;
+                    } else {
+                        $_flat[] = $_mi;
+                    }
+                }
+                $_menuItems = $_flat;
+                if (!$_menuItems) continue;
             ?>
-            <div class="footer-col footer-col--pages">
-                <p class="footer-col-heading"><?php echo htmlspecialchars($footerData['pagesHeading'][$currentLang] ?? 'Pages'); ?></p>
+            <div class="footer-col footer-col--nav">
+                <p class="footer-col-heading"><?php echo htmlspecialchars(getMenuLabel($_menuId, $currentLang)); ?></p>
                 <nav class="meta-links">
-                    <?php foreach ($footerNavItems as $navItem): ?>
+                    <?php foreach ($_menuItems as $navItem): ?>
                     <a href="<?php echo $basePath . htmlspecialchars($navItem['href']); ?>"><?php echo htmlspecialchars($navItem['label']); ?></a>
                     <?php endforeach; ?>
                 </nav>
             </div>
-            <?php endif; ?>
-
-            <?php if ($legalLinks): ?>
-            <div class="footer-col footer-col--legal">
-                <p class="footer-col-heading<?php echo $isAdminLoggedIn ? ' editable-footer-field' : ''; ?>" data-field="legalHeading" data-lang="<?php echo $currentLang; ?>"><?php echo htmlspecialchars($legalHeading); ?></p>
-                <nav class="meta-links">
-                    <?php foreach ($legalLinks as $ll): ?>
-                    <a href="<?php echo htmlspecialchars($ll['href']); ?>" class="<?php echo $isAdminLoggedIn ? 'editable-footer-field' : ''; ?>" data-field="legalLinks.<?php echo htmlspecialchars($ll['key']); ?>" data-lang="<?php echo $currentLang; ?>" data-link-href="<?php echo htmlspecialchars($ll['href']); ?>"><?php echo htmlspecialchars($ll['text']); ?></a>
-                    <?php endforeach; ?>
-                </nav>
-            </div>
-            <?php endif; ?>
+            <?php endforeach; ?>
         </div>
 
         <div class="footer-bottom">
@@ -467,6 +458,7 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
     require_once __DIR__ . '/../admin/lang/i18n.php';
     ?>
     window.NB_LANG = <?php echo json_encode(tEditorAll(), JSON_UNESCAPED_UNICODE); ?>;
+    window.NB_MENUS = <?php echo json_encode(getMenuRegistry()['menus'] ?? [], JSON_UNESCAPED_UNICODE); ?>;
     <?php
     // Build lightweight page list for link picker (slug → title for current language)
     $_linkPages = [];

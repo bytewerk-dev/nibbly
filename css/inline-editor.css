@@ -962,16 +962,19 @@ body.edit-mode-active .editable-section:hover .video-container::after {
 }
 
 /* HTML Editor */
-.editor-html {
+textarea.editor-html {
     width: 100%;
     min-height: 400px;
     max-height: 600px;
     padding: 12px;
     border: 1px solid #ddd;
     border-radius: 0 0 4px 4px;
-    font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace;
     font-size: 13px;
-    line-height: 1.5;
+    line-height: 1.6;
+    tab-size: 2;
+    white-space: pre-wrap;
+    word-wrap: break-word;
     resize: vertical;
     background: #1e1e1e;
     color: #d4d4d4;
@@ -1381,6 +1384,31 @@ select.prompt-dialog-input {
     box-shadow: 0 0 0 3px rgba(13, 149, 156, 0.15);
 }
 
+/* HTML Source Editor */
+.html-source-textarea {
+    width: 100%;
+    min-height: 300px;
+    flex: 1;
+    padding: 14px 16px;
+    border: 1px solid #e2e2e2;
+    border-radius: 6px;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    tab-size: 2;
+    resize: vertical;
+    background: #fafafa;
+    color: #1a1a1a;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.html-source-textarea:focus {
+    outline: none;
+    border-color: var(--editor-primary);
+    box-shadow: 0 0 0 3px rgba(13, 149, 156, 0.15);
+}
+
 /* ============================================================
    EDITIERBARE KONZERTE
    ============================================================ */
@@ -1771,6 +1799,7 @@ body.edit-mode-active .editable-list-item:hover .list-item-add-btn {
     align-items: center;
     gap: 8px;
     cursor: pointer;
+    color: white;
 }
 
 .image-upload-btn svg {
@@ -2805,6 +2834,28 @@ body.edit-mode-active [data-hidden="true"]:hover {
 }
 
 body.edit-mode-active .editable-field-wrapper:hover .field-hide-btn,
+/* Placeholder for empty/broken images in edit mode */
+body.edit-mode-active .editable-image-empty {
+    min-width: 200px;
+    min-height: 120px;
+    background: repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(128,128,128,0.08) 8px, rgba(128,128,128,0.08) 16px);
+    border: 2px dashed rgba(128,128,128,0.3);
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+body.edit-mode-active .editable-image-empty::after {
+    content: 'Click to add image';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    color: rgba(128,128,128,0.6);
+    pointer-events: none;
+}
+
 body.edit-mode-active .editable-image-wrapper:hover .field-hide-btn {
     display: flex;
 }
@@ -3028,9 +3079,7 @@ body.edit-mode-active .cell-toggle-group {
     outline: none;
 }
 
-[data-site-theme="dark"] .editor-modal label {
-    color: #a3a3a3;
-}
+
 
 /* Secondary buttons in modals */
 [data-site-theme="dark"] .editor-btn-secondary {
@@ -3092,6 +3141,97 @@ body.edit-mode-active .cell-toggle-group {
 
 [data-site-theme="dark"] .image-manager-list-item:hover {
     background: #222;
+}
+
+[data-site-theme="dark"] .image-manager-actions {
+    background: #1a1a1a;
+    border-top-color: #2a2a2a;
+}
+
+[data-site-theme="dark"] .image-action-preview,
+[data-site-theme="dark"] .image-action-replace,
+[data-site-theme="dark"] .image-action-delete {
+    background: #2a2a2a;
+    color: #a3a3a3;
+}
+
+[data-site-theme="dark"] .image-manager-view-toggle {
+    background: #1a1a1a;
+}
+
+[data-site-theme="dark"] .image-manager-name {
+    background: #1a1a1a;
+}
+
+[data-site-theme="dark"] .view-toggle-btn {
+    background: #2a2a2a;
+    border-color: #333;
+    color: #a3a3a3;
+}
+
+[data-site-theme="dark"] .view-toggle-btn.active {
+    background: #333;
+    color: var(--editor-primary);
+    box-shadow: none;
+}
+
+[data-site-theme="dark"] .view-toggle-btn:hover {
+    background: #333;
+}
+
+[data-site-theme="dark"] .image-selection-info {
+    color: #a3a3a3;
+}
+
+[data-site-theme="dark"] .image-search-input {
+    background: #1a1a1a;
+    border-color: #333;
+    color: #e5e5e5;
+}
+
+/* Image manager list view dark mode */
+[data-site-theme="dark"] .image-list-header {
+    background: #141414;
+    color: #666;
+}
+
+[data-site-theme="dark"] .image-list-body {
+    border-color: #2a2a2a;
+}
+
+[data-site-theme="dark"] .image-list-row {
+    border-bottom-color: #2a2a2a;
+}
+
+[data-site-theme="dark"] .image-list-row:hover {
+    background: #1a1a1a;
+}
+
+[data-site-theme="dark"] .image-list-row.selected {
+    background: rgba(13, 156, 144, 0.12);
+}
+
+[data-site-theme="dark"] .image-list-name {
+    color: #e5e5e5;
+}
+
+[data-site-theme="dark"] .image-list-size,
+[data-site-theme="dark"] .image-list-date {
+    color: #666;
+}
+
+[data-site-theme="dark"] .image-list-thumb {
+    background-color: #1a1a1a;
+}
+
+[data-site-theme="dark"] .image-list-checkbox .image-selection-checkbox {
+    border-color: #555;
+    background: #1a1a1a;
+}
+
+[data-site-theme="dark"] .image-list-checkbox .image-selection-checkbox:hover {
+    border-color: var(--editor-primary);
+    background: rgba(13, 156, 144, 0.15);
 }
 
 /* Event editor tabs */
@@ -3178,6 +3318,12 @@ body.edit-mode-active .cell-toggle-group {
 }
 
 [data-site-theme="dark"] .prompt-dialog-input {
+    background: #0f0f0f;
+    color: #e5e5e5;
+    border-color: #2a2a2a;
+}
+
+[data-site-theme="dark"] .html-source-textarea {
     background: #0f0f0f;
     color: #e5e5e5;
     border-color: #2a2a2a;

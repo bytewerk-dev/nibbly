@@ -18,7 +18,6 @@
     "btn.restore": "Restaurar",
     "btn.saving": "Guardando...",
     "btn.changing": "Cambiando...",
-
     "pages.title": "Páginas",
     "pages.new_page": "+ Nueva página",
     "pages.trash": "Papelera",
@@ -30,14 +29,12 @@
     "pages.create": "+ Crear",
     "pages.all_pages": "Todas las páginas",
     "pages.back_to_pages": "Volver a páginas",
-
     "trash.title": "Papelera",
     "trash.col_page": "Página",
     "trash.col_deleted": "Eliminado",
     "trash.col_actions": "Acciones",
     "trash.empty": "La papelera está vacía.",
     "trash.empty_trash": "Vaciar papelera",
-
     "editor.title": "Editor de contenido",
     "editor.expand_all": "Expandir todo",
     "editor.collapse_all": "Contraer todo",
@@ -53,7 +50,16 @@
     "editor.add_item": "+ Añadir elemento",
     "editor.add_section": "Añadir nueva sección:",
     "editor.select_image": "Seleccionar imagen",
-
+    "editor.page_settings": "Configuración de la página",
+    "editor.meta_title": "Título",
+    "editor.meta_description": "Descripción",
+    "editor.nav_locations": "Navegación",
+    "editor.nav_custom_hint": "Personalizado, ej. sidebar",
+    "editor.breadcrumb": "Breadcrumb",
+    "editor.breadcrumb_label": "Etiqueta",
+    "editor.breadcrumb_href": "Enlace (slug)",
+    "editor.breadcrumb_add": "Añadir elemento",
+    "editor.breadcrumb_hint": "El último elemento es la página actual (sin enlace).",
     "events.title": "Eventos",
     "events.new_event": "+ Nuevo evento",
     "events.no_events": "Aún no hay eventos.",
@@ -64,7 +70,6 @@
     "events.url": "URL",
     "events.untitled": "(sin título)",
     "events.save_events": "Guardar eventos",
-
     "mails.title": "Mensajes de contacto",
     "mails.mark_all_read": "Marcar todo como leído",
     "mails.no_messages": "No hay mensajes",
@@ -75,7 +80,6 @@
     "mails.phone": "Teléfono:",
     "mails.preferred_date": "Fecha preferida:",
     "mails.message": "Mensaje:",
-
     "settings.title": "Ajustes",
     "settings.branding": "Marca",
     "settings.branding_desc": "Personaliza el logotipo, el nombre y la visibilidad de la marca. Desactiva la marca para uso de marca blanca.",
@@ -85,7 +89,6 @@
     "settings.show_branding": "Mostrar marca",
     "settings.branding_hint": "Cuando está desactivado, el logotipo y el nombre de Nibbly se ocultan en la barra de administración y la página de inicio de sesión.",
     "settings.save_branding": "Guardar marca",
-
     "settings.theme": "Tema",
     "settings.theme_desc": "Elige la apariencia de la interfaz de administración y personaliza los colores de la marca.",
     "settings.admin_theme": "Tema de administración",
@@ -105,13 +108,11 @@
     "settings.preview_secondary": "Botón secundario",
     "settings.save_theme": "Guardar tema",
     "settings.invalid_color": "Formato de color no válido. Usa hexadecimal (#RRGGBB).",
-
     "settings.language": "Idioma",
     "settings.admin_language": "Idioma de administración",
     "settings.admin_language_hint": "Idioma de la interfaz de administración. Por defecto sigue el idioma principal del sitio.",
     "settings.admin_language_default": "Por defecto ({lang})",
     "settings.save_language": "Guardar idioma",
-
     "settings.password": "Contraseña",
     "settings.change_password": "Cambiar contraseña",
     "settings.current_password": "Contraseña actual",
@@ -124,7 +125,6 @@
     "settings.pw_digit": "Dígito",
     "settings.pw_special": "Carácter especial",
     "settings.pw_match": "Las contraseñas coinciden",
-
     "settings.email": "Email",
     "settings.email_desc": "Configura cómo el formulario de contacto envía los correos. Los mensajes siempre se guardan localmente en la bandeja de entrada del administrador, incluso si el envío falla.",
     "settings.email_method": "Método de envío",
@@ -150,7 +150,6 @@
     "settings.test_email_error": "No se pudo enviar el email de prueba.",
     "settings.recipient_required": "Introduce primero una dirección de email del destinatario.",
     "toast.email_saved": "Ajustes de email guardados",
-
     "settings.danger_zone": "Zona de peligro",
     "settings.danger_zone_desc": "Acciones irreversibles. Procede con extrema precaución.",
     "settings.total_reset": "Restablecimiento total",
@@ -161,18 +160,15 @@
     "settings.total_reset_btn": "Restablecer todo",
     "settings.total_reset_mismatch": "Escribe DELETE exactamente para confirmar.",
     "toast.total_reset_success": "Instalación restablecida. Redirigiendo al asistente de configuración...",
-
     "security.warning": "Aviso de seguridad:",
     "security.weak_password": "Tu contraseña actual no cumple los requisitos mínimos de seguridad (al menos 8 caracteres con una combinación de mayúsculas, minúsculas, dígitos y caracteres especiales).",
     "security.change_now": "Cámbiala de inmediato",
     "security.change_link": "Cambia tu contraseña en Ajustes",
-
     "backups.title": "Backups",
     "backups.no_backups": "No hay backups disponibles",
     "backups.view": "Ver",
     "backups.restore": "Restaurar",
     "backups.delete": "Eliminar",
-
     "toast.saved": "¡Guardado correctamente!",
     "toast.page_duplicated": "Página duplicada: {slug}",
     "toast.page_trashed": "Página movida a la papelera",
@@ -198,7 +194,6 @@
     "toast.error_loading_settings": "Error al cargar ajustes: {message}",
     "toast.events_date_required": "La fecha y el título son obligatorios",
     "toast.language_saved": "Idioma guardado",
-
     "modal.new_page": "Nueva página",
     "modal.new_page_title": "Título",
     "modal.new_page_title_placeholder": "Mi nueva página",
@@ -217,7 +212,6 @@
     "modal.delete_message": "Eliminar mensaje",
     "modal.delete_message_confirm": "¿Seguro que quieres eliminar este mensaje?",
     "modal.select_logo": "Seleccionar logotipo",
-
     "login.title": "Iniciar sesión",
     "login.username": "Usuario",
     "login.password": "Contraseña",
@@ -231,7 +225,6 @@
     "login.error_invalid": "Usuario o contraseña incorrectos",
     "login.hour": "h",
     "login.minute": "min",
-
     "setup.page_title": "Configuración - Nibbly CMS",
     "setup.complete_title": "Configuración completada",
     "setup.complete_message": "Nibbly CMS se ha configurado correctamente.",
@@ -265,7 +258,6 @@
     "setup.error_write": "No se pudo escribir config.php. Comprueba que el directorio admin/ tenga permisos de escritura para el servidor web.",
     "setup.copied": "¡Copiado!",
     "setup.copy": "Copiar",
-
     "block.text": "Texto",
     "block.youtube": "YouTube",
     "block.soundcloud": "SoundCloud",
@@ -277,7 +269,6 @@
     "block.list": "Lista",
     "block.divider": "Separador",
     "block.spacer": "Espaciador",
-
     "field.title": "Título",
     "field.heading_level": "Nivel de encabezado",
     "field.content": "Contenido",
@@ -299,7 +290,6 @@
     "field.title_optional": "Título (opcional)",
     "field.list_items": "Elementos de la lista",
     "field.height": "Altura",
-
     "option.default": "Por defecto",
     "option.highlight": "Destacado",
     "option.large": "Grande",
@@ -315,7 +305,6 @@
     "option.small": "Pequeño",
     "option.medium": "Mediano",
     "option.extra_large": "Extra grande",
-
     "news.title": "Noticias",
     "news.new_post": "+ Nueva entrada",
     "news.no_posts": "Aún no hay entradas.",
@@ -338,16 +327,13 @@
     "news.view": "Ver",
     "news.all_posts": "Todas las noticias",
     "news.read_more": "Leer más",
-
     "toast.news_saved": "¡Entrada guardada!",
     "toast.news_deleted": "Entrada eliminada",
     "toast.news_created": "Entrada creada",
     "toast.error_loading_news": "Error al cargar noticias: {message}",
     "toast.news_date_required": "La fecha y el título son obligatorios",
-
     "modal.delete_post": "Eliminar entrada",
     "modal.delete_post_confirm": "¿Seguro que quieres eliminar \"{title}\"? Esta acción no se puede deshacer.",
-
     "settings.backup": "Backup",
     "settings.backup_desc": "Gracias a la arquitectura de archivos planos de Nibbly, los backups son rápidos y sencillos — descarga una copia completa de tu sitio incluyendo todo el contenido, plantillas, imágenes y configuración.",
     "settings.backup_site": "Backup del sitio",
@@ -357,7 +343,6 @@
     "settings.backup_downloading": "Descargando…",
     "toast.backup_site_created": "Backup creado — descarga iniciada.",
     "toast.backup_site_failed": "El backup falló: {message}",
-
     "settings.restore_title": "Restaurar desde backup",
     "settings.restore_desc": "Sube un archivo ZIP de backup de Nibbly descargado anteriormente para restaurar tu sitio.",
     "settings.restore_full": "Restauración completa",
@@ -373,7 +358,6 @@
     "toast.restore_success_full": "Restauración completa finalizada — {extracted} archivos restaurados.",
     "toast.restore_success_content": "Contenido restaurado — {extracted} archivos actualizados.",
     "toast.restore_failed": "La restauración falló: {message}",
-
     "settings.users": "Usuarios",
     "settings.users_desc": "Gestiona las cuentas de usuario que pueden acceder al panel de administración.",
     "settings.email_missing_title": "Falta la dirección de correo",
@@ -396,6 +380,11 @@
     "toast.user_deleted": "Usuario eliminado",
     "settings.email_inactive": "Inactivo",
     "settings.email_inactive_hint": "El envío de correos está desactivado. Los envíos del formulario de contacto se guardarán localmente, pero no se enviarán correos.",
+    "settings.menus": "Menús",
+    "settings.menus_desc": "Gestiona el orden de las páginas en cada menú de navegación.",
+    "settings.menu_select": "Seleccionar menú",
+    "settings.menu_order_empty": "No hay páginas en este menú.",
+    "settings.menu_order_saved": "Orden del menú guardado.",
     "setup.admin_email": "Email (opcional)",
     "setup.admin_email_placeholder": "admin@example.com",
     "setup.admin_email_hint": "Se usa para restablecer la contraseña. Se puede añadir después en Ajustes.",
@@ -414,5 +403,6 @@
     "login.reset_success": "La contraseña se ha restablecido correctamente. Ya puedes iniciar sesión.",
     "login.reset_email_subject": "Restablecimiento de contraseña",
     "login.reset_email_body": "Hola {username},\n\nHas solicitado un restablecimiento de contraseña. Haz clic en el siguiente enlace para establecer una nueva contraseña:\n\n{url}\n\nEste enlace expira en 1 hora.\n\nSi no has solicitado esto, puedes ignorar este correo.",
-    "login.session_expired": "Tu sesión ha expirado. Por favor, inicia sesión de nuevo."
+    "login.session_expired": "Tu sesión ha expirado. Por favor, inicia sesión de nuevo.",
+    "editor.nav_add_custom": "Añadir menú"
 }

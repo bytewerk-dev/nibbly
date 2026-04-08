@@ -18,7 +18,6 @@
     "btn.restore": "Restaurer",
     "btn.saving": "Enregistrement...",
     "btn.changing": "Modification...",
-
     "pages.title": "Pages",
     "pages.new_page": "+ Nouvelle page",
     "pages.trash": "Corbeille",
@@ -30,14 +29,12 @@
     "pages.create": "+ Créer",
     "pages.all_pages": "Toutes les pages",
     "pages.back_to_pages": "Retour aux pages",
-
     "trash.title": "Corbeille",
     "trash.col_page": "Page",
     "trash.col_deleted": "Supprimée le",
     "trash.col_actions": "Actions",
     "trash.empty": "La corbeille est vide.",
     "trash.empty_trash": "Vider la corbeille",
-
     "editor.title": "Éditeur de contenu",
     "editor.expand_all": "Tout déplier",
     "editor.collapse_all": "Tout replier",
@@ -53,7 +50,6 @@
     "editor.add_item": "+ Ajouter un élément",
     "editor.add_section": "Ajouter une nouvelle section :",
     "editor.select_image": "Sélectionner une image",
-
     "events.title": "Événements",
     "events.new_event": "+ Nouvel événement",
     "events.no_events": "Aucun événement pour le moment.",
@@ -64,7 +60,6 @@
     "events.url": "URL",
     "events.untitled": "(sans titre)",
     "events.save_events": "Enregistrer les événements",
-
     "mails.title": "Messages de contact",
     "mails.mark_all_read": "Tout marquer comme lu",
     "mails.no_messages": "Aucun message",
@@ -75,7 +70,6 @@
     "mails.phone": "Téléphone :",
     "mails.preferred_date": "Date souhaitée :",
     "mails.message": "Message :",
-
     "settings.title": "Paramètres",
     "settings.branding": "Identité visuelle",
     "settings.branding_desc": "Personnalisez le logo, le nom et la visibilité de la marque. Désactivez l'identité visuelle pour une utilisation en marque blanche.",
@@ -85,7 +79,6 @@
     "settings.show_branding": "Afficher l'identité visuelle",
     "settings.branding_hint": "Lorsque cette option est désactivée, le logo et le nom de Nibbly sont masqués dans la barre d'administration et sur la page de connexion.",
     "settings.save_branding": "Enregistrer l'identité visuelle",
-
     "settings.theme": "Thème",
     "settings.theme_desc": "Choisissez l'apparence de l'interface d'administration et personnalisez les couleurs de la marque.",
     "settings.admin_theme": "Thème de l'administration",
@@ -105,13 +98,11 @@
     "settings.preview_secondary": "Bouton secondaire",
     "settings.save_theme": "Enregistrer le thème",
     "settings.invalid_color": "Format de couleur invalide. Utilisez le format hexadécimal (#RRGGBB).",
-
     "settings.language": "Langue",
     "settings.admin_language": "Langue de l'administration",
     "settings.admin_language_hint": "Langue de l'interface d'administration. Par défaut, elle suit la langue principale du site.",
     "settings.admin_language_default": "Par défaut ({lang})",
     "settings.save_language": "Enregistrer la langue",
-
     "settings.password": "Mot de passe",
     "settings.change_password": "Changer le mot de passe",
     "settings.current_password": "Mot de passe actuel",
@@ -124,7 +115,6 @@
     "settings.pw_digit": "Chiffre",
     "settings.pw_special": "Caractère spécial",
     "settings.pw_match": "Les mots de passe correspondent",
-
     "settings.email": "E-mail",
     "settings.email_desc": "Configurez l'envoi des e-mails du formulaire de contact. Les messages sont toujours sauvegardés localement dans la boîte de réception de l'administration, même en cas d'échec de l'envoi.",
     "settings.email_method": "Méthode d'envoi",
@@ -150,7 +140,6 @@
     "settings.test_email_error": "Échec de l'envoi de l'e-mail de test.",
     "settings.recipient_required": "Veuillez d'abord saisir une adresse e-mail de destinataire.",
     "toast.email_saved": "Paramètres e-mail enregistrés",
-
     "settings.danger_zone": "Zone de danger",
     "settings.danger_zone_desc": "Actions irréversibles. Procédez avec une extrême prudence.",
     "settings.total_reset": "Réinitialisation complète",
@@ -161,18 +150,15 @@
     "settings.total_reset_btn": "Tout réinitialiser",
     "settings.total_reset_mismatch": "Veuillez taper DELETE exactement pour confirmer.",
     "toast.total_reset_success": "Installation réinitialisée. Redirection vers l'assistant de configuration...",
-
     "security.warning": "Avertissement de sécurité :",
     "security.weak_password": "Votre mot de passe actuel ne répond pas aux exigences minimales de sécurité (au moins 8 caractères avec un mélange de majuscules, minuscules, chiffres et caractères spéciaux).",
     "security.change_now": "Veuillez le changer immédiatement",
     "security.change_link": "Changer votre mot de passe dans les Paramètres",
-
     "backups.title": "Sauvegardes",
     "backups.no_backups": "Aucune sauvegarde disponible",
     "backups.view": "Voir",
     "backups.restore": "Restaurer",
     "backups.delete": "Supprimer",
-
     "toast.saved": "Enregistré avec succès !",
     "toast.page_duplicated": "Page dupliquée : {slug}",
     "toast.page_trashed": "Page mise à la corbeille",
@@ -198,7 +184,6 @@
     "toast.error_loading_settings": "Erreur de chargement des paramètres : {message}",
     "toast.events_date_required": "La date et le titre sont requis",
     "toast.language_saved": "Langue enregistrée",
-
     "modal.new_page": "Nouvelle page",
     "modal.new_page_title": "Titre",
     "modal.new_page_title_placeholder": "Ma nouvelle page",
@@ -217,7 +202,6 @@
     "modal.delete_message": "Supprimer le message",
     "modal.delete_message_confirm": "Êtes-vous sûr de vouloir supprimer ce message ?",
     "modal.select_logo": "Sélectionner un logo",
-
     "login.title": "Connexion",
     "login.username": "Nom d'utilisateur",
     "login.password": "Mot de passe",
@@ -231,7 +215,6 @@
     "login.error_invalid": "Nom d'utilisateur ou mot de passe incorrect",
     "login.hour": "h",
     "login.minute": "min",
-
     "setup.page_title": "Installation - Nibbly CMS",
     "setup.complete_title": "Installation terminée",
     "setup.complete_message": "Nibbly CMS a été configuré avec succès.",
@@ -265,7 +248,6 @@
     "setup.error_write": "Impossible d'écrire config.php. Veuillez vérifier que le répertoire admin/ est accessible en écriture par le serveur web.",
     "setup.copied": "Copié !",
     "setup.copy": "Copier",
-
     "block.text": "Texte",
     "block.youtube": "YouTube",
     "block.soundcloud": "SoundCloud",
@@ -277,7 +259,6 @@
     "block.list": "Liste",
     "block.divider": "Séparateur",
     "block.spacer": "Espacement",
-
     "field.title": "Titre",
     "field.heading_level": "Niveau de titre",
     "field.content": "Contenu",
@@ -299,7 +280,6 @@
     "field.title_optional": "Titre (optionnel)",
     "field.list_items": "Éléments de la liste",
     "field.height": "Hauteur",
-
     "option.default": "Par défaut",
     "option.highlight": "Mise en valeur",
     "option.large": "Grand",
@@ -315,7 +295,6 @@
     "option.small": "Petit",
     "option.medium": "Moyen",
     "option.extra_large": "Très grand",
-
     "news.title": "Actualités",
     "news.new_post": "+ Nouvel article",
     "news.no_posts": "Aucun article pour le moment.",
@@ -338,16 +317,13 @@
     "news.view": "Voir",
     "news.all_posts": "Toutes les actualités",
     "news.read_more": "Lire la suite",
-
     "toast.news_saved": "Article enregistré !",
     "toast.news_deleted": "Article supprimé",
     "toast.news_created": "Article créé",
     "toast.error_loading_news": "Erreur de chargement des actualités : {message}",
     "toast.news_date_required": "La date et le titre sont requis",
-
     "modal.delete_post": "Supprimer l'article",
     "modal.delete_post_confirm": "Êtes-vous sûr de vouloir supprimer « {title} » ? Cette action est irréversible.",
-
     "settings.backup": "Sauvegarde",
     "settings.backup_desc": "Grâce à l'architecture flat-file de Nibbly, les sauvegardes sont rapides et simples — téléchargez une copie complète de votre site incluant tout le contenu, les modèles, les images et la configuration.",
     "settings.backup_site": "Sauvegarde du site",
@@ -357,7 +333,6 @@
     "settings.backup_downloading": "Téléchargement…",
     "toast.backup_site_created": "Sauvegarde créée — téléchargement lancé.",
     "toast.backup_site_failed": "Échec de la sauvegarde : {message}",
-
     "settings.restore_title": "Restaurer depuis une sauvegarde",
     "settings.restore_desc": "Téléversez un fichier ZIP de sauvegarde Nibbly précédemment téléchargé pour restaurer votre site.",
     "settings.restore_full": "Restauration complète",
@@ -373,7 +348,6 @@
     "toast.restore_success_full": "Restauration complète terminée — {extracted} fichiers restaurés.",
     "toast.restore_success_content": "Contenu restauré — {extracted} fichiers mis à jour.",
     "toast.restore_failed": "Échec de la restauration : {message}",
-
     "settings.users": "Utilisateurs",
     "settings.users_desc": "Gérez les comptes utilisateurs ayant accès au panneau d'administration.",
     "settings.email_missing_title": "Adresse e-mail manquante",
@@ -396,6 +370,11 @@
     "toast.user_deleted": "Utilisateur supprimé",
     "settings.email_inactive": "Inactif",
     "settings.email_inactive_hint": "L'envoi d'e-mails est désactivé. Les soumissions du formulaire de contact seront enregistrées localement, mais aucun e-mail ne sera envoyé.",
+    "settings.menus": "Menus",
+    "settings.menus_desc": "Gérer l'ordre des pages dans chaque menu de navigation.",
+    "settings.menu_select": "Sélectionner le menu",
+    "settings.menu_order_empty": "Aucune page dans ce menu.",
+    "settings.menu_order_saved": "Ordre du menu enregistré.",
     "setup.admin_email": "E-mail (optionnel)",
     "setup.admin_email_placeholder": "admin@example.com",
     "setup.admin_email_hint": "Utilisé pour la réinitialisation du mot de passe. Peut être ajouté ultérieurement dans les Paramètres.",
@@ -414,5 +393,16 @@
     "login.reset_success": "Le mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter.",
     "login.reset_email_subject": "Réinitialisation du mot de passe",
     "login.reset_email_body": "Bonjour {username},\n\nVous avez demandé une réinitialisation de mot de passe. Cliquez sur le lien ci-dessous pour définir un nouveau mot de passe :\n\n{url}\n\nCe lien expire dans 1 heure.\n\nSi vous n'avez pas fait cette demande, vous pouvez ignorer cet e-mail.",
-    "login.session_expired": "Votre session a expiré. Veuillez vous reconnecter."
+    "login.session_expired": "Votre session a expiré. Veuillez vous reconnecter.",
+    "editor.page_settings": "Page Settings",
+    "editor.meta_title": "Title",
+    "editor.meta_description": "Description",
+    "editor.nav_locations": "Navigation",
+    "editor.nav_custom_hint": "Custom, e.g. sidebar",
+    "editor.breadcrumb": "Breadcrumb",
+    "editor.breadcrumb_label": "Label",
+    "editor.breadcrumb_href": "Link (slug)",
+    "editor.breadcrumb_add": "Add item",
+    "editor.breadcrumb_hint": "Last item is the current page (no link needed).",
+    "editor.nav_add_custom": "Add menu"
 }

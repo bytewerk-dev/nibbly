@@ -176,8 +176,6 @@ PHPTPL;
         'contact' => ['phone' => '', 'email' => ''],
         'credit' => ['text' => '', 'link' => '', 'linkText' => ''],
         'contactHeading' => [],
-        'legalHeading' => [],
-        'legalLinks' => [],
         'copyright' => '&copy; ' . date('Y') . ' ' . htmlspecialchars($siteName),
     ];
     foreach ($languages as $lang) {
@@ -185,17 +183,21 @@ PHPTPL;
         $footerData['services'][$lang] = '';
         $footerData['claim'][$lang] = '';
         $footerData['contactHeading'][$lang] = $lang === 'de' ? 'Kontakt' : ($lang === 'es' ? 'Contacto' : 'Contact');
-        $footerData['legalHeading'][$lang] = $lang === 'de' ? 'Rechtliches' : 'Info';
     }
-    // Add contact link to footer
-    $contactLegalLink = ['text' => [], 'href' => []];
-    foreach ($languages as $lang) {
-        $cSlug = $lang === 'de' ? 'kontakt' : ($lang === 'es' ? 'contacto' : 'contact');
-        $contactLegalLink['text'][$lang] = $lang === 'de' ? 'Kontakt' : ($lang === 'es' ? 'Contacto' : 'Contact');
-        $contactLegalLink['href'][$lang] = ($lang === $primaryLang) ? $cSlug : $lang . '/' . $cSlug;
-    }
-    $footerData['legalLinks']['contact'] = $contactLegalLink;
     file_put_contents($root . '/content/pages/footer.json', json_encode($footerData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+    // 4b. Create menus.json (menu registry)
+    $menusData = ['menus' => [
+        'header' => ['label' => [], 'weight' => 0],
+        'footer-pages' => ['label' => [], 'weight' => 10],
+        'footer-legal' => ['label' => [], 'weight' => 20],
+    ]];
+    foreach ($languages as $lang) {
+        $menusData['menus']['header']['label'][$lang] = $lang === 'de' ? 'Kopfzeile' : ($lang === 'es' ? 'Encabezado' : 'Header');
+        $menusData['menus']['footer-pages']['label'][$lang] = $lang === 'de' ? 'Seiten' : ($lang === 'es' ? 'Páginas' : 'Pages');
+        $menusData['menus']['footer-legal']['label'][$lang] = $lang === 'de' ? 'Rechtliches' : 'Info';
+    }
+    file_put_contents($root . '/content/menus.json', json_encode($menusData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
     // 5. Create nav-config.php (includes all demo pages)
     file_put_contents($root . '/includes/nav-config.php', getNavConfig($languages, $primaryLang, $setupLanguages));

@@ -43,6 +43,9 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
                 $siteSettings[$key] = array_replace($defaults, $loadedSettings[$key]);
             }
         }
+        // Preserve top-level keys (favicon, favicon_png)
+        if (!empty($loadedSettings['favicon'])) $siteSettings['favicon'] = $loadedSettings['favicon'];
+        if (!empty($loadedSettings['favicon_png'])) $siteSettings['favicon_png'] = $loadedSettings['favicon_png'];
     }
 }
 $adminTheme = $siteSettings['theme']['adminTheme'] ?? 'light';
@@ -77,6 +80,11 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>Dashboard - <?php echo defined('SITE_NAME') ? SITE_NAME : 'Admin'; ?></title>
+    <?php
+    $_dashFavicon = $siteSettings['favicon'] ?? $siteSettings['branding']['logo'] ?? '/assets/images/favicon.svg';
+    $_dashFaviconType = pathinfo($_dashFavicon, PATHINFO_EXTENSION) === 'svg' ? 'image/svg+xml' : 'image/png';
+    ?>
+    <link rel="icon" href="<?php echo htmlspecialchars($_dashFavicon); ?>" type="<?php echo $_dashFaviconType; ?>">
     <link rel="stylesheet" href="style.css">
     <?php if ($adminTheme === 'system'): ?>
     <script>
@@ -90,8 +98,11 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     <?php if ($siteSettings['theme']['primaryColor'] !== '#2563eb' || $siteSettings['theme']['accentColor'] !== '#60a5fa'): ?>
     <style>
     :root {
+        <?php $pc = htmlspecialchars($siteSettings['theme']['primaryColor']); ?>
         <?php if ($siteSettings['theme']['primaryColor'] !== '#2563eb'): ?>
-        --nb-primary: <?php echo htmlspecialchars($siteSettings['theme']['primaryColor']); ?>;
+        --nb-primary: <?php echo $pc; ?>;
+        --nb-primary-btn: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $pc; ?> 70%, white) 0%, <?php echo $pc; ?> 70%);
+        --nb-primary-btn-hover: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $pc; ?> 50%, white) 0%, <?php echo $pc; ?> 70%);
         <?php endif; ?>
         <?php if ($siteSettings['theme']['accentColor'] !== '#60a5fa'): ?>
         --nb-brand: <?php echo htmlspecialchars($siteSettings['theme']['accentColor']); ?>;
@@ -301,7 +312,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         <button class="btn btn-secondary btn-sm" id="redoBtn" onclick="editorRedo()" title="<?php echo t('editor.redo'); ?>" disabled><?php echo nbIcon('redo', 14); ?></button>
                     </div>
                     <button class="btn btn-primary btn-sm" onclick="saveContent()"><?php echo t('btn.save'); ?></button>
-                    <button class="btn btn-secondary btn-sm editor-trash-btn" id="editorTrashBtn" onclick="trashCurrentPage()" title="<?php echo t('editor.move_to_trash'); ?>"><?php echo nbIcon('trash', 14); ?> <?php echo t('pages.trash'); ?></button>
+                    <a class="btn btn-secondary btn-sm" id="editorViewBtn" href="#" target="_blank" title="<?php echo t('pages.view'); ?>"><?php echo nbIcon('eye', 14); ?></a>
+                    <button class="btn btn-secondary btn-sm editor-trash-btn" id="editorTrashBtn" onclick="trashCurrentPage()" title="<?php echo t('editor.move_to_trash'); ?>"><?php echo nbIcon('trash', 14); ?></button>
                 </div>
             </div>
 
@@ -383,7 +395,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     <h2 id="newsEditorTitle"><?php echo t('news.new_post'); ?></h2>
                 </div>
                 <div class="editor-header-right">
+                    <span class="last-modified" id="newsLastModified"></span>
                     <button class="btn btn-primary btn-sm" onclick="savePost()"><?php echo t('btn.save'); ?></button>
+                    <a class="btn btn-secondary btn-sm" id="newsViewBtn" href="#" target="_blank" style="display:none;" title="<?php echo t('news.view'); ?>"><?php echo nbIcon('eye', 14); ?></a>
+                    <button class="btn btn-secondary btn-sm editor-trash-btn" id="newsTrashBtn" onclick="deleteCurrentPost()" style="display:none;" title="<?php echo t('news.delete'); ?>"><?php echo nbIcon('trash', 14); ?></button>
                 </div>
             </div>
             <div id="newsEditorForm">
@@ -415,6 +430,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <button class="settings-tab-btn" data-settings-tab="language"><?php echo t('settings.language'); ?></button>
             <button class="settings-tab-btn" data-settings-tab="email"><?php echo t('settings.email'); ?></button>
             <button class="settings-tab-btn" data-settings-tab="users"><?php echo t('settings.users'); ?></button>
+            <button class="settings-tab-btn" data-settings-tab="menus"><?php echo t('settings.menus'); ?></button>
             <?php endif; ?>
             <button class="settings-tab-btn<?php echo !$isAdminUser ? ' active' : ''; ?>" data-settings-tab="password"><?php echo t('settings.password'); ?></button>
             <?php if ($isAdminUser): ?>
@@ -658,6 +674,38 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     </tbody>
                 </table>
             </div>
+
+            <!-- Menus Panel -->
+            <div class="settings-panel" id="settingsPanel-menus">
+                <h2><?php echo t('settings.menus'); ?></h2>
+                <p class="settings-description"><?php echo t('settings.menus_desc'); ?></p>
+
+                <div class="form-group">
+                    <label for="menuOrderSelect"><?php echo t('settings.menu_select'); ?></label>
+                    <select id="menuOrderSelect" class="form-control" style="max-width: 300px;">
+                        <?php
+                        require_once __DIR__ . '/../includes/menu-helpers.php';
+                        $defaultLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
+                        foreach (getRegisteredMenuIds() as $mid):
+                            $mlabel = getMenuLabel($mid, $adminLang ?? $defaultLang);
+                        ?>
+                        <option value="<?php echo htmlspecialchars($mid); ?>"><?php echo htmlspecialchars($mlabel); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div id="menuOrderList" class="menu-order-list"></div>
+                <div id="menuOrderEmpty" class="menu-order-empty" style="display:none;">
+                    <p><?php echo t('settings.menu_order_empty'); ?></p>
+                </div>
+
+                <div class="form-actions" style="margin-top: 1.5rem;">
+                    <button type="button" class="btn btn-primary" id="saveMenuOrderBtn" disabled>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        <?php echo t('btn.save'); ?>
+                    </button>
+                </div>
+            </div>
             <?php endif; ?>
 
             <!-- Password Panel -->
@@ -894,11 +942,14 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     // Block Type Registry
     window.BlockTypeRegistry = <?php
         require_once dirname(__DIR__) . '/includes/content-loader.php';
+        require_once dirname(__DIR__) . '/includes/menu-helpers.php';
         echo json_encode(getBlockTypes(), JSON_UNESCAPED_UNICODE);
     ?>;
 
     // Admin translations for JS
     const NB_LANG = <?php echo json_encode(tAll(), JSON_UNESCAPED_UNICODE); ?>;
+    // Menu registry for Page Settings nav checkboxes
+    window.NB_MENUS = <?php echo json_encode(getMenuRegistry()['menus'] ?? [], JSON_UNESCAPED_UNICODE); ?>;
     function t(key, params) {
         let s = NB_LANG[key] || key;
         if (params) { for (const [k, v] of Object.entries(params)) { s = s.replace('{' + k + '}', v); } }
@@ -1587,6 +1638,12 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 // Update topbar title
                 const topbarTitle = document.getElementById('topbarTitle');
                 if (topbarTitle) topbarTitle.textContent = t('editor.title');
+                // Update View button URL
+                const _defLang = '<?php echo SITE_LANG_DEFAULT; ?>';
+                const _viewUrl = (lang === _defLang) ? '../' + page : '../' + lang + '/' + page;
+                const viewBtn = document.getElementById('editorViewBtn');
+                if (viewBtn) viewBtn.href = _viewUrl;
+
                 // Push history state so browser back button returns to page list
                 if (pushHistory) {
                     history.pushState({ view: 'editor', page: currentPage }, '', 'dashboard.php?page=' + currentPage);
@@ -1604,6 +1661,181 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     const META_KEYS = new Set(['page', 'lang', 'lastModified']);
     // Keys that get their own special renderer
     const SPECIAL_KEYS = new Set(['sections']);
+    // Keys rendered in the dedicated "Page Settings" panel
+    const PAGE_SETTINGS_KEYS = new Set(['title', 'description', 'nav', 'breadcrumb']);
+
+    // Render the "Page Settings" panel (title, description, nav locations, breadcrumb)
+    function renderPageSettings(container) {
+        const group = document.createElement('div');
+        group.className = 'ce-group ce-group--open ce-group--settings';
+        group.innerHTML = `<div class="ce-group-header" onclick="toggleGroup(this)">
+            <span class="ce-chevron">▼</span>
+            <span class="ce-group-title">${t('editor.page_settings')}</span>
+        </div>
+        <div class="ce-group-body" style="display:block;"></div>`;
+        const body = group.querySelector('.ce-group-body');
+
+        // Title
+        const titleField = document.createElement('div');
+        titleField.className = 'ce-field';
+        titleField.innerHTML = `<label class="ce-field-label">${t('editor.meta_title')}</label>`;
+        const titleInput = document.createElement('input');
+        titleInput.type = 'text';
+        titleInput.className = 'ce-input';
+        titleInput.value = currentContent.title || '';
+        titleInput.dataset.path = 'title';
+        titleInput.addEventListener('input', () => markDirty());
+        titleField.appendChild(titleInput);
+        body.appendChild(titleField);
+
+        // Description
+        const descField = document.createElement('div');
+        descField.className = 'ce-field';
+        descField.innerHTML = `<label class="ce-field-label">${t('editor.meta_description')}</label>`;
+        const descInput = document.createElement('textarea');
+        descInput.className = 'ce-textarea';
+        descInput.rows = 2;
+        descInput.value = currentContent.description || '';
+        descInput.dataset.path = 'description';
+        descInput.addEventListener('input', () => markDirty());
+        descField.appendChild(descInput);
+        body.appendChild(descField);
+
+        // Nav locations
+        const navField = document.createElement('div');
+        navField.className = 'ce-field';
+        navField.innerHTML = `<label class="ce-field-label">${t('editor.nav_locations')}</label>`;
+        const navRow = document.createElement('div');
+        navRow.className = 'ce-nav-checkboxes';
+        const navLocations = currentContent.nav || ['header'];
+        const registeredMenus = window.NB_MENUS || {};
+        const menuIds = Object.keys(registeredMenus);
+        const customLocations = navLocations.filter(l => !menuIds.includes(l));
+        const adminLang = document.getElementById('langSelect')?.value || document.documentElement.lang || 'en';
+
+        menuIds.forEach(menuId => {
+            const menu = registeredMenus[menuId];
+            const label = document.createElement('label');
+            label.className = 'ce-nav-check';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.dataset.navLocation = menuId;
+            cb.checked = navLocations.includes(menuId);
+            cb.addEventListener('change', () => markDirty());
+            label.appendChild(cb);
+            const displayName = menu.label[adminLang] || menu.label['en'] || menuId;
+            label.appendChild(document.createTextNode(' ' + displayName));
+            navRow.appendChild(label);
+        });
+
+        navField.appendChild(navRow);
+
+        // Custom locations (add-row pattern)
+        const customContainer = document.createElement('div');
+        customContainer.id = 'navCustomContainer';
+        customContainer.className = 'ce-breadcrumb-editor';
+        customLocations.forEach(loc => {
+            customContainer.appendChild(createNavCustomRow(loc));
+        });
+        const addNavBtn = document.createElement('button');
+        addNavBtn.type = 'button';
+        addNavBtn.className = 'btn btn-secondary btn-sm';
+        addNavBtn.textContent = '+ ' + t('editor.nav_add_custom');
+        addNavBtn.addEventListener('click', () => {
+            customContainer.insertBefore(createNavCustomRow(''), addNavBtn);
+            markDirty();
+        });
+        customContainer.appendChild(addNavBtn);
+        navField.appendChild(customContainer);
+        body.appendChild(navField);
+
+        // Breadcrumb editor
+        const bcField = document.createElement('div');
+        bcField.className = 'ce-field';
+        bcField.innerHTML = `<label class="ce-field-label">${t('editor.breadcrumb')}</label>
+            <small class="form-hint">${t('editor.breadcrumb_hint')}</small>`;
+        const bcContainer = document.createElement('div');
+        bcContainer.id = 'breadcrumbEditor';
+        bcContainer.className = 'ce-breadcrumb-editor';
+
+        const crumbs = currentContent.breadcrumb || [];
+        crumbs.forEach((crumb, i) => bcContainer.appendChild(createBreadcrumbRow(crumb, i)));
+
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.className = 'btn btn-secondary btn-sm';
+        addBtn.textContent = '+ ' + t('editor.breadcrumb_add');
+        addBtn.addEventListener('click', () => {
+            bcContainer.insertBefore(createBreadcrumbRow({label: '', href: ''}, bcContainer.children.length), addBtn);
+            markDirty();
+        });
+        bcContainer.appendChild(addBtn);
+        bcField.appendChild(bcContainer);
+        body.appendChild(bcField);
+
+        container.appendChild(group);
+    }
+
+    function createNavCustomRow(value) {
+        const row = document.createElement('div');
+        row.className = 'ce-breadcrumb-row';
+        row.innerHTML = `
+            <input type="text" class="ce-input ce-input--sm" placeholder="${t('editor.nav_custom_hint')}" value="${escapeHtml(value)}" data-nav-custom>
+            <button type="button" class="btn btn-secondary btn-sm ce-breadcrumb-remove" onclick="this.parentElement.remove(); markDirty();">&times;</button>
+        `;
+        row.querySelector('input').addEventListener('input', () => markDirty());
+        return row;
+    }
+
+    function createBreadcrumbRow(crumb, index) {
+        const row = document.createElement('div');
+        row.className = 'ce-breadcrumb-row';
+        row.innerHTML = `
+            <input type="text" class="ce-input ce-input--sm" placeholder="${t('editor.breadcrumb_label')}" value="${escapeHtml(crumb.label || '')}" data-bc-label>
+            <input type="text" class="ce-input ce-input--sm" placeholder="${t('editor.breadcrumb_href')}" value="${escapeHtml(crumb.href || '')}" data-bc-href>
+            <button type="button" class="btn btn-secondary btn-sm ce-breadcrumb-remove" onclick="this.parentElement.remove(); markDirty();">&times;</button>
+        `;
+        row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', () => markDirty()));
+        return row;
+    }
+
+    // Collect nav locations and breadcrumb from the page settings panel
+    function collectPageSettings() {
+        // Nav locations
+        const registeredIds = Object.keys(window.NB_MENUS || {});
+        const navLocs = [];
+        registeredIds.forEach(menuId => {
+            const cb = document.querySelector(`[data-nav-location="${menuId}"]`);
+            if (cb && cb.checked) navLocs.push(menuId);
+        });
+        document.querySelectorAll('#navCustomContainer [data-nav-custom]').forEach(input => {
+            const loc = input.value.trim();
+            if (loc && !navLocs.includes(loc)) navLocs.push(loc);
+        });
+        currentContent.nav = navLocs;
+
+        // Breadcrumb
+        const rows = document.querySelectorAll('#breadcrumbEditor .ce-breadcrumb-row');
+        if (rows.length > 0) {
+            const crumbs = [];
+            rows.forEach(row => {
+                const label = row.querySelector('[data-bc-label]')?.value?.trim();
+                const href = row.querySelector('[data-bc-href]')?.value?.trim();
+                if (label) {
+                    const crumb = { label };
+                    if (href) crumb.href = href;
+                    crumbs.push(crumb);
+                }
+            });
+            if (crumbs.length > 0) {
+                currentContent.breadcrumb = crumbs;
+            } else {
+                delete currentContent.breadcrumb;
+            }
+        } else {
+            delete currentContent.breadcrumb;
+        }
+    }
 
     // Render editor — generic JSON-to-form
     function renderEditor() {
@@ -1630,9 +1862,12 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <span class="ce-meta-item"><strong>${t('editor.meta_lang')}</strong> ${escapeHtml(currentContent.lang || lang)}</span>`;
         container.appendChild(metaDiv);
 
+        // Render page settings panel (title, description, nav, breadcrumb)
+        renderPageSettings(container);
+
         // Render each top-level key as a collapsible group
         for (const key of Object.keys(currentContent)) {
-            if (META_KEYS.has(key)) continue;
+            if (META_KEYS.has(key) || PAGE_SETTINGS_KEYS.has(key)) continue;
 
             if (SPECIAL_KEYS.has(key)) {
                 // Sections: render with existing special UI
@@ -1919,7 +2154,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         } else {
             // String
             const strVal = value != null ? String(value) : '';
-            const isImage = /\.(jpg|jpeg|png|webp|svg|gif)$/i.test(strVal);
+            const keyParts = path.split('.');
+            const fieldName = keyParts[keyParts.length - 1];
+            const isImage = /\.(jpg|jpeg|png|webp|svg|gif)(\?.*)?$/i.test(strVal)
+                || /^(src|image|logo|icon|avatar|photo|thumbnail|cover|hero|poster|og_image)$/i.test(fieldName);
             const isLong = strVal.length > 80 || strVal.includes('\n');
 
             if (isImage) {
@@ -1987,57 +2225,323 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         ta.style.height = Math.max(60, ta.scrollHeight + 2) + 'px';
     }
 
-    // Browse image for a Content Editor field
-    async function browseImageForField(inputEl, previewEl) {
-        try {
-            var response = await fetch('api.php?action=list-images');
-            var result = await response.json();
+    // ============================================================
+    // IMAGE MANAGER (full-featured, matches frontend inline editor)
+    // ============================================================
 
-            if (!result.success || result.data.length === 0) {
-                showToast(t('toast.no_images'), 'error');
-                return;
+    let _imgMgrData = [];
+    let _imgMgrFiltered = [];
+    let _imgMgrSelected = null;
+    let _imgMgrCallback = null;
+    let _imgMgrView = 'grid';
+    let _imgMgrSort = { field: 'date', dir: 'desc' };
+    let _imgMgrSearch = '';
+
+    function browseImageForField(inputEl, previewEl) {
+        _imgMgrCallback = function(path) {
+            inputEl.value = path;
+            inputEl.dispatchEvent(new Event('input'));
+            if (previewEl) {
+                const img = previewEl.querySelector('img');
+                if (img) { img.src = path.startsWith('/') ? '..' + path : path; img.style.display = ''; }
             }
+            markDirty();
+        };
+        openImageManager();
+    }
 
-            var overlay = document.getElementById('modalOverlay');
-            var title = document.getElementById('modalTitle');
-            var text = document.getElementById('modalText');
-            var confirmBtn = document.getElementById('modalConfirm');
+    function openImageManager() {
+        _imgMgrSelected = null;
+        let modal = document.getElementById('imgMgrModal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'imgMgrModal';
+            modal.className = 'img-mgr-overlay';
+            modal.innerHTML = `
+            <div class="img-mgr-backdrop" onclick="closeImageManager()"></div>
+            <div class="img-mgr-dialog">
+                <div class="img-mgr-header">
+                    <h3>${t('editor.select_image')}</h3>
+                    <button type="button" class="img-mgr-close" onclick="closeImageManager()">&times;</button>
+                </div>
+                <div class="img-mgr-toolbar">
+                    <label class="btn btn-primary btn-sm img-mgr-upload-btn">
+                        &#8679; ${t('btn.browse')}
+                        <input type="file" id="imgMgrUpload" accept=".jpg,.jpeg,.png,.webp" style="display:none">
+                    </label>
+                    <small class="img-mgr-formats">JPG, PNG, WebP &middot; max 5 MB</small>
+                    <div class="img-mgr-spacer"></div>
+                    <input type="text" id="imgMgrSearch" class="ce-input ce-input--sm" placeholder="&#128269; ${t('editor.select_image')}...">
+                    <div class="img-mgr-view-toggle">
+                        <button type="button" class="img-mgr-view-btn img-mgr-view-btn--active" data-view="grid" onclick="setImgMgrView('grid')" title="Grid">&#9638;</button>
+                        <button type="button" class="img-mgr-view-btn" data-view="list" onclick="setImgMgrView('list')" title="List">&#9776;</button>
+                    </div>
+                </div>
+                <div class="img-mgr-body">
+                    <div id="imgMgrGrid" class="img-mgr-grid"></div>
+                </div>
+                <div class="img-mgr-footer">
+                    <span id="imgMgrPath" class="img-mgr-path"></span>
+                    <div class="img-mgr-actions">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="closeImageManager()">${t('btn.cancel')}</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="imgMgrConfirm" disabled onclick="confirmImageManagerSelection()">${t('btn.confirm')}</button>
+                    </div>
+                </div>
+            </div>`;
+            document.body.appendChild(modal);
 
-            title.textContent = t('editor.select_image');
-            text.innerHTML = '<div class="logo-browser-grid">' +
-                result.data.map(function(img) {
-                    return '<div class="logo-browser-item" data-path="' + img.path.replace('../', '/') + '">' +
-                        '<img src="' + img.path + '" alt="' + img.name + '">' +
-                        '<span class="logo-browser-name">' + img.name + '</span>' +
-                    '</div>';
-                }).join('') +
-            '</div>';
-
-            confirmBtn.style.display = 'none';
-            overlay.style.display = 'flex';
-
-            text.querySelectorAll('.logo-browser-item').forEach(function(item) {
-                item.addEventListener('click', function() {
-                    var path = this.dataset.path;
-                    inputEl.value = path;
-                    inputEl.dispatchEvent(new Event('input'));
-                    // Update preview image
-                    if (previewEl) {
-                        var img = previewEl.querySelector('img');
-                        if (img) {
-                            img.src = path.startsWith('/') ? '..' + path : path;
-                            img.style.display = '';
-                        }
-                    }
-                    markDirty();
-                    overlay.style.display = 'none';
-                    confirmBtn.style.display = '';
-                });
+            document.getElementById('imgMgrUpload').addEventListener('change', handleImgMgrUpload);
+            document.getElementById('imgMgrSearch').addEventListener('input', function() {
+                _imgMgrSearch = this.value.toLowerCase();
+                filterAndRenderImages();
             });
-        } catch (error) {
-            showToast(t('toast.error_loading_images', {message: error.message}), 'error');
+        }
+        modal.style.display = 'flex';
+        document.getElementById('imgMgrSearch').value = '';
+        _imgMgrSearch = '';
+        loadImageManager();
+    }
+
+    function closeImageManager() {
+        const modal = document.getElementById('imgMgrModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function confirmImageManagerSelection() {
+        if (_imgMgrSelected && _imgMgrCallback) {
+            _imgMgrCallback(_imgMgrSelected);
+        }
+        closeImageManager();
+    }
+
+    async function loadImageManager() {
+        try {
+            const response = await fetch('api.php?action=list-images');
+            const result = await response.json();
+            if (result.success) {
+                _imgMgrData = result.data.map(img => ({ ...img, path: img.path.replace(/^\.\.\//, '/') }));
+                filterAndRenderImages();
+            }
+        } catch (e) {
+            showToast(t('toast.error_loading_images', {message: e.message}), 'error');
         }
     }
+
+    function filterAndRenderImages() {
+        _imgMgrFiltered = _imgMgrData.filter(img =>
+            !_imgMgrSearch || img.name.toLowerCase().includes(_imgMgrSearch)
+        );
+        // Sort
+        _imgMgrFiltered.sort((a, b) => {
+            let cmp = 0;
+            if (_imgMgrSort.field === 'name') cmp = a.name.localeCompare(b.name);
+            else if (_imgMgrSort.field === 'size') cmp = (a.sizeBytes || 0) - (b.sizeBytes || 0);
+            else cmp = (a.modified || 0) - (b.modified || 0);
+            return _imgMgrSort.dir === 'asc' ? cmp : -cmp;
+        });
+        renderImageGrid();
+    }
+
+    function renderImageGrid() {
+        const container = document.getElementById('imgMgrGrid');
+        if (!container) return;
+
+        if (_imgMgrView === 'grid') {
+            container.className = 'img-mgr-grid';
+            container.innerHTML = _imgMgrFiltered.map(img => {
+                const sel = _imgMgrSelected === img.path ? ' img-mgr-item--selected' : '';
+                const chk = _imgMgrSelected === img.path ? ' img-mgr-check--active' : '';
+                const src = img.path.startsWith('/') ? '..' + img.path : img.path;
+                return `<div class="img-mgr-item${sel}" onclick="selectImage('${escapeHtml(img.path)}')" title="${escapeHtml(img.name)}">
+                    <div class="img-mgr-check${chk}"></div>
+                    <div class="img-mgr-thumb" style="background-image:url('${escapeHtml(src)}')"></div>
+                    <span class="img-mgr-name">${escapeHtml(img.name)}</span>
+                    <div class="img-mgr-item-actions">
+                        <button type="button" class="img-mgr-action-btn" title="Copy path" onclick="event.stopPropagation(); copyImagePath('${escapeHtml(img.path)}')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                        <button type="button" class="img-mgr-action-btn img-mgr-action-btn--danger" title="Delete" onclick="event.stopPropagation(); deleteImageFromManager('${escapeHtml(img.name)}')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+        } else {
+            container.className = 'img-mgr-list';
+            container.innerHTML = `<div class="img-mgr-list-header">
+                <span class="img-mgr-list-col img-mgr-list-col--check"></span>
+                <span class="img-mgr-list-col img-mgr-list-col--thumb"></span>
+                <span class="img-mgr-list-col img-mgr-list-col--name" onclick="toggleImgSort('name')">Name</span>
+                <span class="img-mgr-list-col img-mgr-list-col--size" onclick="toggleImgSort('size')">Size</span>
+                <span class="img-mgr-list-col img-mgr-list-col--date" onclick="toggleImgSort('date')">Date</span>
+                <span class="img-mgr-list-col img-mgr-list-col--actions">Actions</span>
+            </div>` + _imgMgrFiltered.map(img => {
+                const sel = _imgMgrSelected === img.path ? ' img-mgr-row--selected' : '';
+                const chk = _imgMgrSelected === img.path ? ' img-mgr-check--active' : '';
+                const src = img.path.startsWith('/') ? '..' + img.path : img.path;
+                return `<div class="img-mgr-row${sel}" onclick="selectImage('${escapeHtml(img.path)}')">
+                    <span class="img-mgr-list-col img-mgr-list-col--check"><span class="img-mgr-check img-mgr-check--list${chk}"></span></span>
+                    <span class="img-mgr-list-col img-mgr-list-col--thumb"><span class="img-mgr-list-thumb" style="background-image:url('${escapeHtml(src)}')"></span></span>
+                    <span class="img-mgr-list-col img-mgr-list-col--name">${escapeHtml(img.name)}</span>
+                    <span class="img-mgr-list-col img-mgr-list-col--size">${img.size || ''}</span>
+                    <span class="img-mgr-list-col img-mgr-list-col--date">${img.dateFormatted || ''}</span>
+                    <span class="img-mgr-list-col img-mgr-list-col--actions">
+                        <button type="button" class="img-mgr-action-btn" title="Copy path" onclick="event.stopPropagation(); copyImagePath('${escapeHtml(img.path)}')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                        <button type="button" class="img-mgr-action-btn img-mgr-action-btn--danger" title="Delete" onclick="event.stopPropagation(); deleteImageFromManager('${escapeHtml(img.name)}')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        </button>
+                    </span>
+                </div>`;
+            }).join('');
+        }
+    }
+
+    function selectImage(path) {
+        var prev = _imgMgrSelected;
+        _imgMgrSelected = (_imgMgrSelected === path) ? null : path;
+        document.getElementById('imgMgrPath').textContent = _imgMgrSelected || '';
+        document.getElementById('imgMgrConfirm').disabled = !_imgMgrSelected;
+
+        var container = document.getElementById('imgMgrGrid');
+        if (!container) return;
+
+        // Deselect previous
+        if (prev) {
+            container.querySelectorAll('.img-mgr-item--selected, .img-mgr-row--selected').forEach(function(el) {
+                el.classList.remove('img-mgr-item--selected', 'img-mgr-row--selected');
+                var chk = el.querySelector('.img-mgr-check');
+                if (chk) chk.classList.remove('img-mgr-check--active');
+            });
+        }
+
+        // Select new (if not deselecting)
+        if (_imgMgrSelected) {
+            container.querySelectorAll('[onclick*="' + CSS.escape(_imgMgrSelected) + '"]').forEach(function(el) {
+                if (el.classList.contains('img-mgr-item')) el.classList.add('img-mgr-item--selected');
+                if (el.classList.contains('img-mgr-row')) el.classList.add('img-mgr-row--selected');
+                var chk = el.querySelector('.img-mgr-check');
+                if (chk) chk.classList.add('img-mgr-check--active');
+            });
+        }
+    }
+
+    function copyImagePath(path) {
+        navigator.clipboard.writeText(path).then(() => {
+            showToast(t('toast.copied') || 'Copied', 'success');
+        });
+    }
+
+    async function deleteImageFromManager(name) {
+        if (!confirm(t('toast.confirm_delete_image') || 'Delete this image?')) return;
+        const formData = new FormData();
+        formData.append('action', 'delete-image');
+        formData.append('name', name);
+        formData.append('csrf_token', CSRF_TOKEN);
+        try {
+            const resp = await fetch('api.php', { method: 'POST', body: formData });
+            const result = await resp.json();
+            if (result.success) {
+                showToast(t('toast.image_deleted') || 'Image deleted', 'success');
+                if (_imgMgrSelected && _imgMgrSelected.endsWith('/' + name)) {
+                    _imgMgrSelected = null;
+                    document.getElementById('imgMgrPath').textContent = '';
+                    document.getElementById('imgMgrConfirm').disabled = true;
+                }
+                await loadImageManager();
+            } else {
+                showToast(result.message || t('toast.error'), 'error');
+            }
+        } catch (e) {
+            showToast(t('toast.error'), 'error');
+        }
+    }
+
+    function setImgMgrView(view) {
+        _imgMgrView = view;
+        document.querySelectorAll('.img-mgr-view-btn').forEach(b => {
+            b.classList.toggle('img-mgr-view-btn--active', b.dataset.view === view);
+        });
+        renderImageGrid();
+    }
+
+    function toggleImgSort(field) {
+        if (_imgMgrSort.field === field) {
+            _imgMgrSort.dir = _imgMgrSort.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+            _imgMgrSort = { field, dir: 'asc' };
+        }
+        filterAndRenderImages();
+    }
+
+    async function handleImgMgrUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        e.target.value = '';
+
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+            showToast('Only JPG, PNG, WebP allowed.', 'error');
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('File too large (max 5 MB).', 'error');
+            return;
+        }
+        const formData = new FormData();
+        formData.append('action', 'upload-image');
+        formData.append('image', file);
+        formData.append('csrf_token', csrfToken);
+
+        try {
+            const response = await fetch('api.php', { method: 'POST', body: formData });
+            const result = await response.json();
+            if (result.success) {
+                showToast('Image uploaded', 'success');
+                await loadImageManager();
+                if (result.data?.path) {
+                    selectImage(result.data.path.replace(/^\.\.\//, '/'));
+                }
+            } else {
+                showToast(result.message || 'Upload failed', 'error');
+            }
+        } catch (err) {
+            showToast('Upload error: ' + err.message, 'error');
+        }
+    }
+
+    // Expose image manager functions for onclick handlers in modal HTML
+    window.openImageManager = openImageManager;
+    window.closeImageManager = closeImageManager;
+    window.confirmImageManagerSelection = confirmImageManagerSelection;
+    window.selectImage = selectImage;
+    window.setImgMgrView = setImgMgrView;
+    window.toggleImgSort = toggleImgSort;
+    window.copyImagePath = copyImagePath;
+    window.deleteImageFromManager = deleteImageFromManager;
+    window.browseSectionImage = function(btn) {
+        const input = btn.parentElement.querySelector('.section-field');
+        const preview = btn.closest('.form-group').querySelector('.ce-image-preview');
+        _imgMgrCallback = function(path) {
+            if (path && input) {
+                input.value = path;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                if (preview) {
+                    const src = path.startsWith('/') ? '..' + path : path;
+                    preview.innerHTML = '<img src="' + escapeHtml(src) + '" alt="preview" onerror="this.style.display=\'none\'">';
+                } else {
+                    // Create preview if it didn't exist
+                    const previewDiv = document.createElement('div');
+                    previewDiv.className = 'ce-image-preview';
+                    const src = path.startsWith('/') ? '..' + path : path;
+                    previewDiv.innerHTML = '<img src="' + escapeHtml(src) + '" alt="preview">';
+                    input.parentElement.before(previewDiv);
+                }
+                markDirty();
+            }
+        };
+        openImageManager();
+    };
 
     // Track unsaved changes
     let isDirty = false;
@@ -2191,6 +2695,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     // Collect all content from the form back into currentContent
     function collectAllContent() {
+        // Collect page settings (title, description, nav, breadcrumb)
+        collectPageSettings();
+
         // Collect generic fields
         document.querySelectorAll('[data-path]').forEach(el => {
             const path = el.dataset.path;
@@ -2262,9 +2769,14 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </div>`;
                         break;
                     case 'image':
+                        const imgSrc = val ? (val.startsWith('/') ? '..' + val : val) : '';
                         content += `<div class="form-group">
                             <label>${field.label}</label>
-                            <input type="text" class="section-field" data-key="${field.key}" value="${val}" placeholder="Path to image...">
+                            ${imgSrc ? `<div class="ce-image-preview"><img src="${escapeHtml(imgSrc)}" alt="preview" onerror="this.style.display='none'"></div>` : ''}
+                            <div class="ce-image-input-row">
+                                <input type="text" class="section-field ce-input" data-key="${field.key}" value="${val}" placeholder="Path to image...">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="browseSectionImage(this)">${t('btn.browse')}</button>
+                            </div>
                         </div>`;
                         break;
                     case 'audio':
@@ -3229,6 +3741,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         // Set WYSIWYG content (not escaped — it's HTML)
         document.getElementById('newsContentWysiwyg').innerHTML = post.content || '';
 
+        // Update view + trash buttons (after form is built, so newsSlug/newsLang exist)
+        updateNewsEditorButtons();
+
         // Auto-generate slug from title for new posts
         document.getElementById('newsTitle').addEventListener('input', function() {
             if (!editingPostId) {
@@ -3282,6 +3797,52 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         }
     }
 
+    function updateNewsEditorButtons() {
+        const viewBtn = document.getElementById('newsViewBtn');
+        const trashBtn = document.getElementById('newsTrashBtn');
+        if (editingPostId) {
+            const defLang = '<?php echo SITE_LANG_DEFAULT; ?>';
+            const lang = document.getElementById('newsLang')?.value || defLang;
+            const slug = document.getElementById('newsSlug')?.value || editingPostId;
+            const prefix = (lang === defLang) ? '../' : '../' + lang + '/';
+            if (viewBtn) { viewBtn.href = prefix + 'news/' + slug; viewBtn.style.display = ''; }
+            if (trashBtn) trashBtn.style.display = '';
+        } else {
+            if (viewBtn) viewBtn.style.display = 'none';
+            if (trashBtn) trashBtn.style.display = 'none';
+        }
+    }
+
+    function deleteCurrentPost() {
+        if (!editingPostId) return;
+        const title = document.getElementById('newsTitle')?.value || editingPostId;
+        showModal(
+            t('modal.delete_post'),
+            t('modal.delete_post_confirm', { title }),
+            async function() {
+                closeModal();
+                try {
+                    const formData = new FormData();
+                    formData.append('action', 'delete-news');
+                    formData.append('slug', editingPostId);
+                    formData.append('csrf_token', CSRF_TOKEN);
+                    const response = await fetch('api.php', { method: 'POST', body: formData });
+                    const result = await response.json();
+                    if (result.success) {
+                        showToast(t('toast.news_deleted'), 'success');
+                        editingPostId = null;
+                        showNewsList();
+                        loadNews();
+                    } else {
+                        showToast(result.message, 'error');
+                    }
+                } catch (e) {
+                    showToast(t('toast.error_generic', {message: e.message}), 'error');
+                }
+            }
+        );
+    }
+
     function getNewsContent() {
         if (newsHtmlMode) {
             return document.getElementById('newsContentHtml').value;
@@ -3333,9 +3894,15 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             const result = await response.json();
 
             if (result.success) {
-                showToast(editingPostId ? t('toast.news_saved') : t('toast.news_created'), 'success');
-                editingPostId = null;
-                showNewsList();
+                const wasNew = !editingPostId;
+                showToast(wasNew ? t('toast.news_created') : t('toast.news_saved'), 'success');
+                // Stay in editor — update slug reference for subsequent saves
+                if (result.data?.slug) {
+                    editingPostId = result.data.slug;
+                    document.getElementById('newsSlug').value = result.data.slug;
+                }
+                // Update view + trash buttons
+                updateNewsEditorButtons();
                 loadNews();
             } else {
                 showToast(result.message, 'error');
@@ -3541,6 +4108,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         root.style.setProperty('--nb-primary', primary);
         root.style.setProperty('--nb-primary-hover', adjustColor(primary, -15));
         root.style.setProperty('--nb-primary-active', adjustColor(primary, -25));
+        root.style.setProperty('--nb-primary-btn',
+            `radial-gradient(ellipse at 50% 0%, color-mix(in srgb, ${primary} 70%, white) 0%, ${primary} 70%)`);
+        root.style.setProperty('--nb-primary-btn-hover',
+            `radial-gradient(ellipse at 50% 0%, color-mix(in srgb, ${primary} 50%, white) 0%, ${primary} 70%)`);
         root.style.setProperty('--nb-brand', accent);
         root.style.setProperty('--nb-brand-light', adjustColor(accent, 20));
         updateBtnStylePreview();
@@ -4779,16 +5350,189 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     // Load users when the users panel becomes visible
     var _usersLoaded = false;
-    var origSwitchSettingsTab = null;
-    // Watch for settings tab switches to load users data
+    var _menuOrderLoaded = false;
+    // Watch for settings tab switches to load data on demand
     document.querySelectorAll('.settings-tab-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
-            if (this.getAttribute('data-settings-tab') === 'users' && !_usersLoaded) {
+            var tab = this.getAttribute('data-settings-tab');
+            if (tab === 'users' && !_usersLoaded) {
                 _usersLoaded = true;
                 loadUsers();
             }
+            if (tab === 'menus' && !_menuOrderLoaded) {
+                _menuOrderLoaded = true;
+                loadMenuOrder();
+            }
         });
     });
+
+    // ============================================================
+    // MENU ORDER
+    // ============================================================
+
+    var _menuOrderItems = [];
+
+    var menuOrderSelect = document.getElementById('menuOrderSelect');
+    var menuOrderList = document.getElementById('menuOrderList');
+    var menuOrderEmpty = document.getElementById('menuOrderEmpty');
+    var saveMenuOrderBtn = document.getElementById('saveMenuOrderBtn');
+
+    if (menuOrderSelect) {
+        menuOrderSelect.addEventListener('change', function() {
+            loadMenuOrder();
+        });
+    }
+
+    if (saveMenuOrderBtn) {
+        saveMenuOrderBtn.addEventListener('click', function() {
+            saveMenuOrder();
+        });
+    }
+
+    async function loadMenuOrder() {
+        var menuId = menuOrderSelect ? menuOrderSelect.value : '';
+        if (!menuId) return;
+
+        var defaultLang = '<?php echo defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en'; ?>';
+
+        try {
+            var resp = await fetch('api.php?action=get-menu-items&menu=' + encodeURIComponent(menuId) + '&lang=' + encodeURIComponent(defaultLang));
+            var result = await resp.json();
+            if (result.success && result.data && result.data.items) {
+                _menuOrderItems = result.data.items;
+                renderMenuOrderList();
+            } else {
+                _menuOrderItems = [];
+                renderMenuOrderList();
+            }
+        } catch (e) {
+            showToast(t('toast.error'), 'error');
+        }
+    }
+
+    function renderMenuOrderList() {
+        if (!menuOrderList) return;
+
+        if (_menuOrderItems.length === 0) {
+            menuOrderList.style.display = 'none';
+            menuOrderEmpty.style.display = 'block';
+            if (saveMenuOrderBtn) saveMenuOrderBtn.disabled = true;
+            return;
+        }
+
+        menuOrderList.style.display = 'block';
+        menuOrderEmpty.style.display = 'none';
+        if (saveMenuOrderBtn) saveMenuOrderBtn.disabled = false;
+
+        var dragGripSvg = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>';
+
+        var html = '';
+        _menuOrderItems.forEach(function(item, i) {
+            html += '<div class="menu-order-item" data-index="' + i + '" draggable="true">';
+            html += '<span class="menu-order-item__drag-handle">' + dragGripSvg + '</span>';
+            html += '<span class="menu-order-item__label">' + escapeHtml(item.label || item.page || '') + '</span>';
+            html += '<span class="menu-order-item__slug">' + escapeHtml(item.page || '') + '</span>';
+            html += '<span class="menu-order-item__actions">';
+            html += '<button type="button" class="btn-icon" title="' + t('btn.move_up') + '"' + (i === 0 ? ' disabled' : '') + ' onclick="moveMenuItem(' + i + ', -1)">';
+            html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>';
+            html += '</button>';
+            html += '<button type="button" class="btn-icon" title="' + t('btn.move_down') + '"' + (i === _menuOrderItems.length - 1 ? ' disabled' : '') + ' onclick="moveMenuItem(' + i + ', 1)">';
+            html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>';
+            html += '</button>';
+            html += '</span>';
+            html += '</div>';
+        });
+        menuOrderList.innerHTML = html;
+        initMenuDragAndDrop();
+    }
+
+    function moveMenuItem(index, direction) {
+        var newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= _menuOrderItems.length) return;
+        var item = _menuOrderItems.splice(index, 1)[0];
+        _menuOrderItems.splice(newIndex, 0, item);
+        renderMenuOrderList();
+    }
+
+    // Drag and drop for menu order items
+    var _menuDragIndex = null;
+
+    function initMenuDragAndDrop() {
+        var items = menuOrderList.querySelectorAll('.menu-order-item');
+        items.forEach(function(el) {
+            el.addEventListener('dragstart', function(e) {
+                _menuDragIndex = parseInt(this.dataset.index);
+                this.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+            el.addEventListener('dragend', function() {
+                _menuDragIndex = null;
+                this.classList.remove('dragging');
+                items.forEach(function(item) {
+                    item.classList.remove('drag-over-top', 'drag-over-bottom');
+                });
+            });
+            el.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                var rect = this.getBoundingClientRect();
+                var midY = rect.top + rect.height / 2;
+                this.classList.remove('drag-over-top', 'drag-over-bottom');
+                if (e.clientY < midY) {
+                    this.classList.add('drag-over-top');
+                } else {
+                    this.classList.add('drag-over-bottom');
+                }
+            });
+            el.addEventListener('dragleave', function() {
+                this.classList.remove('drag-over-top', 'drag-over-bottom');
+            });
+            el.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over-top', 'drag-over-bottom');
+                var targetIndex = parseInt(this.dataset.index);
+                if (_menuDragIndex === null || _menuDragIndex === targetIndex) return;
+
+                var rect = this.getBoundingClientRect();
+                var midY = rect.top + rect.height / 2;
+                var insertBefore = e.clientY < midY;
+
+                var item = _menuOrderItems.splice(_menuDragIndex, 1)[0];
+                var newIndex = insertBefore ? targetIndex : targetIndex + 1;
+                if (_menuDragIndex < targetIndex) newIndex--;
+                _menuOrderItems.splice(newIndex, 0, item);
+                renderMenuOrderList();
+            });
+        });
+    }
+
+    async function saveMenuOrder() {
+        var menuId = menuOrderSelect ? menuOrderSelect.value : '';
+        if (!menuId) return;
+
+        var defaultLang = '<?php echo defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en'; ?>';
+        var order = _menuOrderItems.map(function(item) { return item.page || ''; }).filter(Boolean);
+
+        var formData = new FormData();
+        formData.append('action', 'save-menu-order');
+        formData.append('menu', menuId);
+        formData.append('lang', defaultLang);
+        formData.append('order', JSON.stringify(order));
+        formData.append('csrf_token', CSRF_TOKEN);
+
+        try {
+            var resp = await fetch('api.php', { method: 'POST', body: formData });
+            var result = await resp.json();
+            if (result.success) {
+                showToast(t('settings.menu_order_saved'), 'success');
+            } else {
+                showToast(result.message || t('toast.error'), 'error');
+            }
+        } catch (e) {
+            showToast(t('toast.error'), 'error');
+        }
+    }
+
     <?php endif; ?>
 
     </script>

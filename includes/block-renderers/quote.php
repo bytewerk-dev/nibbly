@@ -16,7 +16,7 @@ $styleClass = $style === 'large' ? ' block-quote--large' : '';
 
 $html .= '<blockquote class="block-quote' . $styleClass . '">' . "\n";
 $html .= '    <p>' . nl2br(htmlspecialchars($text)) . '</p>' . "\n";
-if (!empty($attribution)) {
+if (!empty($attribution) || $editable) {
     $html .= '    <cite>' . htmlspecialchars($attribution) . '</cite>' . "\n";
 }
 $html .= '</blockquote>' . "\n";

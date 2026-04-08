@@ -22,6 +22,16 @@
 #      will never be committed.
 #   4. Run:  bash deploy.sh
 #
+# IMPORTANT — lftp script file approach:
+#   This script writes lftp commands to a temporary file and runs
+#   them with `lftp -f`. This is intentional. Passing lftp commands
+#   via heredoc (<< EOF) or inline (-e "...") causes backslash line
+#   continuations and long option flags (like --verbose, --newer,
+#   --no-perms) to be misinterpreted — flags get treated as file
+#   paths, resulting in "No such file or directory" errors and
+#   silent misbehavior (e.g. --newer being ignored). The temp file
+#   approach avoids all shell quoting/escaping issues.
+#
 # ============================================================
 
 set -o pipefail
@@ -62,8 +72,9 @@ cd "$SCRIPT_DIR" || exit 1
 echo -e "${CYAN}Uploading files (mirror with delete)...${NC}"
 echo ""
 
-lftp -u "$USER","$PASS" "$SERVER" << EOF
-set cmd:fail-exit true
+# Write lftp commands to a temp file (see IMPORTANT note above)
+LFTP_SCRIPT=$(mktemp)
+cat > "$LFTP_SCRIPT" << LFTP
 set ftp:ssl-allow yes
 set ftp:ssl-force yes
 set ftp:ssl-protect-data yes
@@ -72,11 +83,10 @@ set ssl:verify-certificate no
 set mirror:use-pget-n 5
 set net:max-retries 2
 set net:timeout 20
-
+open -u $USER,"$PASS" $SERVER
 mkdir -p $REMOTE_DIR
 cd $REMOTE_DIR
-
-mirror --reverse --delete --verbose \
+mirror --reverse --delete -v --no-perms \
   --exclude-glob .git/ \
   --exclude-glob node_modules/ \
   --exclude-glob .gitignore \
@@ -93,11 +103,14 @@ mirror --reverse --delete --verbose \
   --exclude-glob package.json \
   --exclude-glob package-lock.json \
   . .
-
 bye
-EOF
+LFTP
 
-if [ $? -eq 0 ]; then
+lftp -f "$LFTP_SCRIPT"
+RESULT=$?
+rm -f "$LFTP_SCRIPT"
+
+if [ $RESULT -eq 0 ]; then
     echo ""
     echo -e "${GREEN}=== Deploy complete ===${NC}"
 else

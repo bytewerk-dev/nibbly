@@ -2536,6 +2536,71 @@ switch ($action) {
         jsonResponse(true, null, 'Password reset successfully');
         break;
 
+    // ============================================================
+    // MENU ORDER
+    // ============================================================
+
+    case 'get-menu-items':
+        require_once __DIR__ . '/../includes/menu-helpers.php';
+        if (!file_exists(__DIR__ . '/../includes/nav-config.php')) {
+            $NAV_ITEMS = [];
+        } else {
+            include_once __DIR__ . '/../includes/nav-config.php';
+            if (!isset($NAV_ITEMS)) $NAV_ITEMS = [];
+        }
+
+        $menuId = trim($_GET['menu'] ?? '');
+        $lang = trim($_GET['lang'] ?? (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en'));
+
+        if (!$menuId) {
+            jsonResponse(false, null, 'Missing menu parameter');
+        }
+
+        $allNavItems = $NAV_ITEMS[$lang] ?? [];
+        $items = getMenuItems($menuId, $lang, '', $allNavItems);
+
+        jsonResponse(true, ['items' => $items, 'menu' => $menuId, 'lang' => $lang]);
+        break;
+
+    case 'save-menu-order':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $menuId = trim($_POST['menu'] ?? '');
+        $lang = trim($_POST['lang'] ?? '');
+        $orderRaw = $_POST['order'] ?? '';
+
+        if (!$menuId || !$lang) {
+            jsonResponse(false, null, 'Missing menu or lang parameter');
+        }
+
+        $order = json_decode($orderRaw, true);
+        if (!is_array($order)) {
+            jsonResponse(false, null, 'Invalid order data');
+        }
+
+        // Sanitize: only allow valid slug characters
+        $order = array_values(array_filter($order, fn($s) => is_string($s) && preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $s)));
+
+        $menusPath = __DIR__ . '/../content/menus.json';
+        $registry = file_exists($menusPath) ? json_decode(file_get_contents($menusPath), true) : ['menus' => []];
+        if (!isset($registry['menus'][$menuId])) {
+            jsonResponse(false, null, 'Unknown menu: ' . $menuId);
+        }
+
+        if (!isset($registry['menus'][$menuId]['order'])) {
+            $registry['menus'][$menuId]['order'] = [];
+        }
+        $registry['menus'][$menuId]['order'][$lang] = $order;
+
+        file_put_contents($menusPath, json_encode($registry, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        jsonResponse(true, null, 'Menu order saved');
+        break;
+
     default:
         jsonResponse(false, null, 'Unknown action');
 }

@@ -44,7 +44,12 @@ Options:
   --type=TYPE         Page type: standard or custom (default: standard)
   --title=TEXT        Page title (default: derived from slug)
   --description=TEXT  SEO meta description (default: empty)
-  --hide-nav          Hide page from auto-discovered navigation
+  --nav=LOCATIONS     Comma-separated nav locations (e.g. header,footer)
+                      Use --nav=none to hide from all navigation
+                      Default: header (omits "nav" field, auto-discovered in header)
+  --breadcrumb=PATH   Breadcrumb trail as "Label:href,Label:href,Current Label"
+                      Last item has no href (current page). Example:
+                      --breadcrumb="Docs:docs,API Reference"
   --dry-run           Show what would be generated without writing files
   --force             Overwrite existing files
   --help              Show this help
@@ -58,7 +63,8 @@ Page types:
 Examples:
   php cli/make.php --slug=about --lang=en --title="About Us"
   php cli/make.php --slug=services --lang=de --type=custom
-  php cli/make.php --slug=terms --lang=en --hide-nav --dry-run
+  php cli/make.php --slug=terms --lang=en --nav=none --dry-run
+  php cli/make.php --slug=api --lang=en --nav=header,footer --breadcrumb="Docs:docs,API Reference"
 
 USAGE;
     exit(isset($opts['help']) ? 0 : 1);
@@ -71,7 +77,21 @@ $lang = $opts['lang'] ?? 'en';
 $type = $opts['type'] ?? 'standard';
 $dryRun = isset($opts['dry-run']);
 $force = isset($opts['force']);
-$hideNav = isset($opts['hide-nav']);
+$navLocations = null;
+if (isset($opts['nav'])) {
+    $navLocations = $opts['nav'] === 'none' ? [] : array_map('trim', explode(',', $opts['nav']));
+}
+// Parse breadcrumb: "Label:href,Label:href,Current Label"
+$breadcrumb = null;
+if (isset($opts['breadcrumb'])) {
+    $breadcrumb = [];
+    foreach (explode(',', $opts['breadcrumb']) as $part) {
+        $parts = explode(':', trim($part), 2);
+        $crumb = ['label' => $parts[0]];
+        if (isset($parts[1]) && $parts[1] !== '') $crumb['href'] = $parts[1];
+        $breadcrumb[] = $crumb;
+    }
+}
 
 // Sanitize slug (same as convert.php)
 $slug = preg_replace('/[^a-z0-9-]/', '-', strtolower($slug));
@@ -123,8 +143,11 @@ $json = [
     'lastModified' => null,
 ];
 
-if ($hideNav) {
-    $json['hideFromNav'] = true;
+if ($navLocations !== null) {
+    $json['nav'] = $navLocations;
+}
+if ($breadcrumb !== null) {
+    $json['breadcrumb'] = $breadcrumb;
 }
 
 if ($type === 'standard') {
@@ -248,8 +271,16 @@ if ($type === 'standard') {
 $urlPath = ($lang === (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : '')) ? $slug : "$lang/$slug";
 echo "  URL: /$urlPath\n";
 
-if ($hideNav) {
-    echo "  Navigation: hidden (hideFromNav is set).\n";
+if ($navLocations !== null) {
+    if (empty($navLocations)) {
+        echo "  Navigation: hidden from all menus.\n";
+    } else {
+        echo "  Navigation: " . implode(', ', $navLocations) . "\n";
+    }
 } else {
-    echo "  Will appear in navigation automatically.\n";
+    echo "  Navigation: header (default auto-discovery).\n";
+}
+if ($breadcrumb !== null) {
+    $trail = implode(' / ', array_column($breadcrumb, 'label'));
+    echo "  Breadcrumb: $trail\n";
 }

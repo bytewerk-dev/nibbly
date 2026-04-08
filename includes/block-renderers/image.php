@@ -25,7 +25,7 @@ $widthClass = in_array($width, ['full', 'medium', 'small']) ? " block-image--{$w
 
 $html .= '<figure class="block-image' . $widthClass . '">' . "\n";
 $html .= '    <img src="' . htmlspecialchars($src) . '" alt="' . $alt . '" loading="lazy">' . "\n";
-if (!empty($caption)) {
+if (!empty($caption) || $editable) {
     $html .= '    <figcaption>' . htmlspecialchars($caption) . '</figcaption>' . "\n";
 }
 $html .= '</figure>' . "\n";

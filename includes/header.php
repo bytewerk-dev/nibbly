@@ -87,30 +87,10 @@ if (!isset($NAV_ITEMS)) {
     }
 }
 
-$navItems = $NAV_ITEMS[$currentLang] ?? $NAV_ITEMS[$defaultLang] ?? [];
+require_once __DIR__ . '/menu-helpers.php';
 
-// Auto-discover pages not explicitly listed in NAV_ITEMS (Directory-based routing/nav)
-$_existingPages = array_column($navItems, 'page');
-$_pageFiles = glob($_contentPath . $currentLang . '_*.json');
-if ($_pageFiles) {
-    foreach ($_pageFiles as $_pf) {
-        $_basename = basename($_pf, '.json');
-        $_slug = substr($_basename, strlen($currentLang) + 1);
-        
-        // Skip common partials/components
-        if (in_array($_slug, ['home', 'footer', 'sidebar', 'header'])) continue;
-        
-        if (!in_array($_slug, $_existingPages)) {
-            $_data = json_decode(file_get_contents($_pf), true);
-            // Hide pages that explicitly set hideFromNav: true
-            if ($_data && empty($_data['hideFromNav'])) {
-                $_title = $_data['title'] ?? ucfirst(str_replace('-', ' ', $_slug));
-                $_href = ($currentLang === $defaultLang) ? $_slug : $currentLang . '/' . $_slug;
-                $navItems[] = ['href' => $_href, 'label' => $_title, 'page' => $_slug];
-            }
-        }
-    }
-}
+$_allNavItems = $NAV_ITEMS[$currentLang] ?? $NAV_ITEMS[$defaultLang] ?? [];
+$navItems = getMenuItems('header', $currentLang, $basePath ?? '', $_allNavItems);
 
 // Load site settings (used for favicon, theme colors, editor button style)
 $_settingsPath = __DIR__ . '/../content/settings.json';
@@ -227,11 +207,32 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
             <!-- Desktop Navigation -->
             <nav class="nav-main">
                 <ul class="nav-list">
-                    <?php foreach ($navItems as $item): ?>
-                    <li>
-                        <a href="<?php echo $basePath . $item['href']; ?>"<?php echo ($currentPage ?? '') === $item['page'] ? ' class="active"' : ''; ?>>
+                    <?php foreach ($navItems as $item):
+                        $hasChildren = !empty($item['children']);
+                        $isActive = ($currentPage ?? '') === ($item['page'] ?? '');
+                        // Parent is active if any child matches
+                        if ($hasChildren && !$isActive) {
+                            foreach ($item['children'] as $_child) {
+                                if (($currentPage ?? '') === ($_child['page'] ?? '')) { $isActive = true; break; }
+                            }
+                        }
+                    ?>
+                    <li<?php echo $hasChildren ? ' class="nav-item--has-children"' : ''; ?>>
+                        <a href="<?php echo $basePath . $item['href']; ?>"<?php echo $isActive ? ' class="active"' : ''; ?>>
                             <?php echo htmlspecialchars($item['label']); ?>
+                            <?php if ($hasChildren): ?><svg class="nav-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg><?php endif; ?>
                         </a>
+                        <?php if ($hasChildren): ?>
+                        <ul class="nav-dropdown">
+                            <?php foreach ($item['children'] as $child): ?>
+                            <li>
+                                <a href="<?php echo $basePath . $child['href']; ?>"<?php echo ($currentPage ?? '') === ($child['page'] ?? '') ? ' class="active"' : ''; ?>>
+                                    <?php echo htmlspecialchars($child['label']); ?>
+                                </a>
+                            </li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <?php endif; ?>
                     </li>
                     <?php endforeach; ?>
                 </ul>
@@ -267,11 +268,30 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
     <div class="mobile-nav-overlay" id="mobileNavOverlay">
         <nav class="mobile-nav">
             <ul class="mobile-nav-list">
-                <?php foreach ($navItems as $item): ?>
-                <li>
-                    <a href="<?php echo $basePath . $item['href']; ?>"<?php echo ($currentPage ?? '') === $item['page'] ? ' class="active"' : ''; ?>>
+                <?php foreach ($navItems as $item):
+                    $hasChildren = !empty($item['children']);
+                    $isActive = ($currentPage ?? '') === ($item['page'] ?? '');
+                    if ($hasChildren && !$isActive) {
+                        foreach ($item['children'] as $_child) {
+                            if (($currentPage ?? '') === ($_child['page'] ?? '')) { $isActive = true; break; }
+                        }
+                    }
+                ?>
+                <li<?php echo $hasChildren ? ' class="mobile-nav-item--parent"' : ''; ?>>
+                    <a href="<?php echo $basePath . $item['href']; ?>"<?php echo $isActive ? ' class="active"' : ''; ?>>
                         <?php echo htmlspecialchars($item['label']); ?>
                     </a>
+                    <?php if ($hasChildren): ?>
+                    <ul class="mobile-nav-children">
+                        <?php foreach ($item['children'] as $child): ?>
+                        <li>
+                            <a href="<?php echo $basePath . $child['href']; ?>"<?php echo ($currentPage ?? '') === ($child['page'] ?? '') ? ' class="active"' : ''; ?>>
+                                <?php echo htmlspecialchars($child['label']); ?>
+                            </a>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <?php endif; ?>
                 </li>
                 <?php endforeach; ?>
             </ul>

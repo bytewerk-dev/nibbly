@@ -1063,6 +1063,39 @@ function loadNewsPosts($limit = 0, $lang = '') {
     return $posts;
 }
 
+// ============================================================
+// BREADCRUMBS
+// ============================================================
+
+/**
+ * Render a breadcrumb trail from the page's "breadcrumb" JSON field.
+ * Each entry has "label" (required) and "href" (optional, omitted for current page).
+ * Returns empty string if the page has no breadcrumb data.
+ *
+ * @param string $page     JSON page name (e.g. 'en_about')
+ * @param string $basePath Relative path prefix ('' or '../')
+ * @return string HTML
+ */
+function renderBreadcrumb($page, $basePath = '') {
+    $data = loadContentCached($page);
+    $crumbs = $data['breadcrumb'] ?? null;
+    if (!$crumbs || !is_array($crumbs)) return '';
+
+    $html = '<nav class="breadcrumb" aria-label="Breadcrumb"><ol class="breadcrumb__list">';
+    $count = count($crumbs);
+    foreach ($crumbs as $i => $crumb) {
+        $label = htmlspecialchars($crumb['label'] ?? '');
+        $isLast = ($i === $count - 1);
+        if ($isLast || empty($crumb['href'])) {
+            $html .= '<li class="breadcrumb__item breadcrumb__item--current" aria-current="page">' . $label . '</li>';
+        } else {
+            $html .= '<li class="breadcrumb__item"><a href="' . htmlspecialchars($basePath . $crumb['href']) . '">' . $label . '</a></li>';
+        }
+    }
+    $html .= '</ol></nav>';
+    return $html;
+}
+
 /**
  * Render a news/blog listing.
  *
@@ -1102,18 +1135,23 @@ function renderNewsList($limit = 0, $lang = 'en') {
 
         $html .= '<article class="news-card">';
         $html .= '<a href="' . $postUrl . '" class="news-card__link">';
+        $_isAdmin = isAdminLoggedIn();
         if ($image) {
             $html .= '<div class="news-card__image">';
             $html .= '<img src="' . $image . '" alt="' . $title . '" loading="lazy">';
+            $html .= '</div>';
+        } elseif ($_isAdmin) {
+            $html .= '<div class="news-card__image">';
+            $html .= '<img src="/assets/images/placeholder-image.webp" alt="" loading="lazy">';
             $html .= '</div>';
         }
         $html .= '<div class="news-card__body">';
         $html .= '<time class="news-card__date" datetime="' . htmlspecialchars($date) . '">' . $formattedDate . '</time>';
         $html .= '<h3 class="news-card__title">' . $title . '</h3>';
-        if ($excerpt) {
+        if ($excerpt || $_isAdmin) {
             $html .= '<p class="news-card__excerpt">' . $excerpt . '</p>';
         }
-        if ($author) {
+        if ($author || $_isAdmin) {
             $html .= '<span class="news-card__author">' . $author . '</span>';
         }
         $html .= '</div>';
@@ -1305,7 +1343,7 @@ function renderEvent($event, $lang = 'de', $showImage = true, $editable = false)
     }
 
     // Banner image
-    if ($showImage && !empty($event['image'])) {
+    if ($showImage && (!empty($event['image']) || $editable)) {
         $html .= '<div class="event-card__image">';
         $imgSrc = htmlspecialchars($event['image']);
         $imgAlt = htmlspecialchars($title);
@@ -1353,7 +1391,7 @@ function renderEvent($event, $lang = 'de', $showImage = true, $editable = false)
     }
 
     // Location
-    if (!empty($location)) {
+    if (!empty($location) || $editable) {
         $html .= '<div class="event-card__location">';
         $html .= '<svg class="event-card__location-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
         $html .= htmlspecialchars($location);
@@ -1361,13 +1399,13 @@ function renderEvent($event, $lang = 'de', $showImage = true, $editable = false)
     }
 
     // Description
-    if (!empty($description)) {
+    if (!empty($description) || $editable) {
         $html .= '<p class="event-card__desc">' . htmlspecialchars($description) . '</p>';
     }
 
     // Footer: admission + link
     $html .= '<div class="event-card__footer">';
-    if (!empty($admission)) {
+    if (!empty($admission) || $editable) {
         $admissionLabels = ['de' => 'Eintritt: ', 'en' => 'Admission: ', 'es' => 'Entrada: '];
         $admissionLabel = $admissionLabels[$lang] ?? 'Admission: ';
         $html .= '<span class="event-card__admission">' . $admissionLabel . htmlspecialchars($admission) . '</span>';

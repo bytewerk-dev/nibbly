@@ -16,7 +16,7 @@ if (empty($content) && !$editable) return '';
 $styleClass = $style === 'numbered' ? ' block-list--numbered' : ' block-list--bullet';
 
 $html .= '<div class="block-list' . $styleClass . '">' . "\n";
-if (!empty($title)) {
+if (!empty($title) || $editable) {
     $html .= '    <h3>' . htmlspecialchars($title) . '</h3>' . "\n";
 }
 $html .= sanitizeHtml($content);

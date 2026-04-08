@@ -11,9 +11,7 @@ Nibbly turns any HTML or PHP page into an editable website — no database requi
 | News posts | `content/news/{slug}.json` |
 | Footer content | `content/pages/footer.json` |
 | Site settings | `content/settings.json` |
-| Menu registry | `content/menus.json` |
 | Navigation | `includes/nav-config.php` |
-| Menu helpers | `includes/menu-helpers.php` |
 | Site page hook | `includes/site-page-hook.php` (optional, survives core updates) |
 | Block types | `includes/block-types.php` |
 | Template API | `includes/content-loader.php` |
@@ -24,7 +22,6 @@ Nibbly turns any HTML or PHP page into an editable website — no database requi
 | Example templates | `examples/templates/` |
 | Example content | `examples/content/` |
 | HTML converter | `cli/convert.php` |
-| Page scaffolding | `cli/make.php` |
 | Events | `content/events.json` |
 | Email config | `content/settings.json` → `email` section |
 | SMTP mailer | `api/SmtpMailer.php` |
@@ -41,18 +38,7 @@ The `router.php` handles clean URLs, language routing, and news post URLs withou
 
 ## How to Create a Standard Page
 
-The fastest way is with the scaffolding tool:
-
-```bash
-php cli/make.php --slug=about --lang=en --title="About Us"
-```
-
-This creates `content/pages/en_about.json` with a heading and text section. The router + front controller (`includes/page.php`) will automatically serve `/about` or `/en/about` using `renderAllSections()`. No PHP template file needed.
-
-The page appears in header navigation automatically via auto-discovery. To control which menus a page appears in, use `--nav=header,footer-pages` or set `"nav": ["header", "footer-pages"]` in the JSON. Use `--nav=none` to hide from all menus.
-
-To create the JSON manually instead:
-
+1. Create the content file `content/pages/{lang}_{slug}.json`:
 ```json
 {
   "page": "en_about",
@@ -60,25 +46,19 @@ To create the JSON manually instead:
   "title": "About Us",
   "description": "Learn more about us.",
   "sections": [
-    { "id": "s1", "type": "heading", "text": "About Us", "level": "h1" },
+    { "id": "s1", "type": "heading", "heading": "About Us", "level": "h1" },
     { "id": "s2", "type": "text", "title": "", "content": "<p>Our story...</p>" }
   ]
 }
 ```
 
-To control navigation order, labels, or dropdown grouping, edit `includes/nav-config.php` (`$PAGE_MAPPING` and `$NAV_ITEMS`). Pages listed there take priority; auto-discovered pages are appended after. Nav items support `children` for dropdown menus and an optional `'nav'` key to control which locations they appear in.
+2. That's it. The router + front controller (`includes/page.php`) will automatically serve `/about` or `/en/about` using `renderAllSections()`. No PHP template file needed.
+
+3. To add it to navigation, edit `includes/nav-config.php` and add entries to `$PAGE_MAPPING` and `$NAV_ITEMS`.
 
 ## How to Create a Custom Layout Page
 
 When you need full control over the HTML structure (hero sections, grids, custom components):
-
-```bash
-php cli/make.php --slug=your-page --lang=en --type=custom --title="My Page"
-```
-
-This creates both `en/your-page.php` and `content/pages/en_your-page.json` with hero + content boilerplate. Edit the PHP template to customize the layout.
-
-To create manually instead:
 
 1. Create `{lang}/your-page.php`:
 ```php
@@ -183,68 +163,46 @@ The pattern is always the same:
 | `data-list-index` | list items | Numeric index (0, 1, 2...) |
 | `data-hidden` | any | Hides element from visitors when `"true"` |
 
-## JSON Is the Source of Truth
+## Data-First Principle (CRITICAL)
 
-The JSON file (`content/pages/{lang}_{slug}.json`) is the single source of truth for all editable content. Both the Visual Editor (frontend) and the Content Editor (backend dashboard) read from it.
+Nibbly follows a strict **data-first** approach. All editable text, images, links, and lists for a page **must be declared in the corresponding JSON file** (e.g. `content/pages/en_home.json`) from the start.
 
-### Auto-Write: How Missing Fields Get Populated
+### Why this matters
 
-When an admin browses a page, every `editableText()`, `editableHtml()`, `editableImage()`, and `editableLink()` call checks whether its key exists in the JSON file. If the key is missing, Nibbly **automatically writes the fallback value to the JSON file**. This means:
+Nibbly has two editors:
+1. **Visual Editor** (frontend) — inline editing directly on the rendered page
+2. **Content Editor** (backend dashboard) — structured form built from the JSON file
 
-- An agent (or human) can focus on the PHP template — just use `editableText($_p, 'hero.title', 'Welcome to My Site')` with a good fallback value.
-- On first admin page view, any missing keys are written to the JSON using those fallback values.
-- The Content Editor will then show all fields, because the JSON is now populated.
-- A toast notification tells the admin how many fields were auto-generated (e.g. "Auto-wrote 4 missing fields to en_about.json").
+The Content Editor generates its form fields by iterating over the JSON structure. If a field only exists as a PHP fallback (`editableText($page, 'key', 'Fallback')`) but is **not declared in the JSON**, it will render on the page but **will not appear in the Content Editor**. This breaks the expectation that both editors can manage the same content.
 
-**This is the intended workflow.** Auto-write exists so you don't have to maintain content in two places.
+### The rule
 
-### What This Means for Agents
+When creating or converting a page, **always populate the JSON file with all editable content first**, then reference those keys in the PHP template. Never rely on fallback defaults as the primary content source.
 
-1. **Always provide meaningful fallback values** — they become the initial content in the JSON. Write fallbacks as if they were the real content, not just "Default Title".
-2. **You don't need to pre-populate the JSON file** for custom layout pages. The PHP template + fallbacks are enough. The JSON will be populated on first admin render.
-3. **For standard pages using `sections[]`**, you still create the JSON with the sections array, because `renderAllSections()` iterates over it — there are no PHP fallbacks for section structure.
-4. **For editable lists**, the list structure must exist in JSON (since `editableListItems()` returns `[]` for missing keys and does not auto-write). Individual item fields within an existing list do auto-write.
-
-### Example: Custom Layout Page
-
-The agent writes the PHP template with good fallbacks:
+**Wrong — content only in PHP fallbacks:**
 ```php
-<h1><?php echo editableText($_p, 'hero.title', 'Welcome to My Site'); ?></h1>
+<h1><?php echo editableText($_p, 'hero.title', 'Welcome'); ?></h1>
 <p><?php echo editableText($_p, 'hero.subtitle', 'We build great things.'); ?></p>
-<?php echo editableLink($_p, 'hero.cta', 'Get Started', '/pricing', 'btn'); ?>
+```
+```json
+{}
 ```
 
-The JSON file can start minimal (just metadata):
-```json
-{
-  "page": "en_about",
-  "lang": "en",
-  "title": "About Us",
-  "description": "Learn more about us."
-}
+**Correct — content declared in JSON, PHP fallbacks are just safety nets:**
+```php
+<h1><?php echo editableText($_p, 'hero.title', 'Welcome'); ?></h1>
+<p><?php echo editableText($_p, 'hero.subtitle', 'We build great things.'); ?></p>
 ```
-
-After the first admin page view, the JSON is automatically populated:
 ```json
 {
-  "page": "en_about",
-  "lang": "en",
-  "title": "About Us",
-  "description": "Learn more about us.",
   "hero": {
-    "title": "Welcome to My Site",
-    "subtitle": "We build great things.",
-    "cta": { "text": "Get Started", "href": "/pricing" }
-  },
-  "lastModified": "2026-04-04T12:00:00+00:00"
+    "title": "Welcome",
+    "subtitle": "We build great things."
+  }
 }
 ```
 
-### When You Must Pre-Populate JSON
-
-- **Standard pages with `sections[]`** — `renderAllSections()` needs the sections array to exist.
-- **Editable lists** — `editableListItems()` returns `[]` for missing keys; the list structure (with at least one item) must be in the JSON.
-- **Any field that should have content different from the PHP fallback** — the fallback is just the initial value; edit the JSON directly if you want different content.
+This applies to all page types — standard pages using `sections[]`, custom layout pages with dot-notation keys, and editable lists. The JSON file is the single source of truth.
 
 ## Template API (content-loader.php)
 
@@ -334,7 +292,6 @@ renderStats($page)               // stats.items — key figures
 renderTestimonials($page)        // testimonials.items — quote cards
 renderComparisonTable($page)     // comparison.rows — feature comparison table
 renderNewsList($limit, $lang)    // News posts from content/news/
-renderBreadcrumb($page, $basePath) // Breadcrumb trail from JSON "breadcrumb" field
 ```
 
 ### Content Helpers
@@ -471,102 +428,6 @@ Component styles live in `css/components.css`. Key classes:
 - `.comparison-table`, `.comparison-table-wrap`
 - `.news-grid`, `.news-card`
 
-## Page Scaffolding Tool
-
-Generate page boilerplate with a single command:
-
-```bash
-# Standard page (JSON only — front controller serves it)
-php cli/make.php --slug=about --lang=en --title="About Us"
-
-# Custom layout page (PHP template + JSON)
-php cli/make.php --slug=services --lang=de --type=custom --title="Unsere Dienste"
-
-# Preview without writing files
-php cli/make.php --slug=pricing --lang=en --dry-run
-
-# Hide from navigation
-php cli/make.php --slug=terms --lang=en --hide-nav
-```
-
-Options: `--slug` (required), `--lang` (default: en), `--type` (standard/custom), `--title`, `--description`, `--nav=LOCATIONS`, `--breadcrumb=PATH`, `--dry-run`, `--force`.
-
-## Navigation System
-
-### Auto-Discovery
-
-Pages with JSON content files are **automatically added to navigation** without requiring `nav-config.php` entries. The system scans `content/pages/{lang}_*.json` and adds any page not already listed in `$NAV_ITEMS`.
-
-System partials (`home`, `footer`, `sidebar`, `header`) are excluded automatically.
-
-### Nav Locations (`"nav"` field)
-
-Control which menus a page appears in via the `"nav"` array in page JSON. Menu IDs are defined in `content/menus.json`. Default menus: `"header"`, `"footer-pages"`, `"footer-legal"`.
-
-```json
-{ "nav": ["header", "footer-pages"] }
-{ "nav": ["header"] }
-{ "nav": ["footer-legal"] }
-{ "nav": [] }
-```
-
-If `"nav"` is absent, defaults to `["header"]` (auto-discovered in header only).
-
-### Menu Registry (`content/menus.json`)
-
-Defines available menus with multilingual labels and sort order:
-```json
-{
-  "menus": {
-    "header": { "label": { "en": "Header", "de": "Kopfzeile" }, "weight": 0 },
-    "footer-pages": { "label": { "en": "Pages", "de": "Seiten" }, "weight": 10 },
-    "footer-legal": { "label": { "en": "Info", "de": "Rechtliches" }, "weight": 20 }
-  }
-}
-```
-
-Footer columns are rendered automatically from the registry (all menus except `header`). Adding a new footer column = add an entry to `menus.json` + tag pages with the new menu ID. Column headings come from the `label` field. The dashboard's Page Settings checkboxes are generated dynamically from the registry.
-
-### Nested Menus (Dropdowns)
-
-Group nav items into dropdowns via `children` in `$NAV_ITEMS` (`nav-config.php`):
-
-```php
-$NAV_ITEMS = [
-    'en' => [
-        ['href' => '.', 'label' => 'Home', 'page' => 'home'],
-        ['href' => 'docs', 'label' => 'Resources', 'page' => 'docs', 'children' => [
-            ['href' => 'docs', 'label' => 'Documentation', 'page' => 'docs'],
-            ['href' => 'showcase', 'label' => 'Showcase', 'page' => 'showcase'],
-        ]],
-        ['href' => 'pricing', 'label' => 'Pricing', 'page' => 'pricing', 'nav' => ['header']],  // header only, not in footer
-    ],
-];
-```
-
-- Desktop: hover/focus opens a dropdown below the parent
-- Mobile: children are rendered inline, indented
-- If any child is the active page, the parent also gets the `.active` class
-- Manual items support an optional `'nav'` key (defaults to `['header', 'footer']`)
-
-### Breadcrumbs
-
-Optional `"breadcrumb"` array in page JSON. Each entry has `label` (required) and `href` (optional):
-
-```json
-{
-  "title": "API Reference",
-  "breadcrumb": [
-    { "label": "Docs", "href": "docs" },
-    { "label": "API Reference" }
-  ]
-}
-```
-
-Standard pages render breadcrumbs automatically above `renderAllSections()`. Custom layouts call `renderBreadcrumb($contentPage, $basePath)` manually. If no `"breadcrumb"` field is present, nothing is rendered.
-
-`nav-config.php` is still used for: explicit navigation ordering, custom labels, dropdown grouping, the language switcher's `$PAGE_MAPPING`, and pages that need different slugs per language.
-
 ## HTML-to-Nibbly Converter
 
 Automatically convert a static HTML page into an editable Nibbly template + JSON + CSS:
@@ -610,82 +471,6 @@ When converting an HTML page to Nibbly or setting up a fresh installation, the s
    ```
 
 Never use weak or predictable passwords. The setup wizard enforces: 8+ characters, uppercase, lowercase, digit, and special character.
-
-## Common Mistakes to Avoid
-
-### `editableImage()` returns a full `<img>` tag
-
-Do NOT wrap it in another `<img>`:
-```php
-<!-- WRONG — produces <img <img src="..."> -->
-<img <?php echo editableImage($_p, 'hero.image', 'photo.jpg', 'Alt text'); ?>>
-
-<!-- CORRECT — editableImage() outputs the complete <img> element -->
-<?php echo editableImage($_p, 'hero.image', 'photo.jpg', 'Alt text'); ?>
-```
-
-### `editableLink()` returns a full `<a>` tag
-
-Same pattern — do NOT wrap it:
-```php
-<!-- WRONG -->
-<a href="#"><?php echo editableLink($_p, 'cta', 'Click', '/page'); ?></a>
-
-<!-- CORRECT -->
-<?php echo editableLink($_p, 'cta', 'Click', '/page', 'btn'); ?>
-```
-
-### Block type field names must match the renderer
-
-These are the exact field names each block renderer reads. Using different names (e.g. `"description"` instead of `"content"`, `"quote"` instead of `"text"`) will silently produce empty output.
-
-| Type | Required fields |
-|---|---|
-| `text` | `title`, `content` (HTML), `titleTag`, `style` |
-| `heading` | `text`, `level` (h1-h6) |
-| `quote` | `text`, `attribution`, `style` |
-| `list` | `title`, `style` (bullet/numbered), `content` (HTML: `<ul><li>...</li></ul>`) |
-| `image` | `src`, `alt`, `caption`, `width` |
-| `card` | `title`, `content`, `image` |
-| `youtube` | `videoId`, `title` |
-| `soundcloud` | `trackId`, `title` |
-| `audio` | `src`, `title` |
-| `spacer` | `height` (sm/md/lg/xl) |
-| `divider` | *(none)* |
-
-### Lists use numbered objects, not arrays
-
-```json
-// WRONG — JSON array
-"items": [{"title": "A"}, {"title": "B"}]
-
-// CORRECT — numbered object keys
-"items": {"0": {"title": "A"}, "1": {"title": "B"}}
-```
-
-Dot-notation addressing requires object keys (`features.items.0.title`). JSON arrays don't support this.
-
-### Auto-write only fires for logged-in admins
-
-Visitor traffic never populates the JSON. After creating a new page, an admin must visit it once to trigger auto-write of missing fields.
-
-### `editableListItems()` does NOT auto-write
-
-Unlike `editableText()`/`editableImage()`/`editableLink()`, `editableListItems()` returns `[]` for missing keys without creating them in JSON. Editable list **structures** (with at least one item) must exist in the JSON file.
-
-### `renderNewsList()` signature is `($limit, $lang)`
-
-Not `($lang, $basePath)`. Use `renderNewsList(0, $currentLang)` for all posts.
-
-### Always use `$contentPage` variable, not hardcoded page names
-
-```php
-// WRONG
-<?php echo renderAllSections('en_your-page'); ?>
-
-// CORRECT
-<?php echo renderAllSections($contentPage); ?>
-```
 
 ## Rules
 

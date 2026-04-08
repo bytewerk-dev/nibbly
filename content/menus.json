@@ -1,0 +1,16 @@
+{
+    "menus": {
+        "header": {
+            "label": { "en": "Header", "de": "Kopfzeile", "es": "Encabezado" },
+            "weight": 0
+        },
+        "footer-pages": {
+            "label": { "en": "Pages", "de": "Seiten", "es": "Páginas" },
+            "weight": 10
+        },
+        "footer-legal": {
+            "label": { "en": "Info", "de": "Rechtliches", "es": "Info" },
+            "weight": 20
+        }
+    }
+}

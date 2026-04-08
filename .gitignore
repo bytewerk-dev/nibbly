@@ -9,6 +9,7 @@ website/
 
 # Backup (local reference only)
 nibbly-backup/
+nibbly-alt/
 
 # Runtime data
 backups/*
@@ -42,6 +43,10 @@ zh/
 
 # CSS overlay (copied by deploy script)
 css/website.css
+
+# Fonts & font stylesheet (copied by deploy script)
+css/fonts.css
+assets/fonts/
 
 # Development
 screenshots/
