@@ -10,7 +10,7 @@ $html = '';
 
 if (!empty($section['src'])) {
     $audioSrc = htmlspecialchars($section['src']);
-    $audioTitle = !empty($section['title']) ? htmlspecialchars($section['title']) : 'Audio';
+    $rawTitle = $section['title'] ?? '';
     $playerId = 'player-' . uniqid();
     $html .= '<div class="custom-audio-player" data-player-id="' . $playerId . '">' . "\n";
     $html .= '    <audio id="' . $playerId . '" preload="metadata">' . "\n";
@@ -21,7 +21,11 @@ if (!empty($section['src'])) {
     $html .= '        <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>' . "\n";
     $html .= '    </button>' . "\n";
     $html .= '    <div class="audio-info">' . "\n";
-    $html .= '        <div class="audio-title">' . $audioTitle . '</div>' . "\n";
+    if ($editable) {
+        $html .= '        <div class="audio-title">' . editableText($page, "sections.$index.title", $rawTitle) . '</div>' . "\n";
+    } else {
+        $html .= '        <div class="audio-title">' . htmlspecialchars($rawTitle !== '' ? $rawTitle : 'Audio') . '</div>' . "\n";
+    }
     $html .= '        <div class="audio-progress-container">' . "\n";
     $html .= '            <div class="audio-progress-bar">' . "\n";
     $html .= '                <div class="audio-progress"></div>' . "\n";

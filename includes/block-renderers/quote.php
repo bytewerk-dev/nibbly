@@ -15,9 +15,14 @@ $style = $section['style'] ?? 'default';
 $styleClass = $style === 'large' ? ' block-quote--large' : '';
 
 $html .= '<blockquote class="block-quote' . $styleClass . '">' . "\n";
-$html .= '    <p>' . nl2br(htmlspecialchars($text)) . '</p>' . "\n";
-if (!empty($attribution) || $editable) {
-    $html .= '    <cite>' . htmlspecialchars($attribution) . '</cite>' . "\n";
+if ($editable) {
+    $html .= '    <p>' . editableText($page, "sections.$index.text", $text) . '</p>' . "\n";
+    $html .= '    <cite>' . editableText($page, "sections.$index.attribution", $attribution) . '</cite>' . "\n";
+} else {
+    $html .= '    <p>' . nl2br(htmlspecialchars($text)) . '</p>' . "\n";
+    if (!empty($attribution)) {
+        $html .= '    <cite>' . htmlspecialchars($attribution) . '</cite>' . "\n";
+    }
 }
 $html .= '</blockquote>' . "\n";
 

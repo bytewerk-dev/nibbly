@@ -17,9 +17,14 @@ if (!in_array($level, $allowedLevels)) $level = 'h2';
 $subtitle = $section['subtitle'] ?? '';
 
 $html .= '<div class="block-heading">' . "\n";
-$html .= "    <{$level}>" . htmlspecialchars($text) . "</{$level}>\n";
-if (!empty($subtitle) || $editable) {
-    $html .= '    <p class="block-heading__subtitle">' . htmlspecialchars($subtitle) . '</p>' . "\n";
+if ($editable) {
+    $html .= "    <{$level}>" . editableText($page, "sections.$index.text", $text) . "</{$level}>\n";
+    $html .= '    <p class="block-heading__subtitle">' . editableText($page, "sections.$index.subtitle", $subtitle) . '</p>' . "\n";
+} else {
+    $html .= "    <{$level}>" . htmlspecialchars($text) . "</{$level}>\n";
+    if (!empty($subtitle)) {
+        $html .= '    <p class="block-heading__subtitle">' . htmlspecialchars($subtitle) . '</p>' . "\n";
+    }
 }
 $html .= '</div>' . "\n";
 

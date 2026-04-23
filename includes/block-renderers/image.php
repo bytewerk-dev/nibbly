@@ -8,25 +8,24 @@
 
 $html = '';
 $src = $section['src'] ?? '';
-
-if (empty($src)) {
-    if ($editable) {
-        $html .= '<div class="block-image block-image--placeholder">' . "\n";
-        $html .= '    <span class="placeholder-text">Select an image</span>' . "\n";
-        $html .= '</div>' . "\n";
-    }
-    return $html;
-}
-
-$alt = htmlspecialchars($section['alt'] ?? '');
+$rawAlt = $section['alt'] ?? '';
 $caption = $section['caption'] ?? '';
 $width = $section['width'] ?? 'full';
 $widthClass = in_array($width, ['full', 'medium', 'small']) ? " block-image--{$width}" : '';
 
+if (empty($src) && !$editable) {
+    return '';
+}
+
 $html .= '<figure class="block-image' . $widthClass . '">' . "\n";
-$html .= '    <img src="' . htmlspecialchars($src) . '" alt="' . $alt . '" loading="lazy">' . "\n";
-if (!empty($caption) || $editable) {
-    $html .= '    <figcaption>' . htmlspecialchars($caption) . '</figcaption>' . "\n";
+if ($editable) {
+    $html .= '    ' . editableImageSplit($page, "sections.$index.src", "sections.$index.alt", $src, $rawAlt) . "\n";
+    $html .= '    <figcaption>' . editableText($page, "sections.$index.caption", $caption) . '</figcaption>' . "\n";
+} else {
+    $html .= '    <img src="' . htmlspecialchars($src) . '" alt="' . htmlspecialchars($rawAlt) . '" loading="lazy">' . "\n";
+    if ($caption !== '') {
+        $html .= '    <figcaption>' . htmlspecialchars($caption) . '</figcaption>' . "\n";
+    }
 }
 $html .= '</figure>' . "\n";
 

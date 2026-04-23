@@ -534,7 +534,20 @@ switch ($action) {
             jsonResponse(false, null, 'Error saving');
         }
 
-        jsonResponse(true, ['lastModified' => $contentData['lastModified']], 'Saved successfully');
+        $responseData = ['lastModified' => $contentData['lastModified']];
+
+        // Optional: re-render the full sections list so the client can patch
+        // the .editable-content-area DOM without a full page reload (used
+        // after add/delete/reorder).  Returning the whole list keeps card-grid
+        // grouping and index-based data-field attributes in sync.
+        if (!empty($_POST['render_sections'])) {
+            require_once __DIR__ . '/../includes/content-loader.php';
+            // Force admin mode for the renderer: we're already authenticated
+            // via the save endpoint, but renderAllSections checks isAdminLoggedIn.
+            $responseData['sectionsHtml'] = renderAllSections($page);
+        }
+
+        jsonResponse(true, $responseData, 'Saved successfully');
         break;
 
     // ============================================================

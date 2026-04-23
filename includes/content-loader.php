@@ -79,7 +79,7 @@ function getSectionTypeName($type) {
  * @param bool $editable Make editable
  * @return string HTML output
  */
-function renderSection($section, $index = 0, $editable = false) {
+function renderSection($section, $index = 0, $editable = false, $page = '') {
     $html = '';
     $innerHtml = '';
 
@@ -92,7 +92,7 @@ function renderSection($section, $index = 0, $editable = false) {
     $rendererFile = __DIR__ . '/block-renderers/' . $type . '.php';
 
     if (isset($blockTypes[$type]) && file_exists($rendererFile)) {
-        $innerHtml = (function() use ($section, $editable, $rendererFile) {
+        $innerHtml = (function() use ($section, $editable, $rendererFile, $page, $index) {
             return require $rendererFile;
         })();
     }
@@ -150,7 +150,7 @@ function renderAllSections($page, $staggerCards = false) {
                 $inCardGrid = true;
             }
 
-            $html .= renderSection($section, $index, $isEditable);
+            $html .= renderSection($section, $index, $isEditable, $page);
 
             if ($inCardGrid && (!$nextIsCard || $index === $sectionCount - 1)) {
                 $html .= '</div>' . "\n";
@@ -445,6 +445,45 @@ function editableImage($page, $fieldKey, $defaultSrc = '', $defaultAlt = '', $cl
         $hiddenAttr = $hidden ? ' data-hidden="true"' : '';
         return '<img src="' . htmlspecialchars($src) . '" alt="' . htmlspecialchars($alt) . '"' . $classAttr
             . ' data-editable-image data-page="' . htmlspecialchars($page) . '" data-field="' . htmlspecialchars($fieldKey) . '"' . $hiddenAttr . '>';
+    }
+
+    if ($hidden) return '';
+    return '<img src="' . htmlspecialchars($src) . '" alt="' . htmlspecialchars($alt) . '"' . $classAttr . '>';
+}
+
+/**
+ * Render an editable image whose src and alt live at two separate
+ * dot-notation keys (not nested inside a single {src, alt} object).
+ * Used by block renderers where the JSON schema already stores src
+ * and alt as sibling fields (e.g. image block: sections.N.src, sections.N.alt).
+ * Does NOT auto-write on missing keys — schema is expected to exist.
+ *
+ * @param string $page        JSON page name
+ * @param string $srcFieldKey Dot-notation key for src (e.g. 'sections.3.src')
+ * @param string $altFieldKey Dot-notation key for alt (e.g. 'sections.3.alt')
+ * @param string $defaultSrc  Fallback image path
+ * @param string $defaultAlt  Fallback alt text
+ * @param string $class       CSS classes for the <img> tag
+ * @return string HTML output
+ */
+function editableImageSplit($page, $srcFieldKey, $altFieldKey, $defaultSrc = '', $defaultAlt = '', $class = '') {
+    $data = loadContentCached($page);
+    $src = getNestedValue($data, $srcFieldKey);
+    $alt = getNestedValue($data, $altFieldKey);
+    if ($src === null) $src = $defaultSrc;
+    if ($alt === null) $alt = $defaultAlt;
+
+    $hidden = isFieldHidden($data, $srcFieldKey);
+    $classAttr = $class ? ' class="' . htmlspecialchars($class) . '"' : '';
+
+    if (isAdminLoggedIn()) {
+        $hiddenAttr = $hidden ? ' data-hidden="true"' : '';
+        return '<img src="' . htmlspecialchars($src) . '" alt="' . htmlspecialchars($alt) . '"' . $classAttr
+            . ' data-editable-image data-image-format="split"'
+            . ' data-page="' . htmlspecialchars($page) . '"'
+            . ' data-field="' . htmlspecialchars($srcFieldKey) . '"'
+            . ' data-alt-field="' . htmlspecialchars($altFieldKey) . '"'
+            . $hiddenAttr . '>';
     }
 
     if ($hidden) return '';
