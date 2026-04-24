@@ -10,37 +10,30 @@
     "saving": "Kaydediliyor…",
     "undo": "Geri al",
     "redo": "Yinele",
-
     "edit_mode_hint": "Düzenlemek için metne tıklayın • Sıralamak için sürükleyin",
-
     "cat.content": "İçerik",
     "cat.media": "Medya",
     "cat.cards": "Kartlar ve ızgaralar",
     "cat.interactive": "Etkileşimli",
     "cat.layout": "Düzen",
     "cat.embed": "Yerleştir",
-
     "add_block": "Blok ekle",
     "search_blocks": "Blok ara...",
     "edit": "Düzenle",
     "show": "Göster",
     "hide": "Gizle",
     "drag_reorder": "Sıralamak için sürükleyin",
-
     "add_soundcloud": "SoundCloud ekle",
     "add_audio": "Ses MP3 ekle",
     "add_youtube": "YouTube ekle",
     "add_text": "Metin bölümü ekle",
     "add_card": "Kart ekle",
-
     "bold": "Kalın",
     "italic": "İtalik",
     "insert_link": "Bağlantı ekle",
     "clean_formatting": "Biçimlendirmeyi temizle",
-
     "image_manager": "Görsel yöneticisi",
     "image_preview": "Önizleme",
-
     "event.title": "Başlık",
     "event.location": "Konum",
     "event.description": "Açıklama",
@@ -58,20 +51,16 @@
     "event.delete_confirm": "Bu etkinlik silinsin mi?",
     "event.cannot_undo": "Bu işlem geri alınamaz.",
     "event.date_required": "Tarih ve başlık gereklidir",
-
     "footer.edit": "Alt bilgiyi düzenle",
     "footer.link_text": "Bağlantı metni",
     "footer.link_url": "Bağlantı URL'si",
     "footer.link_text_lang": "Bağlantı metni ({lang})",
     "footer.copyright": "Telif hakkı (Kısa kodlar: [id=\"...\"]metin[/id])",
-
     "section.delete": "Bölümü sil",
     "section.delete_confirm": "Bu bölüm ({type}) silinsin mi?",
     "section.reload_hint": "Silme sonrası sayfa yeniden yüklenecek.",
-
     "item.delete": "Öğeyi sil",
     "item.delete_confirm": "Bu öğe silinsin mi?",
-
     "history.title": "Değişiklik geçmişi",
     "history.clear": "Geçmişi temizle",
     "history.empty": "Geçmişte değişiklik yok.",
@@ -83,7 +72,6 @@
     "history.clear_confirm": "Tüm değişiklik geçmişi silinsin mi?",
     "history.cleared": "Geçmiş temizlendi",
     "history.not_found": "Yedek bulunamadı",
-
     "image.delete": "Görseli sil",
     "image.delete_confirm": "\"{filename}\" silinsin mi?",
     "image.trash_hint": "Görsel çöp kutusuna taşınacak (images-trash).",
@@ -115,7 +103,6 @@
     "image.uploading": "Yükleniyor...",
     "image.exists": "\"{filename}\" adlı bir dosya zaten mevcut",
     "image.upload_image": "Görsel yükle",
-
     "audio.manager": "Ses yöneticisi",
     "audio.upload": "Ses yükle",
     "audio.formats_hint": "MP3, WAV, OGG, M4A, AAC, FLAC (maks. 50 MB)",
@@ -133,7 +120,6 @@
     "audio.trashed": "Ses dosyası çöp kutusuna taşındı",
     "audio.format_error": "Yalnızca MP3, WAV, OGG, M4A, AAC ve FLAC'a izin verilir",
     "audio.size_error": "Maksimum dosya boyutu: 50 MB",
-
     "toast.no_changes": "Kaydedilecek değişiklik yok",
     "toast.saved": "Kaydedildi!",
     "toast.error_saving": "{page} kaydedilirken hata: {message}",
@@ -156,11 +142,14 @@
     "toast.copied_to_empty": "İçerik diğer dillerdeki boş alanlara kopyalandı",
     "toast.upload_error": "Yükleme hatası: {message}",
     "toast.error_deleting": "Silme hatası: {message}",
-
     "nav.unsaved_changes": "Kaydedilmemiş değişiklikleriniz var. Sayfadan çıkılsın mı?",
     "nav.edit_mode_active": "Düzenleme modundasınız. Sayfadan çıkılsın mı?",
-
     "link_target": "Bağlantı hedefi",
     "link_external": "Harici URL",
-    "link_internal": "Site sayfaları"
+    "link_internal": "Site sayfaları",
+    "image.no_images": "Görsel bulunamadı.",
+    "image.no_search_results": "\"{term}\" için görsel bulunamadı.",
+    "image.copy_path": "Yolu kopyala",
+    "toast.copied": "Panoya kopyalandı.",
+    "toast.error": "Bir hata oluştu."
 }

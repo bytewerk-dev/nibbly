@@ -27,4 +27,10 @@ if (!empty($scUrl)) {
     $html .= '</div>' . "\n";
 }
 
+if ($editable) {
+    // Title is editor-only metadata; expose as inline-editable label.
+    $title = $section['title'] ?? '';
+    $html .= '<p class="block-media-title block-media-title--editor-only">' . editableText($page, "sections.$index.title", $title) . '</p>' . "\n";
+}
+
 return $html;

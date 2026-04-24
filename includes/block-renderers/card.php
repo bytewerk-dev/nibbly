@@ -9,16 +9,30 @@
 
 $html = '';
 
+$title = $section['title'] ?? '';
+$content = $section['content'] ?? '';
+$image = $section['image'] ?? '';
+
 $html .= '<div class="card-item">' . "\n";
-if (!empty($section['image']) || $editable) {
-    $alt = !empty($section['title']) ? htmlspecialchars($section['title']) : 'Image';
-    $html .= '    <img src="' . htmlspecialchars($section['image'] ?? '') . '" alt="' . $alt . '">' . "\n";
-}
-if (!empty($section['title']) || $editable) {
-    $html .= '    <h3>' . htmlspecialchars($section['title'] ?? '') . '</h3>' . "\n";
-}
-if (!empty($section['content']) || $editable) {
-    $html .= '    <p>' . htmlspecialchars($section['content'] ?? '') . '</p>' . "\n";
+if ($editable) {
+    // Use split-format so the image and its alt text live at two sibling keys
+    // (sections.N.image, sections.N.alt) — preserves title/content in the same
+    // section object. Defaults alt to the title when empty.
+    $defaultAlt = $section['alt'] ?? ($title !== '' ? $title : 'Image');
+    $html .= '    ' . editableImageSplit($page, "sections.$index.image", "sections.$index.alt", $image, $defaultAlt) . "\n";
+    $html .= '    <h3>' . editableText($page, "sections.$index.title", $title) . '</h3>' . "\n";
+    $html .= '    <p>' . editableText($page, "sections.$index.content", $content) . '</p>' . "\n";
+} else {
+    if (!empty($image)) {
+        $alt = !empty($section['alt']) ? $section['alt'] : ($title !== '' ? $title : 'Image');
+        $html .= '    <img src="' . htmlspecialchars($image) . '" alt="' . htmlspecialchars($alt) . '">' . "\n";
+    }
+    if ($title !== '') {
+        $html .= '    <h3>' . htmlspecialchars($title) . '</h3>' . "\n";
+    }
+    if ($content !== '') {
+        $html .= '    <p>' . htmlspecialchars($content) . '</p>' . "\n";
+    }
 }
 $html .= '</div>' . "\n";
 

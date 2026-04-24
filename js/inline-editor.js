@@ -128,6 +128,7 @@
         heading: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 4v3h5.5v12h3V7H19V4H5z"/></svg>',
         quote: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z"/></svg>',
         spacer: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 18H3v2h18v-2zM21 4H3v2h18V4zm-9 8.5l3.5 3.5-1.41 1.41L12 15.33l-2.09 2.08L8.5 16l3.5-3.5zM12 7.5L8.5 11l1.41 1.41L12 10.33l2.09 2.08L15.5 11 12 7.5z"/></svg>',
+        divider: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11h18v2H3z"/></svg>',
         // Offizielle Brand Icons
         soundcloud: '<svg viewBox="0 0 24 24"><defs><style>.cls-1{fill:currentColor;stroke:currentColor;stroke-miterlimit:10;stroke-width:1.91px;}</style></defs><path class="cls-1" d="M22.5,13.93a2.87,2.87,0,0,1-2.86,2.87H13V7.47a4.82,4.82,0,0,1,1.44-.22,4.07,4.07,0,0,1,4.29,3.82h1A2.86,2.86,0,0,1,22.5,13.93Z"/><line class="cls-1" x1="10.09" y1="8.2" x2="10.09" y2="17.75"/><line class="cls-1" x1="7.23" y1="9.16" x2="7.23" y2="17.75"/><line class="cls-1" x1="4.36" y1="9.16" x2="4.36" y2="17.75"/><line class="cls-1" x1="1.5" y1="11.07" x2="1.5" y2="16.8"/></svg>',
         youtube: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>'
@@ -1101,12 +1102,22 @@
     // ============================================================
 
     /**
+     * Builds the DOM IDs for an editor field.
+     * Uses key+type so that multiple block types with the same field key
+     * (e.g. 'src' exists for both image and audio blocks) don't collide.
+     */
+    function editorFieldIds(field) {
+        return {
+            fid: `editor-field-${field.key}-${field.type}`,
+            iid: `editor-input-${field.key}-${field.type}`,
+        };
+    }
+
+    /**
      * Renders an editor field HTML snippet based on field definition.
-     * Each field gets a wrapper with id="editor-field-{key}" and the input gets id="editor-input-{key}".
      */
     function renderEditorField(field) {
-        const fid = `editor-field-${field.key}`;
-        const iid = `editor-input-${field.key}`;
+        const { fid, iid } = editorFieldIds(field);
 
         switch (field.type) {
             case 'input': {
@@ -1177,14 +1188,11 @@
                     <label>${field.label}</label>
                     <div class="editor-image-row">
                         <input type="text" id="${iid}" placeholder="Path to image..." readonly>
-                        <button type="button" class="editor-btn editor-btn-secondary" onclick="InlineEditor.openImageManager()">
+                        <button type="button" class="editor-btn editor-btn-secondary" onclick="InlineEditor.openImageManager(null, '${iid}')">
                             ${Icons.folder} ${t('image_manager')}
                         </button>
-                        <button type="button" class="editor-btn editor-btn-icon" id="editor-image-preview-btn" onclick="InlineEditor.openEditorImageLightbox()" title="${t('image_preview')}">
-                            ${Icons.eye}
-                        </button>
                     </div>
-                    <div id="editor-image-preview" class="editor-image-preview"></div>
+                    <div id="editor-image-preview-${field.key}" class="editor-image-preview"></div>
                 </div>`;
 
             case 'audio':
@@ -1197,7 +1205,7 @@
                             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
                             ${t('image.upload')}
                         </label>
-                        <button type="button" class="editor-btn editor-btn-secondary editor-btn-inline" onclick="InlineEditor.openAudioManager()">
+                        <button type="button" class="editor-btn editor-btn-secondary editor-btn-inline" onclick="InlineEditor.openAudioManager('${iid}')">
                             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
                             ${t('audio.manager')}
                         </button>
@@ -1220,9 +1228,10 @@
 
         for (const [type, def] of Object.entries(BlockTypes)) {
             for (const field of (def.fields || [])) {
-                if (!renderedKeys.has(field.key)) {
-                    renderedKeys.add(field.key);
-                    allFieldsHtml[field.key] = renderEditorField(field);
+                const dedupKey = `${field.key}-${field.type}`;
+                if (!renderedKeys.has(dedupKey)) {
+                    renderedKeys.add(dedupKey);
+                    allFieldsHtml[dedupKey] = renderEditorField(field);
                 }
             }
         }
@@ -1259,10 +1268,10 @@
         });
 
         // Attach event listeners for special field types
-        const youtubeInput = document.getElementById('editor-input-videoId');
+        const youtubeInput = document.getElementById('editor-input-videoId-input');
         if (youtubeInput) youtubeInput.addEventListener('input', updateYoutubePreview);
 
-        const scInput = document.getElementById('editor-input-trackId');
+        const scInput = document.getElementById('editor-input-trackId-input');
         if (scInput) scInput.addEventListener('input', updateSoundcloudPreview);
 
         const audioUpload = document.getElementById('editor-audio-upload-input');
@@ -1383,6 +1392,8 @@
         const sections = document.querySelectorAll('.editable-section');
 
         sections.forEach((wrapper) => {
+            if (wrapper.dataset.editorReady === 'true') return;
+            wrapper.dataset.editorReady = 'true';
             const index = parseInt(wrapper.dataset.sectionIndex, 10);
             const type = wrapper.dataset.sectionType;
             const contentPage = getContentPageForSection(wrapper);
@@ -1465,22 +1476,10 @@
                 }
             });
 
-            // Click on section itself opens editor
-            wrapper.addEventListener('click', (e) => {
-                if (!EditorConfig.editMode) return;
-                if (e.target.closest('.editable-overlay')) return;
-                if (e.target.closest('a')) return;
-                if (e.target.closest('.section-add-buttons')) return;
-
-                e.preventDefault();
-                e.stopPropagation();
-
-                const currentIndex = parseInt(wrapper.dataset.sectionIndex, 10);
-                const pageData = EditorConfig.contentData[contentPage];
-                if (pageData && pageData.sections && pageData.sections[currentIndex]) {
-                    openEditor(currentIndex, pageData.sections[currentIndex], contentPage);
-                }
-            });
+            // Note: section body clicks no longer open the editor modal.
+            // Text content is edited inline via .editable-field handlers; the
+            // modal is reserved for structural fields and is opened via the
+            // edit button in the overlay (handled above).
 
             // "Add" buttons below the section
             createAddButtonsForSection(wrapper, index, contentPage);
@@ -1491,40 +1490,141 @@
         // Check if already present
         if (wrapper.querySelector('.section-add-buttons')) return;
 
-        const addButtons = document.createElement('div');
-        addButtons.className = 'section-add-buttons';
-        addButtons.innerHTML = `
-            <button type="button" class="section-add-btn" data-type="soundcloud" title="${t('add_soundcloud')}">
-                ${Icons.soundcloud}
-            </button>
-            <button type="button" class="section-add-btn" data-type="audio" title="${t('add_audio')}">
-                ${Icons.audio}
-            </button>
-            <button type="button" class="section-add-btn" data-type="youtube" title="${t('add_youtube')}">
-                ${Icons.youtube}
-            </button>
-            <button type="button" class="section-add-btn" data-type="text" title="${t('add_text')}">
-                ${Icons.text}
-            </button>
-            <button type="button" class="section-add-btn" data-type="card" title="${t('add_card')}">
-                ${Icons.card}
-            </button>
-        `;
+        const container = document.createElement('div');
+        container.className = 'section-add-buttons';
 
-        addButtons.addEventListener('click', (e) => {
-            const btn = e.target.closest('.section-add-btn');
-            if (!btn) return;
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.className = 'section-add-btn-toggle';
+        addBtn.title = t('add_section') || 'Add section';
+        addBtn.setAttribute('aria-label', addBtn.title);
+        addBtn.setAttribute('aria-expanded', 'false');
+        addBtn.innerHTML = Icons.plus;
 
+        addBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-
-            // Read index dynamically (survives reorder)
+            if (!EditorConfig.editMode) return;
             const currentIndex = parseInt(wrapper.dataset.sectionIndex, 10);
-            const type = btn.dataset.type;
+            openSectionTypePicker(addBtn, currentIndex, contentPage);
+        });
+
+        container.appendChild(addBtn);
+        wrapper.appendChild(container);
+    }
+
+    // ============================================================
+    // SECTION TYPE PICKER POPOVER
+    // ============================================================
+
+    function openSectionTypePicker(anchorBtn, afterIndex, contentPage) {
+        // Toggle: close if already open for this anchor
+        const existing = document.querySelector('.section-type-picker');
+        if (existing) {
+            existing.remove();
+            if (existing.dataset.anchorId === anchorBtn.dataset.pickerId) {
+                anchorBtn.setAttribute('aria-expanded', 'false');
+                return;
+            }
+        }
+
+        const pickerId = 'picker-' + Date.now();
+        anchorBtn.dataset.pickerId = pickerId;
+        anchorBtn.setAttribute('aria-expanded', 'true');
+
+        // Group types by category, using the BlockTypeRegistry definition order
+        const categoryOrder = ['content', 'cards', 'media', 'interactive', 'embed', 'layout'];
+        const grouped = {};
+        for (const [type, def] of Object.entries(BlockTypes)) {
+            const cat = def.category || 'other';
+            if (!grouped[cat]) grouped[cat] = [];
+            grouped[cat].push({ type, def });
+        }
+
+        const picker = document.createElement('div');
+        picker.className = 'section-type-picker';
+        picker.dataset.anchorId = pickerId;
+
+        const orderedCategories = [
+            ...categoryOrder.filter(c => grouped[c]),
+            ...Object.keys(grouped).filter(c => !categoryOrder.includes(c))
+        ];
+
+        let markup = '';
+        for (const cat of orderedCategories) {
+            const label = CategoryLabels[cat] || cat;
+            markup += `<div class="section-type-picker__category"><span class="section-type-picker__category-label">${label}</span><div class="section-type-picker__grid">`;
+            for (const { type, def } of grouped[cat]) {
+                const icon = Icons[def.icon] || Icons[type] || Icons.plus;
+                const labelText = def.label || type;
+                markup += `<button type="button" class="section-type-picker__item" data-type="${type}" title="${labelText}"><span class="section-type-picker__icon">${icon}</span><span class="section-type-picker__label">${labelText}</span></button>`;
+            }
+            markup += `</div></div>`;
+        }
+        picker.innerHTML = markup;
+
+        // Click handler for type selection
+        picker.addEventListener('click', (e) => {
+            const item = e.target.closest('.section-type-picker__item');
+            if (!item) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const type = item.dataset.type;
+            closePicker();
+            const wrapper = anchorBtn.closest('.editable-section');
+            const currentIndex = wrapper ? parseInt(wrapper.dataset.sectionIndex, 10) : afterIndex;
             addSectionAfter(currentIndex, type, contentPage);
         });
 
-        wrapper.appendChild(addButtons);
+        document.body.appendChild(picker);
+        positionPicker(picker, anchorBtn);
+
+        // Close on outside click / Escape
+        const closePicker = () => {
+            picker.remove();
+            anchorBtn.setAttribute('aria-expanded', 'false');
+            document.removeEventListener('click', outsideClick, true);
+            document.removeEventListener('keydown', escHandler, true);
+            window.removeEventListener('resize', reposition);
+            window.removeEventListener('scroll', reposition, true);
+        };
+        const outsideClick = (e) => {
+            if (picker.contains(e.target) || anchorBtn.contains(e.target)) return;
+            closePicker();
+        };
+        const escHandler = (e) => {
+            if (e.key === 'Escape') closePicker();
+        };
+        const reposition = () => positionPicker(picker, anchorBtn);
+        // Defer to avoid catching the click that opened it
+        setTimeout(() => {
+            document.addEventListener('click', outsideClick, true);
+            document.addEventListener('keydown', escHandler, true);
+            window.addEventListener('resize', reposition);
+            window.addEventListener('scroll', reposition, true);
+        }, 0);
+    }
+
+    function positionPicker(picker, anchor) {
+        const rect = anchor.getBoundingClientRect();
+        const pickerRect = picker.getBoundingClientRect();
+        const margin = 8;
+        let top = rect.bottom + margin;
+        let left = rect.left + rect.width / 2 - pickerRect.width / 2;
+
+        // Clamp to viewport
+        const maxLeft = window.innerWidth - pickerRect.width - margin;
+        if (left < margin) left = margin;
+        if (left > maxLeft) left = maxLeft;
+
+        // Flip above if not enough space below
+        if (top + pickerRect.height > window.innerHeight - margin) {
+            const flipped = rect.top - pickerRect.height - margin;
+            if (flipped > margin) top = flipped;
+        }
+
+        picker.style.top = `${top + window.scrollY}px`;
+        picker.style.left = `${left + window.scrollX}px`;
     }
 
     // ============================================================
@@ -1704,14 +1804,11 @@
         const pageData = EditorConfig.contentData[contentPage];
         if (!pageData) return;
 
-        // Neue Section erstellen
         const newSection = createNewSection(type, pageData.sections.length);
+        const insertIndex = afterIndex + 1;
+        pageData.sections.splice(insertIndex, 0, newSection);
 
-        // Insert at correct position
-        pageData.sections.splice(afterIndex + 1, 0, newSection);
-
-        // Save and open editor
-        saveAndOpenEditor(afterIndex + 1, contentPage);
+        saveAndInsertSection(insertIndex, contentPage);
     }
 
     function addSection(type) {
@@ -1721,10 +1818,11 @@
         if (!pageData) return;
 
         const newSection = createNewSection(type, pageData.sections.length);
-        pageData.sections.splice(addAfterIndex + 1, 0, newSection);
+        const insertIndex = addAfterIndex + 1;
+        pageData.sections.splice(insertIndex, 0, newSection);
 
         closeAddModal();
-        saveAndOpenEditor(addAfterIndex + 1, addContentPage);
+        saveAndInsertSection(insertIndex, addContentPage);
     }
 
     function createNewSection(type, count) {
@@ -1737,11 +1835,82 @@
         return { id, type };
     }
 
-    function saveAndOpenEditor(index, contentPage) {
+    /**
+     * Persist contentData, fetch a freshly-rendered .editable-content-area
+     * block from the server, replace the existing DOM region in-place and
+     * re-wire handlers. Avoids a full page reload so the admin bar and
+     * edit-mode state stay intact.
+     */
+    async function saveAndInsertSection(index, contentPage) {
         pushUndoState();
         EditorConfig.dirtyPages.add(contentPage);
         updateUndoRedoButtons();
-        saveStructuralChange(contentPage, 'Section added');
+
+        try {
+            const pageData = EditorConfig.contentData[contentPage];
+            const formData = new FormData();
+            formData.append('action', 'save');
+            formData.append('page', contentPage);
+            formData.append('content', JSON.stringify(pageData));
+            formData.append('csrf_token', EditorConfig.csrfToken);
+            formData.append('render_sections', '1');
+
+            const response = await fetch(EditorConfig.apiUrl, { method: 'POST', body: formData });
+            const result = await response.json();
+
+            if (!result.success) {
+                showToast(t('toast.error_generic', { message: result.message || 'Unknown' }), 'error');
+                return;
+            }
+
+            if (result.data && result.data.sectionsHtml) {
+                replaceContentArea(result.data.sectionsHtml, contentPage, index);
+                showToast(t('toast.section_added') || 'Section added', 'success');
+                EditorConfig.dirtyPages.delete(contentPage);
+            } else {
+                // Server did not return HTML (shouldn't happen) — fall back to reload.
+                sessionStorage.setItem('site-edit-mode', 'true');
+                location.reload();
+            }
+        } catch (error) {
+            showToast(t('toast.error_saving', { page: contentPage, message: error.message }), 'error');
+        }
+    }
+
+    /**
+     * Replace the <div class="editable-content-area"> for the given page with
+     * freshly-rendered server HTML, then re-wire editor handlers on the new
+     * nodes. Scrolls the section at `focusIndex` into view.
+     */
+    function replaceContentArea(html, contentPage, focusIndex) {
+        const oldArea = document.querySelector(`.editable-content-area[data-content-page="${CSS.escape(contentPage)}"]`);
+        if (!oldArea) {
+            sessionStorage.setItem('site-edit-mode', 'true');
+            location.reload();
+            return;
+        }
+
+        const tpl = document.createElement('template');
+        tpl.innerHTML = html.trim();
+        const newArea = tpl.content.firstElementChild;
+        if (!newArea) return;
+
+        oldArea.replaceWith(newArea);
+
+        // Re-wire handlers. attach* functions guard via data-editor-ready,
+        // but the new DOM nodes have no such marker so they all get wired.
+        attachEditHandlers();
+        attachFieldEditHandlers();
+        attachLinkEditHandlers();
+        attachImageEditHandlers();
+        attachListEditHandlers();
+
+        if (EditorConfig.editMode) {
+            document.body.classList.add('edit-mode-active');
+        }
+
+        const focused = newArea.querySelectorAll('.editable-section')[focusIndex];
+        if (focused) focused.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     // ============================================================
@@ -1812,8 +1981,7 @@
      * Populates an editor field with data from the section.
      */
     function populateEditorField(field, section) {
-        const fid = `editor-field-${field.key}`;
-        const iid = `editor-input-${field.key}`;
+        const { fid, iid } = editorFieldIds(field);
         const fieldEl = document.getElementById(fid);
         if (!fieldEl) return;
 
@@ -1841,9 +2009,13 @@
                 break;
             }
 
-            case 'select':
-                document.getElementById(iid).value = value;
+            case 'select': {
+                const selectEl = document.getElementById(iid);
+                // Fall back to first option when no value is set
+                if (value) selectEl.value = value;
+                else if (selectEl.options.length > 0) selectEl.selectedIndex = 0;
                 break;
+            }
 
             case 'checkbox':
                 document.getElementById(iid).checked = !!value;
@@ -1851,7 +2023,7 @@
 
             case 'image':
                 document.getElementById(iid).value = value;
-                updateImagePreview();
+                updateImagePreview(iid);
                 break;
 
             case 'audio':
@@ -1865,7 +2037,7 @@
      * Reads an editor field value back.
      */
     function readEditorField(field) {
-        const iid = `editor-input-${field.key}`;
+        const { iid } = editorFieldIds(field);
 
         switch (field.type) {
             case 'input':
@@ -2302,7 +2474,7 @@
     // ============================================================
 
     function updateYoutubePreview() {
-        const input = document.getElementById('editor-input-videoId');
+        const input = document.getElementById('editor-input-videoId-input');
         const preview = document.getElementById('editor-youtube-preview');
         const videoId = input.value.trim();
 
@@ -2317,7 +2489,7 @@
     }
 
     function updateSoundcloudPreview() {
-        const input = document.getElementById('editor-input-trackId');
+        const input = document.getElementById('editor-input-trackId-input');
         const preview = document.getElementById('editor-soundcloud-preview');
         const trackId = input.value.trim();
 
@@ -2333,7 +2505,7 @@
     }
 
     function updateAudioPreview() {
-        const input = document.getElementById('editor-input-src');
+        const input = document.getElementById('editor-input-src-audio');
         const preview = document.getElementById('editor-audio-preview');
         const src = input.value.trim();
 
@@ -2389,11 +2561,11 @@
 
             if (result.success && result.data) {
                 // Set audio path
-                document.getElementById('editor-input-src').value = result.data.path;
+                document.getElementById('editor-input-src-audio').value = result.data.path;
                 updateAudioPreview();
 
                 // Generate title from filename (without extension, hyphens/underscores → spaces)
-                const titleInput = document.getElementById('editor-input-title');
+                const titleInput = document.getElementById('editor-input-title-input');
                 if (!titleInput.value) {
                     const filename = result.data.name;
                     // Remove file extension
@@ -2484,9 +2656,59 @@
         EditorConfig.contentData[contentPage].sections[index] = section;
         EditorConfig.dirtyPages.add(contentPage);
 
+        // Live-update the section in the DOM so admins see changes immediately
+        patchSectionInDom(index, section);
+
         updateUndoRedoButtons();
         showToast(t('toast.change_queued'), 'success');
         closeModal();
+    }
+
+    /**
+     * Patch a rendered section in the DOM with new data, so the editor shows
+     * changes immediately without a full page reload.
+     */
+    function patchSectionInDom(index, section) {
+        const sectionEl = document.querySelector('.editable-section[data-section-index="' + index + '"]');
+        if (!sectionEl) return;
+        const type = section.type === 'project' ? 'card' : section.type;
+
+        switch (type) {
+            case 'image': {
+                const img = sectionEl.querySelector('.block-image img');
+                if (img && section.src) {
+                    img.src = section.src;
+                    img.alt = section.alt || '';
+                }
+                const caption = sectionEl.querySelector('.block-image figcaption');
+                if (caption) caption.textContent = section.caption || '';
+                break;
+            }
+            case 'heading': {
+                const heading = sectionEl.querySelector('.block-heading h1, .block-heading h2, .block-heading h3, .block-heading h4, .block-heading h5, .block-heading h6');
+                if (heading && section.text) heading.textContent = section.text;
+                const sub = sectionEl.querySelector('.block-heading__subtitle');
+                if (sub) sub.textContent = section.subtitle || '';
+                break;
+            }
+            case 'text': {
+                const titleEl = sectionEl.querySelector('.block-text h1, .block-text h2, .block-text h3, .block-text h4');
+                if (titleEl && section.title) titleEl.textContent = section.title;
+                const contentEl = sectionEl.querySelector('.block-text__content');
+                if (contentEl && section.content !== undefined) contentEl.innerHTML = section.content;
+                break;
+            }
+            case 'quote': {
+                const quoteText = sectionEl.querySelector('.block-quote__text');
+                if (quoteText && section.text !== undefined) quoteText.textContent = section.text;
+                const attr = sectionEl.querySelector('.block-quote__attribution');
+                if (attr) attr.textContent = section.attribution || '';
+                break;
+            }
+            // For complex block types (card, list, etc.) a partial DOM patch would
+            // duplicate renderer logic. Full reload happens after the global "Save"
+            // admin button anyway, which is already persisted in dirtyPages.
+        }
     }
 
     // ============================================================
@@ -2820,6 +3042,8 @@
         if (fields.length === 0) return;
 
         fields.forEach(field => {
+            if (field.dataset.editorReady === 'true') return;
+            field.dataset.editorReady = 'true';
             field.classList.add('editable-field-active');
 
             // Add hide toggle button
@@ -3142,6 +3366,8 @@
         if (links.length === 0) return;
 
         links.forEach(link => {
+            if (link.dataset.editorReady === 'true') return;
+            link.dataset.editorReady = 'true';
             link.classList.add('editable-field-active');
 
             // Add hide toggle button
@@ -3362,6 +3588,8 @@
         if (images.length === 0) return;
 
         images.forEach(img => {
+            if (img.dataset.editorReady === 'true') return;
+            img.dataset.editorReady = 'true';
             // Skip images inside event cards — those are edited via the event editor modal
             if (img.closest('.event-card[data-event-id]')) return;
             const wrapper = document.createElement('div');
@@ -3380,21 +3608,6 @@
             img.addEventListener('error', () => wrapper.classList.add('editable-image-empty'));
             img.addEventListener('load', () => wrapper.classList.remove('editable-image-empty'));
 
-            // Add hide toggle button for image
-            const isHidden = img.dataset.hidden === 'true';
-            const hideBtn = document.createElement('button');
-            hideBtn.type = 'button';
-            hideBtn.className = 'field-hide-btn';
-            hideBtn.title = isHidden ? t('show') : t('hide');
-            hideBtn.innerHTML = isHidden ? Icons.eyeClosed : Icons.eyeOpen;
-            hideBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (!EditorConfig.editMode) return;
-                toggleFieldHidden(img, hideBtn);
-            });
-            wrapper.appendChild(hideBtn);
-
             wrapper.addEventListener('click', (e) => {
                 if (!EditorConfig.editMode) return;
                 e.preventDefault();
@@ -3408,14 +3621,20 @@
         const page = imgElement.dataset.page;
         const fieldKey = imgElement.dataset.field;
         const currentAlt = imgElement.getAttribute('alt') || '';
-        const isStringFormat = imgElement.dataset.imageFormat === 'string';
+        const format = imgElement.dataset.imageFormat || 'object';
 
         openImageManager((imagePath) => {
-            if (isStringFormat) {
+            if (format === 'string') {
                 // String-format images (e.g. news cover): save path directly, no alt dialog
                 saveImageField(page, fieldKey, imagePath, currentAlt, imgElement);
+            } else if (format === 'split') {
+                // Split-format: src and alt live at two separate keys
+                showPromptDialog('Alt text', 'Alt text', currentAlt, (newAlt) => {
+                    if (newAlt === null) newAlt = currentAlt;
+                    saveImageField(page, fieldKey, imagePath, newAlt, imgElement);
+                });
             } else {
-                // Object-format images: ask for alt text
+                // Object-format images: ask for alt text, save as {src, alt}
                 showPromptDialog('Alt text', 'Alt text', currentAlt, (newAlt) => {
                     if (newAlt === null) newAlt = currentAlt;
                     saveImageField(page, fieldKey, imagePath, newAlt, imgElement);
@@ -3428,8 +3647,7 @@
         // Push undo state
         pushUndoState();
 
-        // Check if this is a string-format image (e.g. news post cover)
-        const isStringFormat = element.dataset.imageFormat === 'string';
+        const format = element.dataset.imageFormat || 'object';
 
         // Update in-memory data
         if (page === '__news_post__' && EditorConfig.newsPostData) {
@@ -3437,7 +3655,19 @@
             EditorConfig.newsPostData[fieldKey] = newSrc;
         } else {
             if (!EditorConfig.contentData[page]) EditorConfig.contentData[page] = {};
-            setNestedValue(EditorConfig.contentData[page], fieldKey, isStringFormat ? newSrc : { src: newSrc, alt: newAlt });
+            if (format === 'string') {
+                setNestedValue(EditorConfig.contentData[page], fieldKey, newSrc);
+            } else if (format === 'split') {
+                // Save src and alt at separate sibling keys — preserves other
+                // fields in the parent object (e.g. type, caption, width).
+                setNestedValue(EditorConfig.contentData[page], fieldKey, newSrc);
+                const altFieldKey = element.dataset.altField;
+                if (altFieldKey) {
+                    setNestedValue(EditorConfig.contentData[page], altFieldKey, newAlt);
+                }
+            } else {
+                setNestedValue(EditorConfig.contentData[page], fieldKey, { src: newSrc, alt: newAlt });
+            }
         }
 
         // Mark as dirty
@@ -3471,6 +3701,8 @@
         if (lists.length === 0) return;
 
         lists.forEach(listContainer => {
+            if (listContainer.dataset.editorReady === 'true') return;
+            listContainer.dataset.editorReady = 'true';
             const page = listContainer.dataset.listPage;
             const listKey = listContainer.dataset.listKey;
             const defaults = JSON.parse(listContainer.dataset.listDefaults || '{}');
@@ -4321,20 +4553,46 @@
     }
 
     // ============================================================
-    // IMAGE MANAGER (extended with grid/list, sorting, replace, lightbox)
+    // IMAGE MANAGER — thin wrappers around NbImageManager (js/image-manager.js)
     // ============================================================
 
-    let imageManagerCallback = null;
-    let imageManagerData = [];
-    let imageManagerFilteredData = []; // Filtered data for display
-    let imageManagerView = 'grid'; // 'grid' or 'list'
-    let imageManagerSort = { field: 'date', dir: 'desc' }; // Default: newest first
-    let imageManagerSearchTerm = '';
-    let imageManagerSelectedPath = null; // Currently selected image
+    // Initialize shared image manager with frontend editor context.
+    // Called lazily on first open() since EditorConfig.csrfToken is set
+    // by initEditor() after the meta tag is parsed.
+    let _nbImgMgrInitialized = false;
+    function ensureImageManagerInit() {
+        if (_nbImgMgrInitialized || !window.NbImageManager) return;
+        NbImageManager.init({
+            apiUrl: EditorConfig.apiUrl,
+            csrfToken: EditorConfig.csrfToken,
+            t: t,
+            showToast: showToast,
+            showConfirm: function(title, message, onYes) {
+                showConfirmDialog(title, message, '', onYes);
+            }
+        });
+        _nbImgMgrInitialized = true;
+    }
 
-    function updateImagePreview() {
-        const input = document.getElementById('editor-input-image');
-        const preview = document.getElementById('editor-image-preview');
+    function updateImagePreview(inputId) {
+        // Derive preview element ID from input ID (editor-input-{key}-{type} → editor-image-preview-{key})
+        let previewId = 'editor-image-preview';
+        let input;
+        if (inputId) {
+            input = document.getElementById(inputId);
+            const m = inputId.match(/^editor-input-(.+?)-[^-]+$/);
+            if (m) previewId = 'editor-image-preview-' + m[1];
+        } else {
+            // Fallback: find any visible image input in the editor modal
+            input = document.querySelector('.editor-field[style*="block"] input[id^="editor-input-"][readonly]');
+            if (input) {
+                inputId = input.id;
+                const m = inputId.match(/^editor-input-(.+?)-[^-]+$/);
+                if (m) previewId = 'editor-image-preview-' + m[1];
+            }
+        }
+        const preview = document.getElementById(previewId);
+        if (!input || !preview) return;
         const imagePath = input.value.trim();
 
         if (imagePath) {
@@ -4349,812 +4607,77 @@
         }
     }
 
-    function createImageManagerModal() {
-        if (document.getElementById('image-manager-modal')) return;
-
-        const modal = document.createElement('div');
-        modal.id = 'image-manager-modal';
-        modal.className = 'editor-modal';
-        modal.innerHTML = `
-            <div class="editor-modal-backdrop"></div>
-            <div class="editor-modal-content editor-modal-wide">
-                <div class="editor-modal-header">
-                    <h3>${t('image_manager')}</h3>
-                    <button type="button" class="editor-close-btn" onclick="InlineEditor.closeImageManager()">&times;</button>
-                </div>
-                <div class="editor-modal-body">
-                    <div class="image-manager-toolbar">
-                        <label class="editor-btn editor-btn-primary image-upload-btn">
-                            ${Icons.upload} ${t('image.upload_image')}
-                            <input type="file" id="image-upload-input" accept=".jpg,.jpeg,.png,.webp" style="display:none;">
-                        </label>
-                        <span class="image-manager-info">${t('image.formats_hint')}</span>
-                        <div class="image-manager-search">
-                            <input type="text" id="image-search-input" placeholder="${t('image.search')}" class="image-search-input">
-                        </div>
-                        <div class="image-manager-view-toggle">
-                            <button type="button" class="view-toggle-btn active" data-view="grid" title="${t('image.grid_view')}">
-                                ${Icons.grid}
-                            </button>
-                            <button type="button" class="view-toggle-btn" data-view="list" title="${t('image.list_view')}">
-                                ${Icons.list}
-                            </button>
-                        </div>
-                    </div>
-                    <div class="image-manager-container">
-                        <div id="image-manager-grid" class="image-manager-grid">
-                            <p class="image-manager-loading">${t('image.loading')}</p>
-                        </div>
-                        <div id="image-manager-list" class="image-manager-list">
-                            <div class="image-list-header">
-                                <div class="image-list-header-col"></div>
-                                <div class="image-list-header-col">${t('image.col_image')}</div>
-                                <div class="image-list-header-col sortable" data-sort="name">${t('image.col_filename')}</div>
-                                <div class="image-list-header-col sortable" data-sort="size">${t('image.col_size')}</div>
-                                <div class="image-list-header-col sortable" data-sort="date">${t('image.col_date')}</div>
-                                <div class="image-list-header-col">${t('image.col_actions')}</div>
-                            </div>
-                            <div id="image-list-body" class="image-list-body"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="editor-modal-footer image-manager-footer">
-                    <div class="image-selection-info">
-                        <span class="image-selection-path" id="image-selection-path">${t('image.no_selection')}</span>
-                    </div>
-                    <div class="image-selection-actions">
-                        <button type="button" class="editor-btn editor-btn-secondary" onclick="InlineEditor.closeImageManager()">${t('cancel')}</button>
-                        <button type="button" class="editor-btn editor-btn-primary" id="image-confirm-btn" onclick="InlineEditor.confirmImageSelection()" disabled>${t('image.select')}</button>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-
-        modal.querySelector('.editor-modal-backdrop').addEventListener('click', closeImageManager);
-
-        // Resizable Modal
-        ModalResize.init(modal.querySelector('.editor-modal-content'));
-
-        // Upload Event
-        document.getElementById('image-upload-input').addEventListener('change', handleImageUpload);
-
-        // View Toggle Events
-        modal.querySelectorAll('.view-toggle-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const view = btn.dataset.view;
-                switchImageManagerView(view);
-            });
-        });
-
-        // Sort events for list view
-        modal.querySelectorAll('.image-list-header-col.sortable').forEach(col => {
-            col.addEventListener('click', () => {
-                const field = col.dataset.sort;
-                sortImages(field);
-            });
-        });
-
-        // Such-Event
-        document.getElementById('image-search-input').addEventListener('input', (e) => {
-            imageManagerSearchTerm = e.target.value.toLowerCase().trim();
-            filterAndRenderImages();
-        });
-
-        // Lightbox erstellen
-        createImageLightbox();
-
-        // Create replace dialog
-        createReplaceDialog();
-    }
-
-    function switchImageManagerView(view) {
-        imageManagerView = view;
-        const gridEl = document.getElementById('image-manager-grid');
-        const listEl = document.getElementById('image-manager-list');
-        const toggleBtns = document.querySelectorAll('.view-toggle-btn');
-
-        toggleBtns.forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.view === view);
-        });
-
-        if (view === 'grid') {
-            gridEl.classList.remove('hidden');
-            listEl.classList.remove('active');
-        } else {
-            gridEl.classList.add('hidden');
-            listEl.classList.add('active');
-        }
-
-        renderImages();
-    }
-
-    function filterAndRenderImages() {
-        // Filter based on search term
-        if (imageManagerSearchTerm) {
-            imageManagerFilteredData = imageManagerData.filter(img =>
-                img.name.toLowerCase().includes(imageManagerSearchTerm)
-            );
-        } else {
-            imageManagerFilteredData = [...imageManagerData];
-        }
-        renderImages();
-    }
-
-    function sortImages(field) {
-        // Sortierrichtung umschalten
-        if (imageManagerSort.field === field) {
-            imageManagerSort.dir = imageManagerSort.dir === 'asc' ? 'desc' : 'asc';
-        } else {
-            imageManagerSort.field = field;
-            imageManagerSort.dir = 'asc';
-        }
-
-        // Header-Klassen aktualisieren
-        document.querySelectorAll('.image-list-header-col.sortable').forEach(col => {
-            col.classList.remove('sorted-asc', 'sorted-desc');
-            if (col.dataset.sort === field) {
-                col.classList.add(imageManagerSort.dir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+    function openImageManager(callback, targetInputId) {
+        ensureImageManagerInit();
+        // Default callback: update a specific editor image input by ID
+        const cb = callback || function(imagePath) {
+            const input = targetInputId ? document.getElementById(targetInputId) : null;
+            if (input) {
+                input.value = imagePath;
+                updateImagePreview(targetInputId);
             }
-        });
-
-        // Sort
-        imageManagerData.sort((a, b) => {
-            let valA, valB;
-
-            switch (field) {
-                case 'name':
-                    valA = a.name.toLowerCase();
-                    valB = b.name.toLowerCase();
-                    break;
-                case 'size':
-                    valA = a.sizeBytes || 0;
-                    valB = b.sizeBytes || 0;
-                    break;
-                case 'date':
-                    valA = a.modified || 0;
-                    valB = b.modified || 0;
-                    break;
-                default:
-                    return 0;
-            }
-
-            if (valA < valB) return imageManagerSort.dir === 'asc' ? -1 : 1;
-            if (valA > valB) return imageManagerSort.dir === 'asc' ? 1 : -1;
-            return 0;
-        });
-
-        // Nach Sortierung neu filtern
-        filterAndRenderImages();
+        };
+        NbImageManager.open(cb);
     }
 
-    function openImageManager(callback) {
-        createImageManagerModal();
-        imageManagerCallback = callback || ((imagePath) => {
-            document.getElementById('editor-input-image').value = imagePath;
-            updateImagePreview();
-        });
-
-        // Reset selection
-        imageManagerSelectedPath = null;
-
-        // Reset search field
-        const searchInput = document.getElementById('image-search-input');
-        if (searchInput) {
-            searchInput.value = '';
-            imageManagerSearchTerm = '';
-        }
-
-        loadImages();
-
-        // Reset selection UI
-        updateImageSelectionUI();
-
-        document.getElementById('image-manager-modal').classList.add('active');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function closeImageManager() {
-        const modal = document.getElementById('image-manager-modal');
-        modal.classList.remove('active');
-        ModalResize.reset(modal.querySelector('.editor-modal-content'));
-        document.body.style.overflow = '';
-        imageManagerCallback = null;
-    }
+    function closeImageManager() { NbImageManager.close(); }
+    function confirmImageSelection() { NbImageManager.confirmSelection(); }
 
     function openImageManagerForEvent() {
-        openImageManager((imagePath) => {
-            document.getElementById('event-image').value = imagePath;
-        });
-    }
-
-    async function loadImages() {
-        const gridEl = document.getElementById('image-manager-grid');
-        const listBody = document.getElementById('image-list-body');
-
-        gridEl.innerHTML = '<p class="image-manager-loading">' + t('image.loading') + '</p>';
-        listBody.innerHTML = '';
-
-        try {
-            const response = await fetch(`${EditorConfig.apiUrl}?action=list-images`);
-            const result = await response.json();
-
-            if (result.success && result.data && result.data.length > 0) {
-                // Normalize paths: ../images/... → /images/... (absolute)
-                imageManagerData = result.data.map(img => ({
-                    ...img,
-                    path: img.path.replace(/^\.\.\//, '/')
-                }));
-                // Set header classes for current sort
-                document.querySelectorAll('.image-list-header-col.sortable').forEach(col => {
-                    col.classList.remove('sorted-asc', 'sorted-desc');
-                    if (col.dataset.sort === imageManagerSort.field) {
-                        col.classList.add(imageManagerSort.dir === 'asc' ? 'sorted-asc' : 'sorted-desc');
-                    }
-                });
-                // Sort and filter
-                sortImages(imageManagerSort.field);
-            } else {
-                imageManagerData = [];
-                imageManagerFilteredData = [];
-                gridEl.innerHTML = '<p class="image-manager-empty">No images found.</p>';
-                listBody.innerHTML = '<p class="image-manager-empty">No images found.</p>';
-            }
-        } catch (error) {
-            gridEl.innerHTML = `<p class="image-manager-error">Error loading: ${error.message}</p>`;
-        }
-    }
-
-    function renderImages() {
-        if (imageManagerView === 'grid') {
-            renderGridView();
-        } else {
-            renderListView();
-        }
-    }
-
-    function renderGridView() {
-        const gridEl = document.getElementById('image-manager-grid');
-
-        if (imageManagerFilteredData.length === 0) {
-            if (imageManagerSearchTerm) {
-                gridEl.innerHTML = '<p class="image-manager-empty">No images found for: "' + imageManagerSearchTerm + '"</p>';
-            } else if (imageManagerData.length === 0) {
-                gridEl.innerHTML = '<p class="image-manager-empty">No images found.</p>';
-            } else {
-                gridEl.innerHTML = '<p class="image-manager-empty">No images found.</p>';
-            }
-            return;
-        }
-
-        gridEl.innerHTML = '';
-
-        imageManagerFilteredData.forEach(image => {
-            const item = document.createElement('div');
-            const isSelected = imageManagerSelectedPath === image.path;
-            item.className = 'image-manager-item' + (isSelected ? ' selected' : '');
-            item.dataset.path = image.path;
-            item.innerHTML = `
-                <div class="image-selection-checkbox${isSelected ? ' checked' : ''}" data-path="${image.path}"></div>
-                <div class="image-manager-thumb" style="background-image: url('${image.path}')"></div>
-                <div class="image-manager-name" title="${image.name}">${image.name}</div>
-                <div class="image-manager-actions">
-                    <button type="button" class="image-action-btn image-action-preview" title="${t('image_preview')}" data-path="${image.path}" data-name="${image.name}">
-                        ${Icons.eye}
-                    </button>
-                    <button type="button" class="image-action-btn image-action-replace" title="${t('image.replace')}" data-name="${image.name}" data-path="${image.path}">
-                        ${Icons.replace}
-                    </button>
-                    <button type="button" class="image-action-btn image-action-delete" title="${t('delete')}" data-name="${image.name}">
-                        ${Icons.delete}
-                    </button>
-                </div>
-            `;
-            gridEl.appendChild(item);
-
-            attachImageItemEvents(item, image);
-        });
-    }
-
-    function renderListView() {
-        const listBody = document.getElementById('image-list-body');
-
-        if (imageManagerFilteredData.length === 0) {
-            if (imageManagerSearchTerm) {
-                listBody.innerHTML = '<p class="image-manager-empty">No images found for: "' + imageManagerSearchTerm + '"</p>';
-            } else if (imageManagerData.length === 0) {
-                listBody.innerHTML = '<p class="image-manager-empty">No images found.</p>';
-            } else {
-                listBody.innerHTML = '<p class="image-manager-empty">No images found.</p>';
-            }
-            return;
-        }
-
-        listBody.innerHTML = '';
-
-        imageManagerFilteredData.forEach(image => {
-            const row = document.createElement('div');
-            const isSelected = imageManagerSelectedPath === image.path;
-            row.className = 'image-list-row' + (isSelected ? ' selected' : '');
-            row.dataset.path = image.path;
-            row.innerHTML = `
-                <div class="image-list-checkbox">
-                    <div class="image-selection-checkbox${isSelected ? ' checked' : ''}" data-path="${image.path}"></div>
-                </div>
-                <div class="image-list-thumb" style="background-image: url('${image.path}')" data-path="${image.path}" data-name="${image.name}"></div>
-                <div class="image-list-name" title="${image.name}">${image.name}</div>
-                <div class="image-list-size">${image.size || '-'}</div>
-                <div class="image-list-date">${image.dateFormatted || '-'}</div>
-                <div class="image-list-actions">
-                    <button type="button" class="image-action-btn image-action-preview" title="${t('image_preview')}" data-path="${image.path}" data-name="${image.name}">
-                        ${Icons.eye}
-                    </button>
-                    <button type="button" class="image-action-btn image-action-replace" title="${t('image.replace')}" data-name="${image.name}" data-path="${image.path}">
-                        ${Icons.replace}
-                    </button>
-                    <button type="button" class="image-action-btn image-action-delete" title="${t('delete')}" data-name="${image.name}">
-                        ${Icons.delete}
-                    </button>
-                </div>
-            `;
-            listBody.appendChild(row);
-
-            attachImageItemEvents(row, image);
-        });
-    }
-
-    function attachImageItemEvents(element, image) {
-        // Click on entire item or checkbox = toggle selection
-        const checkbox = element.querySelector('.image-selection-checkbox');
-        const thumb = element.querySelector('.image-manager-thumb');
-
-        // Checkbox-Klick
-        if (checkbox) {
-            checkbox.addEventListener('click', (e) => {
-                e.stopPropagation();
-                toggleImageSelection(image.path);
-            });
-        }
-
-        // Thumbnail-Klick in Grid-Ansicht = Auswahl togglen
-        if (thumb && element.classList.contains('image-manager-item')) {
-            thumb.addEventListener('click', (e) => {
-                e.stopPropagation();
-                toggleImageSelection(image.path);
-            });
-        }
-
-        // Thumbnail-Klick in List-Ansicht = Vorschau
-        const listThumb = element.querySelector('.image-list-thumb');
-        if (listThumb) {
-            listThumb.addEventListener('click', (e) => {
-                e.stopPropagation();
-                openImageLightbox(image.path, image.name);
-            });
-        }
-
-        // Vorschau-Button
-        element.querySelector('.image-action-preview').addEventListener('click', (e) => {
-            e.stopPropagation();
-            openImageLightbox(image.path, image.name);
-        });
-
-        // Replace
-        element.querySelector('.image-action-replace').addEventListener('click', (e) => {
-            e.stopPropagation();
-            openReplaceDialog(image.name, image.path);
-        });
-
-        // Delete
-        element.querySelector('.image-action-delete').addEventListener('click', (e) => {
-            e.stopPropagation();
-            deleteImage(image.name);
-        });
-
-        // Click on row in list view = toggle selection
-        if (element.classList.contains('image-list-row')) {
-            element.addEventListener('click', (e) => {
-                // Only if not clicked on a button
-                if (!e.target.closest('.image-action-btn') && !e.target.closest('.image-list-thumb')) {
-                    toggleImageSelection(image.path);
+        ensureImageManagerInit();
+        NbImageManager.open(function(imagePath) {
+            const input = document.getElementById('event-image');
+            if (input) {
+                input.value = imagePath;
+                // Update preview if an updater exists
+                if (typeof updateEventImagePreview === 'function') {
+                    updateEventImagePreview();
                 }
-            });
-        }
-    }
-
-    function toggleImageSelection(imagePath) {
-        // Toggle: if already selected, deselect
-        if (imageManagerSelectedPath === imagePath) {
-            imageManagerSelectedPath = null;
-        } else {
-            imageManagerSelectedPath = imagePath;
-        }
-        updateImageSelectionUI();
-    }
-
-    function updateImageSelectionUI() {
-        // Alle Items aktualisieren
-        document.querySelectorAll('.image-manager-item, .image-list-row').forEach(item => {
-            const path = item.dataset.path;
-            const isSelected = path === imageManagerSelectedPath;
-            item.classList.toggle('selected', isSelected);
-
-            const checkbox = item.querySelector('.image-selection-checkbox');
-            if (checkbox) {
-                checkbox.classList.toggle('checked', isSelected);
-            }
-        });
-
-        // Footer aktualisieren
-        const pathDisplay = document.getElementById('image-selection-path');
-        const confirmBtn = document.getElementById('image-confirm-btn');
-
-        if (imageManagerSelectedPath) {
-            // Convert relative path to absolute URL for better readability
-            let displayPath = imageManagerSelectedPath;
-            if (displayPath.startsWith('../')) {
-                // ../images/... -> absolute URL
-                displayPath = window.location.origin + '/' + displayPath.replace(/^\.\.\//, '');
-            } else if (displayPath.startsWith('/')) {
-                displayPath = window.location.origin + displayPath;
-            }
-            pathDisplay.textContent = displayPath;
-            pathDisplay.classList.add('has-selection');
-            confirmBtn.disabled = false;
-        } else {
-            pathDisplay.textContent = t('image.no_selection');
-            pathDisplay.classList.remove('has-selection');
-            confirmBtn.disabled = true;
-        }
-    }
-
-    function confirmImageSelection() {
-        if (imageManagerSelectedPath && imageManagerCallback) {
-            imageManagerCallback(imageManagerSelectedPath);
-        }
-        closeImageManager();
-    }
-
-    // Legacy function for direct selection (no longer used)
-    function selectImage(imagePath) {
-        imageManagerSelectedPath = imagePath;
-        updateImageSelectionUI();
-    }
-
-    // ============================================================
-    // LIGHTBOX
-    // ============================================================
-
-    function createImageLightbox() {
-        if (document.getElementById('image-lightbox')) return;
-
-        const lightbox = document.createElement('div');
-        lightbox.id = 'image-lightbox';
-        lightbox.className = 'image-lightbox';
-        lightbox.innerHTML = `
-            <div class="image-lightbox-content">
-                <button type="button" class="image-lightbox-close" onclick="InlineEditor.closeLightbox()">&times;</button>
-                <img id="lightbox-image" src="" alt="">
-                <div id="lightbox-info" class="image-lightbox-info"></div>
-            </div>
-        `;
-        document.body.appendChild(lightbox);
-
-        // Click on background closes lightbox
-        lightbox.addEventListener('click', (e) => {
-            if (e.target === lightbox) {
-                closeLightbox();
-            }
-        });
-
-        // Escape key closes lightbox
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && lightbox.classList.contains('active')) {
-                closeLightbox();
             }
         });
     }
 
-    function openImageLightbox(imagePath, imageName) {
-        const lightbox = document.getElementById('image-lightbox');
-        const img = document.getElementById('lightbox-image');
-        const info = document.getElementById('lightbox-info');
-
-        img.src = imagePath;
-        info.textContent = imageName;
-        lightbox.classList.add('active');
-    }
-
-    function closeLightbox() {
-        const lightbox = document.getElementById('image-lightbox');
-        if (lightbox) {
-            lightbox.classList.remove('active');
-        }
-    }
-
-    function openEditorImageLightbox() {
-        const imagePath = document.getElementById('editor-input-image').value.trim();
+    // Lightbox for previewing the image currently entered in the editor's image input
+    function openEditorImageLightbox(inputId) {
+        const input = inputId ? document.getElementById(inputId) : null;
+        if (!input) return;
+        const imagePath = input.value.trim();
         if (!imagePath) {
             showToast(t('image.no_selection'), 'error');
             return;
         }
-        // Extract filename from path
         const imageName = imagePath.split('/').pop();
-        // Create lightbox if needed
-        createImageLightbox();
-        openImageLightbox(imagePath, imageName);
+        // NbImageManager lightbox is internal; open it via a temporary approach:
+        // simplest: use a built-in modal by opening the manager and letting the user preview
+        // For quick preview without manager, create a minimal inline lightbox:
+        let lb = document.getElementById('nb-imgmgr-inline-lightbox');
+        if (!lb) {
+            lb = document.createElement('div');
+            lb.id = 'nb-imgmgr-inline-lightbox';
+            lb.className = 'nb-imgmgr-lightbox';
+            lb.innerHTML =
+                '<div class="nb-imgmgr-lightbox-content">' +
+                    '<button type="button" class="nb-imgmgr-lightbox-close" aria-label="Close">&times;</button>' +
+                    '<img alt="">' +
+                    '<div class="nb-imgmgr-lightbox-info"></div>' +
+                '</div>';
+            document.body.appendChild(lb);
+            lb.addEventListener('click', function(e) { if (e.target === lb) lb.classList.remove('active'); });
+            lb.querySelector('.nb-imgmgr-lightbox-close').addEventListener('click', function() { lb.classList.remove('active'); });
+        }
+        lb.querySelector('img').src = imagePath;
+        lb.querySelector('.nb-imgmgr-lightbox-info').textContent = imageName;
+        lb.classList.add('active');
     }
+
+    // Legacy no-ops (in case any old onclick attribute in dynamically-rendered HTML still references these)
+    function closeLightbox() {
+        const lb = document.getElementById('nb-imgmgr-inline-lightbox');
+        if (lb) lb.classList.remove('active');
+    }
+    function closeReplaceDialog() { /* handled internally by NbImageManager */ }
 
     // ============================================================
-    // ERSETZEN-DIALOG
-    // ============================================================
-
-    let replaceDialogTarget = null;
-
-    function createReplaceDialog() {
-        if (document.getElementById('replace-dialog')) return;
-
-        const dialog = document.createElement('div');
-        dialog.id = 'replace-dialog';
-        dialog.className = 'editor-modal';
-        dialog.innerHTML = `
-            <div class="editor-modal-backdrop"></div>
-            <div class="editor-modal-content editor-modal-small">
-                <div class="editor-modal-header">
-                    <h3>${t('image.replace')}</h3>
-                    <button type="button" class="editor-close-btn" onclick="InlineEditor.closeReplaceDialog()">&times;</button>
-                </div>
-                <div class="editor-modal-body">
-                    <p style="margin-top:0;">${t('image.replacing')} <strong id="replace-dialog-filename"></strong></p>
-
-                    <div class="replace-dialog-options">
-                        <label class="replace-dialog-option selected" data-option="replace">
-                            <input type="radio" name="replace-option" value="replace" checked>
-                            <div class="replace-dialog-option-content">
-                                <div class="replace-dialog-option-title">${t('image.overwrite_file')}</div>
-                                <div class="replace-dialog-option-desc">${t('image.overwrite_desc')}</div>
-                            </div>
-                        </label>
-                        <label class="replace-dialog-option" data-option="new">
-                            <input type="radio" name="replace-option" value="new">
-                            <div class="replace-dialog-option-content">
-                                <div class="replace-dialog-option-title">${t('image.save_new_name')}</div>
-                                <div class="replace-dialog-option-desc">${t('image.save_new_desc')}</div>
-                            </div>
-                        </label>
-                    </div>
-
-                    <div class="replace-dialog-file">
-                        <label>
-                            ${Icons.upload} ${t('image.choose_file')}
-                            <input type="file" id="replace-dialog-file-input" accept=".jpg,.jpeg,.png,.webp">
-                        </label>
-                        <div id="replace-dialog-selected-file" class="replace-dialog-filename"></div>
-                    </div>
-                </div>
-                <div class="editor-modal-footer">
-                    <button type="button" class="editor-btn editor-btn-secondary" onclick="InlineEditor.closeReplaceDialog()">${t('cancel')}</button>
-                    <button type="button" class="editor-btn editor-btn-primary" id="replace-dialog-submit" disabled>${t('image.upload')}</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(dialog);
-
-        dialog.querySelector('.editor-modal-backdrop').addEventListener('click', closeReplaceDialog);
-
-        // Resizable Modal
-        ModalResize.init(dialog.querySelector('.editor-modal-content'));
-
-        // Option-Auswahl
-        dialog.querySelectorAll('.replace-dialog-option').forEach(option => {
-            option.addEventListener('click', () => {
-                dialog.querySelectorAll('.replace-dialog-option').forEach(o => o.classList.remove('selected'));
-                option.classList.add('selected');
-                option.querySelector('input[type="radio"]').checked = true;
-            });
-        });
-
-        // File selection
-        const fileInput = document.getElementById('replace-dialog-file-input');
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            const display = document.getElementById('replace-dialog-selected-file');
-            const submitBtn = document.getElementById('replace-dialog-submit');
-
-            if (file) {
-                display.textContent = file.name;
-                submitBtn.disabled = false;
-            } else {
-                display.textContent = '';
-                submitBtn.disabled = true;
-            }
-        });
-
-        // Submit
-        document.getElementById('replace-dialog-submit').addEventListener('click', handleReplaceUpload);
-    }
-
-    function openReplaceDialog(filename, filepath) {
-        replaceDialogTarget = { name: filename, path: filepath };
-
-        document.getElementById('replace-dialog-filename').textContent = filename;
-
-        // Reset
-        document.getElementById('replace-dialog-file-input').value = '';
-        document.getElementById('replace-dialog-selected-file').textContent = '';
-        document.getElementById('replace-dialog-submit').disabled = true;
-
-        // Select first option
-        const options = document.querySelectorAll('.replace-dialog-option');
-        options.forEach((o, i) => o.classList.toggle('selected', i === 0));
-        document.querySelector('input[name="replace-option"][value="replace"]').checked = true;
-
-        document.getElementById('replace-dialog').classList.add('active');
-    }
-
-    function closeReplaceDialog() {
-        const dialog = document.getElementById('replace-dialog');
-        dialog.classList.remove('active');
-        ModalResize.reset(dialog.querySelector('.editor-modal-content'));
-        replaceDialogTarget = null;
-    }
-
-    async function handleReplaceUpload() {
-        const fileInput = document.getElementById('replace-dialog-file-input');
-        const file = fileInput.files[0];
-
-        if (!file || !replaceDialogTarget) return;
-
-        // Check file type
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-        if (!allowedTypes.includes(file.type)) {
-            showToast(t('image.format_error'), 'error');
-            return;
-        }
-
-        // Check file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            showToast(t('image.size_error'), 'error');
-            return;
-        }
-
-        const option = document.querySelector('input[name="replace-option"]:checked').value;
-        let targetFilename = replaceDialogTarget.name;
-
-        if (option === 'new') {
-            // Use the filename of the uploaded file
-            targetFilename = file.name;
-
-            // Check if filename already exists
-            const existingFile = imageManagerData.find(img =>
-                img.name.toLowerCase() === targetFilename.toLowerCase()
-            );
-
-            if (existingFile) {
-                showToast(t('image.exists', { filename: targetFilename }), 'error');
-                return;
-            }
-        }
-
-        try {
-            const formData = new FormData();
-            formData.append('action', 'upload-image');
-            formData.append('image', file);
-            formData.append('filename', targetFilename);
-            formData.append('replace', option === 'replace' ? '1' : '0');
-            formData.append('csrf_token', EditorConfig.csrfToken);
-
-            showToast(t('image.uploading'), 'success');
-
-            const response = await fetch(EditorConfig.apiUrl, {
-                method: 'POST',
-                body: formData
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                showToast(option === 'replace' ? 'Image replaced!' : 'Image uploaded!', 'success');
-                closeReplaceDialog();
-                // After upload: set sort to date descending
-                imageManagerSort = { field: 'date', dir: 'desc' };
-                loadImages();
-            } else {
-                showToast(t('toast.error_generic', { message: result.message }), 'error');
-            }
-        } catch (error) {
-            showToast(t('toast.upload_error', { message: error.message }), 'error');
-        }
-    }
-
-    // ============================================================
-    // DELETE & UPLOAD
-    // ============================================================
-
-    async function deleteImage(filename) {
-        showConfirmDialog(
-            t('image.delete'),
-            t('image.delete_confirm', { filename }),
-            t('image.trash_hint'),
-            async () => {
-                try {
-                    const formData = new FormData();
-                    formData.append('action', 'delete-image');
-                    formData.append('filename', filename);
-                    formData.append('csrf_token', EditorConfig.csrfToken);
-
-                    const response = await fetch(EditorConfig.apiUrl, {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    const result = await response.json();
-
-                    if (result.success) {
-                        showToast(t('image.trashed'), 'success');
-                        loadImages();
-                    } else {
-                        showToast(t('toast.error_generic', { message: result.message }), 'error');
-                    }
-                } catch (error) {
-                    showToast(t('toast.error_generic', { message: error.message }), 'error');
-                }
-            }
-        );
-    }
-
-    async function handleImageUpload(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        // Check file type
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-        if (!allowedTypes.includes(file.type)) {
-            showToast(t('image.format_error'), 'error');
-            e.target.value = '';
-            return;
-        }
-
-        // Check file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            showToast(t('image.size_error'), 'error');
-            e.target.value = '';
-            return;
-        }
-
-        try {
-            const formData = new FormData();
-            formData.append('action', 'upload-image');
-            formData.append('image', file);
-            formData.append('csrf_token', EditorConfig.csrfToken);
-
-            showToast(t('image.uploading'), 'success');
-
-            const response = await fetch(EditorConfig.apiUrl, {
-                method: 'POST',
-                body: formData
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                showToast(t('image.uploaded'), 'success');
-                // After upload: set sort to date descending
-                imageManagerSort = { field: 'date', dir: 'desc' };
-                loadImages();
-                // Optional: select image directly
-                if (result.data && result.data.path) {
-                    selectImage(result.data.path.replace(/^\.\.\//, '/'));
-                }
-            } else {
-                showToast(t('toast.error_generic', { message: result.message }), 'error');
-            }
-        } catch (error) {
-            showToast(t('toast.upload_error', { message: error.message }), 'error');
-        }
-
-        e.target.value = '';
-    }
 
     // ============================================================
     // AUDIO-MANAGER
@@ -5210,12 +4733,19 @@
         document.getElementById('audio-search-input').addEventListener('input', filterAndRenderAudio);
     }
 
-    function openAudioManager(callback) {
+    function openAudioManager(targetInputIdOrCallback) {
         createAudioManagerModal();
-        audioManagerCallback = callback || ((audioPath) => {
-            document.getElementById('editor-input-src').value = audioPath;
-            updateAudioPreview();
-        });
+        // Allow either a callback function or a target input ID
+        if (typeof targetInputIdOrCallback === 'function') {
+            audioManagerCallback = targetInputIdOrCallback;
+        } else {
+            const targetInputId = targetInputIdOrCallback || 'editor-input-src-audio';
+            audioManagerCallback = (audioPath) => {
+                const input = document.getElementById(targetInputId);
+                if (input) input.value = audioPath;
+                updateAudioPreview();
+            };
+        }
 
         loadAudioFiles();
 

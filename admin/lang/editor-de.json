@@ -10,37 +10,30 @@
     "saving": "Speichern…",
     "undo": "Rückgängig",
     "redo": "Wiederholen",
-
     "edit_mode_hint": "Klicke auf Text zum Bearbeiten • Ziehen zum Umsortieren",
-
     "cat.content": "Inhalt",
     "cat.media": "Medien",
     "cat.cards": "Karten & Raster",
     "cat.interactive": "Interaktiv",
     "cat.layout": "Layout",
     "cat.embed": "Einbetten",
-
     "add_block": "Block hinzufügen",
     "search_blocks": "Blöcke suchen...",
     "edit": "Bearbeiten",
     "show": "Einblenden",
     "hide": "Ausblenden",
     "drag_reorder": "Ziehen zum Umsortieren",
-
     "add_soundcloud": "SoundCloud hinzufügen",
     "add_audio": "Audio MP3 hinzufügen",
     "add_youtube": "YouTube hinzufügen",
     "add_text": "Textabschnitt hinzufügen",
     "add_card": "Karte hinzufügen",
-
     "bold": "Fett",
     "italic": "Kursiv",
     "insert_link": "Link einfügen",
     "clean_formatting": "Formatierung bereinigen",
-
     "image_manager": "Bildverwaltung",
     "image_preview": "Bildvorschau",
-
     "event.title": "Titel",
     "event.location": "Ort",
     "event.description": "Beschreibung",
@@ -58,20 +51,16 @@
     "event.delete_confirm": "Diesen Termin wirklich löschen?",
     "event.cannot_undo": "Diese Aktion kann nicht rückgängig gemacht werden.",
     "event.date_required": "Datum und Titel sind erforderlich",
-
     "footer.edit": "Footer bearbeiten",
     "footer.link_text": "Linktext",
     "footer.link_url": "Link-URL",
     "footer.link_text_lang": "Linktext ({lang})",
     "footer.copyright": "Copyright (Shortcodes: [id=\"...\"]Text[/id])",
-
     "section.delete": "Abschnitt löschen",
     "section.delete_confirm": "Diesen Abschnitt ({type}) wirklich löschen?",
     "section.reload_hint": "Die Seite wird nach dem Löschen neu geladen.",
-
     "item.delete": "Eintrag löschen",
     "item.delete_confirm": "Diesen Eintrag wirklich löschen?",
-
     "history.title": "Änderungsverlauf",
     "history.clear": "Verlauf löschen",
     "history.empty": "Keine Änderungen im Verlauf.",
@@ -83,7 +72,6 @@
     "history.clear_confirm": "Den gesamten Änderungsverlauf löschen?",
     "history.cleared": "Verlauf gelöscht",
     "history.not_found": "Backup nicht gefunden",
-
     "image.delete": "Bild löschen",
     "image.delete_confirm": "\"{filename}\" wirklich löschen?",
     "image.trash_hint": "Das Bild wird in den Papierkorb verschoben (images-trash).",
@@ -115,7 +103,6 @@
     "image.uploading": "Lade hoch...",
     "image.exists": "Eine Datei mit dem Namen \"{filename}\" existiert bereits",
     "image.upload_image": "Bild hochladen",
-
     "audio.manager": "Audio-Verwaltung",
     "audio.upload": "Audio hochladen",
     "audio.formats_hint": "MP3, WAV, OGG, M4A, AAC, FLAC (max. 50 MB)",
@@ -133,7 +120,6 @@
     "audio.trashed": "Audiodatei in den Papierkorb verschoben",
     "audio.format_error": "Nur MP3, WAV, OGG, M4A, AAC und FLAC erlaubt",
     "audio.size_error": "Maximale Dateigröße: 50 MB",
-
     "toast.no_changes": "Keine Änderungen zum Speichern",
     "toast.saved": "Gespeichert!",
     "toast.error_saving": "Fehler beim Speichern von {page}: {message}",
@@ -156,11 +142,14 @@
     "toast.copied_to_empty": "Inhalt in leere Felder der anderen Sprachen kopiert",
     "toast.upload_error": "Upload-Fehler: {message}",
     "toast.error_deleting": "Fehler beim Löschen: {message}",
-
     "nav.unsaved_changes": "Du hast ungespeicherte Änderungen. Seite wirklich verlassen?",
     "nav.edit_mode_active": "Du bist im Bearbeitungsmodus. Seite wirklich verlassen?",
-
     "link_target": "Linkziel",
     "link_external": "Externe URL",
-    "link_internal": "Seiten"
+    "link_internal": "Seiten",
+    "image.no_images": "Keine Bilder gefunden.",
+    "image.no_search_results": "Keine Bilder gefunden für \"{term}\".",
+    "image.copy_path": "Pfad kopieren",
+    "toast.copied": "In Zwischenablage kopiert.",
+    "toast.error": "Ein Fehler ist aufgetreten."
 }

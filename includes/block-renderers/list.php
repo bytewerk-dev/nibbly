@@ -16,10 +16,15 @@ if (empty($content) && !$editable) return '';
 $styleClass = $style === 'numbered' ? ' block-list--numbered' : ' block-list--bullet';
 
 $html .= '<div class="block-list' . $styleClass . '">' . "\n";
-if (!empty($title) || $editable) {
-    $html .= '    <h3>' . htmlspecialchars($title) . '</h3>' . "\n";
+if ($editable) {
+    $html .= '    <h3>' . editableText($page, "sections.$index.title", $title) . '</h3>' . "\n";
+    $html .= editableHtml($page, "sections.$index.content", $content);
+} else {
+    if ($title !== '') {
+        $html .= '    <h3>' . htmlspecialchars($title) . '</h3>' . "\n";
+    }
+    $html .= sanitizeHtml($content);
 }
-$html .= sanitizeHtml($content);
 $html .= '</div>' . "\n";
 
 return $html;

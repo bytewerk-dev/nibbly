@@ -447,6 +447,8 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
     <?php endif; ?>
     <meta name="site-languages" content="<?php echo htmlspecialchars(json_encode($SITE_LANGUAGES ?? ['en' => 'English'])); ?>">
     <meta name="site-lang-default" content="<?php echo htmlspecialchars(defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en'); ?>">
+    <link rel="stylesheet" href="<?php echo $basePath; ?>css/nibbly-admin-tokens.css">
+    <link rel="stylesheet" href="<?php echo $basePath; ?>css/image-manager.css">
     <link rel="stylesheet" href="<?php echo $basePath; ?>css/inline-editor.css">
     <?php if (!empty($_editorVars)): ?>
     <style>:root{<?php echo implode(';', $_editorVars); ?>}</style>
@@ -487,6 +489,7 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
         return s;
     }
     </script>
+    <script src="<?php echo $basePath; ?>js/image-manager.js"></script>
     <script src="<?php echo $basePath; ?>js/inline-editor.js"></script>
     <?php endif; ?>
 </body>

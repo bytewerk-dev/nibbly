@@ -86,6 +86,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     ?>
     <link rel="icon" href="<?php echo htmlspecialchars($_dashFavicon); ?>" type="<?php echo $_dashFaviconType; ?>">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../css/image-manager.css">
     <?php if ($adminTheme === 'system'): ?>
     <script>
     (function() {
@@ -938,6 +939,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     </div>
     <?php endif; ?>
 
+    <script src="../js/image-manager.js"></script>
     <script>
     // Block Type Registry
     window.BlockTypeRegistry = <?php
@@ -947,7 +949,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     ?>;
 
     // Admin translations for JS
-    const NB_LANG = <?php echo json_encode(tAll(), JSON_UNESCAPED_UNICODE); ?>;
+    const NB_LANG = <?php echo json_encode(array_merge(tEditorAll(), tAll()), JSON_UNESCAPED_UNICODE); ?>;
     // Menu registry for Page Settings nav checkboxes
     window.NB_MENUS = <?php echo json_encode(getMenuRegistry()['menus'] ?? [], JSON_UNESCAPED_UNICODE); ?>;
     function t(key, params) {
@@ -2226,19 +2228,27 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     }
 
     // ============================================================
-    // IMAGE MANAGER (full-featured, matches frontend inline editor)
+    // IMAGE MANAGER — thin wrappers around NbImageManager (js/image-manager.js)
     // ============================================================
 
-    let _imgMgrData = [];
-    let _imgMgrFiltered = [];
-    let _imgMgrSelected = null;
-    let _imgMgrCallback = null;
-    let _imgMgrView = 'grid';
-    let _imgMgrSort = { field: 'date', dir: 'desc' };
-    let _imgMgrSearch = '';
+    // Initialize the shared image manager component with dashboard dependencies.
+    // (Deferred to end of script where CSRF_TOKEN and t() are defined.)
+    window.addEventListener('DOMContentLoaded', function() {
+        NbImageManager.init({
+            apiUrl: 'api.php',
+            csrfToken: CSRF_TOKEN,
+            t: function(key, params) {
+                return typeof t === 'function' ? t(key, params) : key;
+            },
+            showToast: function(msg, type) {
+                if (typeof showToast === 'function') showToast(msg, type);
+            },
+            showConfirm: null
+        });
+    });
 
     function browseImageForField(inputEl, previewEl) {
-        _imgMgrCallback = function(path) {
+        NbImageManager.open(function(path) {
             inputEl.value = path;
             inputEl.dispatchEvent(new Event('input'));
             if (previewEl) {
@@ -2246,283 +2256,16 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 if (img) { img.src = path.startsWith('/') ? '..' + path : path; img.style.display = ''; }
             }
             markDirty();
-        };
-        openImageManager();
-    }
-
-    function openImageManager() {
-        _imgMgrSelected = null;
-        let modal = document.getElementById('imgMgrModal');
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = 'imgMgrModal';
-            modal.className = 'img-mgr-overlay';
-            modal.innerHTML = `
-            <div class="img-mgr-backdrop" onclick="closeImageManager()"></div>
-            <div class="img-mgr-dialog">
-                <div class="img-mgr-header">
-                    <h3>${t('editor.select_image')}</h3>
-                    <button type="button" class="img-mgr-close" onclick="closeImageManager()">&times;</button>
-                </div>
-                <div class="img-mgr-toolbar">
-                    <label class="btn btn-primary btn-sm img-mgr-upload-btn">
-                        &#8679; ${t('btn.browse')}
-                        <input type="file" id="imgMgrUpload" accept=".jpg,.jpeg,.png,.webp" style="display:none">
-                    </label>
-                    <small class="img-mgr-formats">JPG, PNG, WebP &middot; max 5 MB</small>
-                    <div class="img-mgr-spacer"></div>
-                    <input type="text" id="imgMgrSearch" class="ce-input ce-input--sm" placeholder="&#128269; ${t('editor.select_image')}...">
-                    <div class="img-mgr-view-toggle">
-                        <button type="button" class="img-mgr-view-btn img-mgr-view-btn--active" data-view="grid" onclick="setImgMgrView('grid')" title="Grid">&#9638;</button>
-                        <button type="button" class="img-mgr-view-btn" data-view="list" onclick="setImgMgrView('list')" title="List">&#9776;</button>
-                    </div>
-                </div>
-                <div class="img-mgr-body">
-                    <div id="imgMgrGrid" class="img-mgr-grid"></div>
-                </div>
-                <div class="img-mgr-footer">
-                    <span id="imgMgrPath" class="img-mgr-path"></span>
-                    <div class="img-mgr-actions">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="closeImageManager()">${t('btn.cancel')}</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="imgMgrConfirm" disabled onclick="confirmImageManagerSelection()">${t('btn.confirm')}</button>
-                    </div>
-                </div>
-            </div>`;
-            document.body.appendChild(modal);
-
-            document.getElementById('imgMgrUpload').addEventListener('change', handleImgMgrUpload);
-            document.getElementById('imgMgrSearch').addEventListener('input', function() {
-                _imgMgrSearch = this.value.toLowerCase();
-                filterAndRenderImages();
-            });
-        }
-        modal.style.display = 'flex';
-        document.getElementById('imgMgrSearch').value = '';
-        _imgMgrSearch = '';
-        loadImageManager();
-    }
-
-    function closeImageManager() {
-        const modal = document.getElementById('imgMgrModal');
-        if (modal) modal.style.display = 'none';
-    }
-
-    function confirmImageManagerSelection() {
-        if (_imgMgrSelected && _imgMgrCallback) {
-            _imgMgrCallback(_imgMgrSelected);
-        }
-        closeImageManager();
-    }
-
-    async function loadImageManager() {
-        try {
-            const response = await fetch('api.php?action=list-images');
-            const result = await response.json();
-            if (result.success) {
-                _imgMgrData = result.data.map(img => ({ ...img, path: img.path.replace(/^\.\.\//, '/') }));
-                filterAndRenderImages();
-            }
-        } catch (e) {
-            showToast(t('toast.error_loading_images', {message: e.message}), 'error');
-        }
-    }
-
-    function filterAndRenderImages() {
-        _imgMgrFiltered = _imgMgrData.filter(img =>
-            !_imgMgrSearch || img.name.toLowerCase().includes(_imgMgrSearch)
-        );
-        // Sort
-        _imgMgrFiltered.sort((a, b) => {
-            let cmp = 0;
-            if (_imgMgrSort.field === 'name') cmp = a.name.localeCompare(b.name);
-            else if (_imgMgrSort.field === 'size') cmp = (a.sizeBytes || 0) - (b.sizeBytes || 0);
-            else cmp = (a.modified || 0) - (b.modified || 0);
-            return _imgMgrSort.dir === 'asc' ? cmp : -cmp;
-        });
-        renderImageGrid();
-    }
-
-    function renderImageGrid() {
-        const container = document.getElementById('imgMgrGrid');
-        if (!container) return;
-
-        if (_imgMgrView === 'grid') {
-            container.className = 'img-mgr-grid';
-            container.innerHTML = _imgMgrFiltered.map(img => {
-                const sel = _imgMgrSelected === img.path ? ' img-mgr-item--selected' : '';
-                const chk = _imgMgrSelected === img.path ? ' img-mgr-check--active' : '';
-                const src = img.path.startsWith('/') ? '..' + img.path : img.path;
-                return `<div class="img-mgr-item${sel}" onclick="selectImage('${escapeHtml(img.path)}')" title="${escapeHtml(img.name)}">
-                    <div class="img-mgr-check${chk}"></div>
-                    <div class="img-mgr-thumb" style="background-image:url('${escapeHtml(src)}')"></div>
-                    <span class="img-mgr-name">${escapeHtml(img.name)}</span>
-                    <div class="img-mgr-item-actions">
-                        <button type="button" class="img-mgr-action-btn" title="Copy path" onclick="event.stopPropagation(); copyImagePath('${escapeHtml(img.path)}')">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                        </button>
-                        <button type="button" class="img-mgr-action-btn img-mgr-action-btn--danger" title="Delete" onclick="event.stopPropagation(); deleteImageFromManager('${escapeHtml(img.name)}')">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                        </button>
-                    </div>
-                </div>`;
-            }).join('');
-        } else {
-            container.className = 'img-mgr-list';
-            container.innerHTML = `<div class="img-mgr-list-header">
-                <span class="img-mgr-list-col img-mgr-list-col--check"></span>
-                <span class="img-mgr-list-col img-mgr-list-col--thumb"></span>
-                <span class="img-mgr-list-col img-mgr-list-col--name" onclick="toggleImgSort('name')">Name</span>
-                <span class="img-mgr-list-col img-mgr-list-col--size" onclick="toggleImgSort('size')">Size</span>
-                <span class="img-mgr-list-col img-mgr-list-col--date" onclick="toggleImgSort('date')">Date</span>
-                <span class="img-mgr-list-col img-mgr-list-col--actions">Actions</span>
-            </div>` + _imgMgrFiltered.map(img => {
-                const sel = _imgMgrSelected === img.path ? ' img-mgr-row--selected' : '';
-                const chk = _imgMgrSelected === img.path ? ' img-mgr-check--active' : '';
-                const src = img.path.startsWith('/') ? '..' + img.path : img.path;
-                return `<div class="img-mgr-row${sel}" onclick="selectImage('${escapeHtml(img.path)}')">
-                    <span class="img-mgr-list-col img-mgr-list-col--check"><span class="img-mgr-check img-mgr-check--list${chk}"></span></span>
-                    <span class="img-mgr-list-col img-mgr-list-col--thumb"><span class="img-mgr-list-thumb" style="background-image:url('${escapeHtml(src)}')"></span></span>
-                    <span class="img-mgr-list-col img-mgr-list-col--name">${escapeHtml(img.name)}</span>
-                    <span class="img-mgr-list-col img-mgr-list-col--size">${img.size || ''}</span>
-                    <span class="img-mgr-list-col img-mgr-list-col--date">${img.dateFormatted || ''}</span>
-                    <span class="img-mgr-list-col img-mgr-list-col--actions">
-                        <button type="button" class="img-mgr-action-btn" title="Copy path" onclick="event.stopPropagation(); copyImagePath('${escapeHtml(img.path)}')">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                        </button>
-                        <button type="button" class="img-mgr-action-btn img-mgr-action-btn--danger" title="Delete" onclick="event.stopPropagation(); deleteImageFromManager('${escapeHtml(img.name)}')">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                        </button>
-                    </span>
-                </div>`;
-            }).join('');
-        }
-    }
-
-    function selectImage(path) {
-        var prev = _imgMgrSelected;
-        _imgMgrSelected = (_imgMgrSelected === path) ? null : path;
-        document.getElementById('imgMgrPath').textContent = _imgMgrSelected || '';
-        document.getElementById('imgMgrConfirm').disabled = !_imgMgrSelected;
-
-        var container = document.getElementById('imgMgrGrid');
-        if (!container) return;
-
-        // Deselect previous
-        if (prev) {
-            container.querySelectorAll('.img-mgr-item--selected, .img-mgr-row--selected').forEach(function(el) {
-                el.classList.remove('img-mgr-item--selected', 'img-mgr-row--selected');
-                var chk = el.querySelector('.img-mgr-check');
-                if (chk) chk.classList.remove('img-mgr-check--active');
-            });
-        }
-
-        // Select new (if not deselecting)
-        if (_imgMgrSelected) {
-            container.querySelectorAll('[onclick*="' + CSS.escape(_imgMgrSelected) + '"]').forEach(function(el) {
-                if (el.classList.contains('img-mgr-item')) el.classList.add('img-mgr-item--selected');
-                if (el.classList.contains('img-mgr-row')) el.classList.add('img-mgr-row--selected');
-                var chk = el.querySelector('.img-mgr-check');
-                if (chk) chk.classList.add('img-mgr-check--active');
-            });
-        }
-    }
-
-    function copyImagePath(path) {
-        navigator.clipboard.writeText(path).then(() => {
-            showToast(t('toast.copied') || 'Copied', 'success');
         });
     }
 
-    async function deleteImageFromManager(name) {
-        if (!confirm(t('toast.confirm_delete_image') || 'Delete this image?')) return;
-        const formData = new FormData();
-        formData.append('action', 'delete-image');
-        formData.append('name', name);
-        formData.append('csrf_token', CSRF_TOKEN);
-        try {
-            const resp = await fetch('api.php', { method: 'POST', body: formData });
-            const result = await resp.json();
-            if (result.success) {
-                showToast(t('toast.image_deleted') || 'Image deleted', 'success');
-                if (_imgMgrSelected && _imgMgrSelected.endsWith('/' + name)) {
-                    _imgMgrSelected = null;
-                    document.getElementById('imgMgrPath').textContent = '';
-                    document.getElementById('imgMgrConfirm').disabled = true;
-                }
-                await loadImageManager();
-            } else {
-                showToast(result.message || t('toast.error'), 'error');
-            }
-        } catch (e) {
-            showToast(t('toast.error'), 'error');
-        }
-    }
-
-    function setImgMgrView(view) {
-        _imgMgrView = view;
-        document.querySelectorAll('.img-mgr-view-btn').forEach(b => {
-            b.classList.toggle('img-mgr-view-btn--active', b.dataset.view === view);
-        });
-        renderImageGrid();
-    }
-
-    function toggleImgSort(field) {
-        if (_imgMgrSort.field === field) {
-            _imgMgrSort.dir = _imgMgrSort.dir === 'asc' ? 'desc' : 'asc';
-        } else {
-            _imgMgrSort = { field, dir: 'asc' };
-        }
-        filterAndRenderImages();
-    }
-
-    async function handleImgMgrUpload(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        e.target.value = '';
-
-        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-            showToast('Only JPG, PNG, WebP allowed.', 'error');
-            return;
-        }
-        if (file.size > 5 * 1024 * 1024) {
-            showToast('File too large (max 5 MB).', 'error');
-            return;
-        }
-        const formData = new FormData();
-        formData.append('action', 'upload-image');
-        formData.append('image', file);
-        formData.append('csrf_token', csrfToken);
-
-        try {
-            const response = await fetch('api.php', { method: 'POST', body: formData });
-            const result = await response.json();
-            if (result.success) {
-                showToast('Image uploaded', 'success');
-                await loadImageManager();
-                if (result.data?.path) {
-                    selectImage(result.data.path.replace(/^\.\.\//, '/'));
-                }
-            } else {
-                showToast(result.message || 'Upload failed', 'error');
-            }
-        } catch (err) {
-            showToast('Upload error: ' + err.message, 'error');
-        }
-    }
-
-    // Expose image manager functions for onclick handlers in modal HTML
-    window.openImageManager = openImageManager;
-    window.closeImageManager = closeImageManager;
-    window.confirmImageManagerSelection = confirmImageManagerSelection;
-    window.selectImage = selectImage;
-    window.setImgMgrView = setImgMgrView;
-    window.toggleImgSort = toggleImgSort;
-    window.copyImagePath = copyImagePath;
-    window.deleteImageFromManager = deleteImageFromManager;
+    // Backward-compat globals (in case any onclick attribute still references them)
+    window.openImageManager = function() { NbImageManager.open(); };
+    window.closeImageManager = function() { NbImageManager.close(); };
     window.browseSectionImage = function(btn) {
         const input = btn.parentElement.querySelector('.section-field');
         const preview = btn.closest('.form-group').querySelector('.ce-image-preview');
-        _imgMgrCallback = function(path) {
+        NbImageManager.open(function(path) {
             if (path && input) {
                 input.value = path;
                 input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -2530,7 +2273,6 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     const src = path.startsWith('/') ? '..' + path : path;
                     preview.innerHTML = '<img src="' + escapeHtml(src) + '" alt="preview" onerror="this.style.display=\'none\'">';
                 } else {
-                    // Create preview if it didn't exist
                     const previewDiv = document.createElement('div');
                     previewDiv.className = 'ce-image-preview';
                     const src = path.startsWith('/') ? '..' + path : path;
@@ -2539,8 +2281,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 }
                 markDirty();
             }
-        };
-        openImageManager();
+        });
     };
 
     // Track unsaved changes

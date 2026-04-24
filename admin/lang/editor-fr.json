@@ -10,37 +10,30 @@
     "saving": "Enregistrement…",
     "undo": "Annuler",
     "redo": "Rétablir",
-
     "edit_mode_hint": "Cliquez sur un texte pour modifier • Glissez pour réorganiser",
-
     "cat.content": "Contenu",
     "cat.media": "Médias",
     "cat.cards": "Cartes et grilles",
     "cat.interactive": "Interactif",
     "cat.layout": "Mise en page",
     "cat.embed": "Intégrer",
-
     "add_block": "Ajouter un bloc",
     "search_blocks": "Rechercher des blocs...",
     "edit": "Modifier",
     "show": "Afficher",
     "hide": "Masquer",
     "drag_reorder": "Glisser pour réorganiser",
-
     "add_soundcloud": "Ajouter SoundCloud",
     "add_audio": "Ajouter audio MP3",
     "add_youtube": "Ajouter YouTube",
     "add_text": "Ajouter une section texte",
     "add_card": "Ajouter une carte",
-
     "bold": "Gras",
     "italic": "Italique",
     "insert_link": "Insérer un lien",
     "clean_formatting": "Nettoyer le formatage",
-
     "image_manager": "Gestionnaire d'images",
     "image_preview": "Aperçu",
-
     "event.title": "Titre",
     "event.location": "Lieu",
     "event.description": "Description",
@@ -58,20 +51,16 @@
     "event.delete_confirm": "Supprimer cet événement ?",
     "event.cannot_undo": "Cette action est irréversible.",
     "event.date_required": "La date et le titre sont obligatoires",
-
     "footer.edit": "Modifier le pied de page",
     "footer.link_text": "Texte du lien",
     "footer.link_url": "URL du lien",
     "footer.link_text_lang": "Texte du lien ({lang})",
     "footer.copyright": "Copyright (Shortcodes : [id=\"...\"]texte[/id])",
-
     "section.delete": "Supprimer la section",
     "section.delete_confirm": "Supprimer cette section ({type}) ?",
     "section.reload_hint": "La page sera rechargée après suppression.",
-
     "item.delete": "Supprimer l'élément",
     "item.delete_confirm": "Supprimer cet élément ?",
-
     "history.title": "Historique des modifications",
     "history.clear": "Effacer l'historique",
     "history.empty": "Aucun changement dans l'historique.",
@@ -83,7 +72,6 @@
     "history.clear_confirm": "Supprimer tout l'historique des modifications ?",
     "history.cleared": "Historique effacé",
     "history.not_found": "Sauvegarde introuvable",
-
     "image.delete": "Supprimer l'image",
     "image.delete_confirm": "Supprimer \"{filename}\" ?",
     "image.trash_hint": "L'image sera déplacée dans la corbeille (images-trash).",
@@ -115,7 +103,6 @@
     "image.uploading": "Téléchargement...",
     "image.exists": "Un fichier nommé \"{filename}\" existe déjà",
     "image.upload_image": "Télécharger une image",
-
     "audio.manager": "Gestionnaire audio",
     "audio.upload": "Télécharger un audio",
     "audio.formats_hint": "MP3, WAV, OGG, M4A, AAC, FLAC (max. 50 Mo)",
@@ -133,7 +120,6 @@
     "audio.trashed": "Fichier audio déplacé dans la corbeille",
     "audio.format_error": "Seuls MP3, WAV, OGG, M4A, AAC et FLAC sont autorisés",
     "audio.size_error": "Taille maximale : 50 Mo",
-
     "toast.no_changes": "Aucun changement à enregistrer",
     "toast.saved": "Enregistré !",
     "toast.error_saving": "Erreur lors de l'enregistrement de {page} : {message}",
@@ -156,11 +142,14 @@
     "toast.copied_to_empty": "Contenu copié dans les champs vides des autres langues",
     "toast.upload_error": "Erreur de téléchargement : {message}",
     "toast.error_deleting": "Erreur lors de la suppression : {message}",
-
     "nav.unsaved_changes": "Vous avez des modifications non enregistrées. Quitter la page ?",
     "nav.edit_mode_active": "Vous êtes en mode édition. Quitter la page ?",
-
     "link_target": "Cible du lien",
     "link_external": "URL externe",
-    "link_internal": "Pages du site"
+    "link_internal": "Pages du site",
+    "image.no_images": "Aucune image trouvée.",
+    "image.no_search_results": "Aucune image trouvée pour « {term} ».",
+    "image.copy_path": "Copier le chemin",
+    "toast.copied": "Copié dans le presse-papiers.",
+    "toast.error": "Une erreur s'est produite."
 }
