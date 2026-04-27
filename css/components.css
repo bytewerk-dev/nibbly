@@ -779,6 +779,7 @@
     margin: 0 0 0.75rem;
     display: -webkit-box;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -1459,4 +1460,32 @@
 
 [data-theme="dark"] .breadcrumb__item--current {
     color: var(--color-text-on-dark);
+}
+
+/* Components page demo sections — extra breathing room between component
+   showcases so each <section class="demo-section"> reads as its own block. */
+.demo-section {
+    padding-block: var(--spacing-lg);
+}
+
+.demo-section + .demo-section {
+    border-top: 1px solid var(--color-border);
+}
+
+.demo-section > h2 {
+    margin-top: 0;
+}
+
+/* Buttons demo group (components page) */
+.demo-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+}
+
+.demo-buttons > a:not([class]) {
+    padding: 0 var(--spacing-sm);
 }

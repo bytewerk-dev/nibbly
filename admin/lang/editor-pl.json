@@ -84,6 +84,8 @@
     "image.save_new_desc": "Istniejący plik zostanie zachowany, przesłany plik zachowa swoją nazwę",
     "image.choose_file": "Wybierz plik",
     "image.upload": "Prześlij",
+    "image.drop_files": "Upuść pliki do przesłania",
+    "image.or": "lub",
     "image.formats_hint": "Dozwolone formaty: JPG, PNG, WebP (maks. 5 MB)",
     "image.search": "Szukaj pliku...",
     "image.grid_view": "Widok siatki",
@@ -145,11 +147,13 @@
     "nav.unsaved_changes": "Masz niezapisane zmiany. Opuścić stronę?",
     "nav.edit_mode_active": "Jesteś w trybie edycji. Opuścić stronę?",
     "link_target": "Cel linku",
-    "link_external": "Zewnętrzny URL",
+    "link_external": "Niestandardowy",
     "link_internal": "Strony witryny",
     "image.no_images": "Nie znaleziono obrazów.",
     "image.no_search_results": "Nie znaleziono obrazów dla \"{term}\".",
     "image.copy_path": "Kopiuj ścieżkę",
     "toast.copied": "Skopiowano do schowka.",
-    "toast.error": "Wystąpił błąd."
+    "toast.error": "Wystąpił błąd.",
+    "link_open_new_tab": "Otwórz w nowej karcie",
+    "link_offer_download": "Zaoferuj do pobrania"
 }

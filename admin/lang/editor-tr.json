@@ -84,6 +84,8 @@
     "image.save_new_desc": "Mevcut dosya korunur, yüklenen dosya kendi adını korur",
     "image.choose_file": "Dosya seç",
     "image.upload": "Yükle",
+    "image.drop_files": "Dosyaları yüklemek için bırakın",
+    "image.or": "veya",
     "image.formats_hint": "İzin verilen biçimler: JPG, PNG, WebP (maks. 5 MB)",
     "image.search": "Dosya ara...",
     "image.grid_view": "Izgara görünümü",
@@ -145,11 +147,13 @@
     "nav.unsaved_changes": "Kaydedilmemiş değişiklikleriniz var. Sayfadan çıkılsın mı?",
     "nav.edit_mode_active": "Düzenleme modundasınız. Sayfadan çıkılsın mı?",
     "link_target": "Bağlantı hedefi",
-    "link_external": "Harici URL",
+    "link_external": "Özel",
     "link_internal": "Site sayfaları",
     "image.no_images": "Görsel bulunamadı.",
     "image.no_search_results": "\"{term}\" için görsel bulunamadı.",
     "image.copy_path": "Yolu kopyala",
     "toast.copied": "Panoya kopyalandı.",
-    "toast.error": "Bir hata oluştu."
+    "toast.error": "Bir hata oluştu.",
+    "link_open_new_tab": "Yeni sekmede aç",
+    "link_offer_download": "İndirme olarak sun"
 }

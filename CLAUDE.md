@@ -694,5 +694,6 @@ Not `($lang, $basePath)`. Use `renderNewsList(0, $currentLang)` for all posts.
 - **Use `$basePath`** for all asset and link paths (handles root vs subdirectory serving)
 - **BEM class names** + CSS custom properties for all styling
 - **No inline styles** except for PHP-injected dynamic values
+- **Page-specific styles belong in `css/page-{slug}.css`**, not in `style.css` or `components.css`. Use `$pageStylesheet` in the template (or let the HTML converter generate it). Selectors like `.page-foo .card` in the base stylesheets leak page logic into the CMS core.
 - **Every `<img>` needs `alt`**, every interactive element needs `:focus-visible`
 - **Set `$contentPage`** before including `header.php` so the admin bar works

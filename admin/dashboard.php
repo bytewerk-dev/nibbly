@@ -34,7 +34,7 @@ $userRole = $_SESSION['admin_role'] ?? 'admin'; // backward compat: old sessions
 $isAdminUser = ($userRole === 'admin');
 
 // Load settings for theme
-$siteSettings = ['branding' => ['logo' => '/assets/images/favicon.svg', 'name' => '', 'showBranding' => true], 'theme' => ['adminTheme' => 'light', 'primaryColor' => '#2563eb', 'accentColor' => '#60a5fa', 'buttonGlow' => true, 'buttonRadius' => 6]];
+$siteSettings = ['favicon' => '/assets/images/favicon.svg', 'branding' => ['logo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both'], 'theme' => ['adminTheme' => 'light', 'primaryColor' => '#2563eb', 'accentColor' => '#60a5fa', 'buttonGlow' => true, 'buttonRadius' => 6]];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     $loadedSettings = json_decode(file_get_contents(SETTINGS_PATH), true);
     if (is_array($loadedSettings)) {
@@ -81,7 +81,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     <meta name="robots" content="noindex, nofollow">
     <title>Dashboard - <?php echo defined('SITE_NAME') ? SITE_NAME : 'Admin'; ?></title>
     <?php
-    $_dashFavicon = $siteSettings['favicon'] ?? $siteSettings['branding']['logo'] ?? '/assets/images/favicon.svg';
+    $_dashFavicon = !empty($siteSettings['favicon']) ? $siteSettings['favicon'] : '/assets/images/favicon.svg';
     $_dashFaviconType = pathinfo($_dashFavicon, PATHINFO_EXTENSION) === 'svg' ? 'image/svg+xml' : 'image/png';
     ?>
     <link rel="icon" href="<?php echo htmlspecialchars($_dashFavicon); ?>" type="<?php echo $_dashFaviconType; ?>">
@@ -118,8 +118,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <?php echo nbIcon('hamburger', 24, '2'); ?>
         </button>
         <div class="topbar-brand">
-            <?php if ($siteSettings['branding']['showBranding'] && !empty($siteSettings['branding']['logo'])): ?>
-            <img src="<?php echo htmlspecialchars($siteSettings['branding']['logo']); ?>" alt="<?php echo htmlspecialchars($siteSettings['branding']['name']); ?>" width="24" height="24" class="topbar-logo">
+            <?php if ($siteSettings['branding']['showBranding']):
+                $_topbarLogo = !empty($siteSettings['branding']['logo']) ? $siteSettings['branding']['logo'] : ($siteSettings['favicon'] ?? '/assets/images/favicon.svg');
+            ?>
+            <img src="<?php echo htmlspecialchars($_topbarLogo); ?>" alt="<?php echo htmlspecialchars($siteSettings['branding']['name']); ?>" width="24" height="24" class="topbar-logo">
             <?php endif; ?>
             <span class="topbar-dashboard"><?php echo t('dashboard'); ?></span>
         </div>
@@ -212,6 +214,25 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <?php echo t('security.weak_password'); ?>
             <strong><?php echo t('security.change_now'); ?></strong> &mdash; this is a significant security risk.
             <br><a href="#" onclick="switchTab('settings'); document.querySelector('[data-settings-tab=&quot;password&quot;]').click(); return false;"><?php echo t('security.change_link'); ?> &rarr;</a>
+        </div>
+    </div>
+    <?php endif; ?>
+    <?php
+    // One-shot frontend-edit hint: the user reached the dashboard from a public
+    // page (via the footer dblclick). Offer a link back to that page so they
+    // can keep editing in place. Consumed once — gone on the next dashboard load.
+    $loginSourceUrl = $_SESSION['login_source_url'] ?? '';
+    unset($_SESSION['login_source_url']);
+    ?>
+    <?php if ($loginSourceUrl !== ''): ?>
+    <div class="info-banner" id="frontendEditBanner">
+        <div class="info-banner__inner">
+            <strong class="info-banner__title"><?php echo nbIcon('eye'); ?> <?php echo t('banner.frontend_edit_title'); ?></strong>
+            <span class="info-banner__body">
+                <?php echo t('banner.frontend_edit_text'); ?>
+                <a href="<?php echo htmlspecialchars($loginSourceUrl); ?>" class="info-banner__cta"><?php echo t('banner.frontend_edit_cta'); ?> &rarr;</a>
+            </span>
+            <button type="button" class="info-banner__close" aria-label="<?php echo t('close'); ?>" onclick="document.getElementById('frontendEditBanner').remove();">&times;</button>
         </div>
     </div>
     <?php endif; ?>
@@ -336,18 +357,85 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         </div>
     </div>
 
-    <!-- Events Tab -->
+    <!-- Events Tab — list view -->
     <div class="admin-container" id="eventsTab" style="display: none;">
-        <div class="editor-container" id="eventsEditorContainer">
-            <div class="editor-header">
-                <div class="editor-header-left">
+        <div class="page-list-container" id="eventsListView">
+            <div class="page-list-header">
+                <div class="page-list-header-left">
                     <h2><?php echo t('events.title'); ?></h2>
-                    <button class="btn btn-primary btn-sm" onclick="addNewEvent()"><?php echo t('events.new_event'); ?></button>
+                    <button class="btn btn-secondary btn-sm" onclick="addNewEvent()"><?php echo t('events.new_event'); ?></button>
+                    <button class="btn btn-secondary btn-sm page-list-trash-btn" onclick="showEventsTrash()">
+                        <?php echo nbIcon('trash', 14); ?>
+                        <?php echo t('pages.trash'); ?>
+                    </button>
                 </div>
                 <span class="last-modified" id="eventsLastModified"></span>
             </div>
-            <div id="eventsListContainer">
-                <!-- Events inserted via JS -->
+            <div class="page-list-table-wrap">
+                <table class="page-list-table" id="eventsListTable">
+                    <thead>
+                        <tr>
+                            <th class="page-list-col-title"><?php echo t('pages.col_title'); ?></th>
+                            <th class="page-list-col-date"><?php echo t('events.col_date'); ?></th>
+                            <th><?php echo t('events.col_location'); ?></th>
+                            <th class="page-list-col-date"><?php echo t('events.col_status'); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody id="eventsListBody">
+                        <!-- Rows inserted via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Events Tab — trash view -->
+        <div class="page-list-container" id="eventsTrashView" style="display: none;">
+            <div class="page-list-header">
+                <div class="page-list-header-left">
+                    <h2><?php echo t('trash.title'); ?></h2>
+                    <button class="btn btn-secondary btn-sm" onclick="closeEventsTrash()">
+                        <?php echo nbIcon('back', 14); ?>
+                        <?php echo t('events.back_to_events'); ?>
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="emptyEventsTrash()" id="emptyEventsTrashBtn" style="display:none;"><?php echo t('trash.empty_trash'); ?></button>
+                </div>
+            </div>
+            <div class="page-list-table-wrap">
+                <table class="page-list-table" id="eventsTrashTable">
+                    <thead>
+                        <tr>
+                            <th class="page-list-col-title"><?php echo t('pages.col_title'); ?></th>
+                            <th class="page-list-col-date"><?php echo t('events.col_date'); ?></th>
+                            <th class="page-list-col-date"><?php echo t('trash.col_deleted'); ?></th>
+                            <th class="page-list-col-actions"><?php echo t('trash.col_actions'); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody id="eventsTrashBody">
+                    </tbody>
+                </table>
+            </div>
+            <p class="trash-empty-msg" id="eventsTrashEmptyMsg" style="display:none;"><?php echo t('trash.empty'); ?></p>
+        </div>
+
+        <!-- Events Tab — single-event editor view -->
+        <div class="editor-container" id="eventsEditorView" style="display: none;">
+            <div class="editor-header">
+                <div class="editor-header-left">
+                    <button class="btn btn-secondary btn-sm" onclick="closeEventEditor()" title="<?php echo t('btn.back'); ?>">
+                        <?php echo nbIcon('back', 16); ?>
+                        <span><?php echo t('btn.back'); ?></span>
+                    </button>
+                    <h2 id="eventEditorTitle"></h2>
+                </div>
+                <div class="editor-header-right">
+                    <button class="btn btn-secondary btn-sm" id="eventEditorDeleteBtn" onclick="deleteCurrentEvent()" title="<?php echo t('editor.move_to_trash'); ?>">
+                        <?php echo nbIcon('trash', 14); ?>
+                    </button>
+                    <button class="btn btn-primary btn-sm" onclick="saveCurrentEvent()"><?php echo t('btn.save'); ?></button>
+                </div>
+            </div>
+            <div id="eventEditorBody">
+                <!-- Editor fields inserted via JS -->
             </div>
         </div>
     </div>
@@ -410,15 +498,51 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     <!-- Mails Tab -->
     <div class="admin-container" id="mailsTab" style="display: none;">
-        <div class="mails-header">
-            <h2><?php echo t('mails.title'); ?></h2>
-            <div class="mails-actions">
-                <button class="btn btn-secondary btn-sm" onclick="loadMails()"><?php echo t('btn.refresh'); ?></button>
-                <button class="btn btn-primary btn-sm" onclick="markAllMailsRead()"><?php echo t('mails.mark_all_read'); ?></button>
+        <!-- List view -->
+        <div class="page-list-container" id="mailsListView">
+            <div class="page-list-header">
+                <div class="page-list-header-left">
+                    <h2><?php echo t('mails.title'); ?></h2>
+                    <button class="btn btn-secondary btn-sm" onclick="loadMails()"><?php echo t('btn.refresh'); ?></button>
+                    <button class="btn btn-secondary btn-sm" onclick="markAllMailsRead()"><?php echo t('mails.mark_all_read'); ?></button>
+                </div>
+            </div>
+            <div class="page-list-table-wrap">
+                <table class="page-list-table" id="mailsListTable">
+                    <thead>
+                        <tr>
+                            <th class="page-list-col-title"><?php echo t('mails.col_from'); ?></th>
+                            <th><?php echo t('mails.col_subject'); ?></th>
+                            <th class="page-list-col-date"><?php echo t('mails.col_received'); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody id="mailsList">
+                        <!-- Mails inserted via JS -->
+                    </tbody>
+                </table>
             </div>
         </div>
-        <div class="mails-list" id="mailsList">
-            <!-- Mails inserted via JS -->
+
+        <!-- Detail view -->
+        <div class="editor-container" id="mailDetailView" style="display: none;">
+            <div class="editor-header">
+                <div class="editor-header-left">
+                    <button class="btn btn-secondary btn-sm" onclick="closeMailDetail()" title="<?php echo t('btn.back'); ?>">
+                        <?php echo nbIcon('back', 16); ?>
+                        <span><?php echo t('btn.back'); ?></span>
+                    </button>
+                    <h2 id="mailDetailTitle"></h2>
+                </div>
+                <div class="editor-header-right">
+                    <button class="btn btn-danger btn-sm" id="mailDeleteBtn">
+                        <?php echo nbIcon('trash', 14); ?>
+                        <span><?php echo t('btn.delete'); ?></span>
+                    </button>
+                </div>
+            </div>
+            <div class="mail-detail-content" id="mailDetailContent">
+                <!-- Detail fields inserted via JS -->
+            </div>
         </div>
     </div>
 
@@ -429,6 +553,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <button class="settings-tab-btn active" data-settings-tab="branding"><?php echo t('settings.branding'); ?></button>
             <button class="settings-tab-btn" data-settings-tab="theme"><?php echo t('settings.theme'); ?></button>
             <button class="settings-tab-btn" data-settings-tab="language"><?php echo t('settings.language'); ?></button>
+            <button class="settings-tab-btn" data-settings-tab="login"><?php echo t('settings.login'); ?></button>
             <button class="settings-tab-btn" data-settings-tab="email"><?php echo t('settings.email'); ?></button>
             <button class="settings-tab-btn" data-settings-tab="users"><?php echo t('settings.users'); ?></button>
             <button class="settings-tab-btn" data-settings-tab="menus"><?php echo t('settings.menus'); ?></button>
@@ -446,34 +571,71 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 <h2><?php echo t('settings.branding'); ?></h2>
                 <p class="settings-description"><?php echo t('settings.branding_desc'); ?></p>
                 <form id="brandingForm" class="settings-form">
-                    <div class="form-group">
-                        <label for="settingsLogo"><?php echo t('settings.logo'); ?></label>
-                        <div class="logo-preview-group">
-                            <div class="logo-preview" id="logoPreview">
-                                <img src="/assets/images/favicon.svg" alt="<?php echo t('settings.logo'); ?>" id="logoPreviewImg">
+                    <fieldset class="settings-section">
+                        <legend><?php echo t('settings.site_identity'); ?></legend>
+                        <div class="form-group">
+                            <label for="settingsName"><?php echo t('settings.site_name'); ?></label>
+                            <input type="text" id="settingsName" value="" placeholder="<?php echo t('settings.site_name_placeholder'); ?>" maxlength="100">
+                        </div>
+                        <div class="form-group-row">
+                            <div class="form-group">
+                                <label for="settingsFavicon"><?php echo t('settings.favicon'); ?></label>
+                                <div class="logo-preview-group">
+                                    <div class="logo-preview" id="faviconPreview">
+                                        <img src="/assets/images/favicon.svg" alt="<?php echo t('settings.favicon'); ?>" id="faviconPreviewImg">
+                                    </div>
+                                    <div class="logo-controls">
+                                        <div class="logo-path-input">
+                                            <span class="input-with-clear">
+                                                <input type="text" id="settingsFavicon" value="/assets/images/favicon.svg" placeholder="/assets/images/favicon.svg">
+                                                <button type="button" class="input-clear-btn" data-clear-target="settingsFavicon" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                            </span>
+                                            <button type="button" class="btn btn-secondary btn-sm" id="browseFaviconBtn"><?php echo t('btn.browse'); ?></button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="logo-controls">
-                                <div class="logo-path-input">
-                                    <input type="text" id="settingsLogo" value="/assets/images/favicon.svg" placeholder="/assets/images/logo.png">
-                                    <button type="button" class="btn btn-secondary btn-sm" id="browseLogoBtn"><?php echo t('btn.browse'); ?></button>
+                            <div class="form-group">
+                                <label for="settingsLogo"><?php echo t('settings.logo'); ?></label>
+                                <div class="logo-preview-group">
+                                    <div class="logo-preview" id="logoPreview">
+                                        <img src="" alt="<?php echo t('settings.logo'); ?>" id="logoPreviewImg">
+                                    </div>
+                                    <div class="logo-controls">
+                                        <div class="logo-path-input">
+                                            <span class="input-with-clear">
+                                                <input type="text" id="settingsLogo" value="" placeholder="/assets/images/logo.png">
+                                                <button type="button" class="input-clear-btn" data-clear-target="settingsLogo" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                            </span>
+                                            <button type="button" class="btn btn-secondary btn-sm" id="browseLogoBtn"><?php echo t('btn.browse'); ?></button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="settingsName"><?php echo t('settings.site_name'); ?></label>
-                        <input type="text" id="settingsName" value="" placeholder="<?php echo t('settings.site_name_placeholder'); ?>" maxlength="100">
-                    </div>
-                    <div class="form-group">
-                        <label class="toggle-label">
-                            <span><?php echo t('settings.show_branding'); ?></span>
-                            <div class="toggle-switch">
-                                <input type="checkbox" id="settingsShowBranding" checked>
-                                <span class="toggle-slider"></span>
+                        <div class="form-group" id="logoDisplayGroup">
+                            <label><?php echo t('settings.header_display'); ?></label>
+                            <small class="form-hint"><?php echo t('settings.header_display_hint'); ?></small>
+                            <div class="radio-group">
+                                <label class="radio-option"><input type="radio" name="settingsLogoDisplay" value="favicon"> <span><?php echo t('settings.logo_display_favicon'); ?></span></label>
+                                <label class="radio-option"><input type="radio" name="settingsLogoDisplay" value="text"> <span><?php echo t('settings.logo_display_text'); ?></span></label>
+                                <label class="radio-option"><input type="radio" name="settingsLogoDisplay" value="both" checked> <span><?php echo t('settings.logo_display_both'); ?></span></label>
                             </div>
-                        </label>
-                        <small class="form-hint"><?php echo t('settings.branding_hint'); ?></small>
-                    </div>
+                        </div>
+                    </fieldset>
+                    <fieldset class="settings-section">
+                        <legend><?php echo t('settings.admin_interface'); ?></legend>
+                        <div class="form-group">
+                            <label class="toggle-label">
+                                <span><?php echo t('settings.show_branding'); ?></span>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="settingsShowBranding" checked>
+                                    <span class="toggle-slider"></span>
+                                </div>
+                            </label>
+                            <small class="form-hint"><?php echo t('settings.branding_hint'); ?></small>
+                        </div>
+                    </fieldset>
                     <button type="submit" class="btn btn-primary" id="saveBrandingBtn"><?php echo t('settings.save_branding'); ?></button>
                 </form>
             </div>
@@ -562,6 +724,28 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </select>
                     </div>
                     <button type="submit" class="btn btn-primary" id="saveLanguageBtn"><?php echo t('settings.save_language'); ?></button>
+                </form>
+            </div>
+
+            <!-- Login Panel -->
+            <div class="settings-panel" id="settingsPanel-login">
+                <h2><?php echo t('settings.login'); ?></h2>
+                <p class="settings-description"><?php echo t('settings.frontend_login_redirect_hint'); ?></p>
+                <form id="loginForm" class="settings-form">
+                    <div class="form-group">
+                        <span class="form-group-label"><?php echo t('settings.frontend_login_redirect'); ?></span>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="frontendLoginRedirect" value="auto" id="frontendLoginRedirectAuto">
+                                <span><?php echo t('settings.frontend_login_redirect_auto'); ?></span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="frontendLoginRedirect" value="dashboard" id="frontendLoginRedirectDashboard">
+                                <span><?php echo t('settings.frontend_login_redirect_dashboard'); ?></span>
+                            </label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="saveLoginBtn"><?php echo t('settings.save_login'); ?></button>
                 </form>
             </div>
 
@@ -701,10 +885,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 </div>
 
                 <div class="form-actions" style="margin-top: 1.5rem;">
-                    <button type="button" class="btn btn-primary" id="saveMenuOrderBtn" disabled>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                        <?php echo t('btn.save'); ?>
-                    </button>
+                    <button type="button" class="btn btn-primary" id="saveMenuOrderBtn" disabled><?php echo t('settings.save_menus'); ?></button>
                 </div>
             </div>
             <?php endif; ?>
@@ -768,7 +949,11 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     <!-- Backup Tab -->
     <div class="admin-container" id="backupTab" style="display: none;">
-        <h1><?php echo t('settings.backup'); ?></h1>
+        <div class="page-list-header">
+            <div class="page-list-header-left">
+                <h2><?php echo t('settings.backup'); ?></h2>
+            </div>
+        </div>
         <p class="page-description"><?php echo t('settings.backup_desc'); ?></p>
 
         <div class="backup-site-card">
@@ -838,18 +1023,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     </div><!-- /.admin-main -->
     </div><!-- /.admin-body -->
 
-    <!-- Mail Detail Modal -->
-    <div class="modal-overlay" id="mailDetailOverlay" style="display: none;">
-        <div class="modal modal-large">
-            <h3 id="mailDetailTitle"><?php echo t('mails.detail_title'); ?></h3>
-            <div class="mail-detail-content" id="mailDetailContent">
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-danger" id="mailDeleteBtn"><?php echo t('btn.delete'); ?></button>
-                <button class="btn btn-secondary" onclick="closeMailDetail()"><?php echo t('btn.close'); ?></button>
-            </div>
-        </div>
-    </div>
+    <!-- Mail detail is now rendered inline within #mailsTab as #mailDetailView -->
+
 
     <!-- Confirmation Modal -->
     <div class="modal-overlay" id="modalOverlay" style="display: none;">
@@ -2256,7 +2431,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 if (img) { img.src = path.startsWith('/') ? '..' + path : path; img.style.display = ''; }
             }
             markDirty();
-        });
+        }, inputEl ? inputEl.value : null);
     }
 
     // Backward-compat globals (in case any onclick attribute still references them)
@@ -2281,7 +2456,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 }
                 markDirty();
             }
-        });
+        }, input ? input.value : null);
     };
 
     // Track unsaved changes
@@ -2944,6 +3119,11 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         document.getElementById('adminSidebar').classList.remove('open');
 
         if (tab === 'mails') {
+            // Always start on the list view when switching into Mails
+            const mailsList = document.getElementById('mailsListView');
+            const mailDetail = document.getElementById('mailDetailView');
+            if (mailsList) mailsList.style.display = '';
+            if (mailDetail) mailDetail.style.display = 'none';
             loadMails();
         }
         if (tab === 'news') {
@@ -2953,9 +3133,19 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 loadNews();
             }
         }
-        if (tab === 'events' && !eventsLoaded) {
-            eventsLoaded = true;
-            loadEventsEditor();
+        if (tab === 'events') {
+            // Always start on the list view when switching into Events
+            const listView = document.getElementById('eventsListView');
+            const editorView = document.getElementById('eventsEditorView');
+            const trashView = document.getElementById('eventsTrashView');
+            if (listView) listView.style.display = '';
+            if (editorView) editorView.style.display = 'none';
+            if (trashView) trashView.style.display = 'none';
+            currentEventIndex = null;
+            if (!eventsLoaded) {
+                eventsLoaded = true;
+                loadEventsEditor();
+            }
         }
         if (tab === 'settings' && !settingsLoaded) {
             loadSettings();
@@ -2986,30 +3176,73 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     }
 
     function renderMails() {
-        const container = document.getElementById('mailsList');
+        const tbody = document.getElementById('mailsList');
+        if (!tbody) return;
+        tbody.innerHTML = '';
 
-        if (mailsData.length === 0) {
-            container.innerHTML = '<p class="mails-empty">' + t('mails.no_messages') + '</p>';
+        if (!mailsData || mailsData.length === 0) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="3" style="color: var(--nb-text-muted); text-align: center; padding: var(--nb-space-6);">${escapeHtml(t('mails.no_messages'))}</td>`;
+            tbody.appendChild(tr);
             return;
         }
 
-        container.innerHTML = mailsData.map(mail => {
+        mailsData.forEach(mail => {
             const date = new Date(mail.timestamp);
             const dateStr = date.toLocaleDateString();
             const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const unreadClass = mail.read ? '' : 'mail-unread';
+            const isUnread = !mail.read;
 
-            return `
-                <div class="mail-item ${unreadClass}" onclick="openMailDetail('${mail.id}')">
-                    <div class="mail-item-header">
-                        <span class="mail-name">${escapeHtml(mail.name)}</span>
-                        <span class="mail-date">${dateStr} ${timeStr}</span>
-                    </div>
-                    <div class="mail-item-subject">${escapeHtml(mail.occasion)}</div>
-                    <div class="mail-item-preview">${escapeHtml(mail.message.substring(0, 100))}${mail.message.length > 100 ? '...' : ''}</div>
-                </div>
-            `;
-        }).join('');
+            const tr = document.createElement('tr');
+            tr.className = 'page-list-row';
+            if (isUnread) tr.classList.add('mail-row-unread');
+
+            const tdFrom = document.createElement('td');
+            tdFrom.className = 'page-list-cell-title';
+
+            const fromLink = document.createElement('a');
+            fromLink.href = '#';
+            fromLink.className = 'page-list-title-link';
+            fromLink.textContent = mail.name;
+            fromLink.onclick = (e) => { e.preventDefault(); openMailDetail(mail.id); };
+            tdFrom.appendChild(fromLink);
+
+            const actions = document.createElement('div');
+            actions.className = 'page-list-row-actions';
+
+            const viewLink = document.createElement('a');
+            viewLink.href = '#';
+            viewLink.className = 'page-list-row-action';
+            viewLink.innerHTML = icon('eye', 12, '2') + ' ' + t('pages.view');
+            viewLink.onclick = (e) => { e.preventDefault(); openMailDetail(mail.id); };
+            actions.appendChild(viewLink);
+
+            const sep = document.createElement('span');
+            sep.className = 'page-list-row-action-sep';
+            sep.textContent = '|';
+            actions.appendChild(sep);
+
+            const trashLink = document.createElement('a');
+            trashLink.href = '#';
+            trashLink.className = 'page-list-row-action page-list-row-action--danger';
+            trashLink.innerHTML = icon('trash', 12, '2') + ' ' + t('btn.delete');
+            trashLink.onclick = (e) => { e.preventDefault(); deleteMail(mail.id); };
+            actions.appendChild(trashLink);
+
+            tdFrom.appendChild(actions);
+
+            const tdSubject = document.createElement('td');
+            tdSubject.textContent = mail.occasion || '';
+
+            const tdDate = document.createElement('td');
+            tdDate.className = 'page-list-cell-date';
+            tdDate.textContent = `${dateStr} ${timeStr}`;
+
+            tr.appendChild(tdFrom);
+            tr.appendChild(tdSubject);
+            tr.appendChild(tdDate);
+            tbody.appendChild(tr);
+        });
     }
 
     function updateMailBadge() {
@@ -3082,7 +3315,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         `;
 
         document.getElementById('mailDeleteBtn').onclick = () => deleteMail(mailId);
-        document.getElementById('mailDetailOverlay').style.display = 'flex';
+        document.getElementById('mailsListView').style.display = 'none';
+        document.getElementById('mailDetailView').style.display = '';
 
         if (!mail.read) {
             markMailRead(mailId);
@@ -3090,7 +3324,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     }
 
     function closeMailDetail() {
-        document.getElementById('mailDetailOverlay').style.display = 'none';
+        document.getElementById('mailDetailView').style.display = 'none';
+        document.getElementById('mailsListView').style.display = '';
     }
 
     async function markMailRead(mailId) {
@@ -3778,11 +4013,22 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     function populateSettings(settings) {
         // Branding
-        var logoPath = settings.branding.logo || '/assets/images/favicon.svg';
+        var faviconPath = settings.favicon || '/assets/images/favicon.svg';
+        document.getElementById('settingsFavicon').value = faviconPath;
+        updateFaviconPreview(faviconPath);
+        updateClearButton(document.getElementById('settingsFavicon'));
+
+        var logoPath = settings.branding.logo || '';
         document.getElementById('settingsLogo').value = logoPath;
         document.getElementById('settingsName').value = settings.branding.name || '';
         document.getElementById('settingsShowBranding').checked = settings.branding.showBranding !== false;
         updateLogoPreview(logoPath);
+        updateClearButton(document.getElementById('settingsLogo'));
+
+        var logoDisplay = settings.branding.logoDisplay || 'both';
+        var displayRadio = document.querySelector('input[name="settingsLogoDisplay"][value="' + logoDisplay + '"]');
+        if (displayRadio) displayRadio.checked = true;
+        updateLogoDisplayVisibility();
 
         // Theme
         document.getElementById('settingsAdminTheme').value = settings.theme.adminTheme || 'light';
@@ -3811,6 +4057,12 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         // Language
         var langSelect = document.getElementById('settingsAdminLanguage');
         if (langSelect) langSelect.value = settings.general?.adminLanguage || '';
+
+        // Frontend-login redirect mode (default: 'auto')
+        var loginMode = (settings.general && settings.general.frontendLoginRedirect) || 'auto';
+        var modeRadio = document.querySelector('input[name="frontendLoginRedirect"][value="' + loginMode + '"]');
+        if (modeRadio) modeRadio.checked = true;
+
         updateColorPreview(primary, accent);
         updateBtnStylePreview();
 
@@ -3840,8 +4092,28 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             img.src = path;
             img.style.display = 'block';
         } else {
+            img.removeAttribute('src');
             img.style.display = 'none';
         }
+        updateLogoDisplayVisibility();
+    }
+
+    function updateFaviconPreview(path) {
+        var img = document.getElementById('faviconPreviewImg');
+        if (path) {
+            img.src = path;
+            img.style.display = 'block';
+        } else {
+            img.removeAttribute('src');
+            img.style.display = 'none';
+        }
+    }
+
+    // 3-way logo display selector is only relevant when no logo is set
+    function updateLogoDisplayVisibility() {
+        var logoVal = document.getElementById('settingsLogo').value.trim();
+        var group = document.getElementById('logoDisplayGroup');
+        if (group) group.style.display = logoVal ? 'none' : '';
     }
 
     function updateColorPreview(primary, accent) {
@@ -3929,51 +4201,50 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         }
     });
 
-    // Logo path change
-    document.getElementById('settingsLogo').addEventListener('input', function() {
-        updateLogoPreview(this.value);
+    // Browse logo button — opens the image manager
+    document.getElementById('browseLogoBtn').addEventListener('click', function() {
+        var input = document.getElementById('settingsLogo');
+        NbImageManager.open(function(path) {
+            input.value = path;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }, input ? input.value : null);
     });
 
-    // Browse logo button — opens image list modal
-    document.getElementById('browseLogoBtn').addEventListener('click', async function() {
-        try {
-            var response = await fetch('api.php?action=list-images');
-            var result = await response.json();
+    // Browse favicon button — opens the image manager
+    document.getElementById('browseFaviconBtn').addEventListener('click', function() {
+        var input = document.getElementById('settingsFavicon');
+        NbImageManager.open(function(path) {
+            input.value = path;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }, input ? input.value : null);
+    });
 
-            if (!result.success || result.data.length === 0) {
-                showToast(t('toast.no_images'), 'error');
-                return;
-            }
+    // Manual edits to the logo path also toggle the 3-way selector
+    document.getElementById('settingsLogo').addEventListener('input', function() {
+        updateLogoPreview(this.value.trim());
+        updateClearButton(this);
+    });
+    document.getElementById('settingsFavicon').addEventListener('input', function() {
+        updateFaviconPreview(this.value.trim());
+        updateClearButton(this);
+    });
 
-            var overlay = document.getElementById('modalOverlay');
-            var title = document.getElementById('modalTitle');
-            var text = document.getElementById('modalText');
-            var confirmBtn = document.getElementById('modalConfirm');
-
-            title.textContent = t('modal.select_logo');
-            text.innerHTML = '<div class="logo-browser-grid">' +
-                result.data.map(function(img) {
-                    return '<div class="logo-browser-item" data-path="' + img.path.replace('../', '/') + '">' +
-                        '<img src="' + img.path + '" alt="' + img.name + '">' +
-                    '</div>';
-                }).join('') +
-            '</div>';
-
-            confirmBtn.style.display = 'none';
-            overlay.style.display = 'flex';
-
-            text.querySelectorAll('.logo-browser-item').forEach(function(item) {
-                item.addEventListener('click', function() {
-                    var path = this.dataset.path;
-                    document.getElementById('settingsLogo').value = path;
-                    updateLogoPreview(path);
-                    overlay.style.display = 'none';
-                    confirmBtn.style.display = '';
-                });
-            });
-        } catch (error) {
-            showToast(t('toast.error_loading_images', {message: error.message}), 'error');
-        }
+    // Generic clear-X handler for image-path inputs
+    function updateClearButton(input) {
+        var btn = document.querySelector('.input-clear-btn[data-clear-target="' + input.id + '"]');
+        if (btn) btn.hidden = !input.value.trim();
+    }
+    document.querySelectorAll('.input-clear-btn[data-clear-target]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var input = document.getElementById(btn.dataset.clearTarget);
+            if (!input) return;
+            input.value = '';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.focus();
+        });
+        // Initialize visibility
+        var input = document.getElementById(btn.dataset.clearTarget);
+        if (input) btn.hidden = !input.value.trim();
     });
 
     // Save branding
@@ -3985,10 +4256,13 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
         try {
             var settings = Object.assign({}, currentSettings || {});
+            settings.favicon = document.getElementById('settingsFavicon').value.trim();
+            var displayRadio = document.querySelector('input[name="settingsLogoDisplay"]:checked');
             settings.branding = {
                 logo: document.getElementById('settingsLogo').value.trim(),
                 name: document.getElementById('settingsName').value.trim(),
-                showBranding: document.getElementById('settingsShowBranding').checked
+                showBranding: document.getElementById('settingsShowBranding').checked,
+                logoDisplay: displayRadio ? displayRadio.value : 'both'
             };
 
             var formData = new FormData();
@@ -4153,6 +4427,47 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             btn.textContent = t('settings.save_language');
         }
     });
+
+    // ============================================================
+    // SAVE LOGIN BEHAVIOUR
+    // ============================================================
+
+    var loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var btn = document.getElementById('saveLoginBtn');
+            btn.disabled = true;
+            btn.textContent = t('btn.saving');
+
+            try {
+                var settings = Object.assign({}, currentSettings || {});
+                if (!settings.general) settings.general = {};
+                var modeRadio = document.querySelector('input[name="frontendLoginRedirect"]:checked');
+                settings.general.frontendLoginRedirect = modeRadio ? modeRadio.value : 'auto';
+
+                var formData = new FormData();
+                formData.append('action', 'save-settings');
+                formData.append('settings', JSON.stringify(settings));
+                formData.append('csrf_token', CSRF_TOKEN);
+
+                var response = await fetch('api.php', { method: 'POST', body: formData });
+                var result = await response.json();
+
+                if (result.success) {
+                    currentSettings = result.data;
+                    showToast(t('toast.login_saved'), 'success');
+                } else {
+                    showToast(result.message, 'error');
+                }
+            } catch (error) {
+                showToast(t('toast.error_generic', {message: error.message}), 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = t('settings.save_login');
+            }
+        });
+    }
 
     // ============================================================
     // EMAIL SETTINGS
@@ -4548,6 +4863,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     const DEFAULT_LANG = '<?php echo defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en'; ?>';
     let eventsData = null;
     let eventsLoaded = false;
+    let currentEventIndex = null;
     const EVENT_TRANSLATABLE = ['title', 'location', 'description', 'admission'];
 
     async function loadEventsEditor() {
@@ -4556,7 +4872,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             const result = await response.json();
             if (result.success) {
                 eventsData = result.data;
-                renderEventsEditor();
+                renderEventsList();
             } else {
                 showToast(result.message, 'error');
             }
@@ -4565,46 +4881,176 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         }
     }
 
-    function renderEventsEditor() {
-        const container = document.getElementById('eventsListContainer');
-        container.innerHTML = '';
+    function renderEventsList() {
+        const tbody = document.getElementById('eventsListBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
 
-        if (eventsData.lastModified) {
+        if (eventsData && eventsData.lastModified) {
             const d = new Date(eventsData.lastModified);
             document.getElementById('eventsLastModified').textContent = t('editor.last_saved', {date: formatDateShort(d)});
+        } else {
+            document.getElementById('eventsLastModified').textContent = '';
         }
 
-        const events = eventsData.events || [];
+        const events = (eventsData && eventsData.events) || [];
         if (events.length === 0) {
-            container.innerHTML = '<p style="color:var(--nb-text-muted, #888);">' + t('events.no_events') + '</p>';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="4" style="color: var(--nb-text-muted); text-align: center; padding: var(--nb-space-6);">${escapeHtml(t('events.no_events'))}</td>`;
+            tbody.appendChild(tr);
             return;
         }
 
         // Sort by date ascending
         events.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
-        events.forEach((event, index) => {
-            const group = document.createElement('div');
-            group.className = 'ce-group';
+        const todayStr = new Date().toISOString().split('T')[0];
 
+        events.forEach((event, index) => {
             const title = event.title?.[DEFAULT_LANG] || event.title?.en || event.title?.de || t('events.untitled');
             const dateStr = event.date || '';
+            const endDateStr = event['end-date'] || dateStr;
 
-            group.innerHTML = `
-                <div class="ce-group-header" onclick="toggleGroup(this)">
-                    <span class="ce-chevron">▶</span>
-                    <span class="ce-group-title">${escapeHtml(dateStr)} — ${escapeHtml(title)}</span>
-                    <div class="ce-group-actions">
-                        <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); deleteEventDashboard(${index})">${t('btn.delete')}</button>
-                    </div>
-                </div>
-                <div class="ce-group-body" style="display:none;"></div>
-            `;
+            // Status — upcoming / today / past
+            let statusKey, statusClass;
+            if (!dateStr) {
+                statusKey = 'events.status_draft';
+                statusClass = 'events-status events-status--draft';
+            } else if (dateStr === todayStr || (dateStr <= todayStr && endDateStr >= todayStr)) {
+                statusKey = 'events.status_today';
+                statusClass = 'events-status events-status--today';
+            } else if (dateStr > todayStr) {
+                statusKey = 'events.status_upcoming';
+                statusClass = 'events-status events-status--upcoming';
+            } else {
+                statusKey = 'events.status_past';
+                statusClass = 'events-status events-status--past';
+            }
 
-            const body = group.querySelector('.ce-group-body');
-            renderEventFields(body, event, index);
-            container.appendChild(group);
+            const tr = document.createElement('tr');
+            tr.className = 'page-list-row';
+            const tdTitle = document.createElement('td');
+            tdTitle.className = 'page-list-cell-title';
+
+            const titleLink = document.createElement('a');
+            titleLink.href = '#';
+            titleLink.className = 'page-list-title-link';
+            titleLink.textContent = title;
+            titleLink.onclick = (e) => { e.preventDefault(); openEventEditor(index); };
+            tdTitle.appendChild(titleLink);
+
+            // Hover action row
+            const actions = document.createElement('div');
+            actions.className = 'page-list-row-actions';
+
+            const editLink = document.createElement('a');
+            editLink.href = '#';
+            editLink.className = 'page-list-row-action';
+            editLink.innerHTML = icon('edit', 12, '2') + ' ' + t('pages.edit');
+            editLink.onclick = (e) => { e.preventDefault(); openEventEditor(index); };
+            actions.appendChild(editLink);
+
+            if (event.url) {
+                const sep1 = document.createElement('span');
+                sep1.className = 'page-list-row-action-sep';
+                sep1.textContent = '|';
+                actions.appendChild(sep1);
+
+                const viewLink = document.createElement('a');
+                viewLink.href = event.url;
+                viewLink.target = '_blank';
+                viewLink.rel = 'noopener';
+                viewLink.className = 'page-list-row-action';
+                viewLink.innerHTML = icon('eye', 12, '2') + ' ' + t('pages.view');
+                actions.appendChild(viewLink);
+            }
+
+            const sep2 = document.createElement('span');
+            sep2.className = 'page-list-row-action-sep';
+            sep2.textContent = '|';
+            actions.appendChild(sep2);
+
+            const dupLink = document.createElement('a');
+            dupLink.href = '#';
+            dupLink.className = 'page-list-row-action';
+            dupLink.innerHTML = icon('duplicate', 12, '2') + ' ' + t('pages.duplicate');
+            dupLink.onclick = (e) => { e.preventDefault(); duplicateEvent(index); };
+            actions.appendChild(dupLink);
+
+            const sep3 = document.createElement('span');
+            sep3.className = 'page-list-row-action-sep';
+            sep3.textContent = '|';
+            actions.appendChild(sep3);
+
+            const trashLink = document.createElement('a');
+            trashLink.href = '#';
+            trashLink.className = 'page-list-row-action page-list-row-action--danger';
+            trashLink.innerHTML = icon('trash', 12, '2') + ' ' + t('pages.trash');
+            trashLink.onclick = (e) => { e.preventDefault(); deleteEventDashboard(index); };
+            actions.appendChild(trashLink);
+
+            tdTitle.appendChild(actions);
+
+            const tdDate = document.createElement('td');
+            tdDate.className = 'page-list-cell-date';
+            tdDate.textContent = dateStr;
+
+            const tdLocation = document.createElement('td');
+            tdLocation.textContent = event.location?.[DEFAULT_LANG] || event.location?.en || event.location?.de || '';
+
+            const tdStatus = document.createElement('td');
+            tdStatus.className = 'page-list-cell-date';
+            const statusBadge = document.createElement('span');
+            statusBadge.className = statusClass;
+            statusBadge.textContent = t(statusKey);
+            tdStatus.appendChild(statusBadge);
+
+            tr.appendChild(tdTitle);
+            tr.appendChild(tdDate);
+            tr.appendChild(tdLocation);
+            tr.appendChild(tdStatus);
+            tbody.appendChild(tr);
         });
+    }
+
+    function openEventEditor(index) {
+        currentEventIndex = index;
+        document.getElementById('eventsListView').style.display = 'none';
+        document.getElementById('eventsEditorView').style.display = '';
+
+        const event = eventsData.events[index];
+        const title = event.title?.[DEFAULT_LANG] || event.title?.en || t('events.untitled');
+        document.getElementById('eventEditorTitle').textContent = title;
+        document.getElementById('eventEditorDeleteBtn').style.display = event.id ? '' : 'none';
+
+        const body = document.getElementById('eventEditorBody');
+        body.innerHTML = '';
+        renderEventFields(body, event, index);
+    }
+
+    function closeEventEditor() {
+        document.getElementById('eventsEditorView').style.display = 'none';
+        document.getElementById('eventsListView').style.display = '';
+        currentEventIndex = null;
+    }
+
+    function saveCurrentEvent() {
+        if (currentEventIndex === null) return;
+        saveEventDashboard(currentEventIndex);
+    }
+
+    function deleteCurrentEvent() {
+        if (currentEventIndex === null) return;
+        deleteEventDashboard(currentEventIndex);
+    }
+
+    function duplicateEvent(index) {
+        const src = eventsData.events[index];
+        const copy = JSON.parse(JSON.stringify(src));
+        copy.id = ''; // unsaved → server assigns on save
+        eventsData.events.push(copy);
+        renderEventsList();
+        openEventEditor(eventsData.events.length - 1);
     }
 
     function renderEventFields(container, eventObj, index) {
@@ -4708,11 +5154,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             });
         });
 
-        // Save button for this event
-        const saveRow = document.createElement('div');
-        saveRow.style.marginTop = '12px';
-        saveRow.innerHTML = `<button class="btn btn-primary btn-sm" onclick="saveEventDashboard(${index})">${t('events.save_events')}</button>`;
-        container.appendChild(saveRow);
+        // Save button is in the editor header, not duplicated inline.
     }
 
     function collectEventData(index) {
@@ -4757,7 +5199,11 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
             if (result.success) {
                 showToast(result.message || t('toast.events_saved'), 'success');
-                loadEventsEditor();
+                // Reload data, then return to list view
+                const reload = await fetch('api.php?action=load-events').then(r => r.json());
+                if (reload.success) eventsData = reload.data;
+                closeEventEditor();
+                renderEventsList();
             } else {
                 showToast(t('toast.error_generic', {message: result.message}), 'error');
             }
@@ -4784,33 +5230,24 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
         if (!eventsData) eventsData = { events: [], lastModified: null };
         eventsData.events.push(newEvent);
-        renderEventsEditor();
-
-        // Expand the new event group and scroll to it
-        const groups = document.querySelectorAll('#eventsListContainer .ce-group');
-        const lastGroup = groups[groups.length - 1];
-        if (lastGroup) {
-            const header = lastGroup.querySelector('.ce-group-header');
-            if (header) toggleGroup(header);
-            lastGroup.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        renderEventsList();
+        // Open the new event in the editor view immediately
+        openEventEditor(eventsData.events.length - 1);
     }
 
+    // Move event to trash (no confirm — symmetrical to Pages "move to trash")
     function deleteEventDashboard(index) {
         const event = eventsData.events[index];
         if (!event) return;
 
-        const title = event.title?.[DEFAULT_LANG] || event.title?.en || t('events.untitled');
-        if (!confirm(`Delete event "${title}"?`)) return;
-
         if (!event.id) {
             // New unsaved event, just remove from array
             eventsData.events.splice(index, 1);
-            renderEventsEditor();
+            if (currentEventIndex !== null) closeEventEditor();
+            renderEventsList();
             return;
         }
 
-        // Delete via API
         const formData = new FormData();
         formData.append('action', 'delete-event');
         formData.append('id', event.id);
@@ -4820,13 +5257,167 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             .then(r => r.json())
             .then(result => {
                 if (result.success) {
-                    showToast(t('toast.event_deleted'), 'success');
+                    showToast(t('toast.event_trashed'), 'success');
+                    if (currentEventIndex !== null) closeEventEditor();
                     loadEventsEditor();
                 } else {
                     showToast(t('toast.error_generic', {message: result.message}), 'error');
                 }
             })
             .catch(error => showToast(t('toast.error_generic', {message: error.message}), 'error'));
+    }
+
+    // ===== EVENTS TRASH =====
+
+    async function showEventsTrash() {
+        document.getElementById('eventsListView').style.display = 'none';
+        document.getElementById('eventsEditorView').style.display = 'none';
+        document.getElementById('eventsTrashView').style.display = '';
+        await loadEventsTrash();
+    }
+
+    function closeEventsTrash() {
+        document.getElementById('eventsTrashView').style.display = 'none';
+        document.getElementById('eventsListView').style.display = '';
+        // Reload main list — restore/permanent-delete may have changed the event set
+        loadEventsEditor();
+    }
+
+    async function loadEventsTrash() {
+        try {
+            const response = await fetch('api.php?action=list-events-trash&_=' + Date.now());
+            const result = await response.json();
+            if (result.success) {
+                renderEventsTrash(result.data);
+            }
+        } catch (error) {
+            console.error('Error loading events trash:', error);
+        }
+    }
+
+    function renderEventsTrash(items) {
+        const tbody = document.getElementById('eventsTrashBody');
+        const emptyMsg = document.getElementById('eventsTrashEmptyMsg');
+        const emptyBtn = document.getElementById('emptyEventsTrashBtn');
+        const table = document.getElementById('eventsTrashTable');
+        tbody.innerHTML = '';
+
+        if (!items || items.length === 0) {
+            table.style.display = 'none';
+            emptyMsg.style.display = 'block';
+            emptyBtn.style.display = 'none';
+            return;
+        }
+
+        table.style.display = '';
+        emptyMsg.style.display = 'none';
+        emptyBtn.style.display = '';
+
+        items.forEach(item => {
+            const ev = item.event || {};
+            const title = ev.title?.[DEFAULT_LANG] || ev.title?.en || ev.title?.de || t('events.untitled');
+            const tr = document.createElement('tr');
+
+            const tdTitle = document.createElement('td');
+            tdTitle.className = 'page-list-cell-title';
+            tdTitle.textContent = title;
+            tr.appendChild(tdTitle);
+
+            const tdDate = document.createElement('td');
+            tdDate.className = 'page-list-cell-date';
+            tdDate.textContent = ev.date || '';
+            tr.appendChild(tdDate);
+
+            const tdDeletedAt = document.createElement('td');
+            tdDeletedAt.className = 'page-list-cell-date';
+            if (item.deletedAt) {
+                const d = new Date(item.deletedAt);
+                tdDeletedAt.textContent = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+            }
+            tr.appendChild(tdDeletedAt);
+
+            const tdActions = document.createElement('td');
+            tdActions.className = 'page-list-cell-actions';
+
+            const restoreBtn = document.createElement('button');
+            restoreBtn.className = 'btn btn-primary btn-sm';
+            restoreBtn.textContent = t('btn.restore');
+            restoreBtn.onclick = async () => {
+                restoreBtn.disabled = true;
+                restoreBtn.textContent = '...';
+                try {
+                    const fd = new FormData();
+                    fd.append('action', 'restore-event');
+                    fd.append('csrf_token', CSRF_TOKEN);
+                    fd.append('id', ev.id);
+                    const r = await fetch('api.php', { method: 'POST', body: fd });
+                    const res = await r.json();
+                    if (res.success) {
+                        showToast(t('toast.event_restored'), 'success');
+                        loadEventsTrash();
+                    } else {
+                        showToast(res.message || 'Error', 'error');
+                        restoreBtn.disabled = false;
+                        restoreBtn.textContent = t('btn.restore');
+                    }
+                } catch (err) {
+                    showToast(err.message, 'error');
+                    restoreBtn.disabled = false;
+                    restoreBtn.textContent = t('btn.restore');
+                }
+            };
+            tdActions.appendChild(restoreBtn);
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'btn btn-danger btn-sm';
+            delBtn.textContent = t('btn.delete');
+            delBtn.onclick = () => {
+                showModal(t('modal.delete_permanently'), t('events.confirm_delete_permanent', {title: title}), async () => {
+                    closeModal();
+                    try {
+                        const fd = new FormData();
+                        fd.append('action', 'delete-event-permanent');
+                        fd.append('csrf_token', CSRF_TOKEN);
+                        fd.append('id', ev.id);
+                        const r = await fetch('api.php', { method: 'POST', body: fd });
+                        const res = await r.json();
+                        if (res.success) {
+                            showToast(t('toast.event_deleted'), 'success');
+                            loadEventsTrash();
+                        } else {
+                            showToast(res.message || 'Error', 'error');
+                        }
+                    } catch (err) {
+                        showToast(err.message, 'error');
+                    }
+                });
+            };
+            tdActions.appendChild(delBtn);
+
+            tr.appendChild(tdActions);
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function emptyEventsTrash() {
+        showModal(t('modal.empty_trash'), t('modal.empty_trash_confirm'), async () => {
+            closeModal();
+            try {
+                const fd = new FormData();
+                fd.append('action', 'empty-events-trash');
+                fd.append('csrf_token', CSRF_TOKEN);
+                const r = await fetch('api.php', { method: 'POST', body: fd });
+                const res = await r.json();
+                if (res.success) {
+                    showToast(res.message || t('toast.trash_emptied'), 'success');
+                    loadEventsTrash();
+                } else {
+                    showToast(res.message || 'Error', 'error');
+                }
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        });
     }
 
     // Sidebar toggle (mobile)

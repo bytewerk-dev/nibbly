@@ -3387,7 +3387,7 @@
      */
     function buildPagePickerHtml(selectId, inputId) {
         const pages = window.NB_PAGES || [];
-        let options = `<option value="">${t('link_external') || 'External URL'}</option>`;
+        let options = `<option value="">${t('link_external') || 'Custom'}</option>`;
         if (pages.length) {
             options += `<option disabled value="">──── ${t('link_internal') || 'Site pages'} ────</option>`;
             pages.forEach(p => {
@@ -3460,12 +3460,17 @@
         const fieldKey = element.dataset.field;
         const currentText = element.textContent.trim();
         const currentHref = element.getAttribute('href') || '';
+        const currentTarget = element.getAttribute('target') || '';
+        const currentDownload = element.hasAttribute('download');
 
         createLinkEditorDialog();
         initPagePicker('link-editor-page-select', 'link-editor-href');
 
         document.getElementById('link-editor-text').value = currentText;
         syncPagePicker('link-editor-page-select', 'link-editor-href', currentHref);
+        document.getElementById('link-editor-target').checked = currentTarget === '_blank';
+        document.getElementById('link-editor-download').checked = currentDownload;
+        updateDownloadCheckboxState();
 
         const modal = document.getElementById('link-editor-modal');
         modal.classList.add('active');
@@ -3477,6 +3482,38 @@
         setTimeout(() => {
             document.getElementById('link-editor-text').focus();
         }, 100);
+    }
+
+    // Files that typically warrant a "download" attribute on links
+    const DOWNLOAD_EXTENSIONS = [
+        // Documents
+        'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+        'odt', 'ods', 'odp', 'rtf', 'txt', 'csv',
+        // Images
+        'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff', 'avif',
+        // Archives
+        'zip', 'rar', '7z', 'tar', 'gz'
+    ];
+
+    function isDownloadableHref(href) {
+        if (!href) return false;
+        // Strip query string and hash, then extract extension
+        const cleaned = href.split('#')[0].split('?')[0];
+        const match = cleaned.match(/\.([a-z0-9]+)$/i);
+        if (!match) return false;
+        return DOWNLOAD_EXTENSIONS.includes(match[1].toLowerCase());
+    }
+
+    function updateDownloadCheckboxState() {
+        const hrefInput = document.getElementById('link-editor-href');
+        const downloadCheckbox = document.getElementById('link-editor-download');
+        const downloadRow = document.getElementById('link-editor-download-row');
+        if (!hrefInput || !downloadCheckbox || !downloadRow) return;
+
+        const allowed = isDownloadableHref(hrefInput.value);
+        downloadCheckbox.disabled = !allowed;
+        downloadRow.classList.toggle('link-editor-option--disabled', !allowed);
+        if (!allowed) downloadCheckbox.checked = false;
     }
 
     function createLinkEditorDialog() {
@@ -3498,6 +3535,16 @@
                         <input type="text" class="prompt-dialog-input" id="link-editor-text">
                         <label class="prompt-dialog-label" style="margin-top: 12px;">${t('link_target') || 'Link target'}</label>
                         ${buildPagePickerHtml('link-editor-page-select', 'link-editor-href')}
+                        <div class="link-editor-options">
+                            <label class="link-editor-option">
+                                <input type="checkbox" id="link-editor-target">
+                                <span>${t('link_open_new_tab') || 'Open in new tab'}</span>
+                            </label>
+                            <label class="link-editor-option" id="link-editor-download-row">
+                                <input type="checkbox" id="link-editor-download">
+                                <span>${t('link_offer_download') || 'Offer as download'}</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
                 <div class="editor-modal-footer">
@@ -3519,6 +3566,13 @@
                 saveLinkEditor();
             }
         });
+
+        // Keep the download checkbox in sync with the href type
+        document.getElementById('link-editor-href').addEventListener('input', updateDownloadCheckboxState);
+        document.getElementById('link-editor-page-select').addEventListener('change', () => {
+            // change handler on select already updates the hidden href value; wait a tick
+            setTimeout(updateDownloadCheckboxState, 0);
+        });
     }
 
     function closeLinkEditor() {
@@ -3537,6 +3591,9 @@
         const modal = document.getElementById('link-editor-modal');
         const newText = document.getElementById('link-editor-text').value;
         const newHref = document.getElementById('link-editor-href').value;
+        const newTarget = document.getElementById('link-editor-target').checked ? '_blank' : '';
+        const downloadBox = document.getElementById('link-editor-download');
+        const newDownload = !downloadBox.disabled && downloadBox.checked;
 
         // Reset text input state
         const textInput = document.getElementById('link-editor-text');
@@ -3555,6 +3612,18 @@
                 sel.removeAllRanges();
                 sel.addRange(savedRange);
                 document.execCommand('createLink', false, newHref);
+                // Apply target/download to the freshly-created <a>. execCommand
+                // wraps the selection; find the anchor at the current cursor.
+                const anchor = sel.anchorNode && sel.anchorNode.parentElement
+                    ? sel.anchorNode.parentElement.closest('a')
+                    : null;
+                if (anchor) {
+                    if (newTarget === '_blank') {
+                        anchor.setAttribute('target', '_blank');
+                        anchor.setAttribute('rel', 'noopener');
+                    }
+                    if (newDownload) anchor.setAttribute('download', '');
+                }
             }
             return;
         }
@@ -3565,9 +3634,15 @@
         // Push undo state
         pushUndoState();
 
+        // Build the value object. Omit target/download when unset so the JSON
+        // stays minimal and existing content files aren't bloated with defaults.
+        const linkValue = { text: newText, href: newHref };
+        if (newTarget) linkValue.target = newTarget;
+        if (newDownload) linkValue.download = true;
+
         // Update in-memory contentData
         if (!EditorConfig.contentData[page]) EditorConfig.contentData[page] = {};
-        setNestedValue(EditorConfig.contentData[page], fieldKey, { text: newText, href: newHref });
+        setNestedValue(EditorConfig.contentData[page], fieldKey, linkValue);
 
         // Mark as dirty
         EditorConfig.dirtyPages.add(page);
@@ -3575,6 +3650,18 @@
         // Update DOM
         element.textContent = newText;
         element.setAttribute('href', newHref);
+        if (newTarget === '_blank') {
+            element.setAttribute('target', '_blank');
+            element.setAttribute('rel', 'noopener');
+        } else {
+            element.removeAttribute('target');
+            element.removeAttribute('rel');
+        }
+        if (newDownload) {
+            element.setAttribute('download', '');
+        } else {
+            element.removeAttribute('download');
+        }
 
         updateUndoRedoButtons();
     }
@@ -4617,7 +4704,8 @@
                 updateImagePreview(targetInputId);
             }
         };
-        NbImageManager.open(cb);
+        const currentInput = targetInputId ? document.getElementById(targetInputId) : null;
+        NbImageManager.open(cb, currentInput ? currentInput.value : null);
     }
 
     function closeImageManager() { NbImageManager.close(); }
@@ -4625,6 +4713,7 @@
 
     function openImageManagerForEvent() {
         ensureImageManagerInit();
+        const eventInput = document.getElementById('event-image');
         NbImageManager.open(function(imagePath) {
             const input = document.getElementById('event-image');
             if (input) {
@@ -4634,7 +4723,7 @@
                     updateEventImagePreview();
                 }
             }
-        });
+        }, eventInput ? eventInput.value : null);
     }
 
     // Lightbox for previewing the image currently entered in the editor's image input

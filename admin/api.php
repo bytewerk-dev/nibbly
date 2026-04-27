@@ -762,19 +762,32 @@ switch ($action) {
         }
 
         $data = json_decode(file_get_contents(EVENTS_PATH), true);
+        if (!isset($data['trash']) || !is_array($data['trash'])) {
+            $data['trash'] = [];
+        }
 
         $timestamp = date('Y-m-d_His');
         $backupPath = BACKUP_PATH . 'events_' . $timestamp . '.json';
         copy(EVENTS_PATH, $backupPath);
 
-        $originalCount = count($data['events']);
-        $data['events'] = array_values(array_filter($data['events'], function($c) use ($eventId) {
-            return $c['id'] !== $eventId;
-        }));
+        // Move event to trash array (instead of deleting)
+        $movedEvent = null;
+        foreach ($data['events'] as $idx => $existing) {
+            if ($existing['id'] === $eventId) {
+                $movedEvent = $existing;
+                array_splice($data['events'], $idx, 1);
+                break;
+            }
+        }
 
-        if (count($data['events']) === $originalCount) {
+        if ($movedEvent === null) {
             jsonResponse(false, null, 'Event not found');
         }
+
+        $data['trash'][] = [
+            'event' => $movedEvent,
+            'deletedAt' => date('c'),
+        ];
 
         $data['lastModified'] = date('c');
 
@@ -785,10 +798,146 @@ switch ($action) {
         );
 
         if ($result === false) {
-            jsonResponse(false, null, 'Error deleting');
+            jsonResponse(false, null, 'Error moving event to trash');
         }
 
-        jsonResponse(true, null, 'Event deleted');
+        jsonResponse(true, null, 'Event moved to trash');
+        break;
+
+    case 'list-events-trash':
+        if (!file_exists(EVENTS_PATH)) {
+            jsonResponse(true, []);
+        }
+        $data = json_decode(file_get_contents(EVENTS_PATH), true);
+        $trash = $data['trash'] ?? [];
+        // Sort newest first
+        usort($trash, function($a, $b) {
+            return strcmp($b['deletedAt'] ?? '', $a['deletedAt'] ?? '');
+        });
+        jsonResponse(true, $trash);
+        break;
+
+    case 'restore-event':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $eventId = $_POST['id'] ?? '';
+        if (empty($eventId)) {
+            jsonResponse(false, null, 'Event ID missing');
+        }
+
+        if (!file_exists(EVENTS_PATH)) {
+            jsonResponse(false, null, 'No events found');
+        }
+
+        $data = json_decode(file_get_contents(EVENTS_PATH), true);
+        if (!isset($data['trash']) || !is_array($data['trash'])) {
+            jsonResponse(false, null, 'Event not in trash');
+        }
+
+        $restored = null;
+        foreach ($data['trash'] as $idx => $item) {
+            if (($item['event']['id'] ?? null) === $eventId) {
+                $restored = $item['event'];
+                array_splice($data['trash'], $idx, 1);
+                break;
+            }
+        }
+
+        if ($restored === null) {
+            jsonResponse(false, null, 'Event not found in trash');
+        }
+
+        // Avoid id collision: if restored id already exists, append a suffix
+        $existingIds = array_map(function($e) { return $e['id'] ?? ''; }, $data['events']);
+        if (in_array($restored['id'], $existingIds, true)) {
+            $restored['id'] = $restored['id'] . '-restored-' . time();
+        }
+        $data['events'][] = $restored;
+        $data['lastModified'] = date('c');
+
+        $result = file_put_contents(
+            EVENTS_PATH,
+            json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
+            LOCK_EX
+        );
+
+        if ($result === false) {
+            jsonResponse(false, null, 'Error restoring event');
+        }
+
+        jsonResponse(true, ['id' => $restored['id']], 'Event restored');
+        break;
+
+    case 'delete-event-permanent':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $eventId = $_POST['id'] ?? '';
+        if (empty($eventId)) {
+            jsonResponse(false, null, 'Event ID missing');
+        }
+
+        if (!file_exists(EVENTS_PATH)) {
+            jsonResponse(false, null, 'No events found');
+        }
+
+        $data = json_decode(file_get_contents(EVENTS_PATH), true);
+        if (!isset($data['trash']) || !is_array($data['trash'])) {
+            jsonResponse(false, null, 'Event not in trash');
+        }
+
+        $found = false;
+        foreach ($data['trash'] as $idx => $item) {
+            if (($item['event']['id'] ?? null) === $eventId) {
+                array_splice($data['trash'], $idx, 1);
+                $found = true;
+                break;
+            }
+        }
+
+        if (!$found) {
+            jsonResponse(false, null, 'Event not found in trash');
+        }
+
+        $result = file_put_contents(
+            EVENTS_PATH,
+            json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
+            LOCK_EX
+        );
+
+        if ($result === false) {
+            jsonResponse(false, null, 'Error deleting event permanently');
+        }
+
+        jsonResponse(true, null, 'Event permanently deleted');
+        break;
+
+    case 'empty-events-trash':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        if (!file_exists(EVENTS_PATH)) {
+            jsonResponse(true, null, 'Trash is empty');
+        }
+
+        $data = json_decode(file_get_contents(EVENTS_PATH), true);
+        $data['trash'] = [];
+
+        $result = file_put_contents(
+            EVENTS_PATH,
+            json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
+            LOCK_EX
+        );
+
+        if ($result === false) {
+            jsonResponse(false, null, 'Error emptying trash');
+        }
+
+        jsonResponse(true, null, 'Events trash emptied');
         break;
 
     case 'toggle-event-visibility':
@@ -1562,10 +1711,12 @@ switch ($action) {
 
     case 'load-settings':
         $defaults = [
+            'favicon' => '/assets/images/favicon.svg',
             'branding' => [
-                'logo' => '/assets/images/favicon.svg',
+                'logo' => '',
                 'name' => defined('SITE_NAME') ? SITE_NAME : 'CMS',
-                'showBranding' => true
+                'showBranding' => true,
+                'logoDisplay' => 'both'
             ],
             'theme' => [
                 'adminTheme' => 'light',
@@ -1620,11 +1771,14 @@ switch ($action) {
 
         // Whitelist allowed keys
         $allowed = [
-            'branding' => ['logo', 'name', 'showBranding'],
+            'branding' => ['logo', 'name', 'showBranding', 'logoDisplay'],
             'theme' => ['adminTheme', 'primaryColor', 'accentColor', 'buttonGlow', 'buttonRadius'],
-            'general' => ['adminLanguage'],
+            'general' => ['adminLanguage', 'frontendLoginRedirect'],
             'email' => ['method', 'recipientEmail', 'fromEmail', 'fromName', 'smtpHost', 'smtpPort', 'smtpUsername', 'smtpPassword', 'smtpEncryption']
         ];
+
+        // Top-level scalar settings (not nested under a group)
+        $allowedScalar = ['favicon'];
 
         $sanitized = [];
         foreach ($allowed as $group => $keys) {
@@ -1656,6 +1810,11 @@ switch ($action) {
                         $value = max(0, min(24, intval($value)));
                     }
 
+                    // Validate frontendLoginRedirect mode
+                    if ($key === 'frontendLoginRedirect' && !in_array($value, ['auto', 'dashboard'], true)) {
+                        jsonResponse(false, null, 'Invalid frontendLoginRedirect value');
+                    }
+
                     // Validate logo path (prevent traversal and protocol injection)
                     if ($key === 'logo') {
                         $value = (string)$value;
@@ -1666,6 +1825,11 @@ switch ($action) {
                         )) {
                             jsonResponse(false, null, 'Invalid logo path');
                         }
+                    }
+
+                    // Validate logoDisplay (3-way selector)
+                    if ($key === 'logoDisplay' && !in_array($value, ['favicon', 'text', 'both'], true)) {
+                        $value = 'both';
                     }
 
                     // Validate name
@@ -1725,6 +1889,22 @@ switch ($action) {
                     $sanitized[$group][$key] = $value;
                 }
             }
+        }
+
+        // Top-level scalars (favicon)
+        foreach ($allowedScalar as $scalarKey) {
+            if (!array_key_exists($scalarKey, $settings)) continue;
+            $value = (string)$settings[$scalarKey];
+            if ($scalarKey === 'favicon') {
+                if ($value !== '' && (
+                    strpos($value, '..') !== false ||
+                    !str_starts_with($value, '/assets/images/') ||
+                    preg_match('#[:\x00]#', $value)
+                )) {
+                    jsonResponse(false, null, 'Invalid favicon path');
+                }
+            }
+            $sanitized[$scalarKey] = $value;
         }
 
         $contentDir = dirname(SETTINGS_PATH);
