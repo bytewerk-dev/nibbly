@@ -94,10 +94,6 @@
                     '<button type="button" class="nb-imgmgr-close" aria-label="Close">&times;</button>' +
                 '</div>' +
                 '<div class="nb-imgmgr-toolbar">' +
-                    '<label class="nb-imgmgr-upload-btn">' +
-                        Icons.upload + ' <span>' + escapeHtml(t('image.upload')) + '</span>' +
-                        '<input type="file" class="nb-imgmgr-upload-input" accept=".jpg,.jpeg,.png,.webp">' +
-                    '</label>' +
                     '<span class="nb-imgmgr-formats">' + escapeHtml(t('image.formats_hint')) + '</span>' +
                     '<span class="nb-imgmgr-spacer"></span>' +
                     '<input type="text" class="nb-imgmgr-search" placeholder="' + escapeHtml(t('image.search')) + '">' +
@@ -120,6 +116,14 @@
                         '<div class="nb-imgmgr-list-body"></div>' +
                     '</div>' +
                 '</div>' +
+                '<div class="nb-imgmgr-dropzone">' +
+                    '<span class="nb-imgmgr-dropzone-text">' + escapeHtml(t('image.drop_files')) + '</span>' +
+                    '<span class="nb-imgmgr-dropzone-or">' + escapeHtml(t('image.or')) + '</span>' +
+                    '<label class="nb-imgmgr-upload-btn">' +
+                        Icons.upload + ' <span>' + escapeHtml(t('image.upload')) + '</span>' +
+                        '<input type="file" class="nb-imgmgr-upload-input" accept=".jpg,.jpeg,.png,.webp">' +
+                    '</label>' +
+                '</div>' +
                 '<div class="nb-imgmgr-footer">' +
                     '<div class="nb-imgmgr-selection-info"></div>' +
                     '<div class="nb-imgmgr-footer-actions">' +
@@ -138,6 +142,26 @@
         modal.querySelector('[data-action="confirm"]').addEventListener('click', confirmSelection);
 
         modal.querySelector('.nb-imgmgr-upload-input').addEventListener('change', handleUpload);
+
+        var dropzone = modal.querySelector('.nb-imgmgr-dropzone');
+        ['dragenter', 'dragover'].forEach(function (evt) {
+            dropzone.addEventListener(evt, function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.add('nb-imgmgr-dropzone--active');
+            });
+        });
+        ['dragleave', 'drop'].forEach(function (evt) {
+            dropzone.addEventListener(evt, function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.remove('nb-imgmgr-dropzone--active');
+            });
+        });
+        dropzone.addEventListener('drop', function (e) {
+            var files = e.dataTransfer && e.dataTransfer.files;
+            if (files && files.length > 0) uploadFile(files[0]);
+        });
 
         modal.querySelector('.nb-imgmgr-search').addEventListener('input', function (e) {
             state.search = e.target.value.toLowerCase().trim();
@@ -184,10 +208,10 @@
     // ============================================================
     // OPEN / CLOSE
     // ============================================================
-    function open(callback) {
+    function open(callback, currentPath) {
         createModal();
         state.callback = callback || null;
-        state.selectedPath = null;
+        state.selectedPath = normalizeImagePath(currentPath);
         state.search = '';
 
         var modal = document.getElementById('nb-imgmgr-modal');
@@ -198,6 +222,16 @@
 
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
+    }
+
+    function normalizeImagePath(path) {
+        if (!path) return null;
+        path = String(path).trim();
+        if (!path) return null;
+        // Strip leading "../" segments and ensure leading "/" so we match state.data paths.
+        path = path.replace(/^(\.\.\/)+/, '/');
+        if (path.charAt(0) !== '/') path = '/' + path;
+        return path;
     }
 
     function close() {
@@ -508,17 +542,20 @@
 
     function handleUpload(e) {
         var file = e.target.files[0];
+        uploadFile(file);
+        e.target.value = '';
+    }
+
+    function uploadFile(file) {
         if (!file) return;
 
         var allowed = ['image/jpeg', 'image/png', 'image/webp'];
         if (allowed.indexOf(file.type) === -1) {
             config.showToast(t('image.format_error'), 'error');
-            e.target.value = '';
             return;
         }
         if (file.size > 5 * 1024 * 1024) {
             config.showToast(t('image.size_error'), 'error');
-            e.target.value = '';
             return;
         }
 
@@ -538,7 +575,6 @@
                     loadImages();
                     if (result.data && result.data.path) {
                         state.selectedPath = result.data.path.replace(/^\.\.\//, '/');
-                        // Re-render once loaded
                         setTimeout(updateSelectionUI, 300);
                     }
                 } else {
@@ -547,8 +583,7 @@
             })
             .catch(function (err) {
                 config.showToast(err.message || t('toast.error'), 'error');
-            })
-            .finally(function () { e.target.value = ''; });
+            });
     }
 
     // ============================================================

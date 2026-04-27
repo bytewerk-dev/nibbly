@@ -465,6 +465,112 @@ a:hover {
     text-decoration: underline;
 }
 
+/* Info banner — used for the "return to frontend" hint after dblclick login.
+   Lives at the very top of .admin-main, so it inherits the top-left radius. */
+.info-banner {
+    background: var(--nb-primary-medium);
+    border-bottom: 2px solid var(--nb-primary);
+    padding: var(--nb-space-3) var(--nb-space-5);
+    /* Match .admin-main's top-left radius so the banner doesn't bleed past it. */
+    border-top-left-radius: var(--nb-radius-xl);
+}
+
+.info-banner__inner {
+    max-width: 900px;
+    margin: 0 auto;
+    color: var(--nb-text);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--nb-space-3);
+    position: relative;
+    padding-right: 32px;
+}
+
+.info-banner__title {
+    color: var(--nb-text);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+}
+
+/* Text + CTA live inside a single inline wrapper, so the CTA reads as the
+   end of the sentence rather than a button next to the close (×) icon. */
+.info-banner__body {
+    flex: 1 1 auto;
+}
+
+.info-banner__cta {
+    color: var(--nb-primary, #2563eb);
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    margin-left: 0.35em;
+}
+
+.info-banner__cta:hover {
+    text-decoration: underline;
+}
+
+.info-banner__close {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+    background: transparent;
+    border: 0;
+    padding: 4px 8px;
+    font-size: 20px;
+    line-height: 1;
+    color: var(--nb-text-muted, #6b7280);
+    cursor: pointer;
+    border-radius: var(--nb-radius-sm);
+}
+
+.info-banner__close:hover {
+    background: rgba(0, 0, 0, 0.08);
+    color: var(--nb-text);
+}
+
+/* Radio-group — used in settings forms for mutually exclusive options.
+   Spec: needs to override .form-group label { display: block; margin-bottom: ... }. */
+.form-group .form-group-label {
+    display: block;
+    margin-bottom: var(--nb-space-2);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--nb-text);
+}
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.form-group label.radio-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 0.9375rem;
+    font-weight: 400;
+    margin-bottom: 0;
+    color: var(--nb-text);
+}
+
+.form-group label.radio-option input[type="radio"] {
+    width: auto;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
 
 /* ============================================================
    SIDEBAR LAYOUT
@@ -481,6 +587,10 @@ a:hover {
     display: flex;
     flex-direction: column;
     transition: transform var(--nb-duration-normal) var(--nb-ease);
+    position: sticky;
+    top: 49px;
+    align-self: flex-start;
+    height: calc(100vh - 49px);
 }
 
 .sidebar-top {
@@ -526,7 +636,7 @@ a:hover {
 }
 
 .sidebar-nav-item:hover {
-    background: var(--nb-bg-hover);
+    background: var(--nb-primary-subtle);
     color: var(--nb-text);
 }
 
@@ -593,7 +703,14 @@ a:hover {
     display: flex;
     align-items: center;
     gap: var(--nb-space-4);
-    padding: var(--nb-space-3) var(--nb-space-6);
+    padding-block: var(--nb-space-3);
+    padding-inline-start: var(--nb-space-6);
+    /* Align .topbar-actions with the right edge of .admin-container's content area.
+       Topbar spans the full viewport; .admin-container sits inside .admin-main
+       (which starts after the 180px sidebar) with max-width 1280px and 24px right
+       padding. So the container's inner right edge is at 180px + 1280px - 24px
+       = 1436px from the viewport's left edge. */
+    padding-inline-end: max(var(--nb-space-6), 100% - 1436px);
     background: var(--nb-sidebar-bg);
     position: sticky;
     top: 0;
@@ -740,8 +857,8 @@ a:hover {
    ============================================================ */
 
 .admin-container {
-    max-width: 960px;
-    padding: var(--nb-space-6) var(--nb-space-8);
+    max-width: 1280px;
+    padding: var(--nb-space-6);
 }
 
 
@@ -927,6 +1044,45 @@ a:hover {
     font-size: 0.7rem;
     user-select: none;
     margin: 0 2px;
+}
+
+/* Event status pills */
+.events-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: var(--nb-radius-full);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.events-status--upcoming {
+    background: var(--nb-primary-subtle);
+    color: var(--nb-primary);
+}
+
+.events-status--today {
+    background: rgba(217, 119, 6, 0.12);
+    color: var(--nb-warning, #d97706);
+}
+
+.events-status--past {
+    background: var(--nb-bg-hover);
+    color: var(--nb-text-muted);
+}
+
+.events-status--draft {
+    background: var(--nb-bg-hover);
+    color: var(--nb-text-muted);
+    font-style: italic;
+}
+
+/* Unread mail row — emphasised typography */
+.mail-row-unread .page-list-title-link,
+.mail-row-unread td:nth-child(2) {
+    font-weight: 700;
+    color: var(--nb-text);
 }
 
 /* Sortable column headers */
@@ -1117,6 +1273,7 @@ a:hover {
     border-radius: var(--nb-radius-md);
     margin-bottom: var(--nb-space-2);
     background: var(--nb-bg-elevated);
+    overflow: hidden;
 }
 
 .ce-group--nested {
@@ -1535,100 +1692,6 @@ a:hover {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
-}
-
-
-/* ============================================================
-   MAIL LIST
-   ============================================================ */
-
-.mails-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--nb-space-5);
-    flex-wrap: wrap;
-    gap: var(--nb-space-4);
-}
-
-.mails-header h2 {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-}
-
-.mails-actions {
-    display: flex;
-    gap: var(--nb-space-2);
-}
-
-.mails-list {
-    background: var(--nb-bg-elevated);
-    border-radius: var(--nb-radius-lg);
-    border: 1px solid var(--nb-border);
-    box-shadow: var(--nb-shadow-sm);
-    overflow: hidden;
-}
-
-.mails-empty {
-    padding: var(--nb-space-10);
-    text-align: center;
-    color: var(--nb-text-muted);
-}
-
-.mail-item {
-    padding: var(--nb-space-4) var(--nb-space-5);
-    border-bottom: 1px solid var(--nb-border);
-    cursor: pointer;
-    transition: background-color var(--nb-duration-fast) var(--nb-ease);
-}
-
-.mail-item:last-child {
-    border-bottom: none;
-}
-
-.mail-item:hover {
-    background: var(--nb-bg-hover);
-}
-
-.mail-item.mail-unread {
-    background: var(--nb-primary-subtle);
-    border-left: 3px solid var(--nb-primary);
-}
-
-.mail-item.mail-unread:hover {
-    background: var(--nb-primary-muted);
-}
-
-.mail-item-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 5px;
-}
-
-.mail-name {
-    font-weight: 600;
-    color: var(--nb-text);
-}
-
-.mail-date {
-    font-size: 0.8125rem;
-    color: var(--nb-text-muted);
-}
-
-.mail-item-subject {
-    font-weight: 500;
-    color: var(--nb-primary);
-    margin-bottom: 5px;
-}
-
-.mail-item-preview {
-    font-size: 0.875rem;
-    color: var(--nb-text-muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 
@@ -2060,6 +2123,49 @@ a:hover {
     margin-bottom: var(--nb-space-5);
 }
 
+.settings-section {
+    border: 1px solid var(--nb-border);
+    border-radius: var(--nb-radius-lg);
+    padding: var(--nb-space-5) var(--nb-space-6) var(--nb-space-3);
+    margin: 0 0 var(--nb-space-6) 0;
+}
+
+/* Float legend inside the box, not breaking the border line */
+.settings-section > legend {
+    float: left;
+    width: 100%;
+    padding: 0;
+    margin-bottom: var(--nb-space-4);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--nb-text);
+}
+
+.settings-section > legend + * {
+    clear: left;
+}
+
+.settings-section .form-group:last-child {
+    margin-bottom: var(--nb-space-2);
+}
+
+.form-group-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--nb-space-8);
+}
+
+@media (min-width: 1200px) {
+    .form-group-row {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.form-group-row .form-group {
+    margin-bottom: var(--nb-space-5);
+    min-width: 0;
+}
+
 .change-password-form {
     max-width: 500px;
 }
@@ -2069,6 +2175,12 @@ a:hover {
     display: flex;
     align-items: flex-start;
     gap: var(--nb-space-4);
+}
+
+@media (max-width: 479px) {
+    .logo-preview-group {
+        flex-direction: column;
+    }
 }
 
 .logo-preview {
@@ -2102,13 +2214,58 @@ a:hover {
     gap: var(--nb-space-2);
 }
 
-.logo-path-input input {
+.logo-path-input .input-with-clear {
+    position: relative;
     flex: 1;
     min-width: 0;
 }
 
+.logo-path-input .input-with-clear input {
+    width: 100%;
+    padding-right: 2rem;
+}
+
 .logo-path-input .btn {
     flex-shrink: 0;
+}
+
+.input-clear-btn {
+    position: absolute;
+    top: 50%;
+    right: 0.5rem;
+    transform: translateY(-50%);
+    width: 1.25rem;
+    height: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--nb-text-muted);
+    cursor: pointer;
+    padding: 0;
+    border-radius: var(--nb-radius-sm);
+    transition: background-color var(--nb-duration-fast) var(--nb-ease),
+                color var(--nb-duration-fast) var(--nb-ease);
+}
+
+.input-clear-btn:hover {
+    background: var(--nb-bg-hover);
+    color: var(--nb-text);
+}
+
+.input-clear-btn:focus-visible {
+    outline: 2px solid var(--nb-primary);
+    outline-offset: 2px;
+}
+
+.input-clear-btn[hidden] {
+    display: none;
+}
+
+.input-clear-btn svg {
+    width: 0.875rem;
+    height: 0.875rem;
 }
 
 /* Toggle Switch */

@@ -84,6 +84,8 @@
     "image.save_new_desc": "El archivo existente se mantiene, el subido conserva su nombre",
     "image.choose_file": "Seleccionar archivo",
     "image.upload": "Subir",
+    "image.drop_files": "Arrastra archivos para subir",
+    "image.or": "o",
     "image.formats_hint": "Formatos permitidos: JPG, PNG, WebP (máx. 5 MB)",
     "image.search": "Buscar archivo...",
     "image.grid_view": "Vista en cuadrícula",
@@ -145,11 +147,13 @@
     "nav.unsaved_changes": "Tienes cambios sin guardar. ¿Salir de la página?",
     "nav.edit_mode_active": "Estás en modo edición. ¿Salir de la página?",
     "link_target": "Destino del enlace",
-    "link_external": "URL externa",
+    "link_external": "Personalizado",
     "link_internal": "Páginas del sitio",
     "image.no_images": "No se encontraron imágenes.",
     "image.no_search_results": "No hay imágenes para \"{term}\".",
     "image.copy_path": "Copiar ruta",
     "toast.copied": "Copiado al portapapeles.",
-    "toast.error": "Se produjo un error."
+    "toast.error": "Se produjo un error.",
+    "link_open_new_tab": "Abrir en nueva pestaña",
+    "link_offer_download": "Ofrecer como descarga"
 }

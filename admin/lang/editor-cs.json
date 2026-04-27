@@ -84,6 +84,8 @@
     "image.save_new_desc": "Existující soubor zůstane zachován, nahraný soubor si ponechá svůj název",
     "image.choose_file": "Vybrat soubor",
     "image.upload": "Nahrát",
+    "image.drop_files": "Přetáhněte soubory k nahrání",
+    "image.or": "nebo",
     "image.formats_hint": "Povolené formáty: JPG, PNG, WebP (max. 5 MB)",
     "image.search": "Hledat soubor...",
     "image.grid_view": "Mřížkové zobrazení",
@@ -145,11 +147,13 @@
     "nav.unsaved_changes": "Máte neuložené změny. Opravdu opustit stránku?",
     "nav.edit_mode_active": "Jste v režimu úprav. Opravdu opustit stránku?",
     "link_target": "Cíl odkazu",
-    "link_external": "Externí URL",
+    "link_external": "Vlastní",
     "link_internal": "Stránky webu",
     "image.no_images": "Nebyly nalezeny žádné obrázky.",
     "image.no_search_results": "Nebyly nalezeny obrázky pro \"{term}\".",
     "image.copy_path": "Kopírovat cestu",
     "toast.copied": "Zkopírováno do schránky.",
-    "toast.error": "Došlo k chybě."
+    "toast.error": "Došlo k chybě.",
+    "link_open_new_tab": "Otevřít v nové kartě",
+    "link_offer_download": "Nabídnout ke stažení"
 }

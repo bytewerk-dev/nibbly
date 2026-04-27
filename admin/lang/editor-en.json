@@ -84,6 +84,8 @@
     "image.save_new_desc": "Existing file is kept, uploaded file keeps its name",
     "image.choose_file": "Choose file",
     "image.upload": "Upload",
+    "image.drop_files": "Drop files to upload",
+    "image.or": "or",
     "image.formats_hint": "Allowed formats: JPG, PNG, WebP (max. 5 MB)",
     "image.search": "Search filename...",
     "image.grid_view": "Grid view",
@@ -145,11 +147,13 @@
     "nav.unsaved_changes": "You have unsaved changes. Really leave this page?",
     "nav.edit_mode_active": "You are in edit mode. Really leave this page?",
     "link_target": "Link target",
-    "link_external": "External URL",
+    "link_external": "Custom",
     "link_internal": "Site pages",
     "image.no_images": "No images found.",
     "image.no_search_results": "No images found for \"{term}\".",
     "image.copy_path": "Copy path",
     "toast.copied": "Copied to clipboard.",
-    "toast.error": "An error occurred."
+    "toast.error": "An error occurred.",
+    "link_open_new_tab": "Open in new tab",
+    "link_offer_download": "Offer as download"
 }

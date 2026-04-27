@@ -226,15 +226,31 @@ if (isset($_GET['logout'])) {
     exit;
 }
 
-// Save redirect URL (where to go after login)
-// When the user logs in via /admin/index.php they always land on the dashboard.
-// Only inline-editor logins (with ?redirect=… param) should return to the page.
-if (!isset($_SESSION['redirect_after_login'])) {
-    if (!empty($_GET['redirect'])) {
-        $_SESSION['redirect_after_login'] = validateRedirectUrl($_GET['redirect']);
+// Save redirect URL (where to go after login).
+// Behaviour depends on the `general.frontendLoginRedirect` site setting:
+//   'auto'      — return to ?redirect=… page after login (default)
+//   'dashboard' — always land in the dashboard; the dashboard banner offers
+//                 a link back to the source page via $_SESSION['login_source_url'].
+//
+// We honour ?redirect=… on every GET so that an admin who arrives via the
+// footer dblclick gets the freshest source URL even if a stale value lingers
+// in the session from an earlier visit.
+if (!empty($_GET['redirect'])) {
+    $sourceUrl = validateRedirectUrl($_GET['redirect']);
+    $_SESSION['login_source_url'] = $sourceUrl;
+
+    $settings = (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH))
+        ? json_decode(file_get_contents(SETTINGS_PATH), true)
+        : [];
+    $loginMode = $settings['general']['frontendLoginRedirect'] ?? 'auto';
+
+    if ($loginMode === 'auto') {
+        $_SESSION['redirect_after_login'] = $sourceUrl;
     } else {
         $_SESSION['redirect_after_login'] = 'dashboard.php';
     }
+} elseif (!isset($_SESSION['redirect_after_login'])) {
+    $_SESSION['redirect_after_login'] = 'dashboard.php';
 }
 
 // Already logged in? Redirect to saved page
@@ -417,7 +433,7 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
 }
 
 // Load settings for branding/theme
-$siteSettings = ['branding' => ['logo' => '/assets/images/favicon.svg', 'name' => '', 'showBranding' => true], 'theme' => ['adminTheme' => 'light', 'primaryColor' => '#2563eb', 'accentColor' => '#60a5fa']];
+$siteSettings = ['favicon' => '/assets/images/favicon.svg', 'branding' => ['logo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both'], 'theme' => ['adminTheme' => 'light', 'primaryColor' => '#2563eb', 'accentColor' => '#60a5fa']];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     $loadedSettings = json_decode(file_get_contents(SETTINGS_PATH), true);
     if (is_array($loadedSettings)) {
@@ -432,7 +448,7 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
 }
 $adminTheme = $siteSettings['theme']['adminTheme'] ?? 'light';
 $showBranding = $siteSettings['branding']['showBranding'] ?? true;
-$brandLogo = !empty($siteSettings['branding']['logo']) ? $siteSettings['branding']['logo'] : '/assets/images/favicon.svg';
+$brandLogo = !empty($siteSettings['branding']['logo']) ? $siteSettings['branding']['logo'] : ($siteSettings['favicon'] ?? '/assets/images/favicon.svg');
 $brandName = $siteSettings['branding']['name'] ?? (defined('SITE_NAME') ? SITE_NAME : 'CMS');
 ?>
 <!DOCTYPE html>

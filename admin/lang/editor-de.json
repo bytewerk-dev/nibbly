@@ -84,6 +84,8 @@
     "image.save_new_desc": "Bestehende Datei bleibt erhalten, hochgeladene Datei behält ihren Namen",
     "image.choose_file": "Datei auswählen",
     "image.upload": "Hochladen",
+    "image.drop_files": "Dateien zum Hochladen ablegen",
+    "image.or": "oder",
     "image.formats_hint": "Erlaubte Formate: JPG, PNG, WebP (max. 5 MB)",
     "image.search": "Dateiname suchen...",
     "image.grid_view": "Gitteransicht",
@@ -145,11 +147,13 @@
     "nav.unsaved_changes": "Du hast ungespeicherte Änderungen. Seite wirklich verlassen?",
     "nav.edit_mode_active": "Du bist im Bearbeitungsmodus. Seite wirklich verlassen?",
     "link_target": "Linkziel",
-    "link_external": "Externe URL",
+    "link_external": "Benutzerdefiniert",
     "link_internal": "Seiten",
     "image.no_images": "Keine Bilder gefunden.",
     "image.no_search_results": "Keine Bilder gefunden für \"{term}\".",
     "image.copy_path": "Pfad kopieren",
     "toast.copied": "In Zwischenablage kopiert.",
-    "toast.error": "Ein Fehler ist aufgetreten."
+    "toast.error": "Ein Fehler ist aufgetreten.",
+    "link_open_new_tab": "In neuem Tab öffnen",
+    "link_offer_download": "Als Download anbieten"
 }

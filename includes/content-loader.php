@@ -376,9 +376,13 @@ function editableLink($page, $fieldKey, $defaultText = '', $defaultHref = '#', $
 
     $text = $defaultText;
     $href = $defaultHref;
+    $target = '';
+    $download = false;
     if (is_array($linkData)) {
         $text = $linkData['text'] ?? $defaultText;
         $href = $linkData['href'] ?? $defaultHref;
+        $target = $linkData['target'] ?? '';
+        $download = !empty($linkData['download']);
     } elseif (is_string($linkData)) {
         $text = $linkData;
     }
@@ -386,6 +390,12 @@ function editableLink($page, $fieldKey, $defaultText = '', $defaultHref = '#', $
     $hidden = isFieldHidden($data, $fieldKey);
     $classAttr = $class ? ' class="' . htmlspecialchars($class) . '"' : '';
     $extraAttrs = $attrs ? ' ' . $attrs : '';
+    $targetAttr = '';
+    if ($target === '_blank') {
+        // noopener hardens against reverse tabnabbing on new-tab links
+        $targetAttr = ' target="_blank" rel="noopener"';
+    }
+    $downloadAttr = $download ? ' download' : '';
 
     // Decode HTML entities first (e.g. &rarr; → →), then escape for safe output.
     // This prevents double-encoding: &rarr; would become &amp;rarr; without decode.
@@ -393,13 +403,13 @@ function editableLink($page, $fieldKey, $defaultText = '', $defaultHref = '#', $
 
     if (isAdminLoggedIn()) {
         $hiddenAttr = $hidden ? ' data-hidden="true"' : '';
-        return '<a href="' . htmlspecialchars($href) . '"' . $classAttr . $extraAttrs
+        return '<a href="' . htmlspecialchars($href) . '"' . $classAttr . $extraAttrs . $targetAttr . $downloadAttr
             . ' data-editable-link data-page="' . htmlspecialchars($page) . '" data-field="' . htmlspecialchars($fieldKey) . '"' . $hiddenAttr . '>'
             . $safeText . '</a>';
     }
 
     if ($hidden) return '';
-    return '<a href="' . htmlspecialchars($href) . '"' . $classAttr . $extraAttrs . '>'
+    return '<a href="' . htmlspecialchars($href) . '"' . $classAttr . $extraAttrs . $targetAttr . $downloadAttr . '>'
         . $safeText . '</a>';
 }
 

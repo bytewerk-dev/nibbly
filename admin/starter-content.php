@@ -152,6 +152,11 @@ function getStarterI18n($siteName) {
             'comp_faq_3_a' => 'Every time you save content, Nibbly creates a timestamped copy of the JSON file in the backups/ directory. You can restore any previous version from the admin dashboard.',
             'comp_faq_4_q' => 'Is there a build step?',
             'comp_faq_4_a' => 'No. Nibbly is plain PHP — edit a file and the change is live. No compilation, no bundling, no deployment pipeline.',
+            'comp_buttons_heading' => 'Buttons & Links',
+            'comp_buttons_desc' => 'Three call-to-action styles for different emphasis levels. Each is an editable link — click while in edit mode to change text and target.',
+            'comp_btn_primary' => 'Primary button',
+            'comp_btn_secondary' => 'Secondary button',
+            'comp_btn_text' => 'Text link',
             'comp_timeline_heading' => 'Timeline',
             'comp_timeline_desc' => 'A vertical changelog for milestones or version history.',
             'comp_tl_1_date' => 'Today',
@@ -326,6 +331,11 @@ function getStarterI18n($siteName) {
             'comp_faq_3_a' => 'Bei jedem Speichern erstellt Nibbly eine Kopie der JSON-Datei mit Zeitstempel im backups/-Verzeichnis. Du kannst jede frühere Version über das Admin-Dashboard wiederherstellen.',
             'comp_faq_4_q' => 'Gibt es einen Build-Step?',
             'comp_faq_4_a' => 'Nein. Nibbly ist reines PHP — bearbeite eine Datei und die Änderung ist sofort live. Keine Kompilierung, kein Bundling, keine Deployment-Pipeline.',
+            'comp_buttons_heading' => 'Buttons & Links',
+            'comp_buttons_desc' => 'Drei Call-to-Action-Stile für unterschiedliche Gewichtung. Jeder ist ein bearbeitbarer Link — im Edit-Modus anklicken, um Text und Ziel zu ändern.',
+            'comp_btn_primary' => 'Primärer Button',
+            'comp_btn_secondary' => 'Sekundärer Button',
+            'comp_btn_text' => 'Textlink',
             'comp_timeline_heading' => 'Timeline',
             'comp_timeline_desc' => 'Ein vertikaler Zeitstrahl für Meilensteine oder Versionshistorie.',
             'comp_tl_1_date' => 'Heute',
@@ -500,6 +510,11 @@ function getStarterI18n($siteName) {
             'comp_faq_3_a' => 'Cada vez que guardas, Nibbly crea una copia con marca de tiempo en el directorio backups/. Puedes restaurar cualquier versión anterior desde el dashboard.',
             'comp_faq_4_q' => '¿Hay un paso de compilación?',
             'comp_faq_4_a' => 'No. Nibbly es PHP puro — edita un archivo y el cambio está en vivo. Sin compilación, sin bundling, sin pipeline de despliegue.',
+            'comp_buttons_heading' => 'Botones y enlaces',
+            'comp_buttons_desc' => 'Tres estilos de llamada a la acción para diferentes niveles de énfasis. Cada uno es un enlace editable — haz clic en modo edición para cambiar el texto y el destino.',
+            'comp_btn_primary' => 'Botón principal',
+            'comp_btn_secondary' => 'Botón secundario',
+            'comp_btn_text' => 'Enlace de texto',
             'comp_timeline_heading' => 'Línea de tiempo',
             'comp_timeline_desc' => 'Una línea de tiempo vertical para hitos o historial de versiones.',
             'comp_tl_1_date' => 'Hoy',
@@ -962,6 +977,13 @@ function getComponentsContent($lang, $t) {
                 ['value' => $t['comp_stat_4_value'], 'label' => $t['comp_stat_4_label']],
             ],
         ],
+        'buttons' => [
+            'heading' => $t['comp_buttons_heading'],
+            'desc' => $t['comp_buttons_desc'],
+            'primary' => ['text' => $t['comp_btn_primary'], 'href' => '#'],
+            'secondary' => ['text' => $t['comp_btn_secondary'], 'href' => '#'],
+            'text' => ['text' => $t['comp_btn_text'], 'href' => '#'],
+        ],
         'testimonials' => [
             'heading' => $t['comp_testimonials_heading'],
             'desc' => $t['comp_testimonials_desc'],
@@ -1064,6 +1086,16 @@ $_p = $contentPage;
                 <h2><?php echo editableText($_p, 'stats.heading', 'Stats'); ?></h2>
                 <p><?php echo editableText($_p, 'stats.desc', ''); ?></p>
                 <?php echo renderStats($_p); ?>
+            </section>
+
+            <section class="demo-section">
+                <h2><?php echo editableText($_p, 'buttons.heading', 'Buttons & Links'); ?></h2>
+                <p><?php echo editableText($_p, 'buttons.desc', ''); ?></p>
+                <div class="demo-buttons">
+                    <?php echo editableLink($_p, 'buttons.primary', 'Primary button', '#', 'btn btn-gradient'); ?>
+                    <?php echo editableLink($_p, 'buttons.secondary', 'Secondary button', '#', 'btn btn-outline'); ?>
+                    <?php echo editableLink($_p, 'buttons.text', 'Text link', '#'); ?>
+                </div>
             </section>
 
             <section class="demo-section">
@@ -1365,22 +1397,28 @@ function getStarterEvents($languages) {
 
     $events = [];
 
+    // Demo events use obviously fictional names so nobody mistakes them
+    // for real upcoming events. Replace or delete them in the admin panel.
+
     // Event 1: ~3 weeks from now
     $d1 = (clone $baseDate)->modify('+21 days');
-    $d1end = (clone $d1)->modify('+1 day');
     $events[] = [
-        'id' => $d1->format('Y-m-d') . '-community-meetup',
+        'id' => $d1->format('Y-m-d') . '-beaver-burrow-breakfast',
         'date' => $d1->format('Y-m-d'),
         'time' => '18:30',
         'end-date' => $d1->format('Y-m-d'),
         'end-time' => '21:00',
         'url' => '',
-        'title' => buildLangMap($languages, 'Community Meetup', 'Community-Treffen', 'Encuentro comunitario'),
+        'title' => buildLangMap($languages,
+            'Beaver Burrow Breakfast (demo event)',
+            'Biberbau-Frühstück (Demo-Event)',
+            'Desayuno de la madriguera (evento de demostración)'
+        ),
         'location' => buildLangMap($languages, 'Online (Zoom)', 'Online (Zoom)', 'En línea (Zoom)'),
         'description' => buildLangMap($languages,
-            'Monthly community meetup — share projects, ask questions, and connect with other users.',
-            'Monatliches Community-Treffen — Projekte vorstellen, Fragen stellen und sich mit anderen Nutzern vernetzen.',
-            'Encuentro mensual de la comunidad — comparte proyectos, haz preguntas y conecta con otros usuarios.'
+            'Placeholder event. Delete or edit it in the admin panel under Events.',
+            'Platzhalter-Termin. Lösche oder bearbeite ihn im Admin-Bereich unter Events.',
+            'Evento de marcador de posición. Bórralo o edítalo en el panel de administración, en Eventos.'
         ),
         'admission' => buildLangMap($languages, 'Free', 'Kostenlos', 'Gratis'),
         'image' => '',
@@ -1390,18 +1428,22 @@ function getStarterEvents($languages) {
     $d2 = (clone $baseDate)->modify('+42 days');
     $d2end = (clone $d2)->modify('+2 days');
     $events[] = [
-        'id' => $d2->format('Y-m-d') . '-web-dev-conference',
+        'id' => $d2->format('Y-m-d') . '-nibbling-symposium',
         'date' => $d2->format('Y-m-d'),
         'time' => '09:00',
         'end-date' => $d2end->format('Y-m-d'),
         'end-time' => '17:00',
-        'url' => 'https://example.com/webdevconf',
-        'title' => buildLangMap($languages, 'Web Dev Conference', 'Web-Entwickler-Konferenz', 'Conferencia de Desarrollo Web'),
-        'location' => buildLangMap($languages, 'Vienna, Austria', 'Wien, Österreich', 'Viena, Austria'),
+        'url' => 'https://example.com/demo',
+        'title' => buildLangMap($languages,
+            'Nibbling Symposium (fictional)',
+            'Nibbly-Symposium (fiktiv)',
+            'Simposio Nibbling (ficticio)'
+        ),
+        'location' => buildLangMap($languages, 'Imagineland', 'Fantasialand', 'Tierra imaginaria'),
         'description' => buildLangMap($languages,
-            'A two-day conference covering modern web development, performance optimization, and CMS architecture.',
-            'Zweitägige Konferenz über moderne Webentwicklung, Performance-Optimierung und CMS-Architektur.',
-            'Conferencia de dos días sobre desarrollo web moderno, optimización de rendimiento y arquitectura CMS.'
+            'Placeholder event. Delete or edit it in the admin panel under Events.',
+            'Platzhalter-Termin. Lösche oder bearbeite ihn im Admin-Bereich unter Events.',
+            'Evento de marcador de posición. Bórralo o edítalo en el panel de administración, en Eventos.'
         ),
         'admission' => buildLangMap($languages, 'Ticket required', 'Ticket erforderlich', 'Entrada con ticket'),
         'image' => '',
@@ -1410,18 +1452,22 @@ function getStarterEvents($languages) {
     // Event 3: ~10 weeks from now
     $d3 = (clone $baseDate)->modify('+70 days');
     $events[] = [
-        'id' => $d3->format('Y-m-d') . '-open-source-summit',
+        'id' => $d3->format('Y-m-d') . '-fictional-framework-festival',
         'date' => $d3->format('Y-m-d'),
         'time' => '10:00',
         'end-date' => $d3->format('Y-m-d'),
         'end-time' => '18:00',
-        'url' => 'https://example.com/oss-summit',
-        'title' => buildLangMap($languages, 'Open Source Summit', 'Open-Source-Gipfel', 'Cumbre Open Source'),
-        'location' => buildLangMap($languages, 'Berlin, Germany', 'Berlin, Deutschland', 'Berlín, Alemania'),
+        'url' => 'https://example.com/demo',
+        'title' => buildLangMap($languages,
+            'Fictional Framework Festival',
+            'Fiktives Framework-Festival',
+            'Festival de Framework Ficticio'
+        ),
+        'location' => buildLangMap($languages, 'Nowhereland', 'Nirgendwoland', 'Tierra de ninguna parte'),
         'description' => buildLangMap($languages,
-            'A day of talks and workshops about open-source projects, licensing, and sustainable community building.',
-            'Ein Tag voller Vorträge und Workshops über Open-Source-Projekte, Lizenzierung und nachhaltige Community-Arbeit.',
-            'Un día de charlas y talleres sobre proyectos de código abierto, licencias y construcción de comunidades sostenibles.'
+            'Placeholder event. Delete or edit it in the admin panel under Events.',
+            'Platzhalter-Termin. Lösche oder bearbeite ihn im Admin-Bereich unter Events.',
+            'Evento de marcador de posición. Bórralo o edítalo en el panel de administración, en Eventos.'
         ),
         'admission' => buildLangMap($languages, 'Free registration', 'Kostenlose Registrierung', 'Registro gratuito'),
         'image' => '',
@@ -1431,18 +1477,22 @@ function getStarterEvents($languages) {
     $d4 = (clone $baseDate)->modify('+98 days');
     $d4end = (clone $d4)->modify('+1 day');
     $events[] = [
-        'id' => $d4->format('Y-m-d') . '-design-systems-workshop',
+        'id' => $d4->format('Y-m-d') . '-placeholder-playground',
         'date' => $d4->format('Y-m-d'),
         'time' => '09:00',
         'end-date' => $d4end->format('Y-m-d'),
         'end-time' => '16:00',
         'url' => '',
-        'title' => buildLangMap($languages, 'Design Systems Workshop', 'Design-Systems-Workshop', 'Taller de Sistemas de Diseño'),
-        'location' => buildLangMap($languages, 'Amsterdam, Netherlands', 'Amsterdam, Niederlande', 'Ámsterdam, Países Bajos'),
+        'title' => buildLangMap($languages,
+            'Placeholder Playground (demo)',
+            'Platzhalter-Spielplatz (Demo)',
+            'Parque de marcadores (demostración)'
+        ),
+        'location' => buildLangMap($languages, 'Demo City', 'Demo-Stadt', 'Ciudad Demo'),
         'description' => buildLangMap($languages,
-            'Hands-on workshop on building and maintaining design systems with CSS custom properties, component libraries, and documentation.',
-            'Praxisworkshop zum Aufbau und zur Pflege von Design-Systemen mit CSS Custom Properties, Komponentenbibliotheken und Dokumentation.',
-            'Taller práctico sobre la creación y mantenimiento de sistemas de diseño con propiedades CSS personalizadas, bibliotecas de componentes y documentación.'
+            'Placeholder event. Delete or edit it in the admin panel under Events.',
+            'Platzhalter-Termin. Lösche oder bearbeite ihn im Admin-Bereich unter Events.',
+            'Evento de marcador de posición. Bórralo o edítalo en el panel de administración, en Eventos.'
         ),
         'admission' => buildLangMap($languages, 'Ticket required', 'Ticket erforderlich', 'Entrada con ticket'),
         'image' => '',

@@ -176,7 +176,9 @@ PHPTPL;
         'contact' => ['phone' => '', 'email' => ''],
         'credit' => ['text' => '', 'link' => '', 'linkText' => ''],
         'contactHeading' => [],
-        'copyright' => '&copy; ' . date('Y') . ' ' . htmlspecialchars($siteName),
+        // The [id="adminAccess"] shortcode wraps the year in a <span> that
+        // includes/footer.php uses as the hidden admin-login double-click target.
+        'copyright' => '&copy; [id="adminAccess"]' . date('Y') . '[/id] ' . htmlspecialchars($siteName),
     ];
     foreach ($languages as $lang) {
         $footerData['tagline'][$lang] = $siteName;
@@ -204,10 +206,12 @@ PHPTPL;
 
     // 6. Create settings.json
     $settings = [
+        'favicon' => '/assets/images/favicon.svg',
         'branding' => [
-            'logo' => '/assets/images/favicon.svg',
+            'logo' => '',
             'name' => $siteName,
             'showBranding' => true,
+            'logoDisplay' => 'both',
         ],
         'theme' => [
             'adminTheme' => 'light',

@@ -195,12 +195,19 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
                 <?php
                 $_headerLogo = $_settings['logo'] ?? $_settings['branding']['logo'] ?? '';
                 $_headerLogo = ltrim($_headerLogo, '/');
+                // Treat a logo that points at the favicon as "no separate logo set"
+                if ($_headerLogo === $_favicon) $_headerLogo = '';
                 $_siteName = defined('SITE_NAME') ? SITE_NAME : '';
+                $_logoDisplay = $_settings['branding']['logoDisplay'] ?? 'both';
+                $_showFavicon = !$_headerLogo && $_logoDisplay !== 'text';
+                $_showText    = $_siteName && !$_headerLogo && $_logoDisplay !== 'favicon';
                 if ($_headerLogo): ?>
                 <img class="site-logo-img" src="<?php echo $basePath . htmlspecialchars($_headerLogo); ?>" alt="<?php echo htmlspecialchars($_siteName); ?>">
-                <?php else: ?>
+                <?php elseif ($_showFavicon): ?>
                 <img class="site-logo-img" src="<?php echo $basePath . htmlspecialchars($_favicon); ?>" alt="<?php echo htmlspecialchars($_siteName); ?>" width="32" height="32">
-                <span class="site-logo-text"><?php echo htmlspecialchars($_siteName); ?></span>
+                <?php endif; ?>
+                <?php if ($_showText): ?>
+                <span class="site-logo-text" title="<?php echo htmlspecialchars($_siteName); ?>"><?php echo htmlspecialchars($_siteName); ?></span>
                 <?php endif; ?>
             </a>
 

@@ -16,10 +16,6 @@
     --editor-btn-bg: radial-gradient(ellipse at 50% 0%, #4580ed 0%, #2563eb 70%);
     --editor-btn-bg-hover: radial-gradient(ellipse at 50% 0%, #5d94ef 0%, #2563eb 70%);
     --editor-btn-radius: 6px;
-    /* Teal outline for section containers — distinct from the primary
-       field-edit color, so nested field/section outlines don't look glued. */
-    --editor-section-outline: #0d9c90;
-    --editor-section-outline-hover: #0b877d;
     --editor-neutral-bg: #f4f4f5;
     --editor-neutral-bg-hover: #e4e4e7;
     --editor-neutral-fg: #52525b;
@@ -132,6 +128,13 @@ body.has-admin-bar .mobile-nav-overlay {
     top: 40px;
 }
 
+/* Site templates set .main-content padding-top based on --header-height.
+   When the admin bar is present, it pushes .site-header down by 40px,
+   so the scroll-start of the content area needs the same extra offset. */
+body.has-admin-bar .main-content {
+    padding-top: calc(var(--header-height, 80px) + var(--spacing-lg, 4rem) + 40px);
+}
+
 /* ============================================================
    EDITIERBARE SECTIONS
    ============================================================ */
@@ -149,7 +152,7 @@ body.edit-mode-active .editable-section {
 }
 
 body.edit-mode-active .editable-section:hover {
-    outline-color: var(--editor-section-outline);
+    outline-color: var(--editor-primary);
 }
 
 /* About-Section spezifisch */
@@ -1466,6 +1469,39 @@ select.prompt-dialog-input {
     box-shadow: 0 0 0 3px rgba(13, 149, 156, 0.15);
 }
 
+/* Link editor — secondary options (new tab, download) */
+.link-editor-options {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.link-editor-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--nb-text, #333);
+    cursor: pointer;
+    user-select: none;
+}
+
+.link-editor-option input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
+}
+
+.link-editor-option--disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.link-editor-option--disabled,
+.link-editor-option--disabled * {
+    cursor: not-allowed;
+}
+
 /* HTML Source Editor */
 .html-source-textarea {
     width: 100%;
@@ -1505,8 +1541,8 @@ body.edit-mode-active .editable-event {
 }
 
 body.edit-mode-active .editable-event:hover {
-    outline: 2px dashed var(--editor-primary);
-    outline-offset: 4px;
+    outline: 1px solid var(--editor-primary);
+    outline-offset: 6px;
     background: rgba(13, 156, 144, 0.03);
 }
 
@@ -1544,7 +1580,7 @@ body.edit-mode-active .editable-footer-active {
 }
 
 body.edit-mode-active .editable-footer-active:hover {
-    outline: 2px dashed var(--editor-primary);
+    outline: 1px solid var(--editor-primary);
     outline-offset: 2px;
     background: rgba(13, 156, 144, 0.1);
 }
@@ -1605,7 +1641,8 @@ body.edit-mode-active .editable-field-html.editable-field-active {
 .step-number:has(.editable-field),
 .metric-value:has(.editable-field),
 .cta-heading:has(.editable-field),
-.section-label:has(.editable-field) {
+.section-label:has(.editable-field),
+.stats-card__value:has(.editable-field) {
     -webkit-text-fill-color: initial !important;
     -webkit-background-clip: initial !important;
     background-clip: initial !important;
@@ -1620,6 +1657,7 @@ body.edit-mode-active .editable-field-html.editable-field-active {
 [data-theme="light"] .metric-value:has(.editable-field),
 [data-theme="light"] .cta-heading:has(.editable-field),
 [data-theme="light"] .section-label:has(.editable-field),
+[data-theme="light"] .stats-card__value:has(.editable-field),
 .landing-comparison-light .hero-title:has(.editable-field),
 .landing-comparison-light .trust-value:has(.editable-field),
 .landing-comparison-light .cta-heading:has(.editable-field),
@@ -2155,9 +2193,8 @@ body.edit-mode-active .event-card-editable {
 }
 
 body.edit-mode-active .event-card-editable:hover {
-    outline: 2px dashed var(--editor-primary);
-    outline-offset: 4px;
-    border-radius: 8px;
+    outline: 1px solid var(--editor-primary);
+    outline-offset: 6px;
     background: rgba(13, 149, 156, 0.03);
 }
 
@@ -2841,20 +2878,20 @@ body.edit-mode-active .cell-toggle-group {
 
 /* News Post Inline Editing */
 body.edit-mode-active .news-editable {
-    outline: 2px dashed rgba(14, 165, 233, 0.4);
-    outline-offset: 4px;
-    border-radius: 4px;
+    outline: 1px solid transparent;
+    outline-offset: 2px;
     transition: outline-color 0.2s;
     min-height: 1em;
+    cursor: text;
 }
 
 body.edit-mode-active .news-editable:hover,
 body.edit-mode-active .news-editable:focus {
-    outline-color: rgba(14, 165, 233, 0.8);
+    outline-color: var(--editor-primary);
 }
 
 body.edit-mode-active .news-editable:focus {
-    outline-style: solid;
+    outline-width: 2px;
 }
 
 /* Editor-only media title label (youtube, soundcloud).

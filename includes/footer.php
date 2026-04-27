@@ -364,7 +364,10 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
         const adminAccess = document.getElementById('adminAccess');
         if (adminAccess) {
             adminAccess.addEventListener('dblclick', function() {
-                window.location.href = '<?php echo $basePath; ?>admin/';
+                // Pass current path as ?redirect=... so the admin can route the user
+                // back to the page they were viewing (subject to validateRedirectUrl).
+                const here = window.location.pathname + window.location.search;
+                window.location.href = '<?php echo $basePath; ?>admin/?redirect=' + encodeURIComponent(here);
             });
         }
 
