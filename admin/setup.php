@@ -316,7 +316,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // VERSION
 // ============================================================
 
-define('NIBBLY_VERSION', '1.0.0');
+define('NIBBLY_VERSION', '1.1.0');
 
 // ============================================================
 // SITE SETTINGS
