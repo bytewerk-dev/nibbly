@@ -71,6 +71,13 @@ a:hover {
     height: 50px;
 }
 
+/* Inline-SVG variant of the favicon — follows the admin primary color. */
+.login-logo svg {
+    width: 50px;
+    height: 50px;
+    color: var(--nb-primary);
+}
+
 .login-container h1 {
     margin: 0 0 var(--nb-space-1) 0;
     font-family: var(--nb-font-sans);
@@ -727,6 +734,33 @@ a:hover {
 .topbar-logo {
     width: 24px;
     height: 24px;
+}
+
+/* Frontend-logos sub-section inside the Branding settings. Visually
+   separated from the Favicon block by a top border, but shares the
+   surrounding card so the hierarchy stays flat (no card-in-card). */
+.frontend-logos-block {
+    margin-top: var(--nb-space-6);
+    padding-top: var(--nb-space-5);
+    border-top: 1px solid var(--nb-border);
+}
+.frontend-logos-block__title {
+    margin: 0 0 var(--nb-space-1) 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+}
+.frontend-logos-block__hint {
+    display: block;
+    margin-bottom: var(--nb-space-5);
+}
+.frontend-logos-block .form-group:last-child {
+    margin-bottom: 0;
+}
+
+/* Inline-SVG variant follows the admin primary color so it picks up
+   the user's branding accent in both light and dark themes. */
+svg.topbar-logo {
+    color: var(--nb-primary);
 }
 
 .topbar-dashboard {
@@ -2517,34 +2551,65 @@ a:hover {
     background: linear-gradient(135deg, #ffffff 50%, #1a1a1a 50%);
 }
 
-/* Color Input */
+/* Color Input — round swatch (acts as picker trigger) + slim hex field */
 .color-input-group {
     display: flex;
     gap: var(--nb-space-2);
     align-items: center;
 }
 
+/* Round picker — selector deliberately raised to input.color-picker so it
+   beats .form-group input (which sets width: 100% and padding). */
+input.color-picker,
 .color-picker {
-    width: 40px;
-    height: 36px;
-    padding: 2px;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    padding: 0;
     border: 1px solid var(--nb-border);
-    border-radius: var(--nb-radius-sm);
+    border-radius: 50%;
     background: var(--nb-bg);
     cursor: pointer;
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    transition: transform var(--nb-duration-fast) var(--nb-ease),
+                border-color var(--nb-duration-fast) var(--nb-ease);
 }
 
+input.color-picker:hover,
+.color-picker:hover {
+    transform: scale(1.05);
+    border-color: var(--nb-primary);
+}
+
+input.color-picker:focus-visible,
+.color-picker:focus-visible {
+    outline: 2px solid var(--nb-border-focus);
+    outline-offset: 2px;
+}
+
+/* Browser swatch wrappers — fill the round button edge-to-edge */
+input.color-picker::-webkit-color-swatch-wrapper,
 .color-picker::-webkit-color-swatch-wrapper {
-    padding: 2px;
+    padding: 0;
+    border-radius: 50%;
 }
 
+input.color-picker::-webkit-color-swatch,
 .color-picker::-webkit-color-swatch {
     border: none;
-    border-radius: 2px;
+    border-radius: 50%;
+}
+
+input.color-picker::-moz-color-swatch,
+.color-picker::-moz-color-swatch {
+    border: none;
+    border-radius: 50%;
 }
 
 .color-hex-input {
-    width: 100px;
+    width: 110px;
     font-family: var(--nb-font-mono);
     font-size: 0.875rem;
 }
@@ -2599,12 +2664,25 @@ a:hover {
     outline-offset: 2px;
 }
 
-/* Theme color sections — visually grouped Light / Dark blocks */
+/* Theme color sections — Light / Dark blocks side-by-side on desktop */
+.theme-color-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--nb-space-5);
+    margin: 0 0 var(--nb-space-5);
+}
+
+@media (max-width: 900px) {
+    .theme-color-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .theme-color-section {
     border: 1px solid var(--nb-border);
     border-radius: var(--nb-radius-lg);
     padding: var(--nb-space-4) var(--nb-space-5) var(--nb-space-5);
-    margin: 0 0 var(--nb-space-5);
+    margin: 0;
     background: var(--nb-bg-elevated);
 }
 

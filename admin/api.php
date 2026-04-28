@@ -1711,9 +1711,10 @@ switch ($action) {
 
     case 'load-settings':
         $defaults = [
-            'favicon' => '/assets/images/favicon.svg',
+            'favicon' => defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg',
             'branding' => [
                 'logo' => '',
+                'logoDark' => '',
                 'name' => defined('SITE_NAME') ? SITE_NAME : 'CMS',
                 'showBranding' => true,
                 'logoDisplay' => 'both'
@@ -1775,7 +1776,7 @@ switch ($action) {
 
         // Whitelist allowed keys
         $allowed = [
-            'branding' => ['logo', 'name', 'showBranding', 'logoDisplay'],
+            'branding' => ['logo', 'logoDark', 'name', 'showBranding', 'logoDisplay'],
             'theme' => ['adminTheme', 'primaryColor', 'accentColor', 'sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg', 'buttonGlow', 'buttonRadius'],
             'general' => ['adminLanguage', 'frontendLoginRedirect'],
             'email' => ['method', 'recipientEmail', 'fromEmail', 'fromName', 'smtpHost', 'smtpPort', 'smtpUsername', 'smtpPassword', 'smtpEncryption']

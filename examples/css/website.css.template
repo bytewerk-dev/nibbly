@@ -1,0 +1,91 @@
+/*
+ * website.css — Site-Owner Stylesheet (Template)
+ *
+ * This file is loaded by includes/header.php AFTER css/style.css and
+ * css/components.css. Use it for:
+ *   - Theme overrides (CSS custom properties)
+ *   - Site-specific layouts and components
+ *   - Branding (logos, custom typography)
+ *
+ * Upgrade Safety: css/website.css is on the Nibbly Upgrade Blacklist.
+ * It is NEVER overwritten when Nibbly itself is updated.
+ *
+ * To use this template:
+ *   cp examples/css/website.css.template css/website.css
+ *
+ * Then uncomment the variables you want to override and adjust the values.
+ */
+
+/* ============================================
+   THEME OVERRIDES — Override Nibbly-Core variables
+   ============================================ */
+:root {
+    /* Colors — neutral blue primary */
+    /* --color-primary: #2563eb; */
+    /* --color-primary-dark: #1d4ed8; */
+    /* --color-primary-dark-muted: #1e40af; */
+    /* --color-primary-light: #60a5fa; */
+    /* --color-primary-really-dark: #172554; */
+    /* --color-primary-btn: radial-gradient(ellipse at 50% 0%, #3b82f6 0%, #2563eb 70%); */
+    /* --color-primary-btn-hover: radial-gradient(ellipse at 50% 0%, #60a5fa 0%, #2563eb 70%); */
+    /* --color-secondary: #60a5fa; */
+    /* --color-text: #171717; */
+    /* --color-text-secondary: #525252; */
+    /* --color-background: #ffffff; */
+    /* --color-background-dark: #eff6ff; */
+    /* --color-background-darker: #dbeafe; */
+    /* --color-background-section: #f5f5f4; */
+    /* --color-background-card: #ffffff; */
+    /* --color-white: #ffffff; */
+    /* --color-black: #0a0a0a; */
+    /* --color-border: rgba(0, 0, 0, 0.08); */
+
+    /* Dark theme palette */
+    /* --color-bg-dark: #0c0c0c; */
+    /* --color-bg-dark-elevated: #141414; */
+    /* --color-bg-dark-card: #1c1c1c; */
+    /* --color-bg-light: #fafaf9; */
+    /* --color-text-on-dark: #e5e5e5; */
+    /* --color-text-on-dark-muted: #a3a3a3; */
+    /* --color-border-dark: rgba(255, 255, 255, 0.06); */
+    /* --color-border-light: rgba(0, 0, 0, 0.06); */
+
+    /* Accent — single hue gradient */
+    /* --gradient-brand: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); */
+    /* --gradient-brand-text: linear-gradient(90deg, #60a5fa 0%, #3b82f6 50%, #60a5fa 100%); */
+
+    /* Glass effect */
+    /* --glass-bg: rgba(255, 255, 255, 0.03); */
+    /* --glass-border: rgba(255, 255, 255, 0.06); */
+
+    /* Typography — system fonts */
+    /* --font-display: system-ui, -apple-system, sans-serif; */
+    /* --font-body: system-ui, -apple-system, sans-serif; */
+    /* --font-mono: 'SF Mono', 'Fira Code', Menlo, Consolas, monospace; */
+
+    /* Spacing */
+    /* --spacing-xs: 0.5rem; */
+    /* --spacing-sm: 1rem; */
+    /* --spacing-md: 2rem; */
+    /* --spacing-lg: 4rem; */
+    /* --spacing-xl: 6rem; */
+
+    /* Transitions */
+    /* --transition-fast: 0.2s ease; */
+    /* --transition-normal: 0.3s ease; */
+    /* --transition-slow: 0.5s ease; */
+
+    /* Header */
+    /* --header-height: 80px; */
+    /* --header-bg: rgba(255, 255, 255, 0.95); */
+
+    /* Container */
+    /* --container-max: 1440px; */
+    /* --container-standard: 1280px; */
+    /* --container-narrow: 800px; */
+}
+
+/* ============================================
+   SITE-SPECIFIC LAYOUTS & COMPONENTS
+   ============================================ */
+/* Add your custom site styles below this line. */

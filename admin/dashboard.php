@@ -7,6 +7,7 @@ session_start();
 require_once 'config.php';
 require_once __DIR__ . '/lang/i18n.php';
 require_once __DIR__ . '/users.php';
+require_once __DIR__ . '/../includes/asset-helpers.php';
 ensureUsersFile();
 
 // Check authentication
@@ -34,7 +35,8 @@ $userRole = $_SESSION['admin_role'] ?? 'admin'; // backward compat: old sessions
 $isAdminUser = ($userRole === 'admin');
 
 // Load settings for theme
-$siteSettings = ['favicon' => '/assets/images/favicon.svg', 'branding' => ['logo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both'], 'theme' => ['adminTheme' => 'light', 'primaryColor' => '#2563eb', 'accentColor' => '#60a5fa', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'buttonGlow' => true, 'buttonRadius' => 6]];
+$_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg';
+$siteSettings = ['favicon' => $_defaultFavicon, 'branding' => ['logo' => '', 'logoDark' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both'], 'theme' => ['adminTheme' => 'light', 'primaryColor' => '#2563eb', 'accentColor' => '#60a5fa', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'buttonGlow' => true, 'buttonRadius' => 6]];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     $loadedSettings = json_decode(file_get_contents(SETTINGS_PATH), true);
     if (is_array($loadedSettings)) {
@@ -81,7 +83,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     <meta name="robots" content="noindex, nofollow">
     <title>Dashboard - <?php echo defined('SITE_NAME') ? SITE_NAME : 'Admin'; ?></title>
     <?php
-    $_dashFavicon = !empty($siteSettings['favicon']) ? $siteSettings['favicon'] : '/assets/images/favicon.svg';
+    $_dashFavicon = !empty($siteSettings['favicon']) ? $siteSettings['favicon'] : $_defaultFavicon;
     $_dashFaviconType = pathinfo($_dashFavicon, PATHINFO_EXTENSION) === 'svg' ? 'image/svg+xml' : 'image/png';
     ?>
     <link rel="icon" href="<?php echo htmlspecialchars($_dashFavicon); ?>" type="<?php echo $_dashFaviconType; ?>">
@@ -116,16 +118,24 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     :root,
     [data-site-theme="light"] {
         --nb-primary: <?php echo $_pcLight; ?>;
+        --nb-primary-subtle: color-mix(in srgb, <?php echo $_pcLight; ?> 8%, transparent);
+        --nb-primary-muted: color-mix(in srgb, <?php echo $_pcLight; ?> 15%, transparent);
+        --nb-primary-medium: color-mix(in srgb, <?php echo $_pcLight; ?> 30%, transparent);
         --nb-primary-btn: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $_pcLight; ?> 70%, white) 0%, <?php echo $_pcLight; ?> 70%);
         --nb-primary-btn-hover: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $_pcLight; ?> 50%, white) 0%, <?php echo $_pcLight; ?> 70%);
         --nb-brand: <?php echo $_acLight; ?>;
+        --nb-brand-dark: color-mix(in srgb, <?php echo $_acLight; ?> 80%, black);
         --nb-sidebar-bg: <?php echo $_sbLight; ?>;
     }
     [data-site-theme="dark"] {
         --nb-primary: <?php echo $_pcDark; ?>;
+        --nb-primary-subtle: color-mix(in srgb, <?php echo $_pcDark; ?> 12%, transparent);
+        --nb-primary-muted: color-mix(in srgb, <?php echo $_pcDark; ?> 22%, transparent);
+        --nb-primary-medium: color-mix(in srgb, <?php echo $_pcDark; ?> 38%, transparent);
         --nb-primary-btn: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $_pcDark; ?> 70%, white) 0%, <?php echo $_pcDark; ?> 70%);
         --nb-primary-btn-hover: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $_pcDark; ?> 50%, white) 0%, <?php echo $_pcDark; ?> 70%);
         --nb-brand: <?php echo $_acDark; ?>;
+        --nb-brand-dark: color-mix(in srgb, <?php echo $_acDark; ?> 80%, black);
         --nb-sidebar-bg: <?php echo $_sbDark; ?>;
     }
     </style>
@@ -137,10 +147,11 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         </button>
         <div class="topbar-brand">
             <?php if ($siteSettings['branding']['showBranding']):
-                $_topbarLogo = !empty($siteSettings['branding']['logo']) ? $siteSettings['branding']['logo'] : ($siteSettings['favicon'] ?? '/assets/images/favicon.svg');
-            ?>
-            <img src="<?php echo htmlspecialchars($_topbarLogo); ?>" alt="<?php echo htmlspecialchars($siteSettings['branding']['name']); ?>" width="24" height="24" class="topbar-logo">
-            <?php endif; ?>
+                // Backend always uses the favicon (frontend logo is for the public site only).
+                $_topbarFavicon = $siteSettings['favicon'] ?? $_defaultFavicon;
+                $_brandName = $siteSettings['branding']['name'] ?? '';
+                echo nibblyIconOrImg($_topbarFavicon, $_brandName, ['width' => 24, 'height' => 24, 'class' => 'topbar-logo']);
+            endif; ?>
             <span class="topbar-dashboard"><?php echo t('dashboard'); ?></span>
         </div>
         <h1 class="topbar-title" id="topbarTitle"><?php echo t('pages.title'); ?></h1>
@@ -595,37 +606,59 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             <label for="settingsName"><?php echo t('settings.site_name'); ?></label>
                             <input type="text" id="settingsName" value="" placeholder="<?php echo t('settings.site_name_placeholder'); ?>" maxlength="100">
                         </div>
-                        <div class="form-group-row">
-                            <div class="form-group">
-                                <label for="settingsFavicon"><?php echo t('settings.favicon'); ?></label>
-                                <div class="logo-preview-group">
-                                    <div class="logo-preview" id="faviconPreview">
-                                        <img src="/assets/images/favicon.svg" alt="<?php echo t('settings.favicon'); ?>" id="faviconPreviewImg">
-                                    </div>
-                                    <div class="logo-controls">
-                                        <div class="logo-path-input">
-                                            <span class="input-with-clear">
-                                                <input type="text" id="settingsFavicon" value="/assets/images/favicon.svg" placeholder="/assets/images/favicon.svg">
-                                                <button type="button" class="input-clear-btn" data-clear-target="settingsFavicon" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
-                                            </span>
-                                            <button type="button" class="btn btn-secondary btn-sm" id="browseFaviconBtn"><?php echo t('btn.browse'); ?></button>
-                                        </div>
+                        <div class="form-group">
+                            <label for="settingsFavicon"><?php echo t('settings.favicon'); ?></label>
+                            <small class="form-hint"><?php echo t('settings.favicon_hint'); ?></small>
+                            <div class="logo-preview-group">
+                                <div class="logo-preview" id="faviconPreview">
+                                    <img src="<?php echo htmlspecialchars($_dashFavicon); ?>" alt="<?php echo t('settings.favicon'); ?>" id="faviconPreviewImg">
+                                </div>
+                                <div class="logo-controls">
+                                    <div class="logo-path-input">
+                                        <span class="input-with-clear">
+                                            <input type="text" id="settingsFavicon" value="<?php echo htmlspecialchars($_dashFavicon); ?>" placeholder="<?php echo htmlspecialchars($_defaultFavicon); ?>">
+                                            <button type="button" class="input-clear-btn" data-clear-target="settingsFavicon" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                        </span>
+                                        <button type="button" class="btn btn-secondary btn-sm" id="browseFaviconBtn"><?php echo t('btn.browse'); ?></button>
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label for="settingsLogo"><?php echo t('settings.logo'); ?></label>
-                                <div class="logo-preview-group">
-                                    <div class="logo-preview" id="logoPreview">
-                                        <img src="" alt="<?php echo t('settings.logo'); ?>" id="logoPreviewImg">
+                        </div>
+                        <div class="frontend-logos-block">
+                            <h4 class="frontend-logos-block__title"><?php echo t('settings.frontend_logos'); ?></h4>
+                            <small class="form-hint frontend-logos-block__hint"><?php echo t('settings.frontend_logos_hint'); ?></small>
+                            <div class="form-group-row">
+                                <div class="form-group">
+                                    <label for="settingsLogo"><?php echo t('settings.logo_light'); ?></label>
+                                    <div class="logo-preview-group">
+                                        <div class="logo-preview" id="logoPreview">
+                                            <img src="" alt="<?php echo t('settings.logo_light'); ?>" id="logoPreviewImg">
+                                        </div>
+                                        <div class="logo-controls">
+                                            <div class="logo-path-input">
+                                                <span class="input-with-clear">
+                                                    <input type="text" id="settingsLogo" value="" placeholder="/assets/images/logo.png">
+                                                    <button type="button" class="input-clear-btn" data-clear-target="settingsLogo" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                                </span>
+                                                <button type="button" class="btn btn-secondary btn-sm" id="browseLogoBtn"><?php echo t('btn.browse'); ?></button>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="logo-controls">
-                                        <div class="logo-path-input">
-                                            <span class="input-with-clear">
-                                                <input type="text" id="settingsLogo" value="" placeholder="/assets/images/logo.png">
-                                                <button type="button" class="input-clear-btn" data-clear-target="settingsLogo" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
-                                            </span>
-                                            <button type="button" class="btn btn-secondary btn-sm" id="browseLogoBtn"><?php echo t('btn.browse'); ?></button>
+                                </div>
+                                <div class="form-group">
+                                    <label for="settingsLogoDark"><?php echo t('settings.logo_dark'); ?></label>
+                                    <div class="logo-preview-group">
+                                        <div class="logo-preview logo-preview--dark" id="logoDarkPreview">
+                                            <img src="" alt="<?php echo t('settings.logo_dark'); ?>" id="logoDarkPreviewImg">
+                                        </div>
+                                        <div class="logo-controls">
+                                            <div class="logo-path-input">
+                                                <span class="input-with-clear">
+                                                    <input type="text" id="settingsLogoDark" value="" placeholder="/assets/images/logo-dark.png">
+                                                    <button type="button" class="input-clear-btn" data-clear-target="settingsLogoDark" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                                </span>
+                                                <button type="button" class="btn btn-secondary btn-sm" id="browseLogoDarkBtn"><?php echo t('btn.browse'); ?></button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -681,6 +714,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </div>
                         <input type="hidden" id="settingsAdminTheme" value="light">
                     </div>
+                    <div class="theme-color-grid">
                     <fieldset class="theme-color-section" data-mode="light">
                         <legend><?php echo t('settings.theme_section_light'); ?></legend>
                         <div class="form-group">
@@ -742,6 +776,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </div>
                         <small class="form-hint"><?php echo t('settings.dark_section_hint'); ?></small>
                     </fieldset>
+                    </div>
 
                     <div class="form-group">
                         <label><?php echo t('settings.button_style'); ?></label>
@@ -4092,6 +4127,11 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         updateLogoPreview(logoPath);
         updateClearButton(document.getElementById('settingsLogo'));
 
+        var logoDarkPath = settings.branding.logoDark || '';
+        document.getElementById('settingsLogoDark').value = logoDarkPath;
+        updateLogoDarkPreview(logoDarkPath);
+        updateClearButton(document.getElementById('settingsLogoDark'));
+
         var logoDisplay = settings.branding.logoDisplay || 'both';
         var displayRadio = document.querySelector('input[name="settingsLogoDisplay"][value="' + logoDisplay + '"]');
         if (displayRadio) displayRadio.checked = true;
@@ -4181,6 +4221,18 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     function updateFaviconPreview(path) {
         var img = document.getElementById('faviconPreviewImg');
+        if (path) {
+            img.src = path;
+            img.style.display = 'block';
+        } else {
+            img.removeAttribute('src');
+            img.style.display = 'none';
+        }
+    }
+
+    function updateLogoDarkPreview(path) {
+        var img = document.getElementById('logoDarkPreviewImg');
+        if (!img) return;
         if (path) {
             img.src = path;
             img.style.display = 'block';
@@ -4334,7 +4386,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             btnPrimary.style.background = primary;
             btnPrimary.style.borderRadius = radius + 'px';
             if (glow) {
-                btnPrimary.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15), 0 4px 20px ' + primary + '59';
+                btnPrimary.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15), 0 4px 20px ' + hexToRgba(primary, 0.35);
             } else {
                 btnPrimary.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
             }
@@ -4350,6 +4402,34 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         updateBtnStylePreview();
     });
 
+    // Theme-aware browser favicon (recolors SVG currentColor on theme change)
+    var THEME_FAVICON_COLORS = { light: '#0a0a0a', dark: '#e5e5e5' };
+    var faviconSvgCache = null;
+    function updateAdminBrowserFavicon(theme) {
+        var link = document.querySelector('link[rel="icon"]');
+        if (!link) return;
+        var href = link.getAttribute('data-original-href') || link.getAttribute('href');
+        if (!href || !/\.svg(\?|#|$)/i.test(href)) return;
+        if (!link.getAttribute('data-original-href')) link.setAttribute('data-original-href', href);
+        function apply() {
+            if (!faviconSvgCache) return;
+            var color = THEME_FAVICON_COLORS[theme] || THEME_FAVICON_COLORS.light;
+            var patched = faviconSvgCache
+                .replace(/<svg\b/, '<svg data-theme="' + theme + '"')
+                .replace(/currentColor/g, color);
+            link.setAttribute('href', 'data:image/svg+xml;utf8,' + encodeURIComponent(patched));
+        }
+        if (faviconSvgCache === null) {
+            fetch(href).then(function(r){ return r.ok ? r.text() : null; }).then(function(svg){
+                if (svg) { faviconSvgCache = svg; apply(); }
+            }).catch(function(){});
+        } else {
+            apply();
+        }
+    }
+    // Initial favicon apply
+    updateAdminBrowserFavicon(document.documentElement.getAttribute('data-site-theme') || 'light');
+
     // Theme selector buttons — instant preview on click
     document.querySelectorAll('.theme-option').forEach(function(btn) {
         btn.addEventListener('click', function() {
@@ -4363,6 +4443,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
             }
             document.documentElement.setAttribute('data-site-theme', resolved);
+            updateAdminBrowserFavicon(resolved);
             updateBtnStylePreview();
         });
     });
@@ -4439,6 +4520,15 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         }, input ? input.value : null);
     });
 
+    // Browse dark-logo button — opens the image manager
+    document.getElementById('browseLogoDarkBtn').addEventListener('click', function() {
+        var input = document.getElementById('settingsLogoDark');
+        NbImageManager.open(function(path) {
+            input.value = path;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }, input ? input.value : null);
+    });
+
     // Browse favicon button — opens the image manager
     document.getElementById('browseFaviconBtn').addEventListener('click', function() {
         var input = document.getElementById('settingsFavicon');
@@ -4451,6 +4541,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     // Manual edits to the logo path also toggle the 3-way selector
     document.getElementById('settingsLogo').addEventListener('input', function() {
         updateLogoPreview(this.value.trim());
+        updateClearButton(this);
+    });
+    document.getElementById('settingsLogoDark').addEventListener('input', function() {
+        updateLogoDarkPreview(this.value.trim());
         updateClearButton(this);
     });
     document.getElementById('settingsFavicon').addEventListener('input', function() {
@@ -4489,6 +4583,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             var displayRadio = document.querySelector('input[name="settingsLogoDisplay"]:checked');
             settings.branding = {
                 logo: document.getElementById('settingsLogo').value.trim(),
+                logoDark: document.getElementById('settingsLogoDark').value.trim(),
                 name: document.getElementById('settingsName').value.trim(),
                 showBranding: document.getElementById('settingsShowBranding').checked,
                 logoDisplay: displayRadio ? displayRadio.value : 'both'
@@ -4592,14 +4687,25 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             var btnHover = glow === false
                 ? adjustColor(c.primary, -15)
                 : 'radial-gradient(ellipse at 50% 0%, ' + adjustColor(pcLight, 20) + ' 0%, ' + c.primary + ' 70%)';
+            // Subtle/muted/medium tints derived from primary so hover/active
+            // states pick up the user's branding instead of the static blue
+            // defaults in nibbly-admin-tokens.css.
+            var isDark = selector.indexOf('dark') !== -1;
+            var subtleAlpha = isDark ? 0.12 : 0.08;
+            var mutedAlpha = isDark ? 0.22 : 0.15;
+            var mediumAlpha = isDark ? 0.38 : 0.30;
             return selector + ' {' +
                 '--nb-primary: ' + c.primary + ';' +
                 '--nb-primary-hover: ' + adjustColor(c.primary, -15) + ';' +
                 '--nb-primary-active: ' + adjustColor(c.primary, -25) + ';' +
+                '--nb-primary-subtle: ' + hexToRgba(c.primary, subtleAlpha) + ';' +
+                '--nb-primary-muted: ' + hexToRgba(c.primary, mutedAlpha) + ';' +
+                '--nb-primary-medium: ' + hexToRgba(c.primary, mediumAlpha) + ';' +
                 '--nb-primary-btn: ' + btnGradient + ';' +
                 '--nb-primary-btn-hover: ' + btnHover + ';' +
                 '--nb-brand: ' + c.accent + ';' +
                 '--nb-brand-light: ' + adjustColor(c.accent, 20) + ';' +
+                '--nb-brand-dark: ' + adjustColor(c.accent, -20) + ';' +
                 '--nb-sidebar-bg: ' + c.sidebar + ';' +
             '}';
         }
@@ -4641,6 +4747,14 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var g = Math.max(0, Math.min(255, parseInt(hex.substring(2, 4), 16) + amount));
         var b = Math.max(0, Math.min(255, parseInt(hex.substring(4, 6), 16) + amount));
         return '#' + [r, g, b].map(function(c) { return c.toString(16).padStart(2, '0'); }).join('');
+    }
+
+    function hexToRgba(hex, alpha) {
+        hex = hex.replace('#', '');
+        var r = parseInt(hex.substring(0, 2), 16);
+        var g = parseInt(hex.substring(2, 4), 16);
+        var b = parseInt(hex.substring(4, 6), 16);
+        return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + alpha + ')';
     }
 
     // Apply saved theme immediately on page load (server-rendered)

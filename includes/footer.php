@@ -64,9 +64,9 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
             <div class="footer-col footer-col--brand">
                 <a href="<?php echo $basePath; ?>." class="footer-logo" aria-label="Home">
                     <?php
-                    $_footerLogo = $_favicon ?? 'assets/images/favicon.svg';
+                    $_footerLogo = $_favicon ?? ltrim(defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg', '/');
+                    echo nibblyIconOrImg($basePath . $_footerLogo, '', ['width' => 40, 'height' => 40, 'class' => 'site-logo-img']);
                     ?>
-                    <img class="site-logo-img" src="<?php echo $basePath . htmlspecialchars($_footerLogo); ?>" alt="" width="40" height="40">
                 </a>
                 <?php if ($creditText || $creditLinkText): ?>
                 <p class="footer-credit"><span class="<?php echo $isAdminLoggedIn ? 'editable-footer-field' : ''; ?>" data-field="credit.text"><?php echo htmlspecialchars($creditText); ?></span><?php if ($creditLinkText): ?> <a href="<?php echo htmlspecialchars($creditLink); ?>" target="_blank" rel="noopener" class="<?php echo $isAdminLoggedIn ? 'editable-footer-field' : ''; ?>" data-field="credit.link" data-link-href="<?php echo htmlspecialchars($creditLink); ?>"><?php echo htmlspecialchars($creditLinkText); ?></a><?php endif; ?></p>
@@ -312,15 +312,49 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
         (function initThemeToggle() {
             var STORAGE_KEY = 'site-theme';
             var CYCLE = ['dark', 'light'];
+            var THEME_FAVICON_COLORS = { light: '#0a0a0a', dark: '#e5e5e5' };
+            var faviconSvgCache = null;
 
             function getStoredTheme() {
                 try { return localStorage.getItem(STORAGE_KEY); } catch(e) { return null; }
+            }
+
+            function updateBrowserFavicon(theme) {
+                var link = document.querySelector('link[rel="icon"]');
+                if (!link) return;
+                var href = link.getAttribute('data-original-href') || link.getAttribute('href');
+                if (!href || !/\.svg(\?|#|$)/i.test(href)) return;
+                if (!link.getAttribute('data-original-href')) link.setAttribute('data-original-href', href);
+                if (faviconSvgCache === null) {
+                    fetch(href).then(function(r){ return r.ok ? r.text() : null; }).then(function(svg){
+                        if (!svg) return;
+                        faviconSvgCache = svg;
+                        applyFavicon(theme);
+                    }).catch(function(){});
+                } else {
+                    applyFavicon(theme);
+                }
+            }
+
+            function applyFavicon(theme) {
+                if (!faviconSvgCache) return;
+                var color = THEME_FAVICON_COLORS[theme] || THEME_FAVICON_COLORS.light;
+                var patched = faviconSvgCache
+                    .replace(/<svg\b/, '<svg data-theme="' + theme + '"')
+                    .replace(/currentColor/g, color);
+                var dataUrl = 'data:image/svg+xml;utf8,' + encodeURIComponent(patched);
+                document.querySelectorAll('link[rel="icon"], link[rel="alternate icon"]').forEach(function(l){
+                    if (/\.svg(\?|#|$)/i.test(l.getAttribute('data-original-href') || l.getAttribute('href') || '')) {
+                        l.setAttribute('href', dataUrl);
+                    }
+                });
             }
 
             function setTheme(theme) {
                 document.documentElement.setAttribute('data-theme', theme);
                 try { localStorage.setItem(STORAGE_KEY, theme); } catch(e) {}
                 updateMobileButtons(theme);
+                updateBrowserFavicon(theme);
             }
 
             function updateMobileButtons(theme) {
@@ -353,9 +387,10 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
                 });
             });
 
-            // Initial state for mobile buttons
+            // Initial state for mobile buttons + favicon
             var initial = document.documentElement.getAttribute('data-theme') || 'dark';
             updateMobileButtons(initial);
+            updateBrowserFavicon(initial);
         })();
 
         // ============================================================
