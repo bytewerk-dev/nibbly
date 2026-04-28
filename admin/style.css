@@ -2404,25 +2404,39 @@ a:hover {
 /* Button Style Row — controls + live preview side by side */
 .btn-style-row {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr minmax(220px, auto);
     gap: var(--nb-space-4);
-    align-items: start;
+    align-items: stretch;
+    margin-top: var(--nb-space-2);
 }
 
 .btn-style-controls {
     display: flex;
     flex-direction: column;
     gap: var(--nb-space-3);
+    min-width: 0;
+}
+
+.btn-style-controls .form-hint {
+    margin-top: 0;
 }
 
 .btn-style-preview {
     display: flex;
+    flex-direction: column;
     gap: var(--nb-space-2);
-    align-items: center;
+    align-items: stretch;
+    justify-content: center;
     padding: var(--nb-space-4);
     background: var(--nb-bg-sunken);
+    border: 1px solid var(--nb-border);
     border-radius: var(--nb-radius-lg);
-    align-self: center;
+}
+
+@media (max-width: 640px) {
+    .btn-style-row {
+        grid-template-columns: 1fr;
+    }
 }
 
 .btn-preview-primary {
@@ -2533,6 +2547,91 @@ a:hover {
     width: 100px;
     font-family: var(--nb-font-mono);
     font-size: 0.875rem;
+}
+
+/* Auto-badge — shown when an optional color field is in "auto" mode */
+.auto-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px var(--nb-space-2);
+    background: var(--nb-primary-subtle);
+    color: var(--nb-primary);
+    border-radius: var(--nb-radius-full);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    user-select: none;
+}
+
+.auto-badge[hidden] {
+    display: none;
+}
+
+/* Reset-to-auto button per color field */
+.auto-reset-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid var(--nb-border);
+    border-radius: var(--nb-radius-sm);
+    color: var(--nb-text-muted);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: color var(--nb-duration-fast) var(--nb-ease),
+                border-color var(--nb-duration-fast) var(--nb-ease),
+                background var(--nb-duration-fast) var(--nb-ease);
+}
+
+.auto-reset-btn:hover {
+    color: var(--nb-primary);
+    border-color: var(--nb-primary);
+    background: var(--nb-primary-subtle);
+}
+
+.auto-reset-btn:focus-visible {
+    outline: 2px solid var(--nb-border-focus);
+    outline-offset: 2px;
+}
+
+/* Theme color sections — visually grouped Light / Dark blocks */
+.theme-color-section {
+    border: 1px solid var(--nb-border);
+    border-radius: var(--nb-radius-lg);
+    padding: var(--nb-space-4) var(--nb-space-5) var(--nb-space-5);
+    margin: 0 0 var(--nb-space-5);
+    background: var(--nb-bg-elevated);
+}
+
+.theme-color-section legend {
+    padding: 0 var(--nb-space-2);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--nb-text);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.theme-color-section[data-mode="dark"] {
+    background: var(--nb-bg-sunken);
+}
+
+.theme-color-section .form-group:last-child {
+    margin-bottom: 0;
+}
+
+/* Action row at the bottom of the theme form */
+.theme-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--nb-space-3);
+    align-items: center;
+    margin-top: var(--nb-space-4);
 }
 
 
