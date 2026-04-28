@@ -2,15 +2,15 @@
 
 A flat-file CMS built on PHP with no database. Content lives in JSON files, pages are PHP templates, and an inline editor lets you edit everything directly on the page. Zero dependencies, zero build steps.
 
-**Version 1.0**
+**Version 1.1** — Examples and full documentation at [nibbly.dev](https://nibbly.dev/).
 
 ## Features
 
 - **No database** -- all content stored as JSON files
 - **Inline editing** -- click and edit text, images, and links on the live page
 - **Multi-language** -- built-in language switching and per-language content files
-- **Block-based content** -- 11 block types (text, headings, images, cards, quotes, lists, video, audio, dividers, spacers)
-- **Render components** -- pricing tables, FAQ accordions, team grids, galleries, timelines, stats, testimonials, comparison tables, news listings
+- **Block-based content** -- 11 block types (text, heading, quote, list, image, card, youtube, soundcloud, audio, divider, spacer)
+- **Render components** -- pricing tables, FAQ accordions, team grids, feature grids, galleries, timelines, stats, testimonials, comparison tables, news listings, breadcrumbs
 - **Dark/light theme** -- toggle with localStorage persistence
 - **Custom layouts** -- full PHP template control with editable field API
 - **Automatic backups** -- content versioning with restore via admin panel
@@ -56,26 +56,33 @@ An AI agent can create a new page, build a custom layout, add content blocks, an
 
 ```
 admin/              Admin panel, API, setup wizard
+api/                Public endpoints (contact form, etc.)
 assets/
   images/           Uploaded images
   audio/            Uploaded audio files
   fonts/            Custom font files
+cli/                Command-line tools (make.php, convert.php)
 content/
   pages/            Page content JSON files
   news/             Blog post JSON files
+  events.json       Events
   settings.json     Site-wide settings
 css/
-  style.css         Base styles + CSS custom properties
-  components.css    Render component styles
+  style.css         Core styles + CSS custom properties (do not edit)
+  components.css    Core render component styles (do not edit)
+  website.css       Site-owned overrides (created by you, optional)
 includes/
   header.php        HTML head + navigation
   footer.php        Footer + scripts
+  asset-helpers.php Core stylesheet loader (nibblyCoreStyles)
   content-loader.php  Template API
   block-types.php   Block type definitions
+  block-renderers/  Per-block-type renderers
   nav-config.php    Navigation configuration
+  menu-helpers.php  Menu registry
   page.php          Front controller for JSON-only pages
 js/                 Client-side scripts
-examples/           Example templates and content files
+examples/           Example templates, content, css/website.css.template
 router.php          Development server router
 ```
 
@@ -92,7 +99,7 @@ Create `content/pages/en_about.json`:
   "title": "About Us",
   "description": "Learn more about us.",
   "sections": [
-    { "id": "s1", "type": "heading", "heading": "About Us", "level": "h1" },
+    { "id": "s1", "type": "heading", "text": "About Us", "level": "h1" },
     { "id": "s2", "type": "text", "title": "", "content": "<p>Our story.</p>" }
   ]
 }
@@ -133,24 +140,26 @@ See `examples/` for complete working examples.
 
 ## Theming
 
-All design tokens are CSS custom properties in `css/style.css`:
+All design tokens are CSS custom properties defined in `css/style.css` (Nibbly Core). To customize them for your site, **don't edit `style.css` directly** -- it gets overwritten on upgrades. Instead, copy the override template and edit your own file:
+
+```bash
+cp examples/css/website.css.template css/website.css
+```
+
+`includes/header.php` loads `css/website.css` automatically after Core, so any `:root` overrides you set there win:
 
 ```css
 :root {
     --color-primary: #2563eb;
     --color-text: #171717;
-    --color-background: #ffffff;
     --font-display: system-ui, -apple-system, sans-serif;
-    --font-body: system-ui, -apple-system, sans-serif;
-    --spacing-sm: 1rem;
     --spacing-md: 2rem;
-    --spacing-lg: 4rem;
 }
 ```
 
-Change these values to match your brand. Dark theme variables are included and toggled via `data-theme="dark"` on the `<html>` element.
+Dark theme variables are included and toggled via `data-theme="dark"` on the `<html>` element.
 
-To use custom fonts, place font files in `assets/fonts/`, define `@font-face` rules in `css/fonts.css`, and uncomment the stylesheet link in `includes/header.php`.
+To use custom fonts, place font files in `assets/fonts/` and define `@font-face` rules in `css/fonts.css`. `includes/header.php` loads `css/fonts.css` automatically when both the file and the `assets/fonts/` directory exist.
 
 ## License
 
