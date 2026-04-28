@@ -88,6 +88,7 @@ if (!isset($NAV_ITEMS)) {
 }
 
 require_once __DIR__ . '/menu-helpers.php';
+require_once __DIR__ . '/asset-helpers.php';
 
 $_allNavItems = $NAV_ITEMS[$currentLang] ?? $NAV_ITEMS[$defaultLang] ?? [];
 $navItems = getMenuItems('header', $currentLang, $basePath ?? '', $_allNavItems);
@@ -95,7 +96,7 @@ $navItems = getMenuItems('header', $currentLang, $basePath ?? '', $_allNavItems)
 // Load site settings (used for favicon, theme colors, editor button style)
 $_settingsPath = __DIR__ . '/../content/settings.json';
 $_settings = [];
-$_favicon = 'assets/images/favicon.svg';
+$_favicon = ltrim(defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg', '/');
 $_faviconPng = '';
 if (file_exists($_settingsPath)) {
     $_settings = json_decode(file_get_contents($_settingsPath), true) ?: [];
@@ -132,8 +133,7 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
 
     <title><?php echo htmlspecialchars($pageTitle ?? 'Website'); ?></title>
 
-    <link rel="stylesheet" href="<?php echo $basePath; ?>css/style.css">
-    <link rel="stylesheet" href="<?php echo $basePath; ?>css/components.css">
+    <?php echo nibblyCoreStyles($basePath); ?>
     <?php if (file_exists(__DIR__ . '/../css/website.css')): ?>
     <link rel="stylesheet" href="<?php echo $basePath; ?>css/website.css">
     <?php endif; ?>
@@ -195,16 +195,23 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
                 <?php
                 $_headerLogo = $_settings['logo'] ?? $_settings['branding']['logo'] ?? '';
                 $_headerLogo = ltrim($_headerLogo, '/');
+                $_headerLogoDark = ltrim($_settings['branding']['logoDark'] ?? '', '/');
                 // Treat a logo that points at the favicon as "no separate logo set"
                 if ($_headerLogo === $_favicon) $_headerLogo = '';
                 $_siteName = defined('SITE_NAME') ? SITE_NAME : '';
                 $_logoDisplay = $_settings['branding']['logoDisplay'] ?? 'both';
                 $_showFavicon = !$_headerLogo && $_logoDisplay !== 'text';
                 $_showText    = $_siteName && !$_headerLogo && $_logoDisplay !== 'favicon';
-                if ($_headerLogo): ?>
-                <img class="site-logo-img" src="<?php echo $basePath . htmlspecialchars($_headerLogo); ?>" alt="<?php echo htmlspecialchars($_siteName); ?>">
+                if ($_headerLogo):
+                    $_headerLogoDarkSrc = $_headerLogoDark ?: $_headerLogo;
+                    $_hasDarkLogo = ($_headerLogoDark && $_headerLogoDark !== $_headerLogo);
+                ?>
+                <img class="site-logo-img site-logo-img--light" src="<?php echo $basePath . htmlspecialchars($_headerLogo); ?>" alt="<?php echo htmlspecialchars($_siteName); ?>">
+                <?php if ($_hasDarkLogo): ?>
+                <img class="site-logo-img site-logo-img--dark" src="<?php echo $basePath . htmlspecialchars($_headerLogoDarkSrc); ?>" alt="<?php echo htmlspecialchars($_siteName); ?>" aria-hidden="true">
+                <?php endif; ?>
                 <?php elseif ($_showFavicon): ?>
-                <img class="site-logo-img" src="<?php echo $basePath . htmlspecialchars($_favicon); ?>" alt="<?php echo htmlspecialchars($_siteName); ?>" width="32" height="32">
+                <?php echo nibblyIconOrImg($basePath . $_favicon, $_siteName, ['width' => 32, 'height' => 32, 'class' => 'site-logo-img site-logo-icon']); ?>
                 <?php endif; ?>
                 <?php if ($_showText): ?>
                 <span class="site-logo-text" title="<?php echo htmlspecialchars($_siteName); ?>"><?php echo htmlspecialchars($_siteName); ?></span>

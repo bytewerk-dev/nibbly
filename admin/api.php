@@ -1711,9 +1711,10 @@ switch ($action) {
 
     case 'load-settings':
         $defaults = [
-            'favicon' => '/assets/images/favicon.svg',
+            'favicon' => defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg',
             'branding' => [
                 'logo' => '',
+                'logoDark' => '',
                 'name' => defined('SITE_NAME') ? SITE_NAME : 'CMS',
                 'showBranding' => true,
                 'logoDisplay' => 'both'
@@ -1722,6 +1723,10 @@ switch ($action) {
                 'adminTheme' => 'light',
                 'primaryColor' => '#2563eb',
                 'accentColor' => '#60a5fa',
+                'sidebarBg' => '',
+                'darkPrimaryColor' => '',
+                'darkAccentColor' => '',
+                'darkSidebarBg' => '',
                 'buttonGlow' => true,
                 'buttonRadius' => 6
             ],
@@ -1771,8 +1776,8 @@ switch ($action) {
 
         // Whitelist allowed keys
         $allowed = [
-            'branding' => ['logo', 'name', 'showBranding', 'logoDisplay'],
-            'theme' => ['adminTheme', 'primaryColor', 'accentColor', 'buttonGlow', 'buttonRadius'],
+            'branding' => ['logo', 'logoDark', 'name', 'showBranding', 'logoDisplay'],
+            'theme' => ['adminTheme', 'primaryColor', 'accentColor', 'sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg', 'buttonGlow', 'buttonRadius'],
             'general' => ['adminLanguage', 'frontendLoginRedirect'],
             'email' => ['method', 'recipientEmail', 'fromEmail', 'fromName', 'smtpHost', 'smtpPort', 'smtpUsername', 'smtpPassword', 'smtpEncryption']
         ];
@@ -1788,9 +1793,17 @@ switch ($action) {
                 if (array_key_exists($key, $settings[$group])) {
                     $value = $settings[$group][$key];
 
-                    // Validate color values
+                    // Validate color values — required (must be set)
                     if (in_array($key, ['primaryColor', 'accentColor'])) {
                         if (!preg_match('/^#[0-9a-fA-F]{6}$/', $value)) {
+                            jsonResponse(false, null, 'Invalid color value for ' . $key);
+                        }
+                    }
+
+                    // Validate optional color values — empty string means "auto"
+                    if (in_array($key, ['sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg'])) {
+                        $value = (string)$value;
+                        if ($value !== '' && !preg_match('/^#[0-9a-fA-F]{6}$/', $value)) {
                             jsonResponse(false, null, 'Invalid color value for ' . $key);
                         }
                     }

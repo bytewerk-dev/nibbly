@@ -12,6 +12,7 @@ if (!file_exists(__DIR__ . '/config.php')) {
 require_once 'config.php';
 require_once __DIR__ . '/lang/i18n.php';
 require_once __DIR__ . '/users.php';
+require_once __DIR__ . '/../includes/asset-helpers.php';
 ensureUsersFile();
 
 // Secure session cookie settings
@@ -433,7 +434,8 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
 }
 
 // Load settings for branding/theme
-$siteSettings = ['favicon' => '/assets/images/favicon.svg', 'branding' => ['logo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both'], 'theme' => ['adminTheme' => 'light', 'primaryColor' => '#2563eb', 'accentColor' => '#60a5fa']];
+$_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg';
+$siteSettings = ['favicon' => $_defaultFavicon, 'branding' => ['logo' => '', 'logoDark' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both'], 'theme' => ['adminTheme' => 'light', 'primaryColor' => '#2563eb', 'accentColor' => '#60a5fa']];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     $loadedSettings = json_decode(file_get_contents(SETTINGS_PATH), true);
     if (is_array($loadedSettings)) {
@@ -448,7 +450,8 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
 }
 $adminTheme = $siteSettings['theme']['adminTheme'] ?? 'light';
 $showBranding = $siteSettings['branding']['showBranding'] ?? true;
-$brandLogo = !empty($siteSettings['branding']['logo']) ? $siteSettings['branding']['logo'] : ($siteSettings['favicon'] ?? '/assets/images/favicon.svg');
+// Backend always uses the favicon (frontend logo is for the public site only).
+$brandLogo = $siteSettings['favicon'] ?? $_defaultFavicon;
 $brandName = $siteSettings['branding']['name'] ?? (defined('SITE_NAME') ? SITE_NAME : 'CMS');
 ?>
 <!DOCTYPE html>
@@ -493,7 +496,7 @@ $brandName = $siteSettings['branding']['name'] ?? (defined('SITE_NAME') ? SITE_N
     <div class="login-container">
         <?php if ($showBranding): ?>
         <div class="login-logo">
-            <img src="<?php echo htmlspecialchars($brandLogo); ?>" alt="<?php echo htmlspecialchars($brandName); ?>" width="40" height="40">
+            <?php echo nibblyIconOrImg($brandLogo, $brandName, ['width' => 40, 'height' => 40]); ?>
         </div>
         <?php endif; ?>
         <h1><?php echo t('login.title'); ?></h1>

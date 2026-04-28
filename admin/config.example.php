@@ -11,6 +11,10 @@
 
 define('NIBBLY_VERSION', '1.0.0');
 
+// Default favicon path used as fallback by the admin UI before settings.json
+// values are applied. Override in settings.json -> "favicon".
+define('NIBBLY_DEFAULT_FAVICON', '/assets/images/favicon.svg');
+
 // ============================================================
 // SITE SETTINGS
 // ============================================================
