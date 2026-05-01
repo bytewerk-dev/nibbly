@@ -519,6 +519,9 @@ Control which menus a page appears in via the `"nav"` array in page JSON. Menu I
 
 If `"nav"` is absent, defaults to `["header"]` (auto-discovered in header only).
 
+> **`"nav": []` only hides the page from menus — the URL remains publicly reachable.**
+> The front controller serves any existing page slug regardless of `nav`. If you want the page truly gone, delete its JSON file (or move it out of `content/pages/`). For migrations where the content was merged into another page, prefer either deleting the JSON and adding a 301 redirect in `.htaccess`, or returning `410 Gone` if there is no replacement (see `410.php`).
+
 ### Menu Registry (`content/menus.json`)
 
 Defines available menus with multilingual labels and sort order:
