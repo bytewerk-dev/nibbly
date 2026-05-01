@@ -14,6 +14,8 @@ Nibbly turns any HTML or PHP page into an editable website — no database requi
 | Menu registry | `content/menus.json` |
 | Navigation | `includes/nav-config.php` |
 | Menu helpers | `includes/menu-helpers.php` |
+| Migration redirects | `content/redirects.json` (copy from `content/redirects.example.json`) |
+| Redirect helper | `includes/redirect-helper.php` |
 | Site page hook | `includes/site-page-hook.php` (optional, survives core updates) |
 | Block types | `includes/block-types.php` |
 | Template API | `includes/content-loader.php` |
@@ -578,6 +580,30 @@ Optional `"breadcrumb"` array in page JSON. Each entry has `label` (required) an
 Standard pages render breadcrumbs automatically above `renderAllSections()`. Custom layouts call `renderBreadcrumb($contentPage, $basePath)` manually. If no `"breadcrumb"` field is present, nothing is rendered.
 
 `nav-config.php` is still used for: explicit navigation ordering, custom labels, dropdown grouping, the language switcher's `$PAGE_MAPPING`, and pages that need different slugs per language.
+
+## Migration Redirects (`content/redirects.json`)
+
+For SEO-preserving migrations from another CMS, drop URL → URL mappings into `content/redirects.json`. The router applies the first matching rule before any other routing — both in production (via `route.php` after `.htaccess` rewrites) and in development (via `router.php`). One file works for both.
+
+```json
+{
+  "redirects": [
+    { "from": "^/wp/about/?$",          "to": "/about",              "status": 301 },
+    { "from": "^/wp/page/(.+)$",        "to": "/$1",                 "status": 301 },
+    { "from": "^/services/coaching/?$", "to": "/services#coaching",  "status": 301 },
+    { "from": "^/temp/(.+)$",           "to": "/hub",                "status": 302 },
+    { "from": "^/retired/lifecoach$",                                "status": 410 }
+  ]
+}
+```
+
+- `from` is a PCRE pattern matched against the request path (with leading slash). Backreferences (`$1`, `$2`, …) in `to` are resolved.
+- `to` is the target URL. Anchors (`#section`) are preserved as written.
+- `status`: `301` (default), `302`, or `410` (Gone — `to` is ignored, the branded `/410.php` is rendered).
+- Rules are evaluated top-to-bottom; the first match wins.
+- Bad regex in a single rule is silently skipped, so a typo doesn't take the whole site down.
+
+A starter file lives at `content/redirects.example.json`. Copy it to `content/redirects.json` to activate; the live file is gitignored so site owners can edit it without polluting the repo.
 
 ## HTML-to-Nibbly Converter
 
