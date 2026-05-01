@@ -88,7 +88,7 @@ if (preg_match('#^/([a-z]{2})/#', $requestUri, $m) && isset($strings[$m[1]])) {
 $t = $strings[$currentLang] ?? $strings[$defaultLang] ?? $strings['en'];
 $pageTitle = $t['title'];
 
-include 'includes/header.php';
+include __DIR__ . '/includes/header.php';
 ?>
 
     <main class="main-content">
@@ -100,4 +100,4 @@ include 'includes/header.php';
         </div>
     </main>
 
-<?php include 'includes/footer.php'; ?>
+<?php include __DIR__ . '/includes/footer.php'; ?>
