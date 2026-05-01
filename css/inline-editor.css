@@ -3,25 +3,17 @@
  * Flexible and reusable for other websites
  */
 
-/* Colors — editor-primary can be overridden via settings.json (injected in header.php) */
-:root {
-    --editor-primary: #2563eb;
-    --editor-primary-hover: #1d4ed8;
-    --editor-primary-light: #60a5fa;
-    --editor-bar-bg: #23282d;
-    --editor-bar-hover: #32373c;
-    --editor-success: var(--editor-primary);
-    --editor-danger: #dc3545;
-    --editor-danger-hover: #c82333;
-    --editor-btn-bg: radial-gradient(ellipse at 50% 0%, #4580ed 0%, #2563eb 70%);
-    --editor-btn-bg-hover: radial-gradient(ellipse at 50% 0%, #5d94ef 0%, #2563eb 70%);
-    --editor-btn-radius: 6px;
-    --editor-neutral-bg: #f4f4f5;
-    --editor-neutral-bg-hover: #e4e4e7;
-    --editor-neutral-fg: #52525b;
-    --editor-neutral-fg-hover: #27272a;
-    --editor-neutral-border: #d4d4d8;
-}
+/*
+ * Editor theme variables are injected by header.php as a <style>:root{…}</style>
+ * block built from content/settings.json. We deliberately do NOT declare a
+ * competing :root here — if we did, this file (loaded later via <link>) would
+ * override the header injection due to source order, and site theming would
+ * silently break for any setting that differed from the defaults.
+ *
+ * Defaults instead live in the second argument of each var() call below, so
+ * the header injection is always authoritative when present, and the defaults
+ * only kick in if a variable is missing entirely.
+ */
 
 /*
  * Fix: background-clip:text + editable-field child.
@@ -45,7 +37,7 @@
     top: 0;
     left: 0;
     right: 0;
-    background: var(--editor-bar-bg);
+    background: var(--editor-bar-bg, #23282d);
     color: #fff;
     z-index: 10000;
     box-shadow: 0 1px 3px rgba(0,0,0,0.3);
@@ -112,7 +104,7 @@
 }
 
 .admin-bar-link:hover {
-    background: var(--editor-bar-hover);
+    background: var(--editor-bar-hover, #32373c);
     color: #fff;
 }
 
@@ -152,7 +144,7 @@ body.edit-mode-active .editable-section {
 }
 
 body.edit-mode-active .editable-section:hover {
-    outline-color: var(--editor-primary);
+    outline-color: var(--editor-primary, #2563eb);
 }
 
 /* About-Section spezifisch */
@@ -178,7 +170,7 @@ body.edit-mode-active .editable-section.editable-empty {
 }
 
 body.edit-mode-active .editable-section.editable-empty:hover {
-    border-color: var(--editor-primary);
+    border-color: var(--editor-primary, #2563eb);
     background: rgba(13, 156, 144, 0.1);
 }
 
@@ -194,7 +186,7 @@ body.edit-mode-active .editable-section.editable-empty:hover {
        toolbar. */
     bottom: calc(100% - 2px);
     right: 0;
-    background: var(--editor-primary);
+    background: var(--editor-primary, #2563eb);
     color: white;
     padding: 4px 8px;
     border-radius: 4px 4px 4px 0;
@@ -246,11 +238,11 @@ body.edit-mode-active .editable-overlay:hover {
 }
 
 .overlay-btn-edit:hover {
-    background: var(--editor-primary);
+    background: var(--editor-primary, #2563eb);
 }
 
 .overlay-btn-delete:hover {
-    background: var(--editor-danger);
+    background: var(--editor-danger, #dc3545);
 }
 
 .overlay-btn-hide {
@@ -335,13 +327,13 @@ body.edit-mode-active .section-add-buttons:has(.section-add-btn-toggle[aria-expa
 
 .section-add-btn-toggle:hover,
 .section-add-btn-toggle[aria-expanded="true"] {
-    background: var(--editor-bar-hover);
+    background: var(--editor-bar-hover, #32373c);
     color: #fff;
     border-color: rgba(255, 255, 255, 0.18);
 }
 
 .section-add-btn-toggle:focus-visible {
-    outline: 2px solid var(--editor-primary);
+    outline: 2px solid var(--editor-primary, #2563eb);
     outline-offset: 2px;
 }
 
@@ -444,7 +436,7 @@ body.edit-mode-active .section-add-buttons:has(.section-add-btn-toggle[aria-expa
 
 .editable-section.dragging {
     opacity: 0.5;
-    outline: 2px solid var(--editor-primary);
+    outline: 2px solid var(--editor-primary, #2563eb);
     outline-offset: 2px;
 }
 
@@ -453,11 +445,11 @@ body.edit-mode-active .section-add-buttons:has(.section-add-btn-toggle[aria-expa
 }
 
 .editable-section.drag-over-top {
-    box-shadow: inset 0 3px 0 var(--editor-primary);
+    box-shadow: inset 0 3px 0 var(--editor-primary, #2563eb);
 }
 
 .editable-section.drag-over-bottom {
-    box-shadow: inset 0 -3px 0 var(--editor-primary);
+    box-shadow: inset 0 -3px 0 var(--editor-primary, #2563eb);
 }
 
 /* ============================================================
@@ -643,7 +635,7 @@ body.edit-mode-active .editable-section:hover .video-container::after {
 }
 
 .add-section-search input:focus {
-    border-color: var(--editor-primary);
+    border-color: var(--editor-primary, #2563eb);
 }
 
 .add-section-category {
@@ -684,7 +676,7 @@ body.edit-mode-active .editable-section:hover .video-container::after {
 }
 
 .add-section-option:hover {
-    border-color: var(--editor-primary);
+    border-color: var(--editor-primary, #2563eb);
     background: rgba(13, 156, 144, 0.05);
 }
 
@@ -694,7 +686,7 @@ body.edit-mode-active .editable-section:hover .video-container::after {
     justify-content: center;
     width: 32px;
     height: 32px;
-    color: var(--editor-primary);
+    color: var(--editor-primary, #2563eb);
 }
 
 .add-section-icon svg {
@@ -704,7 +696,7 @@ body.edit-mode-active .editable-section:hover .video-container::after {
 }
 
 .add-section-option:hover .add-section-icon {
-    color: var(--editor-primary-hover);
+    color: var(--editor-primary-hover, #1d4ed8);
 }
 
 .add-section-label {
@@ -760,7 +752,7 @@ body.edit-mode-active .editable-section:hover .video-container::after {
 
 .editor-title-tag-select:focus {
     outline: none;
-    border-color: var(--editor-primary);
+    border-color: var(--editor-primary, #2563eb);
     box-shadow: 0 0 0 3px rgba(13, 149, 156, 0.15);
 }
 
@@ -809,7 +801,7 @@ body.edit-mode-active .editable-section:hover .video-container::after {
 .editor-field textarea:focus,
 .editor-field select:focus {
     outline: none;
-    border-color: var(--editor-primary);
+    border-color: var(--editor-primary, #2563eb);
     box-shadow: 0 0 0 3px rgba(13, 149, 156, 0.15);
 }
 
@@ -888,7 +880,7 @@ body.edit-mode-active .editable-section:hover .video-container::after {
 }
 
 .floating-toolbar button:active {
-    background: var(--editor-primary);
+    background: var(--editor-primary, #2563eb);
     color: #fff;
 }
 
@@ -932,8 +924,8 @@ body.edit-mode-active .editable-section:hover .video-container::after {
 }
 
 .editor-toolbar button:hover {
-    background: var(--editor-primary);
-    border-color: var(--editor-primary);
+    background: var(--editor-primary, #2563eb);
+    border-color: var(--editor-primary, #2563eb);
     color: white;
 }
 
@@ -972,7 +964,7 @@ body.edit-mode-active .editable-section:hover .video-container::after {
     width: 16px;
     height: 16px;
     cursor: pointer;
-    accent-color: var(--editor-primary);
+    accent-color: var(--editor-primary, #2563eb);
 }
 
 /* Checkbox label for options below the editor */
@@ -1030,7 +1022,7 @@ body.edit-mode-active .editable-section:hover .video-container::after {
 
 .editor-wysiwyg:focus {
     outline: none;
-    border-color: var(--editor-primary);
+    border-color: var(--editor-primary, #2563eb);
     box-shadow: 0 0 0 2px rgba(13, 156, 144, 0.2);
 }
 
@@ -1048,7 +1040,7 @@ body.edit-mode-active .editable-section:hover .video-container::after {
 }
 
 .editor-wysiwyg a {
-    color: var(--editor-primary);
+    color: var(--editor-primary, #2563eb);
 }
 
 /* HTML Editor */
@@ -1072,7 +1064,7 @@ textarea.editor-html {
 
 .editor-html:focus {
     outline: none;
-    border-color: var(--editor-primary);
+    border-color: var(--editor-primary, #2563eb);
 }
 
 /* ============================================================
@@ -1110,7 +1102,7 @@ textarea.editor-html {
 }
 
 .editor-btn-primary {
-    background: var(--editor-btn-bg);
+    background: var(--editor-btn-bg, radial-gradient(ellipse at 50% 0%, #4580ed 0%, #2563eb 70%));
     color: white;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -1118,9 +1110,9 @@ textarea.editor-html {
 }
 
 .editor-btn-primary:hover {
-    background: var(--editor-btn-bg-hover);
+    background: var(--editor-btn-bg-hover, radial-gradient(ellipse at 50% 0%, #5d94ef 0%, #2563eb 70%));
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15),
-                0 4px 20px color-mix(in srgb, var(--editor-primary) 35%, transparent);
+                0 4px 20px color-mix(in srgb, var(--editor-primary, #2563eb) 35%, transparent);
 }
 
 .editor-flat .editor-btn-primary:hover {
@@ -1151,7 +1143,7 @@ textarea.editor-html {
 }
 
 .editor-btn-icon:hover {
-    background: var(--editor-primary);
+    background: var(--editor-primary, #2563eb);
     color: white;
 }
 
@@ -1162,12 +1154,12 @@ textarea.editor-html {
 }
 
 .editor-btn-danger {
-    background: var(--editor-danger);
+    background: var(--editor-danger, #dc3545);
     color: white;
 }
 
 .editor-btn-danger:hover {
-    background: var(--editor-danger-hover);
+    background: var(--editor-danger-hover, #c82333);
 }
 
 /* ============================================================
@@ -1188,11 +1180,11 @@ textarea.editor-html {
 }
 
 .editor-toast-success {
-    background: var(--editor-success);
+    background: var(--editor-success, #2563eb);
 }
 
 .editor-toast-error {
-    background: var(--editor-danger);
+    background: var(--editor-danger, #dc3545);
 }
 
 @keyframes slideInToast {
@@ -1237,7 +1229,7 @@ textarea.editor-html {
 }
 
 .admin-bar-btn:hover {
-    background: var(--editor-bar-hover);
+    background: var(--editor-bar-hover, #32373c);
     border-color: rgba(255, 255, 255, 0.5);
     color: #60c8cd;
 }
@@ -1259,14 +1251,14 @@ textarea.editor-html {
 }
 
 .admin-bar-btn-edit {
-    background: var(--editor-btn-bg);
-    border-color: var(--editor-primary);
+    background: var(--editor-btn-bg, radial-gradient(ellipse at 50% 0%, #4580ed 0%, #2563eb 70%));
+    border-color: var(--editor-primary, #2563eb);
     font-weight: 600;
 }
 
 .admin-bar-btn-edit:hover {
-    background: var(--editor-btn-bg-hover);
-    border-color: var(--editor-primary-hover);
+    background: var(--editor-btn-bg-hover, radial-gradient(ellipse at 50% 0%, #5d94ef 0%, #2563eb 70%));
+    border-color: var(--editor-primary-hover, #1d4ed8);
     color: #fff;
 }
 
@@ -1284,14 +1276,14 @@ textarea.editor-html {
 }
 
 .admin-bar-btn-save {
-    background: var(--editor-btn-bg);
-    border-color: var(--editor-primary);
+    background: var(--editor-btn-bg, radial-gradient(ellipse at 50% 0%, #4580ed 0%, #2563eb 70%));
+    border-color: var(--editor-primary, #2563eb);
     font-weight: 600;
 }
 
 .admin-bar-btn-save:hover {
-    background: var(--editor-btn-bg-hover);
-    border-color: var(--editor-primary-hover);
+    background: var(--editor-btn-bg-hover, radial-gradient(ellipse at 50% 0%, #5d94ef 0%, #2563eb 70%));
+    border-color: var(--editor-primary-hover, #1d4ed8);
     color: #fff;
 }
 
@@ -1401,7 +1393,7 @@ textarea.editor-html {
     width: 48px;
     height: 48px;
     margin: 0 auto 15px;
-    color: var(--editor-danger);
+    color: var(--editor-danger, #dc3545);
 }
 
 .confirm-dialog-icon svg {
@@ -1470,7 +1462,7 @@ select.prompt-dialog-input {
 
 .prompt-dialog-input:focus {
     outline: none;
-    border-color: var(--editor-primary);
+    border-color: var(--editor-primary, #2563eb);
     box-shadow: 0 0 0 3px rgba(13, 149, 156, 0.15);
 }
 
@@ -1528,7 +1520,7 @@ select.prompt-dialog-input {
 
 .html-source-textarea:focus {
     outline: none;
-    border-color: var(--editor-primary);
+    border-color: var(--editor-primary, #2563eb);
     box-shadow: 0 0 0 3px rgba(13, 149, 156, 0.15);
 }
 
@@ -1546,7 +1538,7 @@ body.edit-mode-active .editable-event {
 }
 
 body.edit-mode-active .editable-event:hover {
-    outline: 1px solid var(--editor-primary);
+    outline: 1px solid var(--editor-primary, #2563eb);
     outline-offset: 6px;
     background: rgba(13, 156, 144, 0.03);
 }
@@ -1555,7 +1547,7 @@ body.edit-mode-active .editable-event:hover {
     position: absolute;
     top: 0;
     right: 0;
-    background: var(--editor-primary);
+    background: var(--editor-primary, #2563eb);
     color: white;
     padding: 4px 8px;
     border-radius: 0 4px 0 4px;
@@ -1585,7 +1577,7 @@ body.edit-mode-active .editable-footer-active {
 }
 
 body.edit-mode-active .editable-footer-active:hover {
-    outline: 1px solid var(--editor-primary);
+    outline: 1px solid var(--editor-primary, #2563eb);
     outline-offset: 2px;
     background: rgba(13, 156, 144, 0.1);
 }
@@ -1595,7 +1587,7 @@ body.edit-mode-active .editable-footer-active:hover {
     position: absolute;
     top: -8px;
     right: -8px;
-    background: var(--editor-primary);
+    background: var(--editor-primary, #2563eb);
     color: white;
     width: 16px;
     height: 16px;
@@ -1630,7 +1622,7 @@ body.edit-mode-active .editable-field-active {
 }
 
 body.edit-mode-active .editable-field-active:hover {
-    outline-color: var(--editor-primary);
+    outline-color: var(--editor-primary, #2563eb);
 }
 
 /* HTML fields keep pointer cursor (open modal) */
@@ -1717,9 +1709,9 @@ body.edit-mode-active .vibecoding-card {
 
 /* Aktiver Bearbeitungsmodus (contentEditable) */
 .editable-field-editing {
-    outline: 2px solid var(--editor-primary) !important;
+    outline: 2px solid var(--editor-primary, #2563eb) !important;
     background: rgba(255, 255, 255, 0.95) !important;
-    caret-color: var(--editor-primary);
+    caret-color: var(--editor-primary, #2563eb);
     min-width: 20px;
     /* Reset gradient-text so content is visible on white editing bg */
     -webkit-text-fill-color: initial !important;
@@ -1759,7 +1751,7 @@ body.edit-mode-active .editable-list-item {
 }
 
 body.edit-mode-active .editable-list-item:hover {
-    outline-color: var(--editor-primary, #0073aa);
+    outline-color: var(--editor-primary, #2563eb);
 }
 
 /* Overlay controls — anchored above the item so it never covers small
@@ -1813,7 +1805,7 @@ body.edit-mode-active .editable-list-overlay:hover {
 }
 
 .editable-list-overlay .overlay-btn-delete:hover {
-    background: var(--editor-danger, #e74c3c);
+    background: var(--editor-danger, #dc3545);
 }
 
 .editable-list-overlay .list-drag-handle {
@@ -1839,16 +1831,16 @@ body.edit-mode-active .editable-list-overlay:hover {
 /* Drag & Drop visual feedback */
 .editable-list-item.dragging {
     opacity: 0.5;
-    outline: 2px solid var(--editor-primary, #0073aa);
+    outline: 2px solid var(--editor-primary, #2563eb);
     outline-offset: 2px;
 }
 
 .editable-list-item.drag-over-top {
-    box-shadow: inset 0 3px 0 var(--editor-primary, #0073aa);
+    box-shadow: inset 0 3px 0 var(--editor-primary, #2563eb);
 }
 
 .editable-list-item.drag-over-bottom {
-    box-shadow: inset 0 -3px 0 var(--editor-primary, #0073aa);
+    box-shadow: inset 0 -3px 0 var(--editor-primary, #2563eb);
 }
 
 /* Add button per item (circular + at bottom edge, visible on hover) */
@@ -1859,9 +1851,9 @@ body.edit-mode-active .editable-list-overlay:hover {
     transform: translateX(-50%);
     width: 28px;
     height: 28px;
-    border: 2px solid var(--editor-primary, #0073aa);
+    border: 2px solid var(--editor-primary, #2563eb);
     background: #fff;
-    color: var(--editor-primary, #0073aa);
+    color: var(--editor-primary, #2563eb);
     cursor: pointer;
     border-radius: 50%;
     display: flex;
@@ -1886,7 +1878,7 @@ body.edit-mode-active .editable-list-item:hover .list-item-add-btn {
 }
 
 .list-item-add-btn:hover {
-    background: var(--editor-primary, #0073aa);
+    background: var(--editor-primary, #2563eb);
     color: #fff;
     transform: translateX(-50%) scale(1.15);
 }
@@ -1997,7 +1989,7 @@ body.edit-mode-active .editable-list-item:hover .list-item-add-btn {
 
 .image-search-input:focus {
     outline: none;
-    border-color: var(--editor-primary);
+    border-color: var(--editor-primary, #2563eb);
     box-shadow: 0 0 0 2px rgba(13, 156, 144, 0.15);
 }
 
@@ -2121,7 +2113,7 @@ body.edit-mode-active .editable-list-item:hover .list-item-add-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--editor-primary);
+    color: var(--editor-primary, #2563eb);
 }
 
 .audio-list-icon svg {
@@ -2178,7 +2170,7 @@ label.editor-btn-inline {
     background: linear-gradient(135deg, rgba(13, 156, 144, 0.2) 0%, rgba(13, 156, 144, 0.1) 100%);
     border: 2px dashed rgba(13, 156, 144, 0.5);
     border-radius: 12px;
-    color: var(--editor-primary);
+    color: var(--editor-primary, #2563eb);
     font-size: 15px;
     font-weight: 500;
     cursor: pointer;
@@ -2187,7 +2179,7 @@ label.editor-btn-inline {
 
 .event-add-btn:hover {
     background: linear-gradient(135deg, rgba(13, 156, 144, 0.3) 0%, rgba(13, 156, 144, 0.2) 100%);
-    border-color: var(--editor-primary);
+    border-color: var(--editor-primary, #2563eb);
     transform: translateY(-2px);
 }
 
@@ -2201,7 +2193,7 @@ body.edit-mode-active .event-card-editable {
 }
 
 body.edit-mode-active .event-card-editable:hover {
-    outline: 1px solid var(--editor-primary);
+    outline: 1px solid var(--editor-primary, #2563eb);
     outline-offset: 6px;
     background: rgba(13, 149, 156, 0.03);
 }
@@ -2252,12 +2244,12 @@ body.edit-mode-active .event-card-editable:hover .event-edit-buttons {
 
 .event-edit-btn:hover {
     background: rgba(13, 149, 156, 0.2);
-    color: var(--editor-primary);
+    color: var(--editor-primary, #2563eb);
 }
 
 .event-hide-btn:hover {
     background: rgba(13, 149, 156, 0.2);
-    color: var(--editor-primary);
+    color: var(--editor-primary, #2563eb);
 }
 
 .event-delete-btn:hover {
@@ -2275,7 +2267,7 @@ body.edit-mode-active .event-card-hidden .event-edit-buttons {
 }
 
 body.edit-mode-active .event-card-hidden .event-hide-btn {
-    color: var(--editor-primary);
+    color: var(--editor-primary, #2563eb);
 }
 
 /* Event Editor Language Tabs */
@@ -2312,8 +2304,8 @@ body.edit-mode-active .event-card-hidden .event-hide-btn {
 }
 
 .event-lang-tab.active {
-    color: var(--editor-primary, #0d959c);
-    border-bottom-color: var(--editor-primary, #0d959c);
+    color: var(--editor-primary, #2563eb);
+    border-bottom-color: var(--editor-primary, #2563eb);
     background: rgba(13, 149, 156, 0.06);
 }
 
@@ -2336,8 +2328,8 @@ body.edit-mode-active .event-card-hidden .event-hide-btn {
 }
 
 .event-lang-copy-btn:hover {
-    color: var(--editor-primary, #0d959c);
-    border-color: var(--editor-primary, #0d959c);
+    color: var(--editor-primary, #2563eb);
+    border-color: var(--editor-primary, #2563eb);
     background: rgba(13, 149, 156, 0.06);
 }
 
@@ -2404,7 +2396,7 @@ body.edit-mode-active .event-card-hidden .event-hide-btn {
 
 .modal-resize-handle:hover::before,
 .modal-resize-handle:hover::after {
-    border-color: var(--editor-primary);
+    border-color: var(--editor-primary, #2563eb);
 }
 
 .editor-modal-content.resizing {
@@ -2766,7 +2758,7 @@ body.edit-mode-active .cell-toggle-group {
 [data-site-theme="dark"] .editor-modal input:focus,
 [data-site-theme="dark"] .editor-modal textarea:focus,
 [data-site-theme="dark"] .editor-modal select:focus {
-    border-color: var(--editor-primary);
+    border-color: var(--editor-primary, #2563eb);
     outline: none;
 }
 
@@ -2900,7 +2892,7 @@ body.edit-mode-active .news-editable {
 
 body.edit-mode-active .news-editable:hover,
 body.edit-mode-active .news-editable:focus {
-    outline-color: var(--editor-primary);
+    outline-color: var(--editor-primary, #2563eb);
 }
 
 body.edit-mode-active .news-editable:focus {
@@ -2916,7 +2908,7 @@ body.edit-mode-active .news-editable:focus {
     font-size: 13px;
     color: var(--color-text-secondary, #525252);
     background: rgba(37, 99, 235, 0.04);
-    border-left: 2px solid var(--editor-primary);
+    border-left: 2px solid var(--editor-primary, #2563eb);
     border-radius: 2px;
     font-style: italic;
 }
