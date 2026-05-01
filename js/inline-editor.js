@@ -518,7 +518,7 @@
         const loadPromises = Array.from(contentPages).map(page => loadContent(page));
         loadPromises.push(loadEvents());
 
-        Promise.all(loadPromises).then(() => {
+        Promise.all(loadPromises).then(async () => {
             createEditorUI();
             createEventEditorUI();
             createAddSectionUI();
@@ -531,7 +531,12 @@
             attachListEditHandlers();
             attachComparisonRowHandlers();
             attachComparisonCellToggles();
-            showAdminBar();
+            // Await the admin bar — showAdminBar() awaits a settings fetch
+            // and only then injects the bar markup. Without await, the
+            // auto-restore branch below ran enterEditMode() before the
+            // bar existed, leaving the toolbar stuck on the "start edit"
+            // state even though edit mode was active internally.
+            await showAdminBar();
 
             // Notify admin about auto-generated content fields
             if (window.NB_AUTO_GENERATED && window.NB_AUTO_GENERATED.length > 0) {
