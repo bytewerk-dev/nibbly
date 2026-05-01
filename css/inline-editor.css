@@ -188,12 +188,16 @@ body.edit-mode-active .editable-section.editable-empty:hover {
 
 .editable-overlay {
     position: absolute;
-    top: 0;
+    /* Anchor above the section so the toolbar never covers content,
+       even on tiny sections. The 2px overlap is a hover bridge so the
+       cursor doesn't lose the section's :hover when crossing into the
+       toolbar. */
+    bottom: calc(100% - 2px);
     right: 0;
     background: var(--editor-primary);
     color: white;
     padding: 4px 8px;
-    border-radius: 0 4px 0 4px;
+    border-radius: 4px 4px 4px 0;
     font-size: 12px;
     opacity: 0;
     transition: opacity 0.2s;
@@ -201,7 +205,8 @@ body.edit-mode-active .editable-section.editable-empty:hover {
     z-index: 10;
 }
 
-body.edit-mode-active .editable-section:hover .editable-overlay {
+body.edit-mode-active .editable-section:hover .editable-overlay,
+body.edit-mode-active .editable-overlay:hover {
     opacity: 1;
     pointer-events: auto;
 }
@@ -1757,24 +1762,27 @@ body.edit-mode-active .editable-list-item:hover {
     outline-color: var(--editor-primary, #0073aa);
 }
 
-/* Overlay controls (top-right) */
+/* Overlay controls — anchored above the item so it never covers small
+   items (trust badges, single cards, info-box rows). The 2px overlap
+   keeps :hover continuous when the cursor moves item -> toolbar. */
 .editable-list-overlay {
     position: absolute;
-    top: 4px;
-    right: 4px;
+    bottom: calc(100% - 2px);
+    right: 0;
     display: flex;
     align-items: center;
     gap: 1px;
     padding: 3px;
     background: rgba(35, 40, 45, 0.95);
-    border-radius: 4px;
+    border-radius: 4px 4px 4px 0;
     opacity: 0;
     transition: opacity 0.2s;
     pointer-events: none;
     z-index: 10;
 }
 
-body.edit-mode-active .editable-list-item:hover .editable-list-overlay {
+body.edit-mode-active .editable-list-item:hover .editable-list-overlay,
+body.edit-mode-active .editable-list-overlay:hover {
     opacity: 1;
     pointer-events: auto;
 }
