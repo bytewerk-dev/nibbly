@@ -4306,6 +4306,11 @@
             // Persist edit-mode flag so it auto-restores after reload
             sessionStorage.setItem('site-edit-mode', 'true');
             showToast(description, 'success');
+            // Detach beforeunload guard before the programmatic reload —
+            // otherwise the browser shows its native "leave page?" dialog
+            // even though the editor itself is triggering the reload and
+            // all dirty pages were just persisted above.
+            window.removeEventListener('beforeunload', beforeUnloadGuard);
             setTimeout(() => location.reload(), 300);
         } catch (error) {
             showToast(t('toast.error_saving', { page: '', message: error.message }), 'error');
