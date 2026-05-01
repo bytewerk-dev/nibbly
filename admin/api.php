@@ -2120,101 +2120,24 @@ switch ($action) {
             jsonResponse(false, null, 'Invalid CSRF token');
         }
 
-        if (!class_exists('ZipArchive')) {
-            jsonResponse(false, null, 'ZIP extension not available on this server.');
+        require_once __DIR__ . '/../includes/backup-helper.php';
+
+        // Tag as "manual" so the prune algorithm protects this backup
+        // from automatic eviction — the admin explicitly asked for it.
+        $created = backupCreate('manual');
+        if (!$created['ok']) {
+            jsonResponse(false, null, $created['message']);
         }
 
-        $siteRoot = realpath(__DIR__ . '/..');
-        $backupDir = BACKUP_PATH;
-
-        // Ensure backup directory exists
-        if (!is_dir($backupDir)) {
-            @mkdir($backupDir, 0755, true);
-        }
-
-        // Check disk space (require at least 100 MB free)
-        $freeSpace = @disk_free_space($backupDir);
-        if ($freeSpace !== false && $freeSpace < 100 * 1024 * 1024) {
-            jsonResponse(false, null, 'Not enough disk space to create a backup.');
-        }
-
-        // Clean up orphaned site backup ZIPs older than 1 hour
-        $orphans = glob($backupDir . 'site-backup-*.zip');
-        if ($orphans) {
-            foreach ($orphans as $orphan) {
-                if (filemtime($orphan) < time() - 3600) {
-                    @unlink($orphan);
-                }
-            }
-        }
-
-        // Generate one-time download token and random filename
+        // One-time download token. The file stays in the backup pool
+        // after download (unlike the previous flow which deleted on
+        // download) so it's still available later for restore.
         $token = bin2hex(random_bytes(32));
-        $zipFilename = 'site-backup-' . bin2hex(random_bytes(8)) . '.zip';
-        $zipPath = $backupDir . $zipFilename;
-
-        // Store token in session
         $_SESSION['backup_download'] = [
-            'token' => $token,
-            'file' => $zipFilename,
+            'token'   => $token,
+            'file'    => $created['file'],
             'created' => time()
         ];
-
-        // Directories to exclude (relative to site root)
-        $excludeDirs = ['node_modules', '.git', 'screenshots', 'reference', '.vscode', '.idea', '.claude', 'vendor'];
-        // Files to exclude by basename
-        $excludeFiles = ['.DS_Store', 'Thumbs.db'];
-
-        set_time_limit(300);
-
-        $zip = new ZipArchive();
-        $result = $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
-        if ($result !== true) {
-            jsonResponse(false, null, 'Could not create ZIP archive (error code: ' . $result . ')');
-        }
-
-        $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($siteRoot, RecursiveDirectoryIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::SELF_FIRST
-        );
-
-        foreach ($iterator as $file) {
-            $filePath = $file->getRealPath();
-            $relativePath = substr($filePath, strlen($siteRoot) + 1);
-
-            // Skip excluded directories
-            $skip = false;
-            foreach ($excludeDirs as $dir) {
-                if (str_starts_with($relativePath, $dir . DIRECTORY_SEPARATOR) || $relativePath === $dir) {
-                    $skip = true;
-                    break;
-                }
-            }
-            if ($skip) continue;
-
-            // Skip excluded files
-            $basename = basename($relativePath);
-            if (in_array($basename, $excludeFiles)) continue;
-            if (str_ends_with($basename, '.tmp') || str_ends_with($basename, '.swp')) continue;
-
-            // Skip site backup ZIPs (but keep page backup JSONs)
-            if (str_starts_with($relativePath, 'backups' . DIRECTORY_SEPARATOR) &&
-                str_starts_with($basename, 'site-backup-') && str_ends_with($basename, '.zip')) {
-                continue;
-            }
-
-            if ($file->isDir()) {
-                $zip->addEmptyDir($relativePath);
-            } else {
-                $zip->addFile($filePath, $relativePath);
-            }
-        }
-
-        $zip->close();
-
-        if (!is_file($zipPath)) {
-            jsonResponse(false, null, 'ZIP file was not created.');
-        }
 
         $siteName = defined('SITE_NAME') ? preg_replace('/[^a-zA-Z0-9_-]/', '-', SITE_NAME) : 'site';
         $downloadName = $siteName . '-backup-' . date('Y-m-d') . '.zip';
@@ -2245,14 +2168,12 @@ switch ($action) {
             jsonResponse(false, null, 'Invalid download token.');
         }
 
-        // Token expires after 5 minutes
+        // Token expires after 5 minutes. The backup file stays — it's
+        // a manual backup in the pool, the user can still download it
+        // later via the scheduled-backup list (which generates a fresh
+        // token).
         if (time() - $backupInfo['created'] > 300) {
             unset($_SESSION['backup_download']);
-            // Clean up the ZIP file
-            $expiredZip = BACKUP_PATH . $backupInfo['file'];
-            if (is_file($expiredZip)) {
-                @unlink($expiredZip);
-            }
             http_response_code(410);
             jsonResponse(false, null, 'Download token expired.');
         }
@@ -2285,9 +2206,10 @@ switch ($action) {
         header('Cache-Control: no-store, no-cache, must-revalidate');
         header('Pragma: no-cache');
 
-        // Stream file and delete
+        // Stream file. Don't delete — the backup is now part of the
+        // pool (tagged "manual") and the admin may want to keep it
+        // server-side as well.
         readfile($zipPath);
-        @unlink($zipPath);
         exit;
 
     case 'restore-site-backup':
@@ -2303,26 +2225,40 @@ switch ($action) {
             jsonResponse(false, null, 'ZIP extension not available on this server.');
         }
 
-        // Validate upload
-        if (!isset($_FILES['backup_zip']) || $_FILES['backup_zip']['error'] !== UPLOAD_ERR_OK) {
-            $uploadErrors = [
-                UPLOAD_ERR_INI_SIZE => 'File exceeds server upload limit.',
-                UPLOAD_ERR_FORM_SIZE => 'File exceeds form upload limit.',
-                UPLOAD_ERR_PARTIAL => 'File was only partially uploaded.',
-                UPLOAD_ERR_NO_FILE => 'No file was uploaded.',
-                UPLOAD_ERR_NO_TMP_DIR => 'Server temporary folder missing.',
-                UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk.',
-            ];
-            $code = $_FILES['backup_zip']['error'] ?? UPLOAD_ERR_NO_FILE;
-            jsonResponse(false, null, $uploadErrors[$code] ?? 'Upload failed.');
+        // Source can be either an upload (legacy/manual restore from
+        // off-server backup) or a pool file (the new dashboard list
+        // lets the admin restore an existing backup without uploading
+        // it first). Normalise both to $uploadedFile + $maxSize.
+        $poolFile = $_POST['pool_file'] ?? '';
+        if ($poolFile !== '') {
+            if (!preg_match('/^site-backup-\d{4}-\d{2}-\d{2}_\d{6}-(daily|weekly|monthly|yearly|manual)\.zip$/', $poolFile)) {
+                jsonResponse(false, null, 'Invalid backup filename');
+            }
+            $uploadedFile = BACKUP_PATH . $poolFile;
+            if (!is_file($uploadedFile)) {
+                jsonResponse(false, null, 'Backup not found in pool');
+            }
+        } else {
+            // Validate upload
+            if (!isset($_FILES['backup_zip']) || $_FILES['backup_zip']['error'] !== UPLOAD_ERR_OK) {
+                $uploadErrors = [
+                    UPLOAD_ERR_INI_SIZE => 'File exceeds server upload limit.',
+                    UPLOAD_ERR_FORM_SIZE => 'File exceeds form upload limit.',
+                    UPLOAD_ERR_PARTIAL => 'File was only partially uploaded.',
+                    UPLOAD_ERR_NO_FILE => 'No file was uploaded.',
+                    UPLOAD_ERR_NO_TMP_DIR => 'Server temporary folder missing.',
+                    UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk.',
+                ];
+                $code = $_FILES['backup_zip']['error'] ?? UPLOAD_ERR_NO_FILE;
+                jsonResponse(false, null, $uploadErrors[$code] ?? 'Upload failed.');
+            }
+            $uploadedFile = $_FILES['backup_zip']['tmp_name'];
         }
 
         $mode = $_POST['restore_mode'] ?? '';
         if (!in_array($mode, ['full', 'content'])) {
             jsonResponse(false, null, 'Invalid restore mode.');
         }
-
-        $uploadedFile = $_FILES['backup_zip']['tmp_name'];
         $maxSize = 500 * 1024 * 1024; // 500 MB
         if (filesize($uploadedFile) > $maxSize) {
             jsonResponse(false, null, 'File too large (max 500 MB).');
@@ -2568,6 +2504,133 @@ switch ($action) {
             'mode' => $mode,
         ], $mode === 'full' ? 'Full site restored' : 'Content restored');
         break;
+
+    // ============================================================
+    // SCHEDULED BACKUPS — pool of site-backup-*-{tier}.zip files
+    // ============================================================
+    // These endpoints back the dashboard's "Automated backups" UI and
+    // complement the manual create/download/restore flow above. The
+    // ZIP-creation, retention, and tier logic lives in
+    // includes/backup-helper.php so the cron CLI uses the exact same
+    // code path as the admin UI.
+
+    case 'backup-status':
+        if (!isAdmin()) jsonResponse(false, null, 'Forbidden');
+        require_once __DIR__ . '/../includes/backup-helper.php';
+        jsonResponse(true, backupStatus());
+        break;
+
+    case 'backup-list':
+        if (!isAdmin()) jsonResponse(false, null, 'Forbidden');
+        require_once __DIR__ . '/../includes/backup-helper.php';
+        jsonResponse(true, ['backups' => backupListAll()]);
+        break;
+
+    case 'backup-create-now':
+        if (!isAdmin()) jsonResponse(false, null, 'Forbidden');
+        if (!validateCsrfToken()) {
+            http_response_code(403);
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        require_once __DIR__ . '/../includes/backup-helper.php';
+        // Tag as "manual" — won't be auto-evicted by storage budget.
+        $created = backupCreate('manual');
+        if (!$created['ok']) {
+            jsonResponse(false, null, $created['message']);
+        }
+        jsonResponse(true, $created, 'Backup created');
+        break;
+
+    case 'backup-prune':
+        if (!isAdmin()) jsonResponse(false, null, 'Forbidden');
+        if (!validateCsrfToken()) {
+            http_response_code(403);
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        require_once __DIR__ . '/../includes/backup-helper.php';
+        $deleted = backupPrune();
+        jsonResponse(true, ['deleted' => $deleted], count($deleted) . ' backup(s) pruned');
+        break;
+
+    case 'backup-delete':
+        if (!isAdmin()) jsonResponse(false, null, 'Forbidden');
+        if (!validateCsrfToken()) {
+            http_response_code(403);
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        $file = $_POST['file'] ?? '';
+        if (!preg_match('/^site-backup-\d{4}-\d{2}-\d{2}_\d{6}-(daily|weekly|monthly|yearly|manual)\.zip$/', $file)) {
+            jsonResponse(false, null, 'Invalid backup filename');
+        }
+        $path = BACKUP_PATH . $file;
+        if (!is_file($path)) {
+            jsonResponse(false, null, 'Backup not found');
+        }
+        if (!@unlink($path)) {
+            jsonResponse(false, null, 'Could not delete backup');
+        }
+        jsonResponse(true, null, 'Backup deleted');
+        break;
+
+    case 'backup-prepare-download':
+        // Issues a one-time token for downloading an existing backup
+        // from the pool. The download itself reuses the existing
+        // download-site-backup endpoint — same token format.
+        if (!isAdmin()) jsonResponse(false, null, 'Forbidden');
+        if (!validateCsrfToken()) {
+            http_response_code(403);
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        $file = $_POST['file'] ?? '';
+        if (!preg_match('/^site-backup-\d{4}-\d{2}-\d{2}_\d{6}-(daily|weekly|monthly|yearly|manual)\.zip$/', $file)) {
+            jsonResponse(false, null, 'Invalid backup filename');
+        }
+        if (!is_file(BACKUP_PATH . $file)) {
+            jsonResponse(false, null, 'Backup not found');
+        }
+        $token = bin2hex(random_bytes(32));
+        $_SESSION['backup_download'] = [
+            'token'   => $token,
+            'file'    => $file,
+            'created' => time(),
+        ];
+        $siteName = defined('SITE_NAME') ? preg_replace('/[^a-zA-Z0-9_-]/', '-', SITE_NAME) : 'site';
+        $downloadName = $siteName . '-' . $file;
+        jsonResponse(true, ['token' => $token, 'filename' => $downloadName], 'Download token issued');
+        break;
+
+    case 'backup-update-settings':
+        if (!isAdmin()) jsonResponse(false, null, 'Forbidden');
+        if (!validateCsrfToken()) {
+            http_response_code(403);
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        require_once __DIR__ . '/../includes/backup-helper.php';
+        $patch = [];
+        if (isset($_POST['enabled'])) {
+            $patch['enabled'] = ($_POST['enabled'] === 'true' || $_POST['enabled'] === '1');
+        }
+        if (isset($_POST['storage_limit_mb'])) {
+            $patch['storage_limit_mb'] = max(0, (int)$_POST['storage_limit_mb']);
+        }
+        $retention = [];
+        foreach (['daily', 'weekly', 'monthly', 'yearly'] as $tier) {
+            $key = "retention_$tier";
+            if (isset($_POST[$key])) $retention[$tier] = max(0, (int)$_POST[$key]);
+        }
+        if (!empty($retention)) $patch['retention'] = $retention;
+        if (empty($patch)) {
+            jsonResponse(false, null, 'No settings to update');
+        }
+        if (!backupSaveConfig($patch)) {
+            jsonResponse(false, null, 'Could not write settings');
+        }
+        jsonResponse(true, backupStatus(), 'Backup settings updated');
+        break;
+
+    // (No backup-restore-from-pool — restore-site-backup now accepts
+    // either a file upload OR a `pool_file` parameter referencing a
+    // file in BACKUP_PATH. The dashboard uses the pool_file form.)
 
     // ============================================================
     // USER MANAGEMENT (admin only)
