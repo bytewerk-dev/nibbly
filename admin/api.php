@@ -2124,7 +2124,12 @@ switch ($action) {
 
         // Tag as "manual" so the prune algorithm protects this backup
         // from automatic eviction — the admin explicitly asked for it.
-        $created = backupCreate('manual');
+        try {
+            $created = backupWithLock(fn() => backupCreate('manual'));
+        } catch (BackupLockException $e) {
+            http_response_code(409);
+            jsonResponse(false, null, $e->getMessage());
+        }
         if (!$created['ok']) {
             jsonResponse(false, null, $created['message']);
         }
@@ -2224,6 +2229,7 @@ switch ($action) {
         if (!class_exists('ZipArchive')) {
             jsonResponse(false, null, 'ZIP extension not available on this server.');
         }
+        require_once __DIR__ . '/../includes/backup-helper.php';
 
         // Source can be either an upload (legacy/manual restore from
         // off-server backup) or a pool file (the new dashboard list
@@ -2390,27 +2396,16 @@ switch ($action) {
             $preRestoreZip = new ZipArchive();
             $preRestorePath = $backupDir . 'pre-restore-' . date('Y-m-d_His') . '.zip';
             if ($preRestoreZip->open($preRestorePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true) {
-                $excludeDirs = ['node_modules', '.git', 'screenshots', 'reference', '.vscode', '.idea', '.claude', 'vendor'];
-                $excludeFiles = ['.DS_Store', 'Thumbs.db'];
-
                 $iterator = new RecursiveIteratorIterator(
                     new RecursiveDirectoryIterator($siteRoot, RecursiveDirectoryIterator::SKIP_DOTS),
                     RecursiveIteratorIterator::SELF_FIRST
                 );
                 foreach ($iterator as $file) {
                     $filePath = $file->getRealPath();
-                    $relativePath = substr($filePath, strlen($siteRoot) + 1);
-                    $skip = false;
-                    foreach ($excludeDirs as $dir) {
-                        if (str_starts_with($relativePath, $dir . DIRECTORY_SEPARATOR) || $relativePath === $dir) {
-                            $skip = true;
-                            break;
-                        }
-                    }
-                    if ($skip) continue;
-                    $basename = basename($relativePath);
-                    if (in_array($basename, $excludeFiles)) continue;
-                    if (str_ends_with($basename, '.tmp') || str_ends_with($basename, '.swp')) continue;
+                    if ($filePath === false) continue;
+                    if ($filePath === realpath($preRestorePath)) continue;
+                    $relativePath = str_replace(DIRECTORY_SEPARATOR, '/', substr($filePath, strlen($siteRoot) + 1));
+                    if (backupShouldSkipPath($relativePath)) continue;
 
                     if ($file->isDir()) {
                         $preRestoreZip->addEmptyDir($relativePath);
@@ -2534,7 +2529,12 @@ switch ($action) {
         }
         require_once __DIR__ . '/../includes/backup-helper.php';
         // Tag as "manual" — won't be auto-evicted by storage budget.
-        $created = backupCreate('manual');
+        try {
+            $created = backupWithLock(fn() => backupCreate('manual'));
+        } catch (BackupLockException $e) {
+            http_response_code(409);
+            jsonResponse(false, null, $e->getMessage());
+        }
         if (!$created['ok']) {
             jsonResponse(false, null, $created['message']);
         }
@@ -2548,7 +2548,12 @@ switch ($action) {
             jsonResponse(false, null, 'Invalid CSRF token');
         }
         require_once __DIR__ . '/../includes/backup-helper.php';
-        $deleted = backupPrune();
+        try {
+            $deleted = backupWithLock(fn() => backupPrune());
+        } catch (BackupLockException $e) {
+            http_response_code(409);
+            jsonResponse(false, null, $e->getMessage());
+        }
         jsonResponse(true, ['deleted' => $deleted], count($deleted) . ' backup(s) pruned');
         break;
 

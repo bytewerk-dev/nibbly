@@ -82,6 +82,11 @@
     flex-shrink: 0;
 }
 
+.admin-bar-logo-icon--default {
+    filter: brightness(0) invert(1);
+    opacity: 0.85;
+}
+
 .admin-bar-info {
     opacity: 0.8;
 }

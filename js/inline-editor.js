@@ -608,8 +608,10 @@
 
         const bar = document.createElement('div');
         bar.id = 'admin-bar';
+        const isDefaultFavicon = /(^|\/)assets\/images\/favicon\.svg(?:[?#].*)?$/.test(brandLogo);
+        const logoClass = `admin-bar-logo-icon${isDefaultFavicon ? ' admin-bar-logo-icon--default' : ''}`;
         const logoHtml = showBranding
-            ? `<img src="${brandLogo}" alt="${brandName}" width="24" height="24" class="admin-bar-logo-icon">`
+            ? `<img src="${brandLogo}" alt="${brandName}" width="24" height="24" class="${logoClass}">`
             : '';
         bar.innerHTML = `
             <div class="admin-bar-inner">

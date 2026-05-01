@@ -98,26 +98,6 @@ function fmtSize($bytes) {
     return $bytes . ' B';
 }
 
-function withLock(callable $fn) {
-    $lockPath = BACKUP_PATH . '.backup.lock';
-    $stale = is_file($lockPath) && (time() - filemtime($lockPath)) > 1800; // 30 min
-    if (is_file($lockPath) && !$stale) {
-        fwrite(STDERR, "Another backup run is in progress (lock: $lockPath, age "
-            . (time() - filemtime($lockPath)) . "s). Aborting.\n");
-        exit(3);
-    }
-    if ($stale) {
-        fwrite(STDERR, "Stale lock found (>30min), removing.\n");
-        @unlink($lockPath);
-    }
-    file_put_contents($lockPath, (string)getmypid());
-    try {
-        return $fn();
-    } finally {
-        @unlink($lockPath);
-    }
-}
-
 // ── Actions ───────────────────────────────────────────────────────────
 
 switch ($action) {
@@ -130,23 +110,19 @@ switch ($action) {
             exit(0);
         }
 
-        $result = withLock(function() use ($tier) {
-            $started = time();
-            if (!$GLOBALS['quiet'] ?? false) {
-                echo "[" . date('c', $started) . "] Backup run starting (tier="
-                    . ($tier ?? 'auto') . ")...\n";
-            }
-            $r = backupRun($started);
-            if ($tier !== null) {
-                // Override tier if requested (backupRun used auto-pick)
-                // — we just delete and re-create with the requested tier.
-                if ($r['created']['ok']) {
-                    @unlink(BACKUP_PATH . $r['created']['file']);
-                    $r['created'] = backupCreate($tier, $started);
+        try {
+            $result = backupWithLock(function() use ($tier) {
+                $started = time();
+                if (!($GLOBALS['quiet'] ?? false)) {
+                    echo "[" . date('c', $started) . "] Backup run starting (tier="
+                        . ($tier ?? 'auto') . ")...\n";
                 }
-            }
-            return $r;
-        });
+                return backupRun($started, $tier);
+            });
+        } catch (BackupLockException $e) {
+            fwrite(STDERR, $e->getMessage() . "\n");
+            exit(3);
+        }
 
         $created = $result['created'];
         if ($created['ok']) {

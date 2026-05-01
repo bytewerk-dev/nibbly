@@ -29,6 +29,10 @@ if (!defined('BACKUP_PATH')) {
     }
 }
 
+if (!class_exists('BackupLockException')) {
+    class BackupLockException extends RuntimeException {}
+}
+
 /** Default backup config — merged over content/settings.json `backup` key. */
 function backupDefaults() {
     return [
@@ -58,6 +62,82 @@ function backupConfig() {
     }
     $merged['storage_limit_mb'] = max(0, (int)($merged['storage_limit_mb'] ?? 0));
     return $merged;
+}
+
+/** Shared lock for backup create/prune operations. */
+function backupWithLock(callable $fn) {
+    if (!defined('BACKUP_PATH')) {
+        throw new BackupLockException('BACKUP_PATH not defined — run setup first.');
+    }
+    if (!is_dir(BACKUP_PATH)) {
+        @mkdir(BACKUP_PATH, 0755, true);
+    }
+
+    $lockPath = BACKUP_PATH . '.backup.lock';
+    $handle = @fopen($lockPath, 'c+');
+    if ($handle === false) {
+        throw new BackupLockException('Could not open backup lock file.');
+    }
+    if (!flock($handle, LOCK_EX | LOCK_NB)) {
+        fclose($handle);
+        throw new BackupLockException('Another backup run is already in progress.');
+    }
+
+    ftruncate($handle, 0);
+    fwrite($handle, (string)getmypid());
+    fflush($handle);
+    try {
+        return $fn();
+    } finally {
+        flock($handle, LOCK_UN);
+        fclose($handle);
+        @unlink($lockPath);
+    }
+}
+
+/** Directories that should never be included in full-site ZIP backups. */
+function backupExcludeDirs() {
+    return [
+        'node_modules',
+        '.git',
+        'screenshots',
+        'reference',
+        '.vscode',
+        '.idea',
+        '.claude',
+        'vendor',
+        'website',
+        'nibbly-alt',
+        'nibbly-backup',
+    ];
+}
+
+/** File basenames that should never be included in full-site ZIP backups. */
+function backupExcludeFiles() {
+    return ['.DS_Store', 'Thumbs.db'];
+}
+
+/** Return whether a relative path should be skipped in a full-site ZIP. */
+function backupShouldSkipPath($relativePath) {
+    $relativePath = str_replace('\\', '/', $relativePath);
+    foreach (backupExcludeDirs() as $dir) {
+        if ($relativePath === $dir || str_starts_with($relativePath, $dir . '/')) {
+            return true;
+        }
+    }
+
+    $base = basename($relativePath);
+    if (in_array($base, backupExcludeFiles(), true)) return true;
+    if (str_ends_with($base, '.tmp') || str_ends_with($base, '.swp')) return true;
+
+    // Keep old JSON page backups, but never include generated backup ZIPs/logs.
+    if (str_starts_with($relativePath, 'backups/')) {
+        if (str_ends_with($base, '.zip') || $base === '.backup.lock' || $base === 'backup.log') {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 /** Persist the backup config back to settings.json (merging with existing keys). */
@@ -173,9 +253,6 @@ function backupCreate($tier = null, $now = null) {
     $filename = "site-backup-{$stamp}-{$tier}.zip";
     $zipPath = BACKUP_PATH . $filename;
 
-    $excludeDirs = ['node_modules', '.git', 'screenshots', 'reference', '.vscode', '.idea', '.claude', 'vendor'];
-    $excludeFiles = ['.DS_Store', 'Thumbs.db'];
-
     @set_time_limit(300);
 
     $zip = new ZipArchive();
@@ -192,26 +269,8 @@ function backupCreate($tier = null, $now = null) {
     foreach ($iterator as $file) {
         $filePath = $file->getRealPath();
         if ($filePath === false) continue;
-        $rel = substr($filePath, strlen($siteRoot) + 1);
-
-        $skip = false;
-        foreach ($excludeDirs as $d) {
-            if (str_starts_with($rel, $d . DIRECTORY_SEPARATOR) || $rel === $d) {
-                $skip = true;
-                break;
-            }
-        }
-        if ($skip) continue;
-
-        $base = basename($rel);
-        if (in_array($base, $excludeFiles, true)) continue;
-        if (str_ends_with($base, '.tmp') || str_ends_with($base, '.swp')) continue;
-
-        // Don't recurse into our own backup output.
-        if (str_starts_with($rel, 'backups' . DIRECTORY_SEPARATOR) &&
-            str_starts_with($base, 'site-backup-') && str_ends_with($base, '.zip')) {
-            continue;
-        }
+        $rel = str_replace(DIRECTORY_SEPARATOR, '/', substr($filePath, strlen($siteRoot) + 1));
+        if (backupShouldSkipPath($rel)) continue;
 
         if ($file->isDir()) {
             $zip->addEmptyDir($rel);
@@ -291,9 +350,9 @@ function backupPrune() {
  * One full scheduled-backup run: create + prune + persist run metadata
  * to settings.json. Used by the CLI cron entrypoint.
  */
-function backupRun($now = null) {
+function backupRun($now = null, $tier = null) {
     $now = $now ?: time();
-    $created = backupCreate(null, $now);
+    $created = backupCreate($tier, $now);
     $deleted = $created['ok'] ? backupPrune() : [];
 
     backupSaveConfig([

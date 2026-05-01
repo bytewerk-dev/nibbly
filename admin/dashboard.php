@@ -1058,71 +1058,73 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         </div>
         <p class="page-description"><?php echo t('settings.backup_desc'); ?></p>
 
-        <div class="backup-site-card">
-            <div class="backup-site-card__info">
-                <h3><?php echo t('settings.backup_site'); ?></h3>
-                <p><?php echo t('settings.backup_site_desc'); ?></p>
-            </div>
-            <div class="backup-site-card__action">
-                <button type="button" class="btn btn-primary" id="createSiteBackupBtn">
-                    <?php echo nbIcon('download', 16); ?>
-                    <span><?php echo t('settings.backup_create'); ?></span>
-                </button>
-                <div class="backup-progress" id="backupProgress" style="display: none;">
-                    <div class="backup-progress__spinner"></div>
-                    <span id="backupProgressText"><?php echo t('settings.backup_creating'); ?></span>
+        <div class="backup-manual-grid">
+            <div class="backup-site-card">
+                <div class="backup-site-card__info">
+                    <h3><?php echo t('settings.backup_site'); ?></h3>
+                    <p><?php echo t('settings.backup_site_desc'); ?></p>
                 </div>
-            </div>
-        </div>
-
-        <!-- Restore from Backup -->
-        <div class="backup-site-card" style="margin-top: var(--nb-space-5);">
-            <div class="backup-site-card__info">
-                <h3><?php echo t('settings.restore_title'); ?></h3>
-                <p><?php echo t('settings.restore_desc'); ?></p>
-            </div>
-            <div class="backup-site-card__action">
-                <div class="restore-upload-area" id="restoreUploadArea">
-                    <input type="file" id="restoreFileInput" accept=".zip" style="display: none;">
-                    <button type="button" class="btn btn-secondary" id="restoreSelectBtn">
-                        <?php echo nbIcon('upload', 16); ?>
-                        <span><?php echo t('settings.restore_select_file'); ?></span>
+                <div class="backup-site-card__action">
+                    <button type="button" class="btn btn-primary" id="createSiteBackupBtn">
+                        <?php echo nbIcon('download', 16); ?>
+                        <span><?php echo t('settings.backup_create'); ?></span>
                     </button>
-                    <span class="restore-filename" id="restoreFilename" style="display: none;"></span>
-                </div>
-
-                <div class="restore-mode-selector" id="restoreModeSelector" style="display: none;">
-                    <label class="restore-mode-option">
-                        <input type="radio" name="restore_mode" value="content" checked>
-                        <div class="restore-mode-card">
-                            <strong><?php echo t('settings.restore_content'); ?></strong>
-                            <span><?php echo t('settings.restore_content_desc'); ?></span>
-                        </div>
-                    </label>
-                    <label class="restore-mode-option">
-                        <input type="radio" name="restore_mode" value="full">
-                        <div class="restore-mode-card">
-                            <strong><?php echo t('settings.restore_full'); ?></strong>
-                            <span><?php echo t('settings.restore_full_desc'); ?></span>
-                        </div>
-                    </label>
-                </div>
-
-                <div class="restore-actions" id="restoreActions" style="display: none;">
-                    <button type="button" class="btn btn-danger" id="restoreBtn">
-                        <?php echo nbIcon('upload', 16); ?>
-                        <span><?php echo t('settings.restore_btn'); ?></span>
-                    </button>
-                    <div class="backup-progress" id="restoreProgress" style="display: none;">
+                    <div class="backup-progress" id="backupProgress" style="display: none;">
                         <div class="backup-progress__spinner"></div>
-                        <span id="restoreProgressText"><?php echo t('settings.restore_uploading'); ?></span>
+                        <span id="backupProgressText"><?php echo t('settings.backup_creating'); ?></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Restore from Backup -->
+            <div class="backup-site-card">
+                <div class="backup-site-card__info">
+                    <h3><?php echo t('settings.restore_title'); ?></h3>
+                    <p><?php echo t('settings.restore_desc'); ?></p>
+                </div>
+                <div class="backup-site-card__action">
+                    <div class="restore-upload-area" id="restoreUploadArea">
+                        <input type="file" id="restoreFileInput" accept=".zip" style="display: none;">
+                        <button type="button" class="btn btn-secondary" id="restoreSelectBtn">
+                            <?php echo nbIcon('upload', 16); ?>
+                            <span><?php echo t('settings.restore_select_file'); ?></span>
+                        </button>
+                        <span class="restore-filename" id="restoreFilename" style="display: none;"></span>
+                    </div>
+
+                    <div class="restore-mode-selector" id="restoreModeSelector" style="display: none;">
+                        <label class="restore-mode-option">
+                            <input type="radio" name="restore_mode" value="content" checked>
+                            <div class="restore-mode-card">
+                                <strong><?php echo t('settings.restore_content'); ?></strong>
+                                <span><?php echo t('settings.restore_content_desc'); ?></span>
+                            </div>
+                        </label>
+                        <label class="restore-mode-option">
+                            <input type="radio" name="restore_mode" value="full">
+                            <div class="restore-mode-card">
+                                <strong><?php echo t('settings.restore_full'); ?></strong>
+                                <span><?php echo t('settings.restore_full_desc'); ?></span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="restore-actions" id="restoreActions" style="display: none;">
+                        <button type="button" class="btn btn-danger" id="restoreBtn">
+                            <?php echo nbIcon('upload', 16); ?>
+                            <span><?php echo t('settings.restore_btn'); ?></span>
+                        </button>
+                        <div class="backup-progress" id="restoreProgress" style="display: none;">
+                            <div class="backup-progress__spinner"></div>
+                            <span id="restoreProgressText"><?php echo t('settings.restore_uploading'); ?></span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Automated / scheduled backups -->
-        <div class="backup-site-card backup-scheduled" style="margin-top: var(--nb-space-5); flex-direction: column; align-items: stretch; gap: var(--nb-space-4);">
+        <div class="backup-site-card backup-scheduled">
             <div class="backup-site-card__info">
                 <h3><?php echo t('settings.scheduled_backups'); ?></h3>
                 <p><?php echo t('settings.scheduled_backups_desc'); ?></p>
@@ -1134,14 +1136,12 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     <strong><?php echo t('settings.last_run'); ?>:</strong>
                     <span id="scheduledLastRun">—</span>
                 </div>
+                <div class="scheduled-storage" id="scheduledStorage">
+                    <strong><?php echo t('settings.storage_summary'); ?>:</strong>
+                    <span id="scheduledStorageCount">—</span>
+                    <span class="scheduled-storage__dates" id="scheduledStorageDates"></span>
+                </div>
                 <div class="scheduled-status__message" id="scheduledStatusMessage"></div>
-            </div>
-
-            <!-- Storage summary -->
-            <div class="scheduled-storage" id="scheduledStorage">
-                <strong><?php echo t('settings.storage_summary'); ?>:</strong>
-                <span id="scheduledStorageCount">—</span>
-                <span class="scheduled-storage__dates" id="scheduledStorageDates"></span>
             </div>
 
             <!-- Settings form -->
@@ -1195,7 +1195,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 <div class="scheduled-cron__line">
                     <code id="cronLine"><?php
                         $sitePath = realpath(__DIR__ . '/..');
-                        echo htmlspecialchars("0 3 * * * cd {$sitePath} && php cli/backup.php --action=run >> backups/backup.log 2>&1");
+                        $sitePathArg = escapeshellarg($sitePath ?: __DIR__ . '/..');
+                        echo htmlspecialchars("0 3 * * * cd {$sitePathArg} && php cli/backup.php --action=run >> backups/backup.log 2>&1");
                     ?></code>
                     <button type="button" class="btn btn-secondary btn-sm" id="cronCopyBtn">
                         <?php echo t('settings.cron_copy'); ?>
@@ -3285,7 +3286,16 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     // TAB NAVIGATION
     // ============================================================
 
+    function dismissFrontendEditBanner() {
+        const banner = document.getElementById('frontendEditBanner');
+        if (banner) banner.remove();
+    }
+
     function switchTab(tab) {
+        if (tab !== 'content') {
+            dismissFrontendEditBanner();
+        }
+
         document.getElementById('contentTab').style.display = tab === 'content' ? 'block' : 'none';
         document.getElementById('newsTab').style.display = tab === 'news' ? 'block' : 'none';
         document.getElementById('eventsTab').style.display = tab === 'events' ? 'block' : 'none';
