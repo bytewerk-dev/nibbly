@@ -30,6 +30,8 @@ Nibbly turns any HTML or PHP page into an editable website — no database requi
 | SMTP mailer | `api/SmtpMailer.php` |
 | Contact form API | `api/contact.php` |
 | Deploy script | `deploy.example.sh` (copy to `deploy.sh` and configure) |
+| Backup CLI | `cli/backup.php` (cron-friendly site backup runner) |
+| Backup helper | `includes/backup-helper.php` |
 
 ## Development Server
 
@@ -620,6 +622,45 @@ When converting an HTML page to Nibbly or setting up a fresh installation, the s
    ```
 
 Never use weak or predictable passwords. The setup wizard enforces: 8+ characters, uppercase, lowercase, digit, and special character.
+
+## Site Backups
+
+Nibbly has three layers of backup, each addressing a different recovery scenario:
+
+### 1. Per-page JSON history (automatic, always on)
+
+Every save in the inline editor or admin dashboard writes the previous JSON to `backups/{lang}_{slug}_YYYY-MM-DD_HHMMSS.json` and keeps the last `MAX_BACKUPS` (default 30) versions per page. Used to roll back a single page edit without affecting the rest of the site. Visible in the dashboard's per-page history view.
+
+### 2. Manual full-site backup (on-demand)
+
+Backup tab → "Create backup" downloads a complete site ZIP and also adds it to the server-side pool tagged `manual`. Manual backups are never auto-evicted by retention or storage limits, so they're the right choice for "snapshot before a risky change."
+
+### 3. Automated scheduled backups (cron-driven)
+
+The dashboard's "Automated backups" card is the operator surface for `cli/backup.php`. The CLI runner is meant to live in a system cron job; the dashboard reflects what cron has produced and lets you tune the policy.
+
+**Setup:**
+1. Configure retention and storage limit in the dashboard (Backup tab → Automated backups).
+2. Toggle "Scheduled backups enabled".
+3. Copy the cron line shown in the dashboard into your hoster's cron UI (Plesk, cPanel, or `crontab -e`). The line includes the absolute site path so it works as-is.
+
+**Default retention** (grandfather-father-son): 7 daily, 4 weekly, 12 monthly, 3 yearly — total ~26 long-term snapshots. Each backup is auto-tagged with the highest tier whose bucket (year, month, week, day) is still empty for "now," so a single nightly run fills weekly/monthly/yearly slots automatically when their bucket opens.
+
+**Storage budget:** The hard `storage_limit_mb` cap evicts the oldest non-manual backups when total backup size exceeds the limit, even if they're still within their retention window. Manual backups are exempt — the admin asked for them on purpose.
+
+**CLI usage** (also runnable directly, e.g. for ad-hoc operations):
+
+```bash
+php cli/backup.php --action=run        # one full backup + prune (the cron-typical path)
+php cli/backup.php --action=prune      # apply retention without creating
+php cli/backup.php --action=status     # current state
+php cli/backup.php --action=list       # all stored backups
+php cli/backup.php --action=run --tier=manual  # force a manual backup even when scheduled is off
+```
+
+Lock-file (`backups/.backup.lock`) prevents concurrent runs. Stale locks (>30 min old) are auto-cleared. Exit codes: `0` success, `1` failure, `2` invalid args, `3` lock contention — useful for cron monitoring scripts.
+
+**Storage helper:** `includes/backup-helper.php` is the single source of truth — both the dashboard endpoints in `admin/api.php` and the CLI runner call into it. ZIP creation, retention math, and tier picking live there only.
 
 ## Adapting Nibbly to an Existing Custom Site
 
