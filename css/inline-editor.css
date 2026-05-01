@@ -2465,11 +2465,16 @@ body.edit-mode-active .event-card-hidden .event-hide-btn {
    HIDDEN ELEMENTS
    ============================================================ */
 
-/* Edit mode: show hidden elements at reduced opacity */
+/* Admins (logged-in, with admin bar) always see hidden elements at reduced
+   opacity — not only inside Edit Mode. Otherwise a hidden block looks
+   identical to a visible one when the editor is closed, which misleads
+   admins about what visitors see. */
+body.has-admin-bar [data-hidden="true"],
 body.edit-mode-active [data-hidden="true"] {
     opacity: 0.35;
 }
 
+body.has-admin-bar [data-hidden="true"]:hover,
 body.edit-mode-active [data-hidden="true"]:hover {
     opacity: 0.55;
 }
