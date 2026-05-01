@@ -69,3 +69,6 @@ Thumbs.db
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Site-specific upgrade notes (kept locally, not part of Nibbly Core)
+NIBBLY-UPGRADE-NOTES.md
