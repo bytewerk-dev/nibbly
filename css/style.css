@@ -1145,13 +1145,22 @@ body.edit-mode-active .event-add-wrapper {
     font-size: clamp(6rem, 15vw, 12rem);
     font-weight: 700;
     line-height: 1;
+    color: var(--color-primary-light, var(--color-primary));
+    opacity: 1;
+    margin-bottom: var(--spacing-sm);
+    letter-spacing: -0.04em;
+}
+
+/* Opt-in gradient text variant — sites that want the original look can
+   add the modifier class. The plain default is overridable with a normal
+   `color` rule, no need to also reset background and -webkit-text-fill-color. */
+.error-page__code--gradient {
     background: var(--gradient-brand);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    color: transparent;
     opacity: 0.3;
-    margin-bottom: var(--spacing-sm);
-    letter-spacing: -0.04em;
 }
 
 .error-page__title {
