@@ -21,6 +21,11 @@ if (!file_exists($configPath)) {
 }
 require_once $configPath;
 
+// Apply migration redirects before any other routing — a redirected URL
+// must never accidentally match a real page slug downstream.
+require_once __DIR__ . '/includes/redirect-helper.php';
+applyRedirects($_SERVER['REQUEST_URI'] ?? '/');
+
 $primaryLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
 
 // Parse the clean URI
