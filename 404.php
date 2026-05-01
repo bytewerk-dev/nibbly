@@ -13,12 +13,13 @@ if (file_exists($configPath) && !defined('SITE_LANG_DEFAULT')) {
     require_once $configPath;
 }
 
-// Detect language: default to SITE_LANG_DEFAULT, override if URL has language prefix
-$currentLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
+// Detect language: default to SITE_LANG_DEFAULT, override only if the URL
+// language prefix is one we actually have translations for. Unknown prefixes
+// must NOT override the default — otherwise /xx/foo on a German site would
+// silently fall back to English instead of staying German.
+$defaultLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
+$currentLang = $defaultLang;
 $requestUri = $_SERVER['REQUEST_URI'] ?? '';
-if (preg_match('#^/([a-z]{2})/#', $requestUri, $m)) {
-    $currentLang = $m[1];
-}
 
 // Calculate basePath dynamically from URL depth
 $trimmedUri = trim(parse_url($requestUri, PHP_URL_PATH) ?? '', '/');
@@ -50,7 +51,12 @@ $strings = [
     ],
 ];
 
-$t = $strings[$currentLang] ?? $strings['en'];
+// URL language prefix only wins if we have translations for it.
+if (preg_match('#^/([a-z]{2})/#', $requestUri, $m) && isset($strings[$m[1]])) {
+    $currentLang = $m[1];
+}
+
+$t = $strings[$currentLang] ?? $strings[$defaultLang] ?? $strings['en'];
 $pageTitle = $t['title'];
 
 include 'includes/header.php';
