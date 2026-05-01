@@ -1120,6 +1120,107 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 </div>
             </div>
         </div>
+
+        <!-- Automated / scheduled backups -->
+        <div class="backup-site-card backup-scheduled" style="margin-top: var(--nb-space-5); flex-direction: column; align-items: stretch; gap: var(--nb-space-4);">
+            <div class="backup-site-card__info">
+                <h3><?php echo t('settings.scheduled_backups'); ?></h3>
+                <p><?php echo t('settings.scheduled_backups_desc'); ?></p>
+            </div>
+
+            <!-- Status banner: last run + warning if cron stalled -->
+            <div class="scheduled-status" id="scheduledStatus" data-state="loading">
+                <div class="scheduled-status__row">
+                    <strong><?php echo t('settings.last_run'); ?>:</strong>
+                    <span id="scheduledLastRun">—</span>
+                </div>
+                <div class="scheduled-status__message" id="scheduledStatusMessage"></div>
+            </div>
+
+            <!-- Storage summary -->
+            <div class="scheduled-storage" id="scheduledStorage">
+                <strong><?php echo t('settings.storage_summary'); ?>:</strong>
+                <span id="scheduledStorageCount">—</span>
+                <span class="scheduled-storage__dates" id="scheduledStorageDates"></span>
+            </div>
+
+            <!-- Settings form -->
+            <form id="scheduledBackupForm" class="scheduled-form">
+                <label class="scheduled-form__toggle">
+                    <input type="checkbox" id="scheduledEnabled" name="enabled">
+                    <span><strong><?php echo t('settings.scheduled_enabled'); ?></strong></span>
+                </label>
+                <p class="scheduled-form__hint"><?php echo t('settings.scheduled_enabled_hint'); ?></p>
+
+                <fieldset class="scheduled-form__fieldset">
+                    <legend><?php echo t('settings.retention_title'); ?></legend>
+                    <p class="scheduled-form__hint"><?php echo t('settings.retention_hint'); ?></p>
+                    <div class="scheduled-form__grid">
+                        <label>
+                            <span><?php echo t('settings.retention_daily'); ?></span>
+                            <input type="number" id="retentionDaily" name="retention_daily" min="0" max="365" step="1">
+                        </label>
+                        <label>
+                            <span><?php echo t('settings.retention_weekly'); ?></span>
+                            <input type="number" id="retentionWeekly" name="retention_weekly" min="0" max="52" step="1">
+                        </label>
+                        <label>
+                            <span><?php echo t('settings.retention_monthly'); ?></span>
+                            <input type="number" id="retentionMonthly" name="retention_monthly" min="0" max="60" step="1">
+                        </label>
+                        <label>
+                            <span><?php echo t('settings.retention_yearly'); ?></span>
+                            <input type="number" id="retentionYearly" name="retention_yearly" min="0" max="20" step="1">
+                        </label>
+                    </div>
+                </fieldset>
+
+                <label class="scheduled-form__limit">
+                    <span><strong><?php echo t('settings.storage_limit'); ?></strong></span>
+                    <input type="number" id="storageLimitMb" name="storage_limit_mb" min="0" step="1">
+                </label>
+                <p class="scheduled-form__hint"><?php echo t('settings.storage_limit_hint'); ?></p>
+
+                <div class="scheduled-form__actions">
+                    <button type="submit" class="btn btn-primary" id="scheduledSaveBtn">
+                        <?php echo t('settings.backup_settings_save'); ?>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Cron setup help -->
+            <div class="scheduled-cron">
+                <h4><?php echo t('settings.cron_setup'); ?></h4>
+                <p><?php echo t('settings.cron_setup_hint'); ?></p>
+                <div class="scheduled-cron__line">
+                    <code id="cronLine"><?php
+                        $sitePath = realpath(__DIR__ . '/..');
+                        echo htmlspecialchars("0 3 * * * cd {$sitePath} && php cli/backup.php --action=run >> backups/backup.log 2>&1");
+                    ?></code>
+                    <button type="button" class="btn btn-secondary btn-sm" id="cronCopyBtn">
+                        <?php echo t('settings.cron_copy'); ?>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Backup list -->
+            <div class="scheduled-list">
+                <h4><?php echo t('settings.backup_list_title'); ?></h4>
+                <table class="scheduled-list__table" id="scheduledList">
+                    <thead>
+                        <tr>
+                            <th><?php echo t('settings.backup_list_col_date'); ?></th>
+                            <th><?php echo t('settings.backup_list_col_tier'); ?></th>
+                            <th><?php echo t('settings.backup_list_col_size'); ?></th>
+                            <th><?php echo t('settings.backup_list_col_actions'); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduledListBody">
+                        <tr><td colspan="4" class="scheduled-list__empty"><?php echo t('settings.backup_list_empty'); ?></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     </div><!-- /.admin-main -->
@@ -5176,6 +5277,306 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 }
             });
         });
+    })();
+
+    // ============================================================
+    // SCHEDULED / AUTOMATED BACKUPS
+    // ============================================================
+
+    (function() {
+        var statusEl       = document.getElementById('scheduledStatus');
+        var lastRunEl      = document.getElementById('scheduledLastRun');
+        var statusMsgEl    = document.getElementById('scheduledStatusMessage');
+        var storageCountEl = document.getElementById('scheduledStorageCount');
+        var storageDatesEl = document.getElementById('scheduledStorageDates');
+        var form           = document.getElementById('scheduledBackupForm');
+        var enabledEl      = document.getElementById('scheduledEnabled');
+        var dailyEl        = document.getElementById('retentionDaily');
+        var weeklyEl       = document.getElementById('retentionWeekly');
+        var monthlyEl      = document.getElementById('retentionMonthly');
+        var yearlyEl       = document.getElementById('retentionYearly');
+        var limitEl        = document.getElementById('storageLimitMb');
+        var saveBtn        = document.getElementById('scheduledSaveBtn');
+        var listBody       = document.getElementById('scheduledListBody');
+        var cronCopyBtn    = document.getElementById('cronCopyBtn');
+        var cronLineEl     = document.getElementById('cronLine');
+
+        if (!statusEl) return; // Tab not on this dashboard
+
+        function fmtSize(bytes) {
+            if (!bytes) return '0 B';
+            if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
+            if (bytes >= 1048576)    return (bytes / 1048576).toFixed(1) + ' MB';
+            if (bytes >= 1024)       return (bytes / 1024).toFixed(1) + ' KB';
+            return bytes + ' B';
+        }
+        function fmtDate(unixOrIso) {
+            if (!unixOrIso) return '—';
+            var d = (typeof unixOrIso === 'number') ? new Date(unixOrIso * 1000) : new Date(unixOrIso);
+            if (isNaN(d.getTime())) return '—';
+            return d.toLocaleString();
+        }
+
+        async function refresh() {
+            try {
+                var res = await fetch('api.php?action=backup-status');
+                var json = await res.json();
+                if (!json.success) throw new Error(json.message);
+                var s = json.data;
+
+                // Form fields
+                enabledEl.checked = !!s.enabled;
+                dailyEl.value     = s.retention.daily;
+                weeklyEl.value    = s.retention.weekly;
+                monthlyEl.value   = s.retention.monthly;
+                yearlyEl.value    = s.retention.yearly;
+                limitEl.value     = s.storage_limit_mb;
+
+                // Last run + cron health
+                if (s.last_run) {
+                    lastRunEl.textContent = fmtDate(s.last_run);
+                    var ageMs = Date.now() - new Date(s.last_run).getTime();
+                    var ageDays = Math.floor(ageMs / 86400000);
+                    if (s.last_status === 'error') {
+                        statusEl.dataset.state = 'error';
+                        statusMsgEl.textContent = t('settings.last_run_error', { message: s.last_message || '' });
+                    } else if (s.enabled && ageDays >= 2) {
+                        statusEl.dataset.state = 'warning';
+                        statusMsgEl.textContent = t('settings.last_run_warning', { days: ageDays });
+                    } else {
+                        statusEl.dataset.state = 'ok';
+                        statusMsgEl.textContent = t('settings.last_run_ok');
+                    }
+                } else {
+                    lastRunEl.textContent = t('settings.last_run_never');
+                    if (s.enabled) {
+                        statusEl.dataset.state = 'warning';
+                        statusMsgEl.textContent = t('settings.last_run_warning', { days: '∞' });
+                    } else {
+                        statusEl.dataset.state = 'idle';
+                        statusMsgEl.textContent = '';
+                    }
+                }
+
+                // Storage summary
+                storageCountEl.textContent = t('settings.storage_count', {
+                    count: s.count, size: fmtSize(s.total_bytes)
+                });
+                if (s.oldest && s.newest && s.count > 0) {
+                    storageDatesEl.textContent = ' · '
+                        + t('settings.storage_oldest', { date: fmtDate(s.oldest) })
+                        + ' · '
+                        + t('settings.storage_newest', { date: fmtDate(s.newest) });
+                } else {
+                    storageDatesEl.textContent = '';
+                }
+
+                // Backup list
+                var listRes = await fetch('api.php?action=backup-list');
+                var listJson = await listRes.json();
+                if (!listJson.success) throw new Error(listJson.message);
+                var backups = listJson.data.backups || [];
+                renderList(backups);
+            } catch (err) {
+                statusEl.dataset.state = 'error';
+                statusMsgEl.textContent = err.message || String(err);
+            }
+        }
+
+        function renderList(backups) {
+            if (backups.length === 0) {
+                listBody.innerHTML = '<tr><td colspan="4" class="scheduled-list__empty">'
+                    + t('settings.backup_list_empty') + '</td></tr>';
+                return;
+            }
+            listBody.innerHTML = '';
+            backups.forEach(function(b) {
+                var tr = document.createElement('tr');
+
+                var tdDate = document.createElement('td');
+                tdDate.textContent = fmtDate(b.mtime);
+                tr.appendChild(tdDate);
+
+                var tdTier = document.createElement('td');
+                var tierBadge = document.createElement('span');
+                tierBadge.className = 'scheduled-tier scheduled-tier--' + b.tier;
+                tierBadge.textContent = b.tier;
+                tdTier.appendChild(tierBadge);
+                tr.appendChild(tdTier);
+
+                var tdSize = document.createElement('td');
+                tdSize.textContent = fmtSize(b.size);
+                tr.appendChild(tdSize);
+
+                var tdActions = document.createElement('td');
+                tdActions.className = 'scheduled-list__actions';
+
+                var dlBtn = document.createElement('button');
+                dlBtn.className = 'btn btn-secondary btn-sm';
+                dlBtn.textContent = t('settings.backup_download');
+                dlBtn.onclick = function() { downloadBackup(b.file); };
+                tdActions.appendChild(dlBtn);
+
+                var rsBtn = document.createElement('button');
+                rsBtn.className = 'btn btn-secondary btn-sm';
+                rsBtn.textContent = t('settings.backup_restore_from_pool');
+                rsBtn.onclick = function() { restoreBackup(b.file); };
+                tdActions.appendChild(rsBtn);
+
+                var delBtn = document.createElement('button');
+                delBtn.className = 'btn btn-danger btn-sm';
+                delBtn.textContent = t('settings.backup_delete');
+                delBtn.onclick = function() { deleteBackup(b.file); };
+                tdActions.appendChild(delBtn);
+
+                tr.appendChild(tdActions);
+                listBody.appendChild(tr);
+            });
+        }
+
+        async function downloadBackup(file) {
+            try {
+                var fd = new FormData();
+                fd.append('action', 'backup-prepare-download');
+                fd.append('csrf_token', CSRF_TOKEN);
+                fd.append('file', file);
+                var res = await fetch('api.php', { method: 'POST', body: fd });
+                var json = await res.json();
+                if (!json.success) throw new Error(json.message);
+                var url = 'api.php?action=download-site-backup'
+                    + '&token=' + encodeURIComponent(json.data.token)
+                    + '&csrf_token=' + encodeURIComponent(CSRF_TOKEN)
+                    + '&filename=' + encodeURIComponent(json.data.filename);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = json.data.filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } catch (err) {
+                showToast(t('toast.backup_site_failed', { message: err.message || String(err) }), 'error');
+            }
+        }
+
+        function restoreBackup(file) {
+            // Pick mode (full vs content) — same UI choice as the upload restore.
+            var mode = window.prompt(
+                t('settings.restore_full') + ' / ' + t('settings.restore_content')
+                + '\n\n[full] = ' + t('settings.restore_full_desc')
+                + '\n[content] = ' + t('settings.restore_content_desc')
+                + '\n\nType "full" or "content":', 'content');
+            if (mode !== 'full' && mode !== 'content') return;
+
+            var warningKey = mode === 'full'
+                ? 'settings.backup_restore_pool_warning_full'
+                : 'settings.backup_restore_pool_warning_content';
+
+            showModal(t('settings.restore_title'), t(warningKey), async function() {
+                closeModal();
+                try {
+                    var fd = new FormData();
+                    fd.append('action', 'restore-site-backup');
+                    fd.append('csrf_token', CSRF_TOKEN);
+                    fd.append('restore_mode', mode);
+                    fd.append('pool_file', file);
+                    var res = await fetch('api.php', { method: 'POST', body: fd });
+                    var json = await res.json();
+                    if (json.success) {
+                        var toastKey = mode === 'full' ? 'toast.restore_success_full' : 'toast.restore_success_content';
+                        showToast(t(toastKey, { extracted: json.data.extracted }), 'success');
+                        setTimeout(function() { location.reload(); }, 2000);
+                    } else {
+                        showToast(t('toast.restore_failed', { message: json.message }), 'error');
+                    }
+                } catch (err) {
+                    showToast(t('toast.restore_failed', { message: err.message || String(err) }), 'error');
+                }
+            });
+        }
+
+        function deleteBackup(file) {
+            showModal(t('settings.backup_delete'), t('settings.backup_delete_confirm'), async function() {
+                closeModal();
+                try {
+                    var fd = new FormData();
+                    fd.append('action', 'backup-delete');
+                    fd.append('csrf_token', CSRF_TOKEN);
+                    fd.append('file', file);
+                    var res = await fetch('api.php', { method: 'POST', body: fd });
+                    var json = await res.json();
+                    if (json.success) {
+                        showToast(t('toast.backup_deleted'), 'success');
+                        refresh();
+                    } else {
+                        showToast(t('toast.backup_delete_failed', { message: json.message }), 'error');
+                    }
+                } catch (err) {
+                    showToast(t('toast.backup_delete_failed', { message: err.message || String(err) }), 'error');
+                }
+            });
+        }
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            saveBtn.disabled = true;
+            try {
+                var fd = new FormData();
+                fd.append('action', 'backup-update-settings');
+                fd.append('csrf_token', CSRF_TOKEN);
+                fd.append('enabled', enabledEl.checked ? 'true' : 'false');
+                fd.append('retention_daily', dailyEl.value);
+                fd.append('retention_weekly', weeklyEl.value);
+                fd.append('retention_monthly', monthlyEl.value);
+                fd.append('retention_yearly', yearlyEl.value);
+                fd.append('storage_limit_mb', limitEl.value);
+                var res = await fetch('api.php', { method: 'POST', body: fd });
+                var json = await res.json();
+                if (json.success) {
+                    showToast(t('toast.scheduled_backup_settings_saved'), 'success');
+                    refresh();
+                } else {
+                    showToast(t('toast.scheduled_backup_settings_failed', { message: json.message }), 'error');
+                }
+            } catch (err) {
+                showToast(t('toast.scheduled_backup_settings_failed', { message: err.message || String(err) }), 'error');
+            } finally {
+                saveBtn.disabled = false;
+            }
+        });
+
+        cronCopyBtn.addEventListener('click', function() {
+            var text = cronLineEl.textContent;
+            var done = function() {
+                var orig = cronCopyBtn.textContent;
+                cronCopyBtn.textContent = t('settings.cron_copied');
+                setTimeout(function() { cronCopyBtn.textContent = orig; }, 1500);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(done, done);
+            } else {
+                // Fallback: select + execCommand
+                var range = document.createRange();
+                range.selectNode(cronLineEl);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+                try { document.execCommand('copy'); done(); } catch (e) { done(); }
+                window.getSelection().removeAllRanges();
+            }
+        });
+
+        // Refresh whenever the backup tab is shown (lazy: only fetch when visible).
+        var backupTab = document.getElementById('backupTab');
+        var observer = new MutationObserver(function() {
+            if (backupTab.style.display !== 'none') refresh();
+        });
+        observer.observe(backupTab, { attributes: true, attributeFilter: ['style'] });
+        if (backupTab.style.display !== 'none') refresh();
+
+        // Refresh after a manual create-site-backup so the new entry shows up.
+        var createBtn = document.getElementById('createSiteBackupBtn');
+        if (createBtn) {
+            createBtn.addEventListener('click', function() { setTimeout(refresh, 3000); });
+        }
     })();
 
     // ============================================================
