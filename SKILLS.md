@@ -2,7 +2,7 @@
 
 Machine-readable instructions for common tasks. Each skill describes what to do, which files to touch, and how to verify the result.
 
-**What Nibbly does:** Nibbly turns any HTML or PHP page into an editable website — no database required. You take an existing page (hand-crafted, designed in Figma, or vibe-coded with AI), replace hardcoded text, images, and links with PHP helper functions (`editableText()`, `editableImage()`, `editableLink()`), and get a fully functional CMS with inline editing. The helpers inject `data-*` attributes that the inline editor JavaScript discovers. Admins click to edit directly on the page. Content is stored as JSON files. Visitors see clean HTML. See `CLAUDE.md` → "How Inline Editing Works" for the full attribute reference.
+**What Nibbly does:** Nibbly turns any HTML or PHP page into an editable website — no database required. You take an existing page (hand-crafted, designed in Figma, or vibe-coded with AI), replace hardcoded text, images, and links with PHP helper functions (`editableText()`, `editableImage()`, `editableLink()`), and get a fully functional CMS with inline editing. The helpers inject `data-*` attributes that the inline editor JavaScript discovers. Admins click to edit directly on the page. Content is stored as JSON files. Visitors see clean HTML. See `AI-AGENT-GUIDE.md` → "How Inline Editing Works" for the full attribute reference.
 
 ---
 
@@ -19,8 +19,8 @@ php cli/convert.php my-page.html --slug=my-page --lang=en --dry-run
 This parses the HTML, detects sections/headings/images/links/repeating patterns, and generates the PHP template + JSON file. Review the output with `--dry-run` first, then run without it to write files. See `cli/README.md` for all options.
 
 ### Manual Steps (Prerequisites)
-- Read `CLAUDE.md` → "How Inline Editing Works" for the data-attribute system
-- Read `CLAUDE.md` → "Template API" for available editable functions
+- Read `AI-AGENT-GUIDE.md` → "How Inline Editing Works" for the data-attribute system
+- Read `AI-AGENT-GUIDE.md` → "Template API" for available editable functions
 - Have the static HTML page ready
 
 ### Concept
@@ -145,7 +145,7 @@ Every piece of content that should be editable needs to be wrapped in an editabl
 Create a new standard page with content editable via the inline editor. No PHP template needed.
 
 ### Prerequisites
-- Read `CLAUDE.md` for conventions
+- Read `AI-AGENT-GUIDE.md` for conventions
 - Read `includes/nav-config.php` for existing pages and language config
 
 ### Steps
@@ -181,7 +181,7 @@ Create a new standard page with content editable via the inline editor. No PHP t
 Add a new content section to an existing page.
 
 ### Prerequisites
-- Read `CLAUDE.md` → Block Types table for available types and fields
+- Read `AI-AGENT-GUIDE.md` → Block Types table for available types and fields
 - Read the target page's JSON file
 
 ### Steps
@@ -224,7 +224,7 @@ Add a new content section to an existing page.
 Create a news article that appears in the news listing.
 
 ### Prerequisites
-- Read `CLAUDE.md` for conventions
+- Read `AI-AGENT-GUIDE.md` for conventions
 - Check `content/news/` for existing slug patterns
 
 ### Steps
@@ -258,7 +258,7 @@ Create a news article that appears in the news listing.
 Add a render component (FAQ, Pricing, Team, Gallery, etc.) to a custom layout page.
 
 ### Prerequisites
-- Read `CLAUDE.md` → Render Components for available components
+- Read `AI-AGENT-GUIDE.md` → Render Components for available components
 - Read the target page's JSON and PHP template
 
 ### Steps
@@ -376,7 +376,7 @@ Add a new language to the site.
 Create a page with a custom PHP template (hero sections, grids, components) instead of the standard `renderAllSections()` approach.
 
 ### Prerequisites
-- Read `CLAUDE.md` → "How to Create a Custom Layout Page"
+- Read `AI-AGENT-GUIDE.md` → "How to Create a Custom Layout Page"
 - Read `examples/templates/page-custom.php` for reference
 - Read `examples/content/custom-layout.json` for JSON structure
 
