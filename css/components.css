@@ -796,6 +796,20 @@
     color: inherit;
 }
 
+.news-card__link,
+.news-card__link:hover,
+.news-card__link:focus-visible,
+.news-card__link * {
+    text-decoration: none;
+}
+
+.content-inner .news-card__link,
+.content-inner .news-card__link:hover,
+.content-inner .news-card__link:focus-visible,
+.content-inner .news-card__link * {
+    text-decoration: none;
+}
+
 .news-card__link:hover .news-card__title {
     color: var(--color-accent);
 }

@@ -191,17 +191,21 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
     <header class="site-header" id="siteHeader">
         <div class="header-inner">
             <!-- Logo -->
-            <a href="<?php echo $basePath; ?>." class="site-logo" aria-label="Home">
+            <?php
+            $_headerLogo = $_settings['logo'] ?? $_settings['branding']['logo'] ?? '';
+            $_headerLogo = ltrim($_headerLogo, '/');
+            $_headerLogoDark = ltrim($_settings['branding']['logoDark'] ?? '', '/');
+            // Treat a logo that points at the favicon as "no separate logo set"
+            if ($_headerLogo === $_favicon) $_headerLogo = '';
+            $_siteName = $_settings['branding']['name'] ?? (defined('SITE_NAME') ? SITE_NAME : '');
+            $_logoDisplay = $_settings['branding']['logoDisplay'] ?? 'both';
+            $_logoSize = $_settings['branding']['logoSize'] ?? 'medium';
+            if (!in_array($_logoSize, ['small', 'medium', 'large'], true)) $_logoSize = 'medium';
+            $_showFavicon = !$_headerLogo && $_logoDisplay !== 'text';
+            $_showText    = $_siteName && !$_headerLogo && $_logoDisplay !== 'favicon';
+            ?>
+            <a href="<?php echo $basePath; ?>." class="site-logo site-logo--size-<?php echo htmlspecialchars($_logoSize); ?>" aria-label="Home">
                 <?php
-                $_headerLogo = $_settings['logo'] ?? $_settings['branding']['logo'] ?? '';
-                $_headerLogo = ltrim($_headerLogo, '/');
-                $_headerLogoDark = ltrim($_settings['branding']['logoDark'] ?? '', '/');
-                // Treat a logo that points at the favicon as "no separate logo set"
-                if ($_headerLogo === $_favicon) $_headerLogo = '';
-                $_siteName = defined('SITE_NAME') ? SITE_NAME : '';
-                $_logoDisplay = $_settings['branding']['logoDisplay'] ?? 'both';
-                $_showFavicon = !$_headerLogo && $_logoDisplay !== 'text';
-                $_showText    = $_siteName && !$_headerLogo && $_logoDisplay !== 'favicon';
                 if ($_headerLogo):
                     $_headerLogoDarkSrc = $_headerLogoDark ?: $_headerLogo;
                     $_hasDarkLogo = ($_headerLogoDark && $_headerLogoDark !== $_headerLogo);

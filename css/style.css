@@ -158,6 +158,7 @@ h3 { font-size: 1.5rem; font-weight: 500; letter-spacing: -0.015em; }
 
 /* Logo */
 .site-logo {
+    --site-logo-size: 40px;
     display: flex;
     align-items: center;
     font-family: var(--font-display);
@@ -167,6 +168,14 @@ h3 { font-size: 1.5rem; font-weight: 500; letter-spacing: -0.015em; }
     text-decoration: none;
     max-width: 200px;
     overflow: hidden;
+}
+
+.site-logo--size-small {
+    --site-logo-size: 32px;
+}
+
+.site-logo--size-large {
+    --site-logo-size: 48px;
 }
 
 .site-logo:hover {
@@ -183,10 +192,14 @@ h3 { font-size: 1.5rem; font-weight: 500; letter-spacing: -0.015em; }
 
 .site-logo-img {
     flex-shrink: 0;
-    height: 40px;
+    height: var(--site-logo-size);
     width: auto;
     max-width: 200px;
     object-fit: contain;
+}
+
+svg.site-logo-img {
+    width: var(--site-logo-size);
 }
 
 /* Inline-SVG icon variant (default favicon): follows the site's primary
@@ -1145,13 +1158,22 @@ body.edit-mode-active .event-add-wrapper {
     font-size: clamp(6rem, 15vw, 12rem);
     font-weight: 700;
     line-height: 1;
+    color: var(--color-primary-light, var(--color-primary));
+    opacity: 1;
+    margin-bottom: var(--spacing-sm);
+    letter-spacing: -0.04em;
+}
+
+/* Opt-in gradient text variant — sites that want the original look can
+   add the modifier class. The plain default is overridable with a normal
+   `color` rule, no need to also reset background and -webkit-text-fill-color. */
+.error-page__code--gradient {
     background: var(--gradient-brand);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    color: transparent;
     opacity: 0.3;
-    margin-bottom: var(--spacing-sm);
-    letter-spacing: -0.04em;
 }
 
 .error-page__title {

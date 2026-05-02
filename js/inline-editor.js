@@ -518,7 +518,7 @@
         const loadPromises = Array.from(contentPages).map(page => loadContent(page));
         loadPromises.push(loadEvents());
 
-        Promise.all(loadPromises).then(() => {
+        Promise.all(loadPromises).then(async () => {
             createEditorUI();
             createEventEditorUI();
             createAddSectionUI();
@@ -531,7 +531,12 @@
             attachListEditHandlers();
             attachComparisonRowHandlers();
             attachComparisonCellToggles();
-            showAdminBar();
+            // Await the admin bar — showAdminBar() awaits a settings fetch
+            // and only then injects the bar markup. Without await, the
+            // auto-restore branch below ran enterEditMode() before the
+            // bar existed, leaving the toolbar stuck on the "start edit"
+            // state even though edit mode was active internally.
+            await showAdminBar();
 
             // Notify admin about auto-generated content fields
             if (window.NB_AUTO_GENERATED && window.NB_AUTO_GENERATED.length > 0) {
@@ -603,8 +608,10 @@
 
         const bar = document.createElement('div');
         bar.id = 'admin-bar';
+        const isDefaultFavicon = /(^|\/)assets\/images\/favicon\.svg(?:[?#].*)?$/.test(brandLogo);
+        const logoClass = `admin-bar-logo-icon${isDefaultFavicon ? ' admin-bar-logo-icon--default' : ''}`;
         const logoHtml = showBranding
-            ? `<img src="${brandLogo}" alt="${brandName}" width="24" height="24" class="admin-bar-logo-icon">`
+            ? `<img src="${brandLogo}" alt="${brandName}" width="24" height="24" class="${logoClass}">`
             : '';
         bar.innerHTML = `
             <div class="admin-bar-inner">
@@ -4306,6 +4313,11 @@
             // Persist edit-mode flag so it auto-restores after reload
             sessionStorage.setItem('site-edit-mode', 'true');
             showToast(description, 'success');
+            // Detach beforeunload guard before the programmatic reload —
+            // otherwise the browser shows its native "leave page?" dialog
+            // even though the editor itself is triggering the reload and
+            // all dirty pages were just persisted above.
+            window.removeEventListener('beforeunload', beforeUnloadGuard);
             setTimeout(() => location.reload(), 300);
         } catch (error) {
             showToast(t('toast.error_saving', { page: '', message: error.message }), 'error');

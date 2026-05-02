@@ -485,9 +485,21 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
     <?php endif; ?>
     <meta name="site-languages" content="<?php echo htmlspecialchars(json_encode($SITE_LANGUAGES ?? ['en' => 'English'])); ?>">
     <meta name="site-lang-default" content="<?php echo htmlspecialchars(defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en'); ?>">
+    <?php
+    // Cache-busting for editor assets: query string with file mtime forces
+    // a fresh fetch as soon as the file changes on the server. Without
+    // this, browsers serve the previous JS/CSS from disk cache and admins
+    // continue to see old bugs after a hotfix.
+    $_assetsDir = __DIR__ . '/..';
+    $_v = function($relPath) use ($basePath, $_assetsDir) {
+        $full = $_assetsDir . '/' . ltrim($relPath, '/');
+        $mtime = is_file($full) ? filemtime($full) : 0;
+        return $basePath . $relPath . ($mtime ? '?v=' . $mtime : '');
+    };
+    ?>
     <link rel="stylesheet" href="<?php echo $basePath; ?>css/nibbly-admin-tokens.css">
-    <link rel="stylesheet" href="<?php echo $basePath; ?>css/image-manager.css">
-    <link rel="stylesheet" href="<?php echo $basePath; ?>css/inline-editor.css">
+    <link rel="stylesheet" href="<?php echo $_v('css/image-manager.css'); ?>">
+    <link rel="stylesheet" href="<?php echo $_v('css/inline-editor.css'); ?>">
     <?php if (!empty($_editorVars)): ?>
     <style>:root{<?php echo implode(';', $_editorVars); ?>}</style>
     <?php endif; ?>
@@ -527,8 +539,8 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
         return s;
     }
     </script>
-    <script src="<?php echo $basePath; ?>js/image-manager.js"></script>
-    <script src="<?php echo $basePath; ?>js/inline-editor.js"></script>
+    <script src="<?php echo $_v('js/image-manager.js'); ?>"></script>
+    <script src="<?php echo $_v('js/inline-editor.js'); ?>"></script>
     <?php endif; ?>
 </body>
 </html>

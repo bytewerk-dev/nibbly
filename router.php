@@ -28,6 +28,10 @@ if ($uri !== '/' && is_file($filePath)) {
     return false;
 }
 
+// Apply migration redirects before slug-based routing.
+require_once $root . '/includes/redirect-helper.php';
+applyRedirects($_SERVER['REQUEST_URI'] ?? '/');
+
 // Serve existing directories with index.php
 if (is_dir($filePath)) {
     $index = rtrim($filePath, '/') . '/index.php';

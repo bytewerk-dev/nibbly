@@ -43,15 +43,6 @@ if (!$emailConfig && file_exists(__DIR__ . '/smtp-config.php')) {
     ];
 }
 
-if (!$emailConfig || empty($emailConfig['recipientEmail']) || ($emailConfig['method'] ?? '') === 'inactive') {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Email not configured']);
-    exit;
-}
-
-// Recipient email
-$to = $emailConfig['recipientEmail'];
-
 // Path to mail backup file
 $mailsFile = __DIR__ . '/../content/mails.json';
 
@@ -81,7 +72,12 @@ function saveMailBackup($filePath, $mailData) {
         $mails = array_slice($mails, 0, 500);
     }
 
-    file_put_contents($filePath, json_encode($mails, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    $dir = dirname($filePath);
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+
+    return file_put_contents($filePath, json_encode($mails, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX) !== false;
 }
 
 // Get and sanitize form data
@@ -155,13 +151,19 @@ $body .= str_repeat('-', 40) . "\n";
 $body .= $message . "\n";
 $body .= str_repeat('-', 40) . "\n";
 
-// Send email
+// Send email when configured. Valid submissions are stored locally even when
+// email delivery is disabled or misconfigured, so contact requests are not lost.
 $sent = false;
-$method = $emailConfig['method'] ?? 'smtp';
-$fromEmail = $emailConfig['fromEmail'] ?? $emailConfig['recipientEmail'];
+$method = $emailConfig['method'] ?? 'inactive';
+$to = $emailConfig['recipientEmail'] ?? '';
+$fromEmail = $emailConfig['fromEmail'] ?? $to;
 $fromName = $emailConfig['fromName'] ?? '';
+$isEmailConfigured = $emailConfig
+    && $method !== 'inactive'
+    && !empty($to)
+    && filter_var($to, FILTER_VALIDATE_EMAIL);
 
-if ($method === 'smtp') {
+if ($isEmailConfigured && $method === 'smtp') {
     $mailer = new SmtpMailer(
         $emailConfig['smtpHost'] ?? '',
         intval($emailConfig['smtpPort'] ?? 587),
@@ -178,7 +180,7 @@ if ($method === 'smtp') {
         $fromName,
         $email  // Reply-To
     );
-} elseif ($method === 'sendmail') {
+} elseif ($isEmailConfigured && $method === 'sendmail') {
     // PHP mail() — requires server IP to be whitelisted for sending
     $headers = [];
     $headers[] = 'From: ' . ($fromName ? "=?UTF-8?B?" . base64_encode($fromName) . "?= <$fromEmail>" : $fromEmail);
@@ -189,48 +191,36 @@ if ($method === 'smtp') {
     $sent = @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', $body, implode("\r\n", $headers));
 }
 
-if ($sent) {
-    saveMailBackup($mailsFile, [
-        'id' => uniqid('mail_'),
-        'timestamp' => date('c'),
-        'lang' => $lang,
-        'name' => $name,
-        'email' => $email,
-        'phone' => $phone,
-        'occasion' => $occasion,
-        'date' => $date,
-        'message' => $message,
-        'status' => 'sent',
-        'read' => false
-    ]);
+$status = $sent ? 'sent' : ($isEmailConfigured ? 'send_failed' : 'local_only');
+$saved = saveMailBackup($mailsFile, [
+    'id' => uniqid('mail_'),
+    'timestamp' => date('c'),
+    'lang' => $lang,
+    'name' => $name,
+    'email' => $email,
+    'phone' => $phone,
+    'occasion' => $occasion,
+    'date' => $date,
+    'message' => $message,
+    'status' => $status,
+    'read' => false
+]);
 
-    echo json_encode([
-        'success' => true,
-        'message' => $lang === 'de'
-            ? 'Vielen Dank für Ihre Nachricht!'
-            : 'Thank you for your message!'
-    ]);
-} else {
-    // Still save locally even if sending failed
-    saveMailBackup($mailsFile, [
-        'id' => uniqid('mail_'),
-        'timestamp' => date('c'),
-        'lang' => $lang,
-        'name' => $name,
-        'email' => $email,
-        'phone' => $phone,
-        'occasion' => $occasion,
-        'date' => $date,
-        'message' => $message,
-        'status' => 'send_failed',
-        'read' => false
-    ]);
-
+if (!$saved) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
         'message' => $lang === 'de'
-            ? 'Fehler beim Senden. Bitte versuchen Sie es später erneut.'
-            : 'Error sending. Please try again later.'
+            ? 'Die Nachricht konnte nicht gespeichert werden. Bitte versuchen Sie es später erneut.'
+            : 'The message could not be saved. Please try again later.'
     ]);
+    exit;
 }
+
+echo json_encode([
+    'success' => true,
+    'status' => $status,
+    'message' => $lang === 'de'
+        ? 'Vielen Dank für Ihre Nachricht!'
+        : 'Thank you for your message!'
+]);

@@ -1,0 +1,11 @@
+{
+  "_comment": "Copy this file to redirects.json to activate. See CLAUDE.md > Migration Redirects for the full schema.",
+  "redirects": [
+    { "from": "^/wp/about/?$",            "to": "/about",                "status": 301 },
+    { "from": "^/wp/page/(.+)$",          "to": "/$1",                   "status": 301 },
+    { "from": "^/wp/category/news/?$",    "to": "/news",                 "status": 301 },
+    { "from": "^/services/lifecoach/?$",  "to": "/services#lifecoach",   "status": 301 },
+    { "from": "^/temp/(.+)$",             "to": "/hub",                  "status": 302 },
+    { "from": "^/retired/old-product$",                                  "status": 410 }
+  ]
+}

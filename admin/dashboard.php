@@ -36,7 +36,7 @@ $isAdminUser = ($userRole === 'admin');
 
 // Load settings for theme
 $_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg';
-$siteSettings = ['favicon' => $_defaultFavicon, 'branding' => ['logo' => '', 'logoDark' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both'], 'theme' => ['adminTheme' => 'light', 'primaryColor' => '#2563eb', 'accentColor' => '#60a5fa', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'buttonGlow' => true, 'buttonRadius' => 6]];
+$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => ['adminTheme' => 'light', 'primaryColor' => '#2563eb', 'accentColor' => '#60a5fa', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'buttonGlow' => true, 'buttonRadius' => 6]];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     $loadedSettings = json_decode(file_get_contents(SETTINGS_PATH), true);
     if (is_array($loadedSettings)) {
@@ -147,8 +147,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         </button>
         <div class="topbar-brand">
             <?php if ($siteSettings['branding']['showBranding']):
-                // Backend always uses the favicon (frontend logo is for the public site only).
-                $_topbarFavicon = $siteSettings['favicon'] ?? $_defaultFavicon;
+                $_topbarFavicon = $siteSettings['branding']['adminLogo'] ?? '';
+                if (!$_topbarFavicon) $_topbarFavicon = $siteSettings['favicon'] ?? $_defaultFavicon;
                 $_brandName = $siteSettings['branding']['name'] ?? '';
                 echo nibblyIconOrImg($_topbarFavicon, $_brandName, ['width' => 24, 'height' => 24, 'class' => 'topbar-logo']);
             endif; ?>
@@ -228,21 +228,25 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     $emailMissing = $emailMethod !== 'inactive' && $currentUserData && empty($currentUserData['email']);
     ?>
     <?php if ($emailMissing): ?>
-    <div class="password-warning" id="emailWarning">
-        <div class="password-warning-inner">
-            <strong>&#9888; <?php echo t('settings.email_missing_title'); ?></strong>
-            <?php echo t('settings.email_missing_text'); ?>
-            <br><a href="#" onclick="switchTab('settings'); document.querySelector('[data-settings-tab=&quot;users&quot;]').click(); return false;"><?php echo t('settings.email_missing_link'); ?> &rarr;</a>
+    <div class="info-banner info-banner--warning" id="emailWarning">
+        <div class="info-banner__inner">
+            <strong class="info-banner__title"><?php echo nbIcon('alert'); ?> <?php echo t('settings.email_missing_title'); ?></strong>
+            <span class="info-banner__body">
+                <?php echo t('settings.email_missing_text'); ?>
+                <a href="#" class="info-banner__cta" onclick="switchTab('settings'); document.querySelector('[data-settings-tab=&quot;users&quot;]').click(); return false;"><?php echo t('settings.email_missing_link'); ?> &rarr;</a>
+            </span>
         </div>
     </div>
     <?php endif; ?>
     <?php if (!empty($_SESSION['password_warning'])): ?>
-    <div class="password-warning" id="passwordWarning">
-        <div class="password-warning-inner">
-            <strong>&#9888; <?php echo t('security.warning'); ?></strong>
-            <?php echo t('security.weak_password'); ?>
-            <strong><?php echo t('security.change_now'); ?></strong> &mdash; this is a significant security risk.
-            <br><a href="#" onclick="switchTab('settings'); document.querySelector('[data-settings-tab=&quot;password&quot;]').click(); return false;"><?php echo t('security.change_link'); ?> &rarr;</a>
+    <div class="info-banner info-banner--warning" id="passwordWarning">
+        <div class="info-banner__inner">
+            <strong class="info-banner__title"><?php echo nbIcon('alert'); ?> <?php echo t('security.warning'); ?></strong>
+            <span class="info-banner__body">
+                <?php echo t('security.weak_password'); ?>
+                <strong><?php echo t('security.change_now'); ?></strong> &mdash; this is a significant security risk.
+                <a href="#" class="info-banner__cta" onclick="switchTab('settings'); document.querySelector('[data-settings-tab=&quot;password&quot;]').click(); return false;"><?php echo t('security.change_link'); ?> &rarr;</a>
+            </span>
         </div>
     </div>
     <?php endif; ?>
@@ -529,11 +533,21 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     <div class="admin-container" id="mailsTab" style="display: none;">
         <!-- List view -->
         <div class="page-list-container" id="mailsListView">
+            <div class="info-banner info-banner--warning mail-config-banner" id="mailConfigBanner" hidden>
+                <div class="info-banner__inner">
+                    <strong class="info-banner__title"><?php echo nbIcon('alert'); ?> <span id="mailConfigBannerTitle"></span></strong>
+                    <span class="info-banner__body">
+                        <span id="mailConfigBannerText"></span>
+                        <button type="button" class="info-banner__cta info-banner__cta-button" onclick="openEmailSettings()"><?php echo t('mails.open_email_settings'); ?> &rarr;</button>
+                    </span>
+                </div>
+            </div>
             <div class="page-list-header">
                 <div class="page-list-header-left">
                     <h2><?php echo t('mails.title'); ?></h2>
                     <button class="btn btn-secondary btn-sm" onclick="loadMails()"><?php echo t('btn.refresh'); ?></button>
                     <button class="btn btn-secondary btn-sm" onclick="markAllMailsRead()"><?php echo t('mails.mark_all_read'); ?></button>
+                    <button class="btn btn-secondary btn-sm" id="deleteReadMailsBtn" onclick="deleteReadMails()" disabled><?php echo t('mails.delete_read'); ?></button>
                 </div>
             </div>
             <div class="page-list-table-wrap">
@@ -600,82 +614,136 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 <h2><?php echo t('settings.branding'); ?></h2>
                 <p class="settings-description"><?php echo t('settings.branding_desc'); ?></p>
                 <form id="brandingForm" class="settings-form">
-                    <fieldset class="settings-section">
+                    <fieldset class="settings-section settings-section--branding-main">
                         <legend><?php echo t('settings.site_identity'); ?></legend>
-                        <div class="form-group">
-                            <label for="settingsName"><?php echo t('settings.site_name'); ?></label>
-                            <input type="text" id="settingsName" value="" placeholder="<?php echo t('settings.site_name_placeholder'); ?>" maxlength="100">
-                        </div>
-                        <div class="form-group">
-                            <label for="settingsFavicon"><?php echo t('settings.favicon'); ?></label>
-                            <small class="form-hint"><?php echo t('settings.favicon_hint'); ?></small>
-                            <div class="logo-preview-group">
-                                <div class="logo-preview" id="faviconPreview">
-                                    <img src="<?php echo htmlspecialchars($_dashFavicon); ?>" alt="<?php echo t('settings.favicon'); ?>" id="faviconPreviewImg">
-                                </div>
-                                <div class="logo-controls">
-                                    <div class="logo-path-input">
-                                        <span class="input-with-clear">
-                                            <input type="text" id="settingsFavicon" value="<?php echo htmlspecialchars($_dashFavicon); ?>" placeholder="<?php echo htmlspecialchars($_defaultFavicon); ?>">
-                                            <button type="button" class="input-clear-btn" data-clear-target="settingsFavicon" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
-                                        </span>
-                                        <button type="button" class="btn btn-secondary btn-sm" id="browseFaviconBtn"><?php echo t('btn.browse'); ?></button>
+                        <div class="branding-main-grid">
+                            <div class="branding-main-column branding-main-column--identity">
+                                <div class="branding-identity-grid">
+                                    <div class="form-group">
+                                        <label for="settingsName"><?php echo t('settings.site_name'); ?></label>
+                                        <small class="form-hint branding-site-name-hint"><?php echo t('settings.site_name_hint'); ?></small>
+                                        <input type="text" id="settingsName" value="" placeholder="<?php echo t('settings.site_name_placeholder'); ?>" maxlength="100">
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="frontend-logos-block">
-                            <h4 class="frontend-logos-block__title"><?php echo t('settings.frontend_logos'); ?></h4>
-                            <small class="form-hint frontend-logos-block__hint"><?php echo t('settings.frontend_logos_hint'); ?></small>
-                            <div class="form-group-row">
-                                <div class="form-group">
-                                    <label for="settingsLogo"><?php echo t('settings.logo_light'); ?></label>
-                                    <div class="logo-preview-group">
-                                        <div class="logo-preview" id="logoPreview">
-                                            <img src="" alt="<?php echo t('settings.logo_light'); ?>" id="logoPreviewImg">
-                                        </div>
-                                        <div class="logo-controls">
-                                            <div class="logo-path-input">
-                                                <span class="input-with-clear">
-                                                    <input type="text" id="settingsLogo" value="" placeholder="/assets/images/logo.png">
-                                                    <button type="button" class="input-clear-btn" data-clear-target="settingsLogo" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
-                                                </span>
-                                                <button type="button" class="btn btn-secondary btn-sm" id="browseLogoBtn"><?php echo t('btn.browse'); ?></button>
+                                    <div class="form-group">
+                                        <label for="settingsFavicon"><?php echo t('settings.favicon'); ?></label>
+                                        <small class="form-hint branding-favicon-hint"><?php echo t('settings.favicon_hint'); ?></small>
+                                        <div class="logo-preview-group">
+                                            <div class="logo-preview" id="faviconPreview">
+                                                <img src="<?php echo htmlspecialchars($_dashFavicon); ?>" alt="<?php echo t('settings.favicon'); ?>" id="faviconPreviewImg">
+                                            </div>
+                                            <div class="logo-controls">
+                                                <div class="logo-path-input">
+                                                    <span class="input-with-clear">
+                                                        <input type="text" id="settingsFavicon" value="<?php echo htmlspecialchars($_dashFavicon); ?>" placeholder="<?php echo htmlspecialchars($_defaultFavicon); ?>">
+                                                        <button type="button" class="input-clear-btn" data-clear-target="settingsFavicon" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                                    </span>
+                                                    <button type="button" class="btn btn-secondary btn-sm" id="browseFaviconBtn"><?php echo t('btn.browse'); ?></button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="settingsLogoDark"><?php echo t('settings.logo_dark'); ?></label>
-                                    <div class="logo-preview-group">
-                                        <div class="logo-preview logo-preview--dark" id="logoDarkPreview">
-                                            <img src="" alt="<?php echo t('settings.logo_dark'); ?>" id="logoDarkPreviewImg">
-                                        </div>
-                                        <div class="logo-controls">
-                                            <div class="logo-path-input">
-                                                <span class="input-with-clear">
-                                                    <input type="text" id="settingsLogoDark" value="" placeholder="/assets/images/logo-dark.png">
-                                                    <button type="button" class="input-clear-btn" data-clear-target="settingsLogoDark" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
-                                                </span>
-                                                <button type="button" class="btn btn-secondary btn-sm" id="browseLogoDarkBtn"><?php echo t('btn.browse'); ?></button>
+                                    <div class="form-group">
+                                        <label for="settingsFaviconPng"><?php echo t('settings.favicon_png'); ?></label>
+                                        <small class="form-hint branding-favicon-hint"><?php echo t('settings.favicon_png_hint'); ?></small>
+                                        <div class="logo-preview-group">
+                                            <div class="logo-preview" id="faviconPngPreview">
+                                                <img src="" alt="<?php echo t('settings.favicon_png'); ?>" id="faviconPngPreviewImg">
+                                            </div>
+                                            <div class="logo-controls">
+                                                <div class="logo-path-input">
+                                                    <span class="input-with-clear">
+                                                        <input type="text" id="settingsFaviconPng" value="<?php echo htmlspecialchars($siteSettings['favicon_png'] ?? ''); ?>" placeholder="/assets/images/favicon.png">
+                                                        <button type="button" class="input-clear-btn" data-clear-target="settingsFaviconPng" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                                    </span>
+                                                    <button type="button" class="btn btn-secondary btn-sm" id="browseFaviconPngBtn"><?php echo t('btn.browse'); ?></button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="form-group" id="logoDisplayGroup">
-                            <label><?php echo t('settings.header_display'); ?></label>
-                            <small class="form-hint"><?php echo t('settings.header_display_hint'); ?></small>
-                            <div class="radio-group">
-                                <label class="radio-option"><input type="radio" name="settingsLogoDisplay" value="favicon"> <span><?php echo t('settings.logo_display_favicon'); ?></span></label>
-                                <label class="radio-option"><input type="radio" name="settingsLogoDisplay" value="text"> <span><?php echo t('settings.logo_display_text'); ?></span></label>
-                                <label class="radio-option"><input type="radio" name="settingsLogoDisplay" value="both" checked> <span><?php echo t('settings.logo_display_both'); ?></span></label>
+                            <div class="branding-main-column branding-main-column--public">
+                                <div class="frontend-logos-block">
+                                    <h4 class="frontend-logos-block__title"><?php echo t('settings.frontend_logos'); ?></h4>
+                                    <small class="form-hint frontend-logos-block__hint"><?php echo t('settings.frontend_logos_hint'); ?></small>
+                                    <div class="form-group-row">
+                                        <div class="form-group">
+                                            <label for="settingsLogo"><?php echo t('settings.logo_light'); ?></label>
+                                            <div class="logo-preview-group">
+                                                <div class="logo-preview" id="logoPreview">
+                                                    <img src="" alt="<?php echo t('settings.logo_light'); ?>" id="logoPreviewImg">
+                                                </div>
+                                                <div class="logo-controls">
+                                                    <div class="logo-path-input">
+                                                        <span class="input-with-clear">
+                                                            <input type="text" id="settingsLogo" value="" placeholder="/assets/images/logo.png">
+                                                            <button type="button" class="input-clear-btn" data-clear-target="settingsLogo" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                                        </span>
+                                                        <button type="button" class="btn btn-secondary btn-sm" id="browseLogoBtn"><?php echo t('btn.browse'); ?></button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="settingsLogoDark"><?php echo t('settings.logo_dark'); ?></label>
+                                            <div class="logo-preview-group">
+                                                <div class="logo-preview logo-preview--dark" id="logoDarkPreview">
+                                                    <img src="" alt="<?php echo t('settings.logo_dark'); ?>" id="logoDarkPreviewImg">
+                                                </div>
+                                                <div class="logo-controls">
+                                                    <div class="logo-path-input">
+                                                        <span class="input-with-clear">
+                                                            <input type="text" id="settingsLogoDark" value="" placeholder="/assets/images/logo-dark.png">
+                                                            <button type="button" class="input-clear-btn" data-clear-target="settingsLogoDark" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                                        </span>
+                                                        <button type="button" class="btn btn-secondary btn-sm" id="browseLogoDarkBtn"><?php echo t('btn.browse'); ?></button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group" id="logoDisplayGroup">
+                                    <label><?php echo t('settings.header_display'); ?></label>
+                                    <small class="form-hint"><?php echo t('settings.header_display_hint'); ?></small>
+                                    <div class="radio-group">
+                                        <label class="radio-option"><input type="radio" name="settingsLogoDisplay" value="favicon"> <span><?php echo t('settings.logo_display_favicon'); ?></span></label>
+                                        <label class="radio-option"><input type="radio" name="settingsLogoDisplay" value="text"> <span><?php echo t('settings.logo_display_text'); ?></span></label>
+                                        <label class="radio-option"><input type="radio" name="settingsLogoDisplay" value="both" checked> <span><?php echo t('settings.logo_display_both'); ?></span></label>
+                                    </div>
+                                </div>
+                                <div class="form-group" id="logoSizeGroup">
+                                    <label><?php echo t('settings.logo_size'); ?></label>
+                                    <small class="form-hint"><?php echo t('settings.logo_size_hint'); ?></small>
+                                    <div class="radio-group radio-group--segmented">
+                                        <label class="radio-option"><input type="radio" name="settingsLogoSize" value="small"> <span><?php echo t('settings.logo_size_small'); ?></span></label>
+                                        <label class="radio-option"><input type="radio" name="settingsLogoSize" value="medium" checked> <span><?php echo t('settings.logo_size_medium'); ?></span></label>
+                                        <label class="radio-option"><input type="radio" name="settingsLogoSize" value="large"> <span><?php echo t('settings.logo_size_large'); ?></span></label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </fieldset>
                     <fieldset class="settings-section">
                         <legend><?php echo t('settings.admin_interface'); ?></legend>
+                        <div class="form-group">
+                            <label for="settingsAdminLogo"><?php echo t('settings.admin_logo'); ?></label>
+                            <small class="form-hint branding-favicon-hint"><?php echo t('settings.admin_logo_hint'); ?></small>
+                            <div class="logo-preview-group">
+                                <div class="logo-preview" id="adminLogoPreview">
+                                    <img src="" alt="<?php echo t('settings.admin_logo'); ?>" id="adminLogoPreviewImg">
+                                </div>
+                                <div class="logo-controls">
+                                    <div class="logo-path-input">
+                                        <span class="input-with-clear">
+                                            <input type="text" id="settingsAdminLogo" value="" placeholder="/assets/images/admin-logo.svg">
+                                            <button type="button" class="input-clear-btn" data-clear-target="settingsAdminLogo" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                        </span>
+                                        <button type="button" class="btn btn-secondary btn-sm" id="browseAdminLogoBtn"><?php echo t('btn.browse'); ?></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <div class="form-group">
                             <label class="toggle-label">
                                 <span><?php echo t('settings.show_branding'); ?></span>
@@ -687,7 +755,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             <small class="form-hint"><?php echo t('settings.branding_hint'); ?></small>
                         </div>
                     </fieldset>
-                    <button type="submit" class="btn btn-primary" id="saveBrandingBtn"><?php echo t('settings.save_branding'); ?></button>
+                    <div class="branding-form-actions">
+                        <button type="button" class="btn btn-secondary" id="resetBrandingBtn">&#x21BA; <?php echo t('settings.reset_branding'); ?></button>
+                        <button type="submit" class="btn btn-primary" id="saveBrandingBtn"><?php echo t('settings.save_branding'); ?></button>
+                    </div>
                 </form>
             </div>
 
@@ -1058,66 +1129,168 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         </div>
         <p class="page-description"><?php echo t('settings.backup_desc'); ?></p>
 
-        <div class="backup-site-card">
-            <div class="backup-site-card__info">
-                <h3><?php echo t('settings.backup_site'); ?></h3>
-                <p><?php echo t('settings.backup_site_desc'); ?></p>
+        <div class="backup-manual-grid">
+            <div class="backup-site-card">
+                <div class="backup-site-card__info">
+                    <h3><?php echo t('settings.backup_site'); ?></h3>
+                    <p><?php echo t('settings.backup_site_desc'); ?></p>
+                </div>
+                <div class="backup-site-card__action">
+                    <button type="button" class="btn btn-primary" id="createSiteBackupBtn">
+                        <?php echo nbIcon('download', 16); ?>
+                        <span><?php echo t('settings.backup_create'); ?></span>
+                    </button>
+                    <div class="backup-progress" id="backupProgress" style="display: none;">
+                        <div class="backup-progress__spinner"></div>
+                        <span id="backupProgressText"><?php echo t('settings.backup_creating'); ?></span>
+                    </div>
+                </div>
             </div>
-            <div class="backup-site-card__action">
-                <button type="button" class="btn btn-primary" id="createSiteBackupBtn">
-                    <?php echo nbIcon('download', 16); ?>
-                    <span><?php echo t('settings.backup_create'); ?></span>
-                </button>
-                <div class="backup-progress" id="backupProgress" style="display: none;">
-                    <div class="backup-progress__spinner"></div>
-                    <span id="backupProgressText"><?php echo t('settings.backup_creating'); ?></span>
+
+            <!-- Restore from Backup -->
+            <div class="backup-site-card">
+                <div class="backup-site-card__info">
+                    <h3><?php echo t('settings.restore_title'); ?></h3>
+                    <p><?php echo t('settings.restore_desc'); ?></p>
+                </div>
+                <div class="backup-site-card__action">
+                    <div class="restore-upload-area" id="restoreUploadArea">
+                        <input type="file" id="restoreFileInput" accept=".zip" style="display: none;">
+                        <button type="button" class="btn btn-secondary" id="restoreSelectBtn">
+                            <?php echo nbIcon('upload', 16); ?>
+                            <span><?php echo t('settings.restore_select_file'); ?></span>
+                        </button>
+                        <span class="restore-filename" id="restoreFilename" style="display: none;"></span>
+                    </div>
+
+                    <div class="restore-mode-selector" id="restoreModeSelector" style="display: none;">
+                        <label class="restore-mode-option">
+                            <input type="radio" name="restore_mode" value="content" checked>
+                            <div class="restore-mode-card">
+                                <strong><?php echo t('settings.restore_content'); ?></strong>
+                                <span><?php echo t('settings.restore_content_desc'); ?></span>
+                            </div>
+                        </label>
+                        <label class="restore-mode-option">
+                            <input type="radio" name="restore_mode" value="full">
+                            <div class="restore-mode-card">
+                                <strong><?php echo t('settings.restore_full'); ?></strong>
+                                <span><?php echo t('settings.restore_full_desc'); ?></span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="restore-actions" id="restoreActions" style="display: none;">
+                        <button type="button" class="btn btn-danger" id="restoreBtn">
+                            <?php echo nbIcon('upload', 16); ?>
+                            <span><?php echo t('settings.restore_btn'); ?></span>
+                        </button>
+                        <div class="backup-progress" id="restoreProgress" style="display: none;">
+                            <div class="backup-progress__spinner"></div>
+                            <span id="restoreProgressText"><?php echo t('settings.restore_uploading'); ?></span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Restore from Backup -->
-        <div class="backup-site-card" style="margin-top: var(--nb-space-5);">
+        <!-- Automated / scheduled backups -->
+        <div class="backup-site-card backup-scheduled">
             <div class="backup-site-card__info">
-                <h3><?php echo t('settings.restore_title'); ?></h3>
-                <p><?php echo t('settings.restore_desc'); ?></p>
+                <h3><?php echo t('settings.scheduled_backups'); ?></h3>
+                <p><?php echo t('settings.scheduled_backups_desc'); ?></p>
             </div>
-            <div class="backup-site-card__action">
-                <div class="restore-upload-area" id="restoreUploadArea">
-                    <input type="file" id="restoreFileInput" accept=".zip" style="display: none;">
-                    <button type="button" class="btn btn-secondary" id="restoreSelectBtn">
-                        <?php echo nbIcon('upload', 16); ?>
-                        <span><?php echo t('settings.restore_select_file'); ?></span>
-                    </button>
-                    <span class="restore-filename" id="restoreFilename" style="display: none;"></span>
-                </div>
 
-                <div class="restore-mode-selector" id="restoreModeSelector" style="display: none;">
-                    <label class="restore-mode-option">
-                        <input type="radio" name="restore_mode" value="content" checked>
-                        <div class="restore-mode-card">
-                            <strong><?php echo t('settings.restore_content'); ?></strong>
-                            <span><?php echo t('settings.restore_content_desc'); ?></span>
-                        </div>
-                    </label>
-                    <label class="restore-mode-option">
-                        <input type="radio" name="restore_mode" value="full">
-                        <div class="restore-mode-card">
-                            <strong><?php echo t('settings.restore_full'); ?></strong>
-                            <span><?php echo t('settings.restore_full_desc'); ?></span>
-                        </div>
-                    </label>
+            <!-- Status banner: last run + warning if cron stalled -->
+            <div class="scheduled-status" id="scheduledStatus" data-state="loading">
+                <div class="scheduled-status__row">
+                    <strong><?php echo t('settings.last_run'); ?>:</strong>
+                    <span id="scheduledLastRun">—</span>
                 </div>
+                <div class="scheduled-storage" id="scheduledStorage">
+                    <strong><?php echo t('settings.storage_summary'); ?>:</strong>
+                    <span id="scheduledStorageCount">—</span>
+                    <span class="scheduled-storage__dates" id="scheduledStorageDates"></span>
+                </div>
+                <div class="scheduled-status__message" id="scheduledStatusMessage"></div>
+            </div>
 
-                <div class="restore-actions" id="restoreActions" style="display: none;">
-                    <button type="button" class="btn btn-danger" id="restoreBtn">
-                        <?php echo nbIcon('upload', 16); ?>
-                        <span><?php echo t('settings.restore_btn'); ?></span>
-                    </button>
-                    <div class="backup-progress" id="restoreProgress" style="display: none;">
-                        <div class="backup-progress__spinner"></div>
-                        <span id="restoreProgressText"><?php echo t('settings.restore_uploading'); ?></span>
+            <!-- Settings form -->
+            <form id="scheduledBackupForm" class="scheduled-form">
+                <label class="scheduled-form__toggle">
+                    <input type="checkbox" id="scheduledEnabled" name="enabled">
+                    <span><strong><?php echo t('settings.scheduled_enabled'); ?></strong></span>
+                </label>
+                <p class="scheduled-form__hint"><?php echo t('settings.scheduled_enabled_hint'); ?></p>
+
+                <fieldset class="scheduled-form__fieldset">
+                    <legend><?php echo t('settings.retention_title'); ?></legend>
+                    <p class="scheduled-form__hint"><?php echo t('settings.retention_hint'); ?></p>
+                    <div class="scheduled-form__grid">
+                        <label>
+                            <span><?php echo t('settings.retention_daily'); ?></span>
+                            <input type="number" id="retentionDaily" name="retention_daily" min="0" max="365" step="1">
+                        </label>
+                        <label>
+                            <span><?php echo t('settings.retention_weekly'); ?></span>
+                            <input type="number" id="retentionWeekly" name="retention_weekly" min="0" max="52" step="1">
+                        </label>
+                        <label>
+                            <span><?php echo t('settings.retention_monthly'); ?></span>
+                            <input type="number" id="retentionMonthly" name="retention_monthly" min="0" max="60" step="1">
+                        </label>
+                        <label>
+                            <span><?php echo t('settings.retention_yearly'); ?></span>
+                            <input type="number" id="retentionYearly" name="retention_yearly" min="0" max="20" step="1">
+                        </label>
                     </div>
+                </fieldset>
+
+                <label class="scheduled-form__limit">
+                    <span><strong><?php echo t('settings.storage_limit'); ?></strong></span>
+                    <input type="number" id="storageLimitMb" name="storage_limit_mb" min="0" step="1">
+                </label>
+                <p class="scheduled-form__hint"><?php echo t('settings.storage_limit_hint'); ?></p>
+
+                <div class="scheduled-form__actions">
+                    <button type="submit" class="btn btn-primary" id="scheduledSaveBtn">
+                        <?php echo t('settings.backup_settings_save'); ?>
+                    </button>
                 </div>
+            </form>
+
+            <!-- Cron setup help -->
+            <div class="scheduled-cron">
+                <h4><?php echo t('settings.cron_setup'); ?></h4>
+                <p><?php echo t('settings.cron_setup_hint'); ?></p>
+                <div class="scheduled-cron__line">
+                    <code id="cronLine"><?php
+                        $sitePath = realpath(__DIR__ . '/..');
+                        $sitePathArg = escapeshellarg($sitePath ?: __DIR__ . '/..');
+                        echo htmlspecialchars("0 3 * * * cd {$sitePathArg} && php cli/backup.php --action=run >> backups/backup.log 2>&1");
+                    ?></code>
+                    <button type="button" class="btn btn-secondary btn-sm" id="cronCopyBtn">
+                        <?php echo t('settings.cron_copy'); ?>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Backup list -->
+            <div class="scheduled-list">
+                <h4><?php echo t('settings.backup_list_title'); ?></h4>
+                <table class="scheduled-list__table" id="scheduledList">
+                    <thead>
+                        <tr>
+                            <th><?php echo t('settings.backup_list_col_date'); ?></th>
+                            <th><?php echo t('settings.backup_list_col_tier'); ?></th>
+                            <th><?php echo t('settings.backup_list_col_size'); ?></th>
+                            <th><?php echo t('settings.backup_list_col_actions'); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduledListBody">
+                        <tr><td colspan="4" class="scheduled-list__empty"><?php echo t('settings.backup_list_empty'); ?></td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -3184,7 +3357,16 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     // TAB NAVIGATION
     // ============================================================
 
+    function dismissFrontendEditBanner() {
+        const banner = document.getElementById('frontendEditBanner');
+        if (banner) banner.remove();
+    }
+
     function switchTab(tab) {
+        if (tab !== 'content') {
+            dismissFrontendEditBanner();
+        }
+
         document.getElementById('contentTab').style.display = tab === 'content' ? 'block' : 'none';
         document.getElementById('newsTab').style.display = tab === 'news' ? 'block' : 'none';
         document.getElementById('eventsTab').style.display = tab === 'events' ? 'block' : 'none';
@@ -3262,6 +3444,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     async function loadMails() {
         try {
+            if (!currentSettings) {
+                await loadSettings();
+            }
             const response = await fetch('api.php?action=load-mails');
             const result = await response.json();
 
@@ -3269,6 +3454,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 mailsData = result.data;
                 renderMails();
                 updateMailBadge();
+                updateMailConfigBanner();
             } else {
                 showToast(result.message, 'error');
             }
@@ -3286,6 +3472,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             const tr = document.createElement('tr');
             tr.innerHTML = `<td colspan="3" style="color: var(--nb-text-muted); text-align: center; padding: var(--nb-space-6);">${escapeHtml(t('mails.no_messages'))}</td>`;
             tbody.appendChild(tr);
+            updateMailBulkActions();
             return;
         }
 
@@ -3345,6 +3532,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             tr.appendChild(tdDate);
             tbody.appendChild(tr);
         });
+        updateMailBulkActions();
     }
 
     function updateMailBadge() {
@@ -3357,6 +3545,50 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         } else {
             badge.classList.add('mail-badge--hidden');
         }
+    }
+
+    function updateMailBulkActions() {
+        const btn = document.getElementById('deleteReadMailsBtn');
+        if (!btn) return;
+        const readCount = (mailsData || []).filter(m => m.read).length;
+        btn.disabled = readCount === 0;
+        btn.textContent = readCount > 0
+            ? t('mails.delete_read_count', {count: readCount})
+            : t('mails.delete_read');
+    }
+
+    function updateMailConfigBanner() {
+        const banner = document.getElementById('mailConfigBanner');
+        if (!banner) return;
+        const title = document.getElementById('mailConfigBannerTitle');
+        const text = document.getElementById('mailConfigBannerText');
+        const email = (currentSettings && currentSettings.email) || {};
+        const method = email.method || 'inactive';
+        let titleText = '';
+        let bodyText = '';
+
+        if (method === 'inactive') {
+            titleText = t('mails.email_inactive_title');
+            bodyText = t('mails.email_inactive_text');
+        } else if (!email.recipientEmail) {
+            titleText = t('mails.email_recipient_missing_title');
+            bodyText = t('mails.email_recipient_missing_text');
+        }
+
+        if (!titleText) {
+            banner.hidden = true;
+            return;
+        }
+
+        title.textContent = titleText;
+        text.textContent = bodyText;
+        banner.hidden = false;
+    }
+
+    function openEmailSettings() {
+        switchTab('settings');
+        const emailTab = document.querySelector('[data-settings-tab="email"]');
+        if (emailTab) emailTab.click();
     }
 
     async function loadUnreadCount() {
@@ -3479,6 +3711,38 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         } catch (error) {
             showToast(t('toast.error_generic', {message: error.message}), 'error');
         }
+    }
+
+    function deleteReadMails() {
+        const readCount = (mailsData || []).filter(m => m.read).length;
+        if (readCount === 0) return;
+
+        showModal(t('modal.delete_read_messages'), t('modal.delete_read_messages_confirm', {count: readCount}), async () => {
+            try {
+                const formData = new FormData();
+                formData.append('action', 'delete-read-mails');
+                formData.append('csrf_token', CSRF_TOKEN);
+
+                const response = await fetch('api.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    mailsData = mailsData.filter(m => !m.read);
+                    renderMails();
+                    updateMailBadge();
+                    closeModal();
+                    showToast(t('toast.read_messages_deleted', {count: result.data?.deleted || readCount}), 'success');
+                } else {
+                    showToast(result.message, 'error');
+                }
+            } catch (error) {
+                showToast(t('toast.error_generic', {message: error.message}), 'error');
+            }
+        });
     }
 
     function deleteMail(mailId) {
@@ -4120,12 +4384,22 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         updateFaviconPreview(faviconPath);
         updateClearButton(document.getElementById('settingsFavicon'));
 
+        var faviconPngPath = settings.favicon_png || '';
+        document.getElementById('settingsFaviconPng').value = faviconPngPath;
+        updateFaviconPngPreview(faviconPngPath);
+        updateClearButton(document.getElementById('settingsFaviconPng'));
+
         var logoPath = settings.branding.logo || '';
         document.getElementById('settingsLogo').value = logoPath;
         document.getElementById('settingsName').value = settings.branding.name || '';
         document.getElementById('settingsShowBranding').checked = settings.branding.showBranding !== false;
         updateLogoPreview(logoPath);
         updateClearButton(document.getElementById('settingsLogo'));
+
+        var adminLogoPath = settings.branding.adminLogo || '';
+        document.getElementById('settingsAdminLogo').value = adminLogoPath;
+        updateAdminLogoPreview(adminLogoPath);
+        updateClearButton(document.getElementById('settingsAdminLogo'));
 
         var logoDarkPath = settings.branding.logoDark || '';
         document.getElementById('settingsLogoDark').value = logoDarkPath;
@@ -4136,6 +4410,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var displayRadio = document.querySelector('input[name="settingsLogoDisplay"][value="' + logoDisplay + '"]');
         if (displayRadio) displayRadio.checked = true;
         updateLogoDisplayVisibility();
+
+        var logoSize = settings.branding.logoSize || 'medium';
+        var sizeRadio = document.querySelector('input[name="settingsLogoSize"][value="' + logoSize + '"]');
+        if (sizeRadio) sizeRadio.checked = true;
 
         // Theme
         document.getElementById('settingsAdminTheme').value = settings.theme.adminTheme || 'light';
@@ -4230,6 +4508,30 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         }
     }
 
+    function updateFaviconPngPreview(path) {
+        var img = document.getElementById('faviconPngPreviewImg');
+        if (!img) return;
+        if (path) {
+            img.src = path;
+            img.style.display = 'block';
+        } else {
+            img.removeAttribute('src');
+            img.style.display = 'none';
+        }
+    }
+
+    function updateAdminLogoPreview(path) {
+        var img = document.getElementById('adminLogoPreviewImg');
+        if (!img) return;
+        if (path) {
+            img.src = path;
+            img.style.display = 'block';
+        } else {
+            img.removeAttribute('src');
+            img.style.display = 'none';
+        }
+    }
+
     function updateLogoDarkPreview(path) {
         var img = document.getElementById('logoDarkPreviewImg');
         if (!img) return;
@@ -4264,6 +4566,18 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         darkSidebarBg: '',
         buttonGlow: true,
         buttonRadius: 6
+    };
+
+    var BRANDING_DEFAULTS = {
+        favicon: <?php echo json_encode($_defaultFavicon); ?>,
+        favicon_png: '',
+        logo: '',
+        logoDark: '',
+        adminLogo: '',
+        name: <?php echo json_encode(defined('SITE_NAME') ? SITE_NAME : 'CMS'); ?>,
+        showBranding: true,
+        logoDisplay: 'both',
+        logoSize: 'medium'
     };
 
     // Sidebar bg derivations — match the CSS color-mix() on first paint
@@ -4529,9 +4843,27 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         }, input ? input.value : null);
     });
 
+    // Browse admin-logo button — opens the image manager
+    document.getElementById('browseAdminLogoBtn').addEventListener('click', function() {
+        var input = document.getElementById('settingsAdminLogo');
+        NbImageManager.open(function(path) {
+            input.value = path;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }, input ? input.value : null);
+    });
+
     // Browse favicon button — opens the image manager
     document.getElementById('browseFaviconBtn').addEventListener('click', function() {
         var input = document.getElementById('settingsFavicon');
+        NbImageManager.open(function(path) {
+            input.value = path;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }, input ? input.value : null);
+    });
+
+    // Browse PNG favicon button — opens the image manager
+    document.getElementById('browseFaviconPngBtn').addEventListener('click', function() {
+        var input = document.getElementById('settingsFaviconPng');
         NbImageManager.open(function(path) {
             input.value = path;
             input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -4547,9 +4879,40 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         updateLogoDarkPreview(this.value.trim());
         updateClearButton(this);
     });
+    document.getElementById('settingsAdminLogo').addEventListener('input', function() {
+        updateAdminLogoPreview(this.value.trim());
+        updateClearButton(this);
+    });
     document.getElementById('settingsFavicon').addEventListener('input', function() {
         updateFaviconPreview(this.value.trim());
         updateClearButton(this);
+    });
+    document.getElementById('settingsFaviconPng').addEventListener('input', function() {
+        updateFaviconPngPreview(this.value.trim());
+        updateClearButton(this);
+    });
+
+    document.getElementById('resetBrandingBtn').addEventListener('click', function() {
+        document.getElementById('settingsFavicon').value = BRANDING_DEFAULTS.favicon;
+        document.getElementById('settingsFaviconPng').value = BRANDING_DEFAULTS.favicon_png;
+        document.getElementById('settingsLogo').value = BRANDING_DEFAULTS.logo;
+        document.getElementById('settingsLogoDark').value = BRANDING_DEFAULTS.logoDark;
+        document.getElementById('settingsAdminLogo').value = BRANDING_DEFAULTS.adminLogo;
+        document.getElementById('settingsName').value = BRANDING_DEFAULTS.name;
+        document.getElementById('settingsShowBranding').checked = BRANDING_DEFAULTS.showBranding;
+        var displayRadio = document.querySelector('input[name="settingsLogoDisplay"][value="' + BRANDING_DEFAULTS.logoDisplay + '"]');
+        if (displayRadio) displayRadio.checked = true;
+        var sizeRadio = document.querySelector('input[name="settingsLogoSize"][value="' + BRANDING_DEFAULTS.logoSize + '"]');
+        if (sizeRadio) sizeRadio.checked = true;
+        updateFaviconPreview(BRANDING_DEFAULTS.favicon);
+        updateFaviconPngPreview(BRANDING_DEFAULTS.favicon_png);
+        updateLogoPreview(BRANDING_DEFAULTS.logo);
+        updateLogoDarkPreview(BRANDING_DEFAULTS.logoDark);
+        updateAdminLogoPreview(BRANDING_DEFAULTS.adminLogo);
+        document.querySelectorAll('.input-clear-btn[data-clear-target]').forEach(function(btn) {
+            var input = document.getElementById(btn.dataset.clearTarget);
+            if (input) updateClearButton(input);
+        });
     });
 
     // Generic clear-X handler for image-path inputs
@@ -4580,13 +4943,17 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         try {
             var settings = Object.assign({}, currentSettings || {});
             settings.favicon = document.getElementById('settingsFavicon').value.trim();
+            settings.favicon_png = document.getElementById('settingsFaviconPng').value.trim();
             var displayRadio = document.querySelector('input[name="settingsLogoDisplay"]:checked');
+            var sizeRadio = document.querySelector('input[name="settingsLogoSize"]:checked');
             settings.branding = {
                 logo: document.getElementById('settingsLogo').value.trim(),
                 logoDark: document.getElementById('settingsLogoDark').value.trim(),
+                adminLogo: document.getElementById('settingsAdminLogo').value.trim(),
                 name: document.getElementById('settingsName').value.trim(),
                 showBranding: document.getElementById('settingsShowBranding').checked,
-                logoDisplay: displayRadio ? displayRadio.value : 'both'
+                logoDisplay: displayRadio ? displayRadio.value : 'both',
+                logoSize: sizeRadio ? sizeRadio.value : 'medium'
             };
 
             var formData = new FormData();
@@ -5176,6 +5543,306 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 }
             });
         });
+    })();
+
+    // ============================================================
+    // SCHEDULED / AUTOMATED BACKUPS
+    // ============================================================
+
+    (function() {
+        var statusEl       = document.getElementById('scheduledStatus');
+        var lastRunEl      = document.getElementById('scheduledLastRun');
+        var statusMsgEl    = document.getElementById('scheduledStatusMessage');
+        var storageCountEl = document.getElementById('scheduledStorageCount');
+        var storageDatesEl = document.getElementById('scheduledStorageDates');
+        var form           = document.getElementById('scheduledBackupForm');
+        var enabledEl      = document.getElementById('scheduledEnabled');
+        var dailyEl        = document.getElementById('retentionDaily');
+        var weeklyEl       = document.getElementById('retentionWeekly');
+        var monthlyEl      = document.getElementById('retentionMonthly');
+        var yearlyEl       = document.getElementById('retentionYearly');
+        var limitEl        = document.getElementById('storageLimitMb');
+        var saveBtn        = document.getElementById('scheduledSaveBtn');
+        var listBody       = document.getElementById('scheduledListBody');
+        var cronCopyBtn    = document.getElementById('cronCopyBtn');
+        var cronLineEl     = document.getElementById('cronLine');
+
+        if (!statusEl) return; // Tab not on this dashboard
+
+        function fmtSize(bytes) {
+            if (!bytes) return '0 B';
+            if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
+            if (bytes >= 1048576)    return (bytes / 1048576).toFixed(1) + ' MB';
+            if (bytes >= 1024)       return (bytes / 1024).toFixed(1) + ' KB';
+            return bytes + ' B';
+        }
+        function fmtDate(unixOrIso) {
+            if (!unixOrIso) return '—';
+            var d = (typeof unixOrIso === 'number') ? new Date(unixOrIso * 1000) : new Date(unixOrIso);
+            if (isNaN(d.getTime())) return '—';
+            return d.toLocaleString();
+        }
+
+        async function refresh() {
+            try {
+                var res = await fetch('api.php?action=backup-status');
+                var json = await res.json();
+                if (!json.success) throw new Error(json.message);
+                var s = json.data;
+
+                // Form fields
+                enabledEl.checked = !!s.enabled;
+                dailyEl.value     = s.retention.daily;
+                weeklyEl.value    = s.retention.weekly;
+                monthlyEl.value   = s.retention.monthly;
+                yearlyEl.value    = s.retention.yearly;
+                limitEl.value     = s.storage_limit_mb;
+
+                // Last run + cron health
+                if (s.last_run) {
+                    lastRunEl.textContent = fmtDate(s.last_run);
+                    var ageMs = Date.now() - new Date(s.last_run).getTime();
+                    var ageDays = Math.floor(ageMs / 86400000);
+                    if (s.last_status === 'error') {
+                        statusEl.dataset.state = 'error';
+                        statusMsgEl.textContent = t('settings.last_run_error', { message: s.last_message || '' });
+                    } else if (s.enabled && ageDays >= 2) {
+                        statusEl.dataset.state = 'warning';
+                        statusMsgEl.textContent = t('settings.last_run_warning', { days: ageDays });
+                    } else {
+                        statusEl.dataset.state = 'ok';
+                        statusMsgEl.textContent = t('settings.last_run_ok');
+                    }
+                } else {
+                    lastRunEl.textContent = t('settings.last_run_never');
+                    if (s.enabled) {
+                        statusEl.dataset.state = 'warning';
+                        statusMsgEl.textContent = t('settings.last_run_warning', { days: '∞' });
+                    } else {
+                        statusEl.dataset.state = 'idle';
+                        statusMsgEl.textContent = '';
+                    }
+                }
+
+                // Storage summary
+                storageCountEl.textContent = t('settings.storage_count', {
+                    count: s.count, size: fmtSize(s.total_bytes)
+                });
+                if (s.oldest && s.newest && s.count > 0) {
+                    storageDatesEl.textContent = ' · '
+                        + t('settings.storage_oldest', { date: fmtDate(s.oldest) })
+                        + ' · '
+                        + t('settings.storage_newest', { date: fmtDate(s.newest) });
+                } else {
+                    storageDatesEl.textContent = '';
+                }
+
+                // Backup list
+                var listRes = await fetch('api.php?action=backup-list');
+                var listJson = await listRes.json();
+                if (!listJson.success) throw new Error(listJson.message);
+                var backups = listJson.data.backups || [];
+                renderList(backups);
+            } catch (err) {
+                statusEl.dataset.state = 'error';
+                statusMsgEl.textContent = err.message || String(err);
+            }
+        }
+
+        function renderList(backups) {
+            if (backups.length === 0) {
+                listBody.innerHTML = '<tr><td colspan="4" class="scheduled-list__empty">'
+                    + t('settings.backup_list_empty') + '</td></tr>';
+                return;
+            }
+            listBody.innerHTML = '';
+            backups.forEach(function(b) {
+                var tr = document.createElement('tr');
+
+                var tdDate = document.createElement('td');
+                tdDate.textContent = fmtDate(b.mtime);
+                tr.appendChild(tdDate);
+
+                var tdTier = document.createElement('td');
+                var tierBadge = document.createElement('span');
+                tierBadge.className = 'scheduled-tier scheduled-tier--' + b.tier;
+                tierBadge.textContent = b.tier;
+                tdTier.appendChild(tierBadge);
+                tr.appendChild(tdTier);
+
+                var tdSize = document.createElement('td');
+                tdSize.textContent = fmtSize(b.size);
+                tr.appendChild(tdSize);
+
+                var tdActions = document.createElement('td');
+                tdActions.className = 'scheduled-list__actions';
+
+                var dlBtn = document.createElement('button');
+                dlBtn.className = 'btn btn-secondary btn-sm';
+                dlBtn.textContent = t('settings.backup_download');
+                dlBtn.onclick = function() { downloadBackup(b.file); };
+                tdActions.appendChild(dlBtn);
+
+                var rsBtn = document.createElement('button');
+                rsBtn.className = 'btn btn-secondary btn-sm';
+                rsBtn.textContent = t('settings.backup_restore_from_pool');
+                rsBtn.onclick = function() { restoreBackup(b.file); };
+                tdActions.appendChild(rsBtn);
+
+                var delBtn = document.createElement('button');
+                delBtn.className = 'btn btn-danger btn-sm';
+                delBtn.textContent = t('settings.backup_delete');
+                delBtn.onclick = function() { deleteBackup(b.file); };
+                tdActions.appendChild(delBtn);
+
+                tr.appendChild(tdActions);
+                listBody.appendChild(tr);
+            });
+        }
+
+        async function downloadBackup(file) {
+            try {
+                var fd = new FormData();
+                fd.append('action', 'backup-prepare-download');
+                fd.append('csrf_token', CSRF_TOKEN);
+                fd.append('file', file);
+                var res = await fetch('api.php', { method: 'POST', body: fd });
+                var json = await res.json();
+                if (!json.success) throw new Error(json.message);
+                var url = 'api.php?action=download-site-backup'
+                    + '&token=' + encodeURIComponent(json.data.token)
+                    + '&csrf_token=' + encodeURIComponent(CSRF_TOKEN)
+                    + '&filename=' + encodeURIComponent(json.data.filename);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = json.data.filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } catch (err) {
+                showToast(t('toast.backup_site_failed', { message: err.message || String(err) }), 'error');
+            }
+        }
+
+        function restoreBackup(file) {
+            // Pick mode (full vs content) — same UI choice as the upload restore.
+            var mode = window.prompt(
+                t('settings.restore_full') + ' / ' + t('settings.restore_content')
+                + '\n\n[full] = ' + t('settings.restore_full_desc')
+                + '\n[content] = ' + t('settings.restore_content_desc')
+                + '\n\nType "full" or "content":', 'content');
+            if (mode !== 'full' && mode !== 'content') return;
+
+            var warningKey = mode === 'full'
+                ? 'settings.backup_restore_pool_warning_full'
+                : 'settings.backup_restore_pool_warning_content';
+
+            showModal(t('settings.restore_title'), t(warningKey), async function() {
+                closeModal();
+                try {
+                    var fd = new FormData();
+                    fd.append('action', 'restore-site-backup');
+                    fd.append('csrf_token', CSRF_TOKEN);
+                    fd.append('restore_mode', mode);
+                    fd.append('pool_file', file);
+                    var res = await fetch('api.php', { method: 'POST', body: fd });
+                    var json = await res.json();
+                    if (json.success) {
+                        var toastKey = mode === 'full' ? 'toast.restore_success_full' : 'toast.restore_success_content';
+                        showToast(t(toastKey, { extracted: json.data.extracted }), 'success');
+                        setTimeout(function() { location.reload(); }, 2000);
+                    } else {
+                        showToast(t('toast.restore_failed', { message: json.message }), 'error');
+                    }
+                } catch (err) {
+                    showToast(t('toast.restore_failed', { message: err.message || String(err) }), 'error');
+                }
+            });
+        }
+
+        function deleteBackup(file) {
+            showModal(t('settings.backup_delete'), t('settings.backup_delete_confirm'), async function() {
+                closeModal();
+                try {
+                    var fd = new FormData();
+                    fd.append('action', 'backup-delete');
+                    fd.append('csrf_token', CSRF_TOKEN);
+                    fd.append('file', file);
+                    var res = await fetch('api.php', { method: 'POST', body: fd });
+                    var json = await res.json();
+                    if (json.success) {
+                        showToast(t('toast.backup_deleted'), 'success');
+                        refresh();
+                    } else {
+                        showToast(t('toast.backup_delete_failed', { message: json.message }), 'error');
+                    }
+                } catch (err) {
+                    showToast(t('toast.backup_delete_failed', { message: err.message || String(err) }), 'error');
+                }
+            });
+        }
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            saveBtn.disabled = true;
+            try {
+                var fd = new FormData();
+                fd.append('action', 'backup-update-settings');
+                fd.append('csrf_token', CSRF_TOKEN);
+                fd.append('enabled', enabledEl.checked ? 'true' : 'false');
+                fd.append('retention_daily', dailyEl.value);
+                fd.append('retention_weekly', weeklyEl.value);
+                fd.append('retention_monthly', monthlyEl.value);
+                fd.append('retention_yearly', yearlyEl.value);
+                fd.append('storage_limit_mb', limitEl.value);
+                var res = await fetch('api.php', { method: 'POST', body: fd });
+                var json = await res.json();
+                if (json.success) {
+                    showToast(t('toast.scheduled_backup_settings_saved'), 'success');
+                    refresh();
+                } else {
+                    showToast(t('toast.scheduled_backup_settings_failed', { message: json.message }), 'error');
+                }
+            } catch (err) {
+                showToast(t('toast.scheduled_backup_settings_failed', { message: err.message || String(err) }), 'error');
+            } finally {
+                saveBtn.disabled = false;
+            }
+        });
+
+        cronCopyBtn.addEventListener('click', function() {
+            var text = cronLineEl.textContent;
+            var done = function() {
+                var orig = cronCopyBtn.textContent;
+                cronCopyBtn.textContent = t('settings.cron_copied');
+                setTimeout(function() { cronCopyBtn.textContent = orig; }, 1500);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(done, done);
+            } else {
+                // Fallback: select + execCommand
+                var range = document.createRange();
+                range.selectNode(cronLineEl);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+                try { document.execCommand('copy'); done(); } catch (e) { done(); }
+                window.getSelection().removeAllRanges();
+            }
+        });
+
+        // Refresh whenever the backup tab is shown (lazy: only fetch when visible).
+        var backupTab = document.getElementById('backupTab');
+        var observer = new MutationObserver(function() {
+            if (backupTab.style.display !== 'none') refresh();
+        });
+        observer.observe(backupTab, { attributes: true, attributeFilter: ['style'] });
+        if (backupTab.style.display !== 'none') refresh();
+
+        // Refresh after a manual create-site-backup so the new entry shows up.
+        var createBtn = document.getElementById('createSiteBackupBtn');
+        if (createBtn) {
+            createBtn.addEventListener('click', function() { setTimeout(refresh, 3000); });
+        }
     })();
 
     // ============================================================
