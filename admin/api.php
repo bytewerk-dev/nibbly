@@ -1712,12 +1712,15 @@ switch ($action) {
     case 'load-settings':
         $defaults = [
             'favicon' => defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg',
+            'favicon_png' => '',
             'branding' => [
                 'logo' => '',
                 'logoDark' => '',
+                'adminLogo' => '',
                 'name' => defined('SITE_NAME') ? SITE_NAME : 'CMS',
                 'showBranding' => true,
-                'logoDisplay' => 'both'
+                'logoDisplay' => 'both',
+                'logoSize' => 'medium'
             ],
             'theme' => [
                 'adminTheme' => 'light',
@@ -1776,14 +1779,14 @@ switch ($action) {
 
         // Whitelist allowed keys
         $allowed = [
-            'branding' => ['logo', 'logoDark', 'name', 'showBranding', 'logoDisplay'],
+            'branding' => ['logo', 'logoDark', 'adminLogo', 'name', 'showBranding', 'logoDisplay', 'logoSize'],
             'theme' => ['adminTheme', 'primaryColor', 'accentColor', 'sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg', 'buttonGlow', 'buttonRadius'],
             'general' => ['adminLanguage', 'frontendLoginRedirect'],
             'email' => ['method', 'recipientEmail', 'fromEmail', 'fromName', 'smtpHost', 'smtpPort', 'smtpUsername', 'smtpPassword', 'smtpEncryption']
         ];
 
         // Top-level scalar settings (not nested under a group)
-        $allowedScalar = ['favicon'];
+        $allowedScalar = ['favicon', 'favicon_png'];
 
         $sanitized = [];
         foreach ($allowed as $group => $keys) {
@@ -1828,8 +1831,8 @@ switch ($action) {
                         jsonResponse(false, null, 'Invalid frontendLoginRedirect value');
                     }
 
-                    // Validate logo path (prevent traversal and protocol injection)
-                    if ($key === 'logo') {
+                    // Validate logo paths (prevent traversal and protocol injection)
+                    if (in_array($key, ['logo', 'logoDark', 'adminLogo'], true)) {
                         $value = (string)$value;
                         if ($value !== '' && (
                             strpos($value, '..') !== false ||
@@ -1843,6 +1846,11 @@ switch ($action) {
                     // Validate logoDisplay (3-way selector)
                     if ($key === 'logoDisplay' && !in_array($value, ['favicon', 'text', 'both'], true)) {
                         $value = 'both';
+                    }
+
+                    // Validate public logo size selector
+                    if ($key === 'logoSize' && !in_array($value, ['small', 'medium', 'large'], true)) {
+                        $value = 'medium';
                     }
 
                     // Validate name
@@ -1904,11 +1912,11 @@ switch ($action) {
             }
         }
 
-        // Top-level scalars (favicon)
+        // Top-level scalars (favicon, PNG fallback)
         foreach ($allowedScalar as $scalarKey) {
             if (!array_key_exists($scalarKey, $settings)) continue;
             $value = (string)$settings[$scalarKey];
-            if ($scalarKey === 'favicon') {
+            if (in_array($scalarKey, ['favicon', 'favicon_png'], true)) {
                 if ($value !== '' && (
                     strpos($value, '..') !== false ||
                     !str_starts_with($value, '/assets/images/') ||

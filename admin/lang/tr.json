@@ -102,6 +102,7 @@
     "settings.logo_display_text": "Site adı",
     "settings.logo_display_both": "Favicon ve site adı",
     "settings.site_name": "Site Adı",
+    "settings.site_name_hint": "Tarayıcı sekmesinde, aşağıda seçildiğinde herkese açık üst bilgide ve yönetici arayüzünde gösterilir.",
     "settings.site_name_placeholder": "Site adı",
     "settings.show_branding": "Yönetimde markayı göster",
     "settings.branding_hint": "Devre dışı bırakıldığında, logo ve site adı yönetim çubuğunda ve giriş sayfasında gizlenir.",
@@ -441,5 +442,15 @@
     "editor.breadcrumb_href": "Link (slug)",
     "editor.breadcrumb_add": "Add item",
     "editor.breadcrumb_hint": "Last item is the current page (no link needed).",
-    "editor.nav_add_custom": "Add menu"
+    "editor.nav_add_custom": "Add menu",
+    "settings.favicon_png": "PNG fallback",
+    "settings.favicon_png_hint": "Raster görsel tercih eden tarayıcılar, sabit sekmeler ve dokunmatik cihazlar için isteğe bağlı PNG ikon.",
+    "settings.logo_size": "Logo boyutu",
+    "settings.logo_size_hint": "Herkese açık sayfa üst bilgisindeki logo yüksekliğini kontrol eder.",
+    "settings.logo_size_small": "Küçük",
+    "settings.logo_size_medium": "Orta",
+    "settings.logo_size_large": "Büyük",
+    "settings.admin_logo": "Admin logosu",
+    "settings.admin_logo_hint": "Admin üst çubuğu için isteğe bağlı logo. Favicon kullanmak için boş bırakın.",
+    "settings.reset_branding": "Markayı Sıfırla"
 }

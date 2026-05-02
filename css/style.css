@@ -158,6 +158,7 @@ h3 { font-size: 1.5rem; font-weight: 500; letter-spacing: -0.015em; }
 
 /* Logo */
 .site-logo {
+    --site-logo-size: 40px;
     display: flex;
     align-items: center;
     font-family: var(--font-display);
@@ -167,6 +168,14 @@ h3 { font-size: 1.5rem; font-weight: 500; letter-spacing: -0.015em; }
     text-decoration: none;
     max-width: 200px;
     overflow: hidden;
+}
+
+.site-logo--size-small {
+    --site-logo-size: 32px;
+}
+
+.site-logo--size-large {
+    --site-logo-size: 48px;
 }
 
 .site-logo:hover {
@@ -183,10 +192,14 @@ h3 { font-size: 1.5rem; font-weight: 500; letter-spacing: -0.015em; }
 
 .site-logo-img {
     flex-shrink: 0;
-    height: 40px;
+    height: var(--site-logo-size);
     width: auto;
     max-width: 200px;
     object-fit: contain;
+}
+
+svg.site-logo-img {
+    width: var(--site-logo-size);
 }
 
 /* Inline-SVG icon variant (default favicon): follows the site's primary

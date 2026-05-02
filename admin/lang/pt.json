@@ -102,6 +102,7 @@
     "settings.logo_display_text": "Nome do site",
     "settings.logo_display_both": "Favicon e nome do site",
     "settings.site_name": "Nome do Site",
+    "settings.site_name_hint": "Mostrado na aba do navegador, no cabeçalho público quando selecionado abaixo, e na interface de administração.",
     "settings.site_name_placeholder": "Nome do site",
     "settings.show_branding": "Mostrar marca no admin",
     "settings.branding_hint": "Quando desativado, o logo e o nome do site ficam ocultos na barra de administração e na página de login.",
@@ -441,5 +442,15 @@
     "editor.breadcrumb_href": "Link (slug)",
     "editor.breadcrumb_add": "Add item",
     "editor.breadcrumb_hint": "Last item is the current page (no link needed).",
-    "editor.nav_add_custom": "Add menu"
+    "editor.nav_add_custom": "Add menu",
+    "settings.favicon_png": "Fallback PNG",
+    "settings.favicon_png_hint": "Ícone PNG opcional para navegadores, abas fixadas e dispositivos touch que preferem imagem raster.",
+    "settings.logo_size": "Tamanho do logo",
+    "settings.logo_size_hint": "Controla a altura do logo no cabeçalho público.",
+    "settings.logo_size_small": "Pequeno",
+    "settings.logo_size_medium": "Médio",
+    "settings.logo_size_large": "Grande",
+    "settings.admin_logo": "Logo do admin",
+    "settings.admin_logo_hint": "Logo opcional para a barra superior de administração. Deixe vazio para usar o favicon.",
+    "settings.reset_branding": "Redefinir marca"
 }

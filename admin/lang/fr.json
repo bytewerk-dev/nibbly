@@ -102,6 +102,7 @@
     "settings.logo_display_text": "Nom du site",
     "settings.logo_display_both": "Favicon et nom du site",
     "settings.site_name": "Nom du site",
+    "settings.site_name_hint": "Affiché dans l'onglet du navigateur, dans l'en-tête public si sélectionné ci-dessous, et dans l'interface d'administration.",
     "settings.site_name_placeholder": "Nom du site",
     "settings.show_branding": "Afficher l'identité dans l'admin",
     "settings.branding_hint": "Lorsque cette option est désactivée, le logo et le nom du site sont masqués dans la barre d'administration et sur la page de connexion.",
@@ -441,5 +442,15 @@
     "editor.breadcrumb_href": "Link (slug)",
     "editor.breadcrumb_add": "Add item",
     "editor.breadcrumb_hint": "Last item is the current page (no link needed).",
-    "editor.nav_add_custom": "Add menu"
+    "editor.nav_add_custom": "Add menu",
+    "settings.favicon_png": "Fallback PNG",
+    "settings.favicon_png_hint": "Icône PNG facultative pour les navigateurs, onglets épinglés et appareils tactiles qui préfèrent une image raster.",
+    "settings.logo_size": "Taille du logo",
+    "settings.logo_size_hint": "Contrôle la hauteur du logo dans l'en-tête public.",
+    "settings.logo_size_small": "Petit",
+    "settings.logo_size_medium": "Moyen",
+    "settings.logo_size_large": "Grand",
+    "settings.admin_logo": "Logo admin",
+    "settings.admin_logo_hint": "Logo facultatif pour la barre supérieure d'administration. Laisser vide pour utiliser le favicon.",
+    "settings.reset_branding": "Réinitialiser la marque"
 }

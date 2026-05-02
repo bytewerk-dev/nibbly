@@ -36,7 +36,7 @@ $isAdminUser = ($userRole === 'admin');
 
 // Load settings for theme
 $_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg';
-$siteSettings = ['favicon' => $_defaultFavicon, 'branding' => ['logo' => '', 'logoDark' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both'], 'theme' => ['adminTheme' => 'light', 'primaryColor' => '#2563eb', 'accentColor' => '#60a5fa', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'buttonGlow' => true, 'buttonRadius' => 6]];
+$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => ['adminTheme' => 'light', 'primaryColor' => '#2563eb', 'accentColor' => '#60a5fa', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'buttonGlow' => true, 'buttonRadius' => 6]];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     $loadedSettings = json_decode(file_get_contents(SETTINGS_PATH), true);
     if (is_array($loadedSettings)) {
@@ -147,8 +147,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         </button>
         <div class="topbar-brand">
             <?php if ($siteSettings['branding']['showBranding']):
-                // Backend always uses the favicon (frontend logo is for the public site only).
-                $_topbarFavicon = $siteSettings['favicon'] ?? $_defaultFavicon;
+                $_topbarFavicon = $siteSettings['branding']['adminLogo'] ?? '';
+                if (!$_topbarFavicon) $_topbarFavicon = $siteSettings['favicon'] ?? $_defaultFavicon;
                 $_brandName = $siteSettings['branding']['name'] ?? '';
                 echo nibblyIconOrImg($_topbarFavicon, $_brandName, ['width' => 24, 'height' => 24, 'class' => 'topbar-logo']);
             endif; ?>
@@ -600,82 +600,136 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 <h2><?php echo t('settings.branding'); ?></h2>
                 <p class="settings-description"><?php echo t('settings.branding_desc'); ?></p>
                 <form id="brandingForm" class="settings-form">
-                    <fieldset class="settings-section">
+                    <fieldset class="settings-section settings-section--branding-main">
                         <legend><?php echo t('settings.site_identity'); ?></legend>
-                        <div class="form-group">
-                            <label for="settingsName"><?php echo t('settings.site_name'); ?></label>
-                            <input type="text" id="settingsName" value="" placeholder="<?php echo t('settings.site_name_placeholder'); ?>" maxlength="100">
-                        </div>
-                        <div class="form-group">
-                            <label for="settingsFavicon"><?php echo t('settings.favicon'); ?></label>
-                            <small class="form-hint"><?php echo t('settings.favicon_hint'); ?></small>
-                            <div class="logo-preview-group">
-                                <div class="logo-preview" id="faviconPreview">
-                                    <img src="<?php echo htmlspecialchars($_dashFavicon); ?>" alt="<?php echo t('settings.favicon'); ?>" id="faviconPreviewImg">
-                                </div>
-                                <div class="logo-controls">
-                                    <div class="logo-path-input">
-                                        <span class="input-with-clear">
-                                            <input type="text" id="settingsFavicon" value="<?php echo htmlspecialchars($_dashFavicon); ?>" placeholder="<?php echo htmlspecialchars($_defaultFavicon); ?>">
-                                            <button type="button" class="input-clear-btn" data-clear-target="settingsFavicon" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
-                                        </span>
-                                        <button type="button" class="btn btn-secondary btn-sm" id="browseFaviconBtn"><?php echo t('btn.browse'); ?></button>
+                        <div class="branding-main-grid">
+                            <div class="branding-main-column branding-main-column--identity">
+                                <div class="branding-identity-grid">
+                                    <div class="form-group">
+                                        <label for="settingsName"><?php echo t('settings.site_name'); ?></label>
+                                        <small class="form-hint branding-site-name-hint"><?php echo t('settings.site_name_hint'); ?></small>
+                                        <input type="text" id="settingsName" value="" placeholder="<?php echo t('settings.site_name_placeholder'); ?>" maxlength="100">
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="frontend-logos-block">
-                            <h4 class="frontend-logos-block__title"><?php echo t('settings.frontend_logos'); ?></h4>
-                            <small class="form-hint frontend-logos-block__hint"><?php echo t('settings.frontend_logos_hint'); ?></small>
-                            <div class="form-group-row">
-                                <div class="form-group">
-                                    <label for="settingsLogo"><?php echo t('settings.logo_light'); ?></label>
-                                    <div class="logo-preview-group">
-                                        <div class="logo-preview" id="logoPreview">
-                                            <img src="" alt="<?php echo t('settings.logo_light'); ?>" id="logoPreviewImg">
-                                        </div>
-                                        <div class="logo-controls">
-                                            <div class="logo-path-input">
-                                                <span class="input-with-clear">
-                                                    <input type="text" id="settingsLogo" value="" placeholder="/assets/images/logo.png">
-                                                    <button type="button" class="input-clear-btn" data-clear-target="settingsLogo" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
-                                                </span>
-                                                <button type="button" class="btn btn-secondary btn-sm" id="browseLogoBtn"><?php echo t('btn.browse'); ?></button>
+                                    <div class="form-group">
+                                        <label for="settingsFavicon"><?php echo t('settings.favicon'); ?></label>
+                                        <small class="form-hint branding-favicon-hint"><?php echo t('settings.favicon_hint'); ?></small>
+                                        <div class="logo-preview-group">
+                                            <div class="logo-preview" id="faviconPreview">
+                                                <img src="<?php echo htmlspecialchars($_dashFavicon); ?>" alt="<?php echo t('settings.favicon'); ?>" id="faviconPreviewImg">
+                                            </div>
+                                            <div class="logo-controls">
+                                                <div class="logo-path-input">
+                                                    <span class="input-with-clear">
+                                                        <input type="text" id="settingsFavicon" value="<?php echo htmlspecialchars($_dashFavicon); ?>" placeholder="<?php echo htmlspecialchars($_defaultFavicon); ?>">
+                                                        <button type="button" class="input-clear-btn" data-clear-target="settingsFavicon" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                                    </span>
+                                                    <button type="button" class="btn btn-secondary btn-sm" id="browseFaviconBtn"><?php echo t('btn.browse'); ?></button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="settingsLogoDark"><?php echo t('settings.logo_dark'); ?></label>
-                                    <div class="logo-preview-group">
-                                        <div class="logo-preview logo-preview--dark" id="logoDarkPreview">
-                                            <img src="" alt="<?php echo t('settings.logo_dark'); ?>" id="logoDarkPreviewImg">
-                                        </div>
-                                        <div class="logo-controls">
-                                            <div class="logo-path-input">
-                                                <span class="input-with-clear">
-                                                    <input type="text" id="settingsLogoDark" value="" placeholder="/assets/images/logo-dark.png">
-                                                    <button type="button" class="input-clear-btn" data-clear-target="settingsLogoDark" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
-                                                </span>
-                                                <button type="button" class="btn btn-secondary btn-sm" id="browseLogoDarkBtn"><?php echo t('btn.browse'); ?></button>
+                                    <div class="form-group">
+                                        <label for="settingsFaviconPng"><?php echo t('settings.favicon_png'); ?></label>
+                                        <small class="form-hint branding-favicon-hint"><?php echo t('settings.favicon_png_hint'); ?></small>
+                                        <div class="logo-preview-group">
+                                            <div class="logo-preview" id="faviconPngPreview">
+                                                <img src="" alt="<?php echo t('settings.favicon_png'); ?>" id="faviconPngPreviewImg">
+                                            </div>
+                                            <div class="logo-controls">
+                                                <div class="logo-path-input">
+                                                    <span class="input-with-clear">
+                                                        <input type="text" id="settingsFaviconPng" value="<?php echo htmlspecialchars($siteSettings['favicon_png'] ?? ''); ?>" placeholder="/assets/images/favicon.png">
+                                                        <button type="button" class="input-clear-btn" data-clear-target="settingsFaviconPng" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                                    </span>
+                                                    <button type="button" class="btn btn-secondary btn-sm" id="browseFaviconPngBtn"><?php echo t('btn.browse'); ?></button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="form-group" id="logoDisplayGroup">
-                            <label><?php echo t('settings.header_display'); ?></label>
-                            <small class="form-hint"><?php echo t('settings.header_display_hint'); ?></small>
-                            <div class="radio-group">
-                                <label class="radio-option"><input type="radio" name="settingsLogoDisplay" value="favicon"> <span><?php echo t('settings.logo_display_favicon'); ?></span></label>
-                                <label class="radio-option"><input type="radio" name="settingsLogoDisplay" value="text"> <span><?php echo t('settings.logo_display_text'); ?></span></label>
-                                <label class="radio-option"><input type="radio" name="settingsLogoDisplay" value="both" checked> <span><?php echo t('settings.logo_display_both'); ?></span></label>
+                            <div class="branding-main-column branding-main-column--public">
+                                <div class="frontend-logos-block">
+                                    <h4 class="frontend-logos-block__title"><?php echo t('settings.frontend_logos'); ?></h4>
+                                    <small class="form-hint frontend-logos-block__hint"><?php echo t('settings.frontend_logos_hint'); ?></small>
+                                    <div class="form-group-row">
+                                        <div class="form-group">
+                                            <label for="settingsLogo"><?php echo t('settings.logo_light'); ?></label>
+                                            <div class="logo-preview-group">
+                                                <div class="logo-preview" id="logoPreview">
+                                                    <img src="" alt="<?php echo t('settings.logo_light'); ?>" id="logoPreviewImg">
+                                                </div>
+                                                <div class="logo-controls">
+                                                    <div class="logo-path-input">
+                                                        <span class="input-with-clear">
+                                                            <input type="text" id="settingsLogo" value="" placeholder="/assets/images/logo.png">
+                                                            <button type="button" class="input-clear-btn" data-clear-target="settingsLogo" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                                        </span>
+                                                        <button type="button" class="btn btn-secondary btn-sm" id="browseLogoBtn"><?php echo t('btn.browse'); ?></button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="settingsLogoDark"><?php echo t('settings.logo_dark'); ?></label>
+                                            <div class="logo-preview-group">
+                                                <div class="logo-preview logo-preview--dark" id="logoDarkPreview">
+                                                    <img src="" alt="<?php echo t('settings.logo_dark'); ?>" id="logoDarkPreviewImg">
+                                                </div>
+                                                <div class="logo-controls">
+                                                    <div class="logo-path-input">
+                                                        <span class="input-with-clear">
+                                                            <input type="text" id="settingsLogoDark" value="" placeholder="/assets/images/logo-dark.png">
+                                                            <button type="button" class="input-clear-btn" data-clear-target="settingsLogoDark" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                                        </span>
+                                                        <button type="button" class="btn btn-secondary btn-sm" id="browseLogoDarkBtn"><?php echo t('btn.browse'); ?></button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group" id="logoDisplayGroup">
+                                    <label><?php echo t('settings.header_display'); ?></label>
+                                    <small class="form-hint"><?php echo t('settings.header_display_hint'); ?></small>
+                                    <div class="radio-group">
+                                        <label class="radio-option"><input type="radio" name="settingsLogoDisplay" value="favicon"> <span><?php echo t('settings.logo_display_favicon'); ?></span></label>
+                                        <label class="radio-option"><input type="radio" name="settingsLogoDisplay" value="text"> <span><?php echo t('settings.logo_display_text'); ?></span></label>
+                                        <label class="radio-option"><input type="radio" name="settingsLogoDisplay" value="both" checked> <span><?php echo t('settings.logo_display_both'); ?></span></label>
+                                    </div>
+                                </div>
+                                <div class="form-group" id="logoSizeGroup">
+                                    <label><?php echo t('settings.logo_size'); ?></label>
+                                    <small class="form-hint"><?php echo t('settings.logo_size_hint'); ?></small>
+                                    <div class="radio-group radio-group--segmented">
+                                        <label class="radio-option"><input type="radio" name="settingsLogoSize" value="small"> <span><?php echo t('settings.logo_size_small'); ?></span></label>
+                                        <label class="radio-option"><input type="radio" name="settingsLogoSize" value="medium" checked> <span><?php echo t('settings.logo_size_medium'); ?></span></label>
+                                        <label class="radio-option"><input type="radio" name="settingsLogoSize" value="large"> <span><?php echo t('settings.logo_size_large'); ?></span></label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </fieldset>
                     <fieldset class="settings-section">
                         <legend><?php echo t('settings.admin_interface'); ?></legend>
+                        <div class="form-group">
+                            <label for="settingsAdminLogo"><?php echo t('settings.admin_logo'); ?></label>
+                            <small class="form-hint branding-favicon-hint"><?php echo t('settings.admin_logo_hint'); ?></small>
+                            <div class="logo-preview-group">
+                                <div class="logo-preview" id="adminLogoPreview">
+                                    <img src="" alt="<?php echo t('settings.admin_logo'); ?>" id="adminLogoPreviewImg">
+                                </div>
+                                <div class="logo-controls">
+                                    <div class="logo-path-input">
+                                        <span class="input-with-clear">
+                                            <input type="text" id="settingsAdminLogo" value="" placeholder="/assets/images/admin-logo.svg">
+                                            <button type="button" class="input-clear-btn" data-clear-target="settingsAdminLogo" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                        </span>
+                                        <button type="button" class="btn btn-secondary btn-sm" id="browseAdminLogoBtn"><?php echo t('btn.browse'); ?></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <div class="form-group">
                             <label class="toggle-label">
                                 <span><?php echo t('settings.show_branding'); ?></span>
@@ -687,7 +741,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             <small class="form-hint"><?php echo t('settings.branding_hint'); ?></small>
                         </div>
                     </fieldset>
-                    <button type="submit" class="btn btn-primary" id="saveBrandingBtn"><?php echo t('settings.save_branding'); ?></button>
+                    <div class="branding-form-actions">
+                        <button type="button" class="btn btn-secondary" id="resetBrandingBtn">&#x21BA; <?php echo t('settings.reset_branding'); ?></button>
+                        <button type="submit" class="btn btn-primary" id="saveBrandingBtn"><?php echo t('settings.save_branding'); ?></button>
+                    </div>
                 </form>
             </div>
 
@@ -4231,12 +4288,22 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         updateFaviconPreview(faviconPath);
         updateClearButton(document.getElementById('settingsFavicon'));
 
+        var faviconPngPath = settings.favicon_png || '';
+        document.getElementById('settingsFaviconPng').value = faviconPngPath;
+        updateFaviconPngPreview(faviconPngPath);
+        updateClearButton(document.getElementById('settingsFaviconPng'));
+
         var logoPath = settings.branding.logo || '';
         document.getElementById('settingsLogo').value = logoPath;
         document.getElementById('settingsName').value = settings.branding.name || '';
         document.getElementById('settingsShowBranding').checked = settings.branding.showBranding !== false;
         updateLogoPreview(logoPath);
         updateClearButton(document.getElementById('settingsLogo'));
+
+        var adminLogoPath = settings.branding.adminLogo || '';
+        document.getElementById('settingsAdminLogo').value = adminLogoPath;
+        updateAdminLogoPreview(adminLogoPath);
+        updateClearButton(document.getElementById('settingsAdminLogo'));
 
         var logoDarkPath = settings.branding.logoDark || '';
         document.getElementById('settingsLogoDark').value = logoDarkPath;
@@ -4247,6 +4314,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var displayRadio = document.querySelector('input[name="settingsLogoDisplay"][value="' + logoDisplay + '"]');
         if (displayRadio) displayRadio.checked = true;
         updateLogoDisplayVisibility();
+
+        var logoSize = settings.branding.logoSize || 'medium';
+        var sizeRadio = document.querySelector('input[name="settingsLogoSize"][value="' + logoSize + '"]');
+        if (sizeRadio) sizeRadio.checked = true;
 
         // Theme
         document.getElementById('settingsAdminTheme').value = settings.theme.adminTheme || 'light';
@@ -4341,6 +4412,30 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         }
     }
 
+    function updateFaviconPngPreview(path) {
+        var img = document.getElementById('faviconPngPreviewImg');
+        if (!img) return;
+        if (path) {
+            img.src = path;
+            img.style.display = 'block';
+        } else {
+            img.removeAttribute('src');
+            img.style.display = 'none';
+        }
+    }
+
+    function updateAdminLogoPreview(path) {
+        var img = document.getElementById('adminLogoPreviewImg');
+        if (!img) return;
+        if (path) {
+            img.src = path;
+            img.style.display = 'block';
+        } else {
+            img.removeAttribute('src');
+            img.style.display = 'none';
+        }
+    }
+
     function updateLogoDarkPreview(path) {
         var img = document.getElementById('logoDarkPreviewImg');
         if (!img) return;
@@ -4375,6 +4470,18 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         darkSidebarBg: '',
         buttonGlow: true,
         buttonRadius: 6
+    };
+
+    var BRANDING_DEFAULTS = {
+        favicon: <?php echo json_encode($_defaultFavicon); ?>,
+        favicon_png: '',
+        logo: '',
+        logoDark: '',
+        adminLogo: '',
+        name: <?php echo json_encode(defined('SITE_NAME') ? SITE_NAME : 'CMS'); ?>,
+        showBranding: true,
+        logoDisplay: 'both',
+        logoSize: 'medium'
     };
 
     // Sidebar bg derivations — match the CSS color-mix() on first paint
@@ -4640,9 +4747,27 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         }, input ? input.value : null);
     });
 
+    // Browse admin-logo button — opens the image manager
+    document.getElementById('browseAdminLogoBtn').addEventListener('click', function() {
+        var input = document.getElementById('settingsAdminLogo');
+        NbImageManager.open(function(path) {
+            input.value = path;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }, input ? input.value : null);
+    });
+
     // Browse favicon button — opens the image manager
     document.getElementById('browseFaviconBtn').addEventListener('click', function() {
         var input = document.getElementById('settingsFavicon');
+        NbImageManager.open(function(path) {
+            input.value = path;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }, input ? input.value : null);
+    });
+
+    // Browse PNG favicon button — opens the image manager
+    document.getElementById('browseFaviconPngBtn').addEventListener('click', function() {
+        var input = document.getElementById('settingsFaviconPng');
         NbImageManager.open(function(path) {
             input.value = path;
             input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -4658,9 +4783,40 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         updateLogoDarkPreview(this.value.trim());
         updateClearButton(this);
     });
+    document.getElementById('settingsAdminLogo').addEventListener('input', function() {
+        updateAdminLogoPreview(this.value.trim());
+        updateClearButton(this);
+    });
     document.getElementById('settingsFavicon').addEventListener('input', function() {
         updateFaviconPreview(this.value.trim());
         updateClearButton(this);
+    });
+    document.getElementById('settingsFaviconPng').addEventListener('input', function() {
+        updateFaviconPngPreview(this.value.trim());
+        updateClearButton(this);
+    });
+
+    document.getElementById('resetBrandingBtn').addEventListener('click', function() {
+        document.getElementById('settingsFavicon').value = BRANDING_DEFAULTS.favicon;
+        document.getElementById('settingsFaviconPng').value = BRANDING_DEFAULTS.favicon_png;
+        document.getElementById('settingsLogo').value = BRANDING_DEFAULTS.logo;
+        document.getElementById('settingsLogoDark').value = BRANDING_DEFAULTS.logoDark;
+        document.getElementById('settingsAdminLogo').value = BRANDING_DEFAULTS.adminLogo;
+        document.getElementById('settingsName').value = BRANDING_DEFAULTS.name;
+        document.getElementById('settingsShowBranding').checked = BRANDING_DEFAULTS.showBranding;
+        var displayRadio = document.querySelector('input[name="settingsLogoDisplay"][value="' + BRANDING_DEFAULTS.logoDisplay + '"]');
+        if (displayRadio) displayRadio.checked = true;
+        var sizeRadio = document.querySelector('input[name="settingsLogoSize"][value="' + BRANDING_DEFAULTS.logoSize + '"]');
+        if (sizeRadio) sizeRadio.checked = true;
+        updateFaviconPreview(BRANDING_DEFAULTS.favicon);
+        updateFaviconPngPreview(BRANDING_DEFAULTS.favicon_png);
+        updateLogoPreview(BRANDING_DEFAULTS.logo);
+        updateLogoDarkPreview(BRANDING_DEFAULTS.logoDark);
+        updateAdminLogoPreview(BRANDING_DEFAULTS.adminLogo);
+        document.querySelectorAll('.input-clear-btn[data-clear-target]').forEach(function(btn) {
+            var input = document.getElementById(btn.dataset.clearTarget);
+            if (input) updateClearButton(input);
+        });
     });
 
     // Generic clear-X handler for image-path inputs
@@ -4691,13 +4847,17 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         try {
             var settings = Object.assign({}, currentSettings || {});
             settings.favicon = document.getElementById('settingsFavicon').value.trim();
+            settings.favicon_png = document.getElementById('settingsFaviconPng').value.trim();
             var displayRadio = document.querySelector('input[name="settingsLogoDisplay"]:checked');
+            var sizeRadio = document.querySelector('input[name="settingsLogoSize"]:checked');
             settings.branding = {
                 logo: document.getElementById('settingsLogo').value.trim(),
                 logoDark: document.getElementById('settingsLogoDark').value.trim(),
+                adminLogo: document.getElementById('settingsAdminLogo').value.trim(),
                 name: document.getElementById('settingsName').value.trim(),
                 showBranding: document.getElementById('settingsShowBranding').checked,
-                logoDisplay: displayRadio ? displayRadio.value : 'both'
+                logoDisplay: displayRadio ? displayRadio.value : 'both',
+                logoSize: sizeRadio ? sizeRadio.value : 'medium'
             };
 
             var formData = new FormData();
