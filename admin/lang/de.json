@@ -507,5 +507,15 @@
     "settings.logo_size_large": "Groß",
     "settings.admin_logo": "Admin-Logo",
     "settings.admin_logo_hint": "Optionales Logo für die Admin-Leiste. Leer lassen, um das Favicon zu verwenden.",
-    "settings.reset_branding": "Branding zurücksetzen"
+    "settings.reset_branding": "Branding zurücksetzen",
+    "mails.delete_read": "Gelesene löschen",
+    "mails.delete_read_count": "Gelesene löschen ({count})",
+    "mails.open_email_settings": "E-Mail-Einstellungen öffnen",
+    "mails.email_inactive_title": "E-Mail-Versand ist deaktiviert:",
+    "mails.email_inactive_text": "Nachrichten werden lokal gespeichert, aber nicht per E-Mail versendet. Aktiviere SMTP oder Sendmail für Benachrichtigungen.",
+    "mails.email_recipient_missing_title": "Empfängeradresse fehlt:",
+    "mails.email_recipient_missing_text": "Nachrichten werden lokal gespeichert, aber ohne Empfängeradresse kann keine E-Mail-Benachrichtigung gesendet werden.",
+    "toast.read_messages_deleted": "{count} gelesene Nachrichten gelöscht",
+    "modal.delete_read_messages": "Gelesene Nachrichten löschen",
+    "modal.delete_read_messages_confirm": "{count} gelesene Nachrichten löschen? Das kann nicht rückgängig gemacht werden."
 }

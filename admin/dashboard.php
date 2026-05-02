@@ -228,21 +228,25 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     $emailMissing = $emailMethod !== 'inactive' && $currentUserData && empty($currentUserData['email']);
     ?>
     <?php if ($emailMissing): ?>
-    <div class="password-warning" id="emailWarning">
-        <div class="password-warning-inner">
-            <strong>&#9888; <?php echo t('settings.email_missing_title'); ?></strong>
-            <?php echo t('settings.email_missing_text'); ?>
-            <br><a href="#" onclick="switchTab('settings'); document.querySelector('[data-settings-tab=&quot;users&quot;]').click(); return false;"><?php echo t('settings.email_missing_link'); ?> &rarr;</a>
+    <div class="info-banner info-banner--warning" id="emailWarning">
+        <div class="info-banner__inner">
+            <strong class="info-banner__title"><?php echo nbIcon('alert'); ?> <?php echo t('settings.email_missing_title'); ?></strong>
+            <span class="info-banner__body">
+                <?php echo t('settings.email_missing_text'); ?>
+                <a href="#" class="info-banner__cta" onclick="switchTab('settings'); document.querySelector('[data-settings-tab=&quot;users&quot;]').click(); return false;"><?php echo t('settings.email_missing_link'); ?> &rarr;</a>
+            </span>
         </div>
     </div>
     <?php endif; ?>
     <?php if (!empty($_SESSION['password_warning'])): ?>
-    <div class="password-warning" id="passwordWarning">
-        <div class="password-warning-inner">
-            <strong>&#9888; <?php echo t('security.warning'); ?></strong>
-            <?php echo t('security.weak_password'); ?>
-            <strong><?php echo t('security.change_now'); ?></strong> &mdash; this is a significant security risk.
-            <br><a href="#" onclick="switchTab('settings'); document.querySelector('[data-settings-tab=&quot;password&quot;]').click(); return false;"><?php echo t('security.change_link'); ?> &rarr;</a>
+    <div class="info-banner info-banner--warning" id="passwordWarning">
+        <div class="info-banner__inner">
+            <strong class="info-banner__title"><?php echo nbIcon('alert'); ?> <?php echo t('security.warning'); ?></strong>
+            <span class="info-banner__body">
+                <?php echo t('security.weak_password'); ?>
+                <strong><?php echo t('security.change_now'); ?></strong> &mdash; this is a significant security risk.
+                <a href="#" class="info-banner__cta" onclick="switchTab('settings'); document.querySelector('[data-settings-tab=&quot;password&quot;]').click(); return false;"><?php echo t('security.change_link'); ?> &rarr;</a>
+            </span>
         </div>
     </div>
     <?php endif; ?>
@@ -529,11 +533,21 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     <div class="admin-container" id="mailsTab" style="display: none;">
         <!-- List view -->
         <div class="page-list-container" id="mailsListView">
+            <div class="info-banner info-banner--warning mail-config-banner" id="mailConfigBanner" hidden>
+                <div class="info-banner__inner">
+                    <strong class="info-banner__title"><?php echo nbIcon('alert'); ?> <span id="mailConfigBannerTitle"></span></strong>
+                    <span class="info-banner__body">
+                        <span id="mailConfigBannerText"></span>
+                        <button type="button" class="info-banner__cta info-banner__cta-button" onclick="openEmailSettings()"><?php echo t('mails.open_email_settings'); ?> &rarr;</button>
+                    </span>
+                </div>
+            </div>
             <div class="page-list-header">
                 <div class="page-list-header-left">
                     <h2><?php echo t('mails.title'); ?></h2>
                     <button class="btn btn-secondary btn-sm" onclick="loadMails()"><?php echo t('btn.refresh'); ?></button>
                     <button class="btn btn-secondary btn-sm" onclick="markAllMailsRead()"><?php echo t('mails.mark_all_read'); ?></button>
+                    <button class="btn btn-secondary btn-sm" id="deleteReadMailsBtn" onclick="deleteReadMails()" disabled><?php echo t('mails.delete_read'); ?></button>
                 </div>
             </div>
             <div class="page-list-table-wrap">
@@ -3430,6 +3444,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     async function loadMails() {
         try {
+            if (!currentSettings) {
+                await loadSettings();
+            }
             const response = await fetch('api.php?action=load-mails');
             const result = await response.json();
 
@@ -3437,6 +3454,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 mailsData = result.data;
                 renderMails();
                 updateMailBadge();
+                updateMailConfigBanner();
             } else {
                 showToast(result.message, 'error');
             }
@@ -3454,6 +3472,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             const tr = document.createElement('tr');
             tr.innerHTML = `<td colspan="3" style="color: var(--nb-text-muted); text-align: center; padding: var(--nb-space-6);">${escapeHtml(t('mails.no_messages'))}</td>`;
             tbody.appendChild(tr);
+            updateMailBulkActions();
             return;
         }
 
@@ -3513,6 +3532,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             tr.appendChild(tdDate);
             tbody.appendChild(tr);
         });
+        updateMailBulkActions();
     }
 
     function updateMailBadge() {
@@ -3525,6 +3545,50 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         } else {
             badge.classList.add('mail-badge--hidden');
         }
+    }
+
+    function updateMailBulkActions() {
+        const btn = document.getElementById('deleteReadMailsBtn');
+        if (!btn) return;
+        const readCount = (mailsData || []).filter(m => m.read).length;
+        btn.disabled = readCount === 0;
+        btn.textContent = readCount > 0
+            ? t('mails.delete_read_count', {count: readCount})
+            : t('mails.delete_read');
+    }
+
+    function updateMailConfigBanner() {
+        const banner = document.getElementById('mailConfigBanner');
+        if (!banner) return;
+        const title = document.getElementById('mailConfigBannerTitle');
+        const text = document.getElementById('mailConfigBannerText');
+        const email = (currentSettings && currentSettings.email) || {};
+        const method = email.method || 'inactive';
+        let titleText = '';
+        let bodyText = '';
+
+        if (method === 'inactive') {
+            titleText = t('mails.email_inactive_title');
+            bodyText = t('mails.email_inactive_text');
+        } else if (!email.recipientEmail) {
+            titleText = t('mails.email_recipient_missing_title');
+            bodyText = t('mails.email_recipient_missing_text');
+        }
+
+        if (!titleText) {
+            banner.hidden = true;
+            return;
+        }
+
+        title.textContent = titleText;
+        text.textContent = bodyText;
+        banner.hidden = false;
+    }
+
+    function openEmailSettings() {
+        switchTab('settings');
+        const emailTab = document.querySelector('[data-settings-tab="email"]');
+        if (emailTab) emailTab.click();
     }
 
     async function loadUnreadCount() {
@@ -3647,6 +3711,38 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         } catch (error) {
             showToast(t('toast.error_generic', {message: error.message}), 'error');
         }
+    }
+
+    function deleteReadMails() {
+        const readCount = (mailsData || []).filter(m => m.read).length;
+        if (readCount === 0) return;
+
+        showModal(t('modal.delete_read_messages'), t('modal.delete_read_messages_confirm', {count: readCount}), async () => {
+            try {
+                const formData = new FormData();
+                formData.append('action', 'delete-read-mails');
+                formData.append('csrf_token', CSRF_TOKEN);
+
+                const response = await fetch('api.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    mailsData = mailsData.filter(m => !m.read);
+                    renderMails();
+                    updateMailBadge();
+                    closeModal();
+                    showToast(t('toast.read_messages_deleted', {count: result.data?.deleted || readCount}), 'success');
+                } else {
+                    showToast(result.message, 'error');
+                }
+            } catch (error) {
+                showToast(t('toast.error_generic', {message: error.message}), 'error');
+            }
+        });
     }
 
     function deleteMail(mailId) {

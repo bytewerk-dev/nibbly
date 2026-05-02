@@ -452,5 +452,15 @@
     "settings.logo_size_large": "Grande",
     "settings.admin_logo": "Logo admin",
     "settings.admin_logo_hint": "Logo opzionale per la barra superiore di amministrazione. Lascia vuoto per usare il favicon.",
-    "settings.reset_branding": "Ripristina branding"
+    "settings.reset_branding": "Ripristina branding",
+    "mails.delete_read": "Elimina letti",
+    "mails.delete_read_count": "Elimina letti ({count})",
+    "mails.open_email_settings": "Apri impostazioni email",
+    "mails.email_inactive_title": "L'invio email è disattivato:",
+    "mails.email_inactive_text": "I messaggi vengono salvati localmente, ma non viene inviata alcuna notifica email. Attiva SMTP o Sendmail per riceverle.",
+    "mails.email_recipient_missing_title": "Email destinatario mancante:",
+    "mails.email_recipient_missing_text": "I messaggi vengono salvati localmente, ma nessuna notifica può essere inviata senza destinatario.",
+    "toast.read_messages_deleted": "{count} messaggi letti eliminati",
+    "modal.delete_read_messages": "Elimina messaggi letti",
+    "modal.delete_read_messages_confirm": "Eliminare {count} messaggi letti? Questa azione non può essere annullata."
 }

@@ -1636,6 +1636,27 @@ switch ($action) {
         jsonResponse(true, null, 'Mail deleted');
         break;
 
+    case 'delete-read-mails':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $mailsFile = dirname(CONTENT_PATH) . '/mails.json';
+        if (!file_exists($mailsFile)) {
+            jsonResponse(true, ['deleted' => 0], 'No mails found');
+        }
+
+        $mails = json_decode(file_get_contents($mailsFile), true) ?: [];
+        $originalCount = count($mails);
+        $mails = array_values(array_filter($mails, function($mail) {
+            return !($mail['read'] ?? false);
+        }));
+        $deletedCount = $originalCount - count($mails);
+
+        file_put_contents($mailsFile, json_encode($mails, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+        jsonResponse(true, ['deleted' => $deletedCount], 'Read mails deleted');
+        break;
+
     case 'unread-mail-count':
         $mailsFile = dirname(CONTENT_PATH) . '/mails.json';
         if (!file_exists($mailsFile)) {

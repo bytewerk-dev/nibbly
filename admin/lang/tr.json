@@ -452,5 +452,15 @@
     "settings.logo_size_large": "Büyük",
     "settings.admin_logo": "Admin logosu",
     "settings.admin_logo_hint": "Admin üst çubuğu için isteğe bağlı logo. Favicon kullanmak için boş bırakın.",
-    "settings.reset_branding": "Markayı Sıfırla"
+    "settings.reset_branding": "Markayı Sıfırla",
+    "mails.delete_read": "Okunanları sil",
+    "mails.delete_read_count": "Okunanları sil ({count})",
+    "mails.open_email_settings": "E-posta ayarlarını aç",
+    "mails.email_inactive_title": "E-posta gönderimi devre dışı:",
+    "mails.email_inactive_text": "Mesajlar yerel olarak kaydedilir, ancak e-posta bildirimi gönderilmez. Bildirimler için SMTP veya Sendmail etkinleştirin.",
+    "mails.email_recipient_missing_title": "Alıcı e-posta adresi eksik:",
+    "mails.email_recipient_missing_text": "Mesajlar yerel olarak kaydedilir, ancak alıcı adresi olmadan e-posta bildirimi gönderilemez.",
+    "toast.read_messages_deleted": "{count} okunmuş mesaj silindi",
+    "modal.delete_read_messages": "Okunmuş mesajları sil",
+    "modal.delete_read_messages_confirm": "{count} okunmuş mesaj silinsin mi? Bu işlem geri alınamaz."
 }

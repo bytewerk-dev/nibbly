@@ -437,49 +437,38 @@ a:hover {
    PASSWORD WARNING BANNER
    ============================================================ */
 
-.password-warning {
-    background: var(--nb-warning-subtle);
-    border-bottom: 3px solid var(--nb-warning);
-    padding: var(--nb-space-4) var(--nb-space-5);
-}
-
-.password-warning-inner {
-    max-width: 900px;
-    margin: 0 auto;
-    color: var(--nb-warning-text, #92400e);
-    font-size: 0.9375rem;
-    line-height: 1.6;
-}
-
-.password-warning strong {
-    color: var(--nb-warning-text-strong, #78350f);
-}
-
-.password-warning code {
-    background: rgba(0, 0, 0, 0.08);
-    padding: 2px 6px;
-    border-radius: var(--nb-radius-sm);
-    font-family: var(--nb-font-mono);
-    font-size: 0.85em;
-}
-
-.password-warning a {
-    color: var(--nb-warning-text-strong, #78350f);
-    font-weight: 600;
-}
-
-.password-warning a:hover {
-    text-decoration: underline;
-}
-
-/* Info banner — used for the "return to frontend" hint after dblclick login.
-   Lives at the very top of .admin-main, so it inherits the top-left radius. */
+/* Notice banner — used for inline editing hints and warnings. Top-level
+   banners live at the top of .admin-main; contained banners sit inside cards. */
 .info-banner {
     background: var(--nb-primary-medium);
     border-bottom: 2px solid var(--nb-primary);
     padding: var(--nb-space-3) var(--nb-space-5);
     /* Match .admin-main's top-left radius so the banner doesn't bleed past it. */
     border-top-left-radius: var(--nb-radius-xl);
+}
+
+.info-banner[hidden] {
+    display: none;
+}
+
+.info-banner--warning {
+    background: #fef3c7;
+    border-bottom-color: var(--nb-warning);
+}
+
+.info-banner--contained {
+    margin: 0 0 var(--nb-space-4);
+    border: 1px solid var(--nb-primary);
+    border-radius: var(--nb-radius-xl);
+}
+
+.info-banner--contained.info-banner--warning {
+    border-color: var(--nb-warning);
+}
+
+.info-banner--contained .info-banner__inner {
+    max-width: none;
+    margin: 0;
 }
 
 .info-banner__inner {
@@ -504,6 +493,15 @@ a:hover {
     font-weight: 600;
 }
 
+.info-banner--warning .info-banner__inner,
+.info-banner--warning .info-banner__title {
+    color: var(--nb-warning-text-strong, #78350f);
+}
+
+.info-banner--warning .info-banner__body {
+    color: var(--nb-warning-text, #92400e);
+}
+
 /* Text + CTA live inside a single inline wrapper, so the CTA reads as the
    end of the sentence rather than a button next to the close (×) icon. */
 .info-banner__body {
@@ -516,6 +514,46 @@ a:hover {
     text-decoration: none;
     white-space: nowrap;
     margin-left: 0.35em;
+}
+
+.info-banner--warning .info-banner__cta {
+    color: var(--nb-warning-text-strong, #78350f);
+    font-weight: 700;
+}
+
+.mail-config-banner {
+    margin: calc(-1 * var(--nb-space-6)) calc(-1 * var(--nb-space-6)) var(--nb-space-6);
+    border-bottom-width: 3px;
+    padding-block: var(--nb-space-3);
+}
+
+.mail-config-banner .info-banner__inner {
+    max-width: none;
+    margin: 0;
+    gap: var(--nb-space-2);
+    flex-wrap: nowrap;
+    padding-right: 0;
+}
+
+.mail-config-banner .info-banner__title {
+    white-space: nowrap;
+}
+
+.mail-config-banner .info-banner__body {
+    min-width: 0;
+}
+
+.mail-config-banner .info-banner__cta {
+    display: inline-block;
+}
+
+.info-banner__cta-button {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
 }
 
 .info-banner__cta:hover {

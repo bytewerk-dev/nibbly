@@ -507,5 +507,15 @@
     "settings.logo_size_large": "Large",
     "settings.admin_logo": "Admin logo",
     "settings.admin_logo_hint": "Optional logo for the admin top bar. Leave empty to use the favicon.",
-    "settings.reset_branding": "Reset Branding"
+    "settings.reset_branding": "Reset Branding",
+    "mails.delete_read": "Delete read",
+    "mails.delete_read_count": "Delete read ({count})",
+    "mails.open_email_settings": "Open Email Settings",
+    "mails.email_inactive_title": "Email sending is inactive:",
+    "mails.email_inactive_text": "Messages are saved locally, but no email notification is sent. Enable SMTP or Sendmail to receive notifications.",
+    "mails.email_recipient_missing_title": "Recipient email is missing:",
+    "mails.email_recipient_missing_text": "Messages are saved locally, but no email notification can be sent until a recipient address is set.",
+    "toast.read_messages_deleted": "{count} read messages deleted",
+    "modal.delete_read_messages": "Delete read messages",
+    "modal.delete_read_messages_confirm": "Delete {count} read messages? This cannot be undone."
 }

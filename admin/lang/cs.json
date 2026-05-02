@@ -452,5 +452,15 @@
     "settings.logo_size_large": "Velké",
     "settings.admin_logo": "Admin logo",
     "settings.admin_logo_hint": "Volitelné logo pro horní lištu administrace. Nechte prázdné pro použití faviconu.",
-    "settings.reset_branding": "Resetovat branding"
+    "settings.reset_branding": "Resetovat branding",
+    "mails.delete_read": "Smazat přečtené",
+    "mails.delete_read_count": "Smazat přečtené ({count})",
+    "mails.open_email_settings": "Otevřít nastavení e-mailu",
+    "mails.email_inactive_title": "Odesílání e-mailů je vypnuté:",
+    "mails.email_inactive_text": "Zprávy se ukládají lokálně, ale e-mailové upozornění se neposílá. Zapněte SMTP nebo Sendmail pro upozornění.",
+    "mails.email_recipient_missing_title": "Chybí e-mail příjemce:",
+    "mails.email_recipient_missing_text": "Zprávy se ukládají lokálně, ale upozornění nelze poslat bez adresy příjemce.",
+    "toast.read_messages_deleted": "Smazáno {count} přečtených zpráv",
+    "modal.delete_read_messages": "Smazat přečtené zprávy",
+    "modal.delete_read_messages_confirm": "Smazat {count} přečtených zpráv? Tuto akci nelze vrátit zpět."
 }
