@@ -41,7 +41,8 @@ That's it. Your site is running.
 
 Nibbly ships with structured documentation designed for AI coding agents:
 
-- **`CLAUDE.md`** -- concise agent guide with block types, template API, and step-by-step instructions for creating pages. This is what Claude Code, Cursor, Copilot Workspace, or any AI tool reads first.
+- **`AI-AGENT-GUIDE.md`** -- tool-neutral agent guide with block types, template API, and step-by-step instructions for creating pages.
+- **`AGENTS.md` / `CLAUDE.md`** -- short entry points for tools that auto-load those filenames; both point to the shared guide.
 - **`architecture.md`** -- full technical reference covering JSON schemas, every PHP function signature, API endpoints, and the inline editor system.
 
 An AI agent can create a new page, build a custom layout, add content blocks, and style components without asking you how things work. The documentation gives it everything it needs.
