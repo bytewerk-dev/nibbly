@@ -6,6 +6,7 @@ content/settings.json
 
 # Website overlay (deployed separately via website/deploy.sh)
 website/
+auth.nibbly.dev/
 
 # Backup (local reference only)
 nibbly-backup/
@@ -55,6 +56,7 @@ reference/
 node_modules/
 *.mjs
 deploy.sh
+auth-deploy.sh
 package.json
 package-lock.json
 

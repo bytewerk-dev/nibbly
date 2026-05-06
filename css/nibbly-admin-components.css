@@ -16,7 +16,7 @@
     gap: var(--nb-space-2);
     padding: 10px 20px;
     border: 1px solid transparent;
-    border-radius: var(--nb-radius-md);
+    border-radius: var(--editor-btn-radius, var(--nb-radius-md));
     font-family: var(--nb-font-sans);
     font-size: 0.875rem;
     font-weight: 500;
@@ -132,7 +132,7 @@
     width: 36px;
     height: 36px;
     padding: 0;
-    border-radius: var(--nb-radius-md);
+    border-radius: var(--editor-btn-radius, var(--nb-radius-md));
 }
 
 /* Sizes */

@@ -132,6 +132,7 @@
     "settings.admin_language_default": "Domyślny ({lang})",
     "settings.save_language": "Zapisz język",
     "settings.password": "Hasło",
+    "settings.my_account": "Moje konto",
     "settings.change_password": "Zmień hasło",
     "settings.current_password": "Obecne hasło",
     "settings.new_password": "Nowe hasło",

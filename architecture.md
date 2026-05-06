@@ -590,6 +590,21 @@ All endpoints are in `admin/api.php`. Authenticated via PHP sessions with CSRF t
 | `restore` | POST | Restore a backup |
 | `delete-backup` | POST | Delete a specific backup |
 | `preview-backup` | GET | Preview backup content |
+| `create-site-backup` | POST | Create a manual full-site ZIP backup and issue a download token |
+| `download-site-backup` | GET | Stream a site backup ZIP using a one-time token |
+| `restore-site-backup` | POST | Restore a full-site ZIP in `full` or `content` mode |
+| `backup-status` | GET | Return scheduled backup status, retention, storage, and remote target metadata |
+| `backup-list` | GET | List stored full-site ZIP backups |
+| `backup-update-settings` | POST | Save scheduled backup retention, storage limit, and remote target config |
+| `backup-delete` | POST | Delete a stored full-site ZIP backup |
+| `backup-prepare-download` | POST | Issue a one-time token for a stored ZIP |
+| `backup-upload-remote` | POST | Upload an existing ZIP to enabled remote targets |
+| `backup-test-remote` | POST | Test one configured remote target with a small upload |
+| `backup-dropbox-oauth-start` / `backup-dropbox-oauth-callback` | GET | Dropbox OAuth PKCE connect flow |
+| `backup-google-oauth-start` / `backup-google-oauth-callback` | GET | Google Drive OAuth PKCE connect flow |
+| `backup-onedrive-oauth-start` / `backup-onedrive-oauth-callback` | GET | Microsoft OneDrive OAuth PKCE connect flow |
+
+Full-site backups are created by `includes/backup-helper.php` and can be run from cron via `cli/backup.php --action=run`. Scheduled backups use tiered retention (`daily`, `weekly`, `monthly`, `yearly`) plus an optional storage cap. Backup files are named `{site-domain}-backup-YYYY-MM-DD_HHMMSS-{tier}.zip`. Remote targets are stored under `backup.remote_targets` in `content/settings.json`; uploads are placed in a per-site subfolder below the configured remote path, secrets are masked in the dashboard, and secrets are scrubbed from `content/settings.json` when that file is written into a backup ZIP.
 
 ### Events
 | Action | Method | Description |

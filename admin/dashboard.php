@@ -245,7 +245,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <span class="info-banner__body">
                 <?php echo t('security.weak_password'); ?>
                 <strong><?php echo t('security.change_now'); ?></strong> &mdash; this is a significant security risk.
-                <a href="#" class="info-banner__cta" onclick="switchTab('settings'); document.querySelector('[data-settings-tab=&quot;password&quot;]').click(); return false;"><?php echo t('security.change_link'); ?> &rarr;</a>
+                <a href="#" class="info-banner__cta" onclick="switchTab('settings'); document.querySelector('[data-settings-tab=&quot;my-account&quot;]').click(); return false;"><?php echo t('security.change_link'); ?> &rarr;</a>
             </span>
         </div>
     </div>
@@ -598,10 +598,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <button class="settings-tab-btn" data-settings-tab="language"><?php echo t('settings.language'); ?></button>
             <button class="settings-tab-btn" data-settings-tab="login"><?php echo t('settings.login'); ?></button>
             <button class="settings-tab-btn" data-settings-tab="email"><?php echo t('settings.email'); ?></button>
-            <button class="settings-tab-btn" data-settings-tab="users"><?php echo t('settings.users'); ?></button>
             <button class="settings-tab-btn" data-settings-tab="menus"><?php echo t('settings.menus'); ?></button>
+            <button class="settings-tab-btn" data-settings-tab="users"><?php echo t('settings.users'); ?></button>
             <?php endif; ?>
-            <button class="settings-tab-btn<?php echo !$isAdminUser ? ' active' : ''; ?>" data-settings-tab="password"><?php echo t('settings.password'); ?></button>
+            <button class="settings-tab-btn<?php echo !$isAdminUser ? ' active' : ''; ?>" data-settings-tab="my-account"><?php echo t('settings.my_account'); ?></button>
             <?php if ($isAdminUser): ?>
             <button class="settings-tab-btn settings-tab-btn--danger" data-settings-tab="danger"><?php echo t('settings.danger_zone'); ?></button>
             <?php endif; ?>
@@ -1063,8 +1063,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             </div>
             <?php endif; ?>
 
-            <!-- Password Panel -->
-            <div class="settings-panel<?php echo !$isAdminUser ? ' active' : ''; ?>" id="settingsPanel-password">
+            <!-- My Account Panel -->
+            <div class="settings-panel<?php echo !$isAdminUser ? ' active' : ''; ?>" id="settingsPanel-my-account">
                 <h2><?php echo t('settings.change_password'); ?></h2>
                 <form id="changePasswordForm" class="change-password-form">
                     <div class="form-group">
@@ -1194,25 +1194,36 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             </div>
         </div>
 
-        <!-- Automated / scheduled backups -->
-        <div class="backup-site-card backup-scheduled">
-            <div class="backup-site-card__info">
-                <h3><?php echo t('settings.scheduled_backups'); ?></h3>
-                <p><?php echo t('settings.scheduled_backups_desc'); ?></p>
-            </div>
-
-            <!-- Status banner: last run + warning if cron stalled -->
-            <div class="scheduled-status" id="scheduledStatus" data-state="loading">
-                <div class="scheduled-status__row">
-                    <strong><?php echo t('settings.last_run'); ?>:</strong>
-                    <span id="scheduledLastRun">—</span>
-                </div>
+        <!-- Backup list -->
+        <div class="scheduled-list">
+            <div class="scheduled-list__header">
+                <h4><?php echo t('settings.backup_list_title'); ?></h4>
                 <div class="scheduled-storage" id="scheduledStorage">
                     <strong><?php echo t('settings.storage_summary'); ?>:</strong>
                     <span id="scheduledStorageCount">—</span>
                     <span class="scheduled-storage__dates" id="scheduledStorageDates"></span>
                 </div>
-                <div class="scheduled-status__message" id="scheduledStatusMessage"></div>
+            </div>
+            <table class="scheduled-list__table" id="scheduledList">
+                <thead>
+                    <tr>
+                        <th><?php echo t('settings.backup_list_col_date'); ?></th>
+                        <th><?php echo t('settings.backup_list_col_tier'); ?></th>
+                        <th><?php echo t('settings.backup_list_col_size'); ?></th>
+                        <th><?php echo t('settings.backup_list_col_actions'); ?></th>
+                    </tr>
+                </thead>
+                <tbody id="scheduledListBody">
+                    <tr><td colspan="4" class="scheduled-list__empty"><?php echo t('settings.backup_list_empty'); ?></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Automated / scheduled backups -->
+        <div class="backup-site-card backup-scheduled">
+            <div class="backup-site-card__info">
+                <h3><?php echo t('settings.scheduled_backups'); ?></h3>
+                <p><?php echo t('settings.scheduled_backups_desc'); ?></p>
             </div>
 
             <!-- Settings form -->
@@ -1246,11 +1257,22 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     </div>
                 </fieldset>
 
-                <label class="scheduled-form__limit">
-                    <span><strong><?php echo t('settings.storage_limit'); ?></strong></span>
-                    <input type="number" id="storageLimitMb" name="storage_limit_mb" min="0" step="1">
-                </label>
-                <p class="scheduled-form__hint"><?php echo t('settings.storage_limit_hint'); ?></p>
+                <!-- Status banner: last run + warning if cron stalled -->
+                <div class="scheduled-status" id="scheduledStatus" data-state="loading">
+                    <div class="scheduled-status__row">
+                        <strong><?php echo t('settings.last_run'); ?>:</strong>
+                        <span id="scheduledLastRun">—</span>
+                    </div>
+                    <div class="scheduled-status__message" id="scheduledStatusMessage"></div>
+                </div>
+
+                <div class="scheduled-form__side">
+                    <label class="scheduled-form__limit">
+                        <span><strong><?php echo t('settings.storage_limit'); ?></strong></span>
+                        <input type="number" id="storageLimitMb" name="storage_limit_mb" min="0" step="1">
+                    </label>
+                    <p class="scheduled-form__hint"><?php echo t('settings.storage_limit_hint'); ?></p>
+                </div>
 
                 <div class="scheduled-form__actions">
                     <button type="submit" class="btn btn-primary" id="scheduledSaveBtn">
@@ -1259,39 +1281,58 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 </div>
             </form>
 
+            <div class="backup-remote">
+                <div class="backup-remote__header">
+                    <div>
+                        <h4><?php echo t('settings.remote_backups'); ?></h4>
+                        <p><?php echo t('settings.remote_backups_hint'); ?></p>
+                        <p class="backup-remote__beta-note"><?php echo t('settings.remote_oauth_beta_note'); ?></p>
+                    </div>
+                    <div class="backup-remote__add">
+                        <select id="remoteProviderSelect" aria-label="<?php echo t('settings.remote_add_target'); ?>">
+                            <option value="dropbox">Dropbox</option>
+                            <option value="google_drive">Google Drive</option>
+                            <option value="onedrive">Microsoft OneDrive</option>
+                            <option value="sftp">SFTP / SCP</option>
+                            <option value="ftp">FTP / FTPS</option>
+                            <option value="s3">S3-Compatible</option>
+                            <option value="webdav">WebDAV</option>
+                        </select>
+                        <button type="button" class="btn btn-secondary btn-sm" id="remoteAddBtn">
+                            <?php echo t('settings.remote_add_target'); ?>
+                        </button>
+                    </div>
+                </div>
+                <div class="backup-remote__list" id="remoteTargetList"></div>
+            </div>
+
             <!-- Cron setup help -->
-            <div class="scheduled-cron">
-                <h4><?php echo t('settings.cron_setup'); ?></h4>
+            <details class="scheduled-cron">
+                <summary><?php echo t('settings.cron_setup'); ?></summary>
                 <p><?php echo t('settings.cron_setup_hint'); ?></p>
+                <?php
+                    $sitePath = realpath(__DIR__ . '/..') ?: dirname(__DIR__);
+                    $backupScriptPath = $sitePath . '/cli/backup.php';
+                ?>
                 <div class="scheduled-cron__line">
-                    <code id="cronLine"><?php
-                        $sitePath = realpath(__DIR__ . '/..');
-                        $sitePathArg = escapeshellarg($sitePath ?: __DIR__ . '/..');
-                        echo htmlspecialchars("0 3 * * * cd {$sitePathArg} && php cli/backup.php --action=run >> backups/backup.log 2>&1");
-                    ?></code>
-                    <button type="button" class="btn btn-secondary btn-sm" id="cronCopyBtn">
+                    <span><?php echo t('settings.cron_script_path'); ?></span>
+                    <code id="cronScriptPath"><?php echo htmlspecialchars($backupScriptPath); ?></code>
+                    <button type="button" class="btn btn-secondary btn-sm" data-copy-code="cronScriptPath">
                         <?php echo t('settings.cron_copy'); ?>
                     </button>
                 </div>
-            </div>
-
-            <!-- Backup list -->
-            <div class="scheduled-list">
-                <h4><?php echo t('settings.backup_list_title'); ?></h4>
-                <table class="scheduled-list__table" id="scheduledList">
-                    <thead>
-                        <tr>
-                            <th><?php echo t('settings.backup_list_col_date'); ?></th>
-                            <th><?php echo t('settings.backup_list_col_tier'); ?></th>
-                            <th><?php echo t('settings.backup_list_col_size'); ?></th>
-                            <th><?php echo t('settings.backup_list_col_actions'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody id="scheduledListBody">
-                        <tr><td colspan="4" class="scheduled-list__empty"><?php echo t('settings.backup_list_empty'); ?></td></tr>
-                    </tbody>
-                </table>
-            </div>
+                <div class="scheduled-cron__line">
+                    <span><?php echo t('settings.cron_arguments'); ?></span>
+                    <code id="cronArguments">--action=run</code>
+                    <button type="button" class="btn btn-secondary btn-sm" data-copy-code="cronArguments">
+                        <?php echo t('settings.cron_copy'); ?>
+                    </button>
+                </div>
+                <div class="scheduled-cron__line scheduled-cron__line--fallback">
+                    <span><?php echo t('settings.cron_shell_command'); ?></span>
+                    <code id="cronShellCommand"><?php echo htmlspecialchars('/absolute/path/to/php ' . escapeshellarg($backupScriptPath) . ' --action=run'); ?></code>
+                </div>
+            </details>
         </div>
     </div>
 
@@ -1832,7 +1873,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         if (topbarSelectors) topbarSelectors.style.display = 'none';
         loadPageList();
         if (pushHistory) {
-            history.pushState({ view: 'pageList' }, '', 'dashboard.php');
+            updateDashboardHash('content');
         }
     }
 
@@ -2098,7 +2139,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
                 // Push history state so browser back button returns to page list
                 if (pushHistory) {
-                    history.pushState({ view: 'editor', page: currentPage }, '', 'dashboard.php?page=' + currentPage);
+                    history.pushState({ view: 'editor', page: currentPage }, '', DASHBOARD_PATH + '#page/' + currentPage);
                 }
 
             } else {
@@ -3286,8 +3327,38 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     document.getElementById('pageSelect').addEventListener('change', function() {
         if (pageMobile) pageMobile.value = this.value;
     });
-    // Auto-load page from URL parameter (?page=en_home), otherwise show page list
-    (async function() {
+
+    const DASHBOARD_PATH = window.location.pathname.replace(/\/dashboard\.php$/, '/dashboard');
+    const VALID_DASHBOARD_TABS = ['content', 'news', 'events', 'mails', 'settings', 'backup'];
+    const DASHBOARD_HASH_ALIASES = { pages: 'content', messages: 'mails' };
+    let dashboardRouteApplying = false;
+
+    function dashboardHashFor(tab, subtab) {
+        const publicTab = tab === 'content' ? 'pages' : (tab === 'mails' ? 'messages' : tab);
+        return '#' + publicTab + (subtab ? '/' + subtab : '');
+    }
+
+    function parseDashboardHash() {
+        const raw = (window.location.hash || '').replace(/^#/, '');
+        if (!raw) return { tab: 'content', subtab: '' };
+        const parts = raw.split('/').filter(Boolean);
+        const first = parts[0] || 'content';
+        const tab = DASHBOARD_HASH_ALIASES[first] || first;
+        return {
+            tab: VALID_DASHBOARD_TABS.indexOf(tab) !== -1 ? tab : 'content',
+            subtab: parts[1] || ''
+        };
+    }
+
+    function updateDashboardHash(tab, subtab, replace) {
+        if (dashboardRouteApplying) return;
+        const next = DASHBOARD_PATH + dashboardHashFor(tab, subtab);
+        if (window.location.pathname + window.location.hash === next) return;
+        history[replace ? 'replaceState' : 'pushState']({ view: 'dashboard', tab: tab, subtab: subtab || '' }, '', next);
+    }
+
+    async function applyDashboardRoute(replace) {
+        dashboardRouteApplying = true;
         // Load page list first so dropdowns are populated
         try {
             const response = await fetch('api.php?action=list-pages&_=' + Date.now());
@@ -3303,9 +3374,35 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         const pageParam = params.get('page');
         const tabParam = params.get('tab');
         const postParam = params.get('post');
+        const route = parseDashboardHash();
+        const hashParts = (window.location.hash || '').replace(/^#/, '').split('/').filter(Boolean);
+        let canonicalTab = route.tab || 'content';
+        let canonicalSubtab = route.subtab || '';
+        let canonicalUrl = null;
 
-        if (tabParam === 'news') {
+        if (hashParts[0] === 'page' && hashParts[1] && hashParts[1].includes('_')) {
+            const page = hashParts[1];
+            const lang = page.substring(0, page.indexOf('_'));
+            const slug = page.substring(page.indexOf('_') + 1);
+            const langSelect = document.getElementById('langSelect');
+            if (langSelect) {
+                langSelect.value = lang;
+                updatePageSelect();
+                const pageSelect = document.getElementById('pageSelect');
+                if (pageSelect) {
+                    pageSelect.value = slug;
+                    await loadContent(false);
+                }
+            }
+            canonicalUrl = DASHBOARD_PATH + '#page/' + page;
+        } else if (route.tab !== 'content' || route.subtab) {
+            switchTab(route.tab, { settingsTab: route.subtab, replace: !!replace });
+            canonicalTab = route.tab;
+            canonicalSubtab = route.subtab;
+        } else if (tabParam === 'news') {
             switchTab('news');
+            canonicalTab = 'news';
+            canonicalSubtab = '';
             if (postParam) {
                 // Wait for news to load, then open the post editor
                 await loadNews();
@@ -3322,18 +3419,29 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 const pageSelect = document.getElementById('pageSelect');
                 if (pageSelect) {
                     pageSelect.value = slug;
-                    loadContent();
+                    await loadContent(false);
                 }
             }
+            canonicalUrl = DASHBOARD_PATH + '#page/' + pageParam;
         } else {
             // No page specified — show page list
             showPageList(false);
-            history.replaceState({ view: 'pageList' }, '', 'dashboard.php');
+            canonicalTab = 'content';
+            canonicalSubtab = '';
         }
-    })();
+        dashboardRouteApplying = false;
+        if (canonicalUrl) {
+            history.replaceState({ view: 'editor', page: hashParts[1] || pageParam }, '', canonicalUrl);
+        } else if (window.location.pathname.endsWith('/dashboard.php') || replace) {
+            updateDashboardHash(canonicalTab, canonicalSubtab, true);
+        }
+    }
+
+    // Auto-load page/hash route, otherwise show page list.
+    applyDashboardRoute(true);
 
     // Browser back/forward navigation
-    window.addEventListener('popstate', (e) => {
+    window.addEventListener('popstate', async (e) => {
         if (e.state && e.state.view === 'editor' && e.state.page) {
             const lang = e.state.page.substring(0, e.state.page.indexOf('_'));
             const slug = e.state.page.substring(e.state.page.indexOf('_') + 1);
@@ -3342,8 +3450,12 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             document.getElementById('pageSelect').value = slug;
             loadContent(false);
         } else {
-            showPageList(false);
+            await applyDashboardRoute(true);
         }
+    });
+
+    window.addEventListener('hashchange', function() {
+        applyDashboardRoute(true);
     });
 
     document.addEventListener('keydown', (e) => {
@@ -3362,7 +3474,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         if (banner) banner.remove();
     }
 
-    function switchTab(tab) {
+    function switchTab(tab, options) {
+        options = options || {};
         if (tab !== 'content') {
             dismissFrontendEditBanner();
         }
@@ -3431,9 +3544,15 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 loadEventsEditor();
             }
         }
+        if (tab === 'settings' && options.settingsTab) {
+            activateSettingsTab(options.settingsTab, { silent: true });
+        }
+
         if (tab === 'settings' && !settingsLoaded) {
             loadSettings();
         }
+
+        updateDashboardHash(tab, tab === 'settings' ? (options.settingsTab || getActiveSettingsTab()) : '', !!options.replace);
     }
 
     // ============================================================
@@ -4348,14 +4467,39 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     let currentSettings = null;
 
     // Settings sub-tabs
+    function getActiveSettingsTab() {
+        var active = document.querySelector('.settings-tab-btn.active');
+        return active ? active.getAttribute('data-settings-tab') : 'branding';
+    }
+
+    function loadSettingsTabData(tab) {
+        if (tab === 'users' && typeof loadUsers === 'function' && typeof _usersLoaded !== 'undefined' && !_usersLoaded) {
+            _usersLoaded = true;
+            loadUsers();
+        }
+        if (tab === 'menus' && typeof loadMenuOrder === 'function' && typeof _menuOrderLoaded !== 'undefined' && !_menuOrderLoaded) {
+            _menuOrderLoaded = true;
+            loadMenuOrder();
+        }
+    }
+
+    function activateSettingsTab(tab, options) {
+        options = options || {};
+        var btn = document.querySelector('.settings-tab-btn[data-settings-tab="' + tab + '"]');
+        if (!btn) return;
+        document.querySelectorAll('.settings-tab-btn').forEach(function(b) { b.classList.remove('active'); });
+        document.querySelectorAll('.settings-panel').forEach(function(p) { p.classList.remove('active'); });
+        btn.classList.add('active');
+        var panel = document.getElementById('settingsPanel-' + tab);
+        if (panel) panel.classList.add('active');
+        loadSettingsTabData(tab);
+        if (!options.silent) updateDashboardHash('settings', tab, !!options.replace);
+    }
+
     document.querySelectorAll('.settings-tab-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
             var tab = this.getAttribute('data-settings-tab');
-            document.querySelectorAll('.settings-tab-btn').forEach(function(b) { b.classList.remove('active'); });
-            document.querySelectorAll('.settings-panel').forEach(function(p) { p.classList.remove('active'); });
-            this.classList.add('active');
-            var panel = document.getElementById('settingsPanel-' + tab);
-            if (panel) panel.classList.add('active');
+            activateSettingsTab(tab);
         });
     });
 
@@ -5097,7 +5241,6 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
         // Button radius — affects both admin and frontend editor buttons
         if (theme.buttonRadius != null) {
-            document.documentElement.style.setProperty('--nb-radius-md', theme.buttonRadius + 'px');
             document.documentElement.style.setProperty('--editor-btn-radius', theme.buttonRadius + 'px');
         }
 
@@ -5564,10 +5707,62 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var limitEl        = document.getElementById('storageLimitMb');
         var saveBtn        = document.getElementById('scheduledSaveBtn');
         var listBody       = document.getElementById('scheduledListBody');
-        var cronCopyBtn    = document.getElementById('cronCopyBtn');
-        var cronLineEl     = document.getElementById('cronLine');
+        var cronCopyBtns   = Array.from(document.querySelectorAll('[data-copy-code]'));
+        var remoteListEl   = document.getElementById('remoteTargetList');
+        var remoteAddBtn   = document.getElementById('remoteAddBtn');
+        var remoteSelectEl = document.getElementById('remoteProviderSelect');
+        var remoteTargets  = [];
+        var remoteProviders = {};
+        var remoteFileCache = {};
 
         if (!statusEl) return; // Tab not on this dashboard
+
+        var remoteFieldLabels = {
+            app_key: t('settings.remote_field_app_key'),
+            access_token: t('settings.remote_field_access_token'),
+            refresh_token: t('settings.remote_field_refresh_token'),
+            client_id: t('settings.remote_field_client_id'),
+            client_secret: t('settings.remote_field_client_secret'),
+            path: t('settings.remote_field_path'),
+            folder_id: t('settings.remote_field_folder_id'),
+            folder_path: t('settings.remote_field_folder_path'),
+            host: t('settings.remote_field_host'),
+            port: t('settings.remote_field_port'),
+            username: t('settings.remote_field_username'),
+            password: t('settings.remote_field_password'),
+            remote_path: t('settings.remote_field_remote_path'),
+            ssl: t('settings.remote_field_ssl'),
+            passive: t('settings.remote_field_passive'),
+            endpoint: t('settings.remote_field_endpoint'),
+            region: t('settings.remote_field_region'),
+            bucket: t('settings.remote_field_bucket'),
+            prefix: t('settings.remote_field_prefix'),
+            access_key: t('settings.remote_field_access_key'),
+            secret_key: t('settings.remote_field_secret_key'),
+            path_style: t('settings.remote_field_path_style'),
+            url: t('settings.remote_field_url'),
+            bearer_token: t('settings.remote_field_bearer_token')
+        };
+
+        var remotePlaceholders = {
+            dropbox: { app_key: 'Dropbox app key', path: '/Nibbly Backups' },
+            google_drive: { client_id: 'Google OAuth client ID', client_secret: t('settings.remote_placeholder_optional'), folder_id: t('settings.remote_placeholder_optional') },
+            onedrive: { client_id: 'Microsoft app client ID', client_secret: t('settings.remote_placeholder_optional'), folder_path: '/Nibbly Backups' },
+            sftp: { port: '22', remote_path: '/home/user/backups' },
+            ftp: { port: '21', remote_path: 'backups', ssl: '0', passive: '1' },
+            s3: { endpoint: 'https://s3.example.com', region: 'eu-central-1', prefix: 'nibbly', path_style: '0' },
+            webdav: { url: 'https://cloud.example.com/remote.php/dav/files/user/backups' }
+        };
+
+        var remoteProviderHints = {
+            sftp: t('settings.remote_hint_sftp'),
+            ftp: t('settings.remote_hint_ftp')
+        };
+
+        var remoteDefaultSettings = {
+            sftp: { port: '22' },
+            ftp: { port: '21', passive: true }
+        };
 
         function fmtSize(bytes) {
             if (!bytes) return '0 B';
@@ -5597,6 +5792,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 monthlyEl.value   = s.retention.monthly;
                 yearlyEl.value    = s.retention.yearly;
                 limitEl.value     = s.storage_limit_mb;
+                remoteTargets     = s.remote_targets || [];
+                remoteProviders   = s.remote_providers || {};
+                renderRemoteTargets();
 
                 // Last run + cron health
                 if (s.last_run) {
@@ -5695,8 +5893,387 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 delBtn.onclick = function() { deleteBackup(b.file); };
                 tdActions.appendChild(delBtn);
 
+                if (remoteTargets.length > 0) {
+                    var upBtn = document.createElement('button');
+                    upBtn.className = 'btn btn-secondary btn-sm';
+                    upBtn.textContent = t('settings.remote_upload');
+                    upBtn.onclick = function() { uploadBackupRemote(b.file, upBtn); };
+                    tdActions.appendChild(upBtn);
+                }
+
                 tr.appendChild(tdActions);
                 listBody.appendChild(tr);
+            });
+        }
+
+        function targetLabel(type) {
+            return (remoteProviders[type] && remoteProviders[type].label) || type;
+        }
+
+        function localizeRemoteMessage(message) {
+            var text = message || '';
+            var map = {
+                'Dropbox access token is missing.': t('settings.remote_error_dropbox_access_token_missing'),
+                'Google Drive access token is missing.': t('settings.remote_error_google_access_token_missing'),
+                'OneDrive access token is missing.': t('settings.remote_error_onedrive_access_token_missing'),
+                'PHP ssh2 extension is required for SFTP/SCP uploads.': t('settings.remote_error_ssh2_required'),
+                'PHP FTP extension is required for FTP/FTPS uploads.': t('settings.remote_error_ftp_required')
+            };
+            return map[text] || text;
+        }
+
+        function makeTarget(type) {
+            return {
+                id: type + '-' + Date.now().toString(36),
+                type: type,
+                name: targetLabel(type),
+                enabled: true,
+                settings: Object.assign({}, remoteDefaultSettings[type] || {}),
+                last_upload: null,
+                last_status: null,
+                last_message: null,
+                last_file: null
+            };
+        }
+
+        function collectRemoteTargets() {
+            if (!remoteListEl) return [];
+            return Array.from(remoteListEl.querySelectorAll('.backup-remote-target')).map(function(card) {
+                var target = {
+                    id: card.dataset.id,
+                    type: card.dataset.type,
+                    name: card.querySelector('[data-field="name"]').value.trim(),
+                    enabled: card.querySelector('[data-field="enabled"]').checked,
+                    settings: {},
+                    last_upload: card.dataset.lastUpload || null,
+                    last_status: card.dataset.lastStatus || null,
+                    last_message: card.dataset.lastMessage || null,
+                    last_file: card.dataset.lastFile || null
+                };
+                card.querySelectorAll('[data-setting]').forEach(function(input) {
+                    target.settings[input.dataset.setting] = input.type === 'checkbox' ? input.checked : input.value;
+                });
+                return target;
+            });
+        }
+
+        function renderRemoteTargets() {
+            if (!remoteListEl) return;
+            if (!remoteTargets.length) {
+                remoteListEl.innerHTML = '<div class="backup-remote__empty">' + t('settings.remote_empty') + '</div>';
+                return;
+            }
+            remoteListEl.innerHTML = '';
+            remoteTargets.forEach(function(target, idx) {
+                var provider = remoteProviders[target.type] || {};
+                var oauthProvider = target.type === 'dropbox' || target.type === 'google_drive' || target.type === 'onedrive';
+                var card = document.createElement('div');
+                card.className = 'backup-remote-target';
+                card.dataset.id = target.id;
+                card.dataset.type = target.type;
+                card.dataset.lastUpload = target.last_upload || '';
+                card.dataset.lastStatus = target.last_status || '';
+                card.dataset.lastMessage = target.last_message || '';
+                card.dataset.lastFile = target.last_file || '';
+
+                var header = document.createElement('div');
+                header.className = 'backup-remote-target__header';
+                var title = document.createElement('div');
+                title.className = 'backup-remote-target__title';
+                var enabled = document.createElement('input');
+                enabled.type = 'checkbox';
+                enabled.checked = !!target.enabled;
+                enabled.dataset.field = 'enabled';
+                title.appendChild(enabled);
+                var name = document.createElement('input');
+                name.type = 'text';
+                name.value = target.name || targetLabel(target.type);
+                name.dataset.field = 'name';
+                title.appendChild(name);
+                var badge = document.createElement('span');
+                badge.textContent = targetLabel(target.type);
+                title.appendChild(badge);
+                header.appendChild(title);
+
+                var actions = document.createElement('div');
+                actions.className = 'backup-remote-target__actions';
+                if (target.type === 'dropbox' || target.type === 'google_drive' || target.type === 'onedrive') {
+                    var connectBtn = document.createElement('button');
+                    connectBtn.type = 'button';
+                    connectBtn.className = 'btn btn-secondary btn-sm';
+                    connectBtn.textContent = target.type === 'dropbox'
+                        ? t('settings.remote_connect_dropbox')
+                        : (target.type === 'google_drive' ? t('settings.remote_connect_google') : t('settings.remote_connect_onedrive'));
+                    connectBtn.onclick = function() { connectOAuthTarget(target.id, target.type); };
+                    actions.appendChild(connectBtn);
+                }
+                var testBtn = document.createElement('button');
+                testBtn.type = 'button';
+                testBtn.className = 'btn btn-secondary btn-sm';
+                testBtn.textContent = t('settings.remote_test');
+                testBtn.onclick = function() { testRemoteTarget(target.id); };
+                actions.appendChild(testBtn);
+                var filesBtn = document.createElement('button');
+                filesBtn.type = 'button';
+                filesBtn.className = 'btn btn-secondary btn-sm';
+                filesBtn.textContent = t('settings.remote_files');
+                filesBtn.onclick = function() { loadRemoteFiles(target.id); };
+                actions.appendChild(filesBtn);
+                var removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'btn btn-danger btn-sm';
+                removeBtn.textContent = t('btn.delete');
+                removeBtn.onclick = function() {
+                    remoteTargets.splice(idx, 1);
+                    renderRemoteTargets();
+                };
+                actions.appendChild(removeBtn);
+                header.appendChild(actions);
+                card.appendChild(header);
+
+                var grid = document.createElement('div');
+                grid.className = 'backup-remote-target__grid';
+                (provider.fields || []).forEach(function(field) {
+                    if (oauthProvider && (field === 'access_token' || field === 'refresh_token')) return;
+                    if (target.type === 'dropbox' && provider.has_global_oauth && field === 'app_key') return;
+                    if ((target.type === 'google_drive' || target.type === 'onedrive') && provider.has_global_oauth && (field === 'client_id' || field === 'client_secret')) return;
+                    var label = document.createElement('label');
+                    if (field === 'path_style' || field === 'ssl' || field === 'passive') label.className = 'backup-remote-target__check';
+                    var span = document.createElement('span');
+                    span.textContent = remoteFieldLabels[field] || field;
+                    label.appendChild(span);
+                    var input = document.createElement('input');
+                    input.dataset.setting = field;
+                    if (field === 'path_style' || field === 'ssl' || field === 'passive') {
+                        input.type = 'checkbox';
+                        input.checked = !!(target.settings && target.settings[field]);
+                    } else {
+                        input.type = 'text';
+                        input.value = (target.settings && target.settings[field]) || '';
+                        input.placeholder = (remotePlaceholders[target.type] && remotePlaceholders[target.type][field]) || '';
+                        input.name = 'nibbly_remote_' + target.type + '_' + field + '_' + target.id;
+                        input.id = 'nibbly_remote_' + target.id + '_' + field;
+                        input.autocomplete = 'off';
+                        input.autocapitalize = 'off';
+                        input.spellcheck = false;
+                        input.setAttribute('data-lpignore', 'true');
+                        input.setAttribute('data-1p-ignore', 'true');
+                        input.setAttribute('data-form-type', 'other');
+                        if ((provider.secret_fields || []).indexOf(field) !== -1) {
+                            input.className = 'backup-remote-target__secret';
+                        }
+                    }
+                    label.appendChild(input);
+                    grid.appendChild(label);
+                });
+                card.appendChild(grid);
+
+                if (remoteProviderHints[target.type]) {
+                    var hint = document.createElement('p');
+                    hint.className = 'form-hint backup-remote-target__hint';
+                    hint.textContent = remoteProviderHints[target.type];
+                    card.appendChild(hint);
+                }
+
+                var status = document.createElement('div');
+                status.className = 'backup-remote-target__status';
+                status.dataset.state = target.last_status || 'idle';
+                status.textContent = target.last_upload
+                    ? t('settings.remote_last_upload', { date: fmtDate(target.last_upload), message: localizeRemoteMessage(target.last_message || '') })
+                    : t('settings.remote_not_tested');
+                card.appendChild(status);
+                if (remoteFileCache[target.id]) {
+                    card.appendChild(renderRemoteFileList(target.id, remoteFileCache[target.id]));
+                }
+                remoteListEl.appendChild(card);
+            });
+        }
+
+        function renderRemoteFileList(targetId, files) {
+            var box = document.createElement('div');
+            box.className = 'backup-remote-files';
+            if (!files.length) {
+                box.textContent = t('settings.remote_files_empty');
+                return box;
+            }
+            files.forEach(function(file) {
+                var row = document.createElement('div');
+                row.className = 'backup-remote-file';
+                var meta = document.createElement('div');
+                meta.className = 'backup-remote-file__meta';
+                var name = document.createElement('strong');
+                name.textContent = file.file;
+                var details = document.createElement('span');
+                details.textContent = file.tier + ' · ' + fmtSize(file.size) + ' · ' + fmtDate(file.mtime);
+                meta.appendChild(name);
+                meta.appendChild(details);
+                row.appendChild(meta);
+                var actions = document.createElement('div');
+                actions.className = 'backup-remote-file__actions';
+                var importBtn = document.createElement('button');
+                importBtn.type = 'button';
+                importBtn.className = 'btn btn-secondary btn-sm';
+                importBtn.textContent = t('settings.remote_import');
+                importBtn.onclick = function() { importRemoteBackup(targetId, file.file); };
+                actions.appendChild(importBtn);
+                var deleteBtn = document.createElement('button');
+                deleteBtn.type = 'button';
+                deleteBtn.className = 'btn btn-danger btn-sm';
+                deleteBtn.textContent = t('btn.delete');
+                deleteBtn.onclick = function() { deleteRemoteBackup(targetId, file.file); };
+                actions.appendChild(deleteBtn);
+                row.appendChild(actions);
+                box.appendChild(row);
+            });
+            return box;
+        }
+
+        async function saveRemoteSettingsOnly() {
+            remoteTargets = collectRemoteTargets();
+            var fd = new FormData();
+            fd.append('action', 'backup-update-settings');
+            fd.append('csrf_token', CSRF_TOKEN);
+            fd.append('remote_targets', JSON.stringify(remoteTargets));
+            var res = await fetch('api.php', { method: 'POST', body: fd });
+            var json = await res.json();
+            if (!json.success) throw new Error(json.message);
+            remoteTargets = json.data.remote_targets || remoteTargets;
+            remoteProviders = json.data.remote_providers || remoteProviders;
+            renderRemoteTargets();
+        }
+
+        async function testRemoteTarget(targetId) {
+            try {
+                await saveRemoteSettingsOnly();
+                var fd = new FormData();
+                fd.append('action', 'backup-test-remote');
+                fd.append('csrf_token', CSRF_TOKEN);
+                fd.append('target_id', targetId);
+                var res = await fetch('api.php', { method: 'POST', body: fd });
+                var json = await res.json();
+                if (!json.success) throw new Error(json.message);
+                showToast(t('toast.remote_test_success'), 'success');
+                refresh();
+            } catch (err) {
+                showToast(t('toast.remote_test_failed', { message: localizeRemoteMessage(err.message || String(err)) }), 'error');
+                refresh();
+            }
+        }
+
+        async function connectOAuthTarget(targetId, type) {
+            var popup = window.open('about:blank', '_blank');
+            try {
+                await saveRemoteSettingsOnly();
+                var target = remoteTargets.find(function(tg) { return tg.id === targetId; });
+                var requiredField = type === 'dropbox' ? 'app_key' : 'client_id';
+                var provider = remoteProviders[type] || {};
+                if (!target || !target.settings || (!target.settings[requiredField] && !provider.has_global_oauth)) {
+                    if (popup) popup.close();
+                    showToast(t(type === 'dropbox' ? 'toast.remote_dropbox_app_key_missing' : 'toast.remote_client_id_missing'), 'error');
+                    return;
+                }
+                var action = type === 'dropbox'
+                    ? 'backup-dropbox-oauth-start'
+                    : (type === 'google_drive' ? 'backup-google-oauth-start' : 'backup-onedrive-oauth-start');
+                var url = 'api.php?action=' + action
+                    + '&csrf_token=' + encodeURIComponent(CSRF_TOKEN)
+                    + '&target_id=' + encodeURIComponent(targetId);
+                if (popup) {
+                    popup.location = url;
+                } else {
+                    window.location.href = url;
+                }
+            } catch (err) {
+                if (popup) popup.close();
+                showToast(t('toast.remote_oauth_connect_failed', { message: localizeRemoteMessage(err.message || String(err)) }), 'error');
+            }
+        }
+
+        async function uploadBackupRemote(file, button) {
+            var originalHtml = button ? button.innerHTML : '';
+            var actionButtons = [];
+            function setBusy(isBusy) {
+                if (!button) return;
+                var row = button.closest('tr');
+                actionButtons = row ? Array.from(row.querySelectorAll('button')) : [button];
+                actionButtons.forEach(function(btn) { btn.disabled = isBusy; });
+                button.classList.toggle('is-loading', isBusy);
+                button.setAttribute('aria-busy', isBusy ? 'true' : 'false');
+                button.innerHTML = isBusy
+                    ? '<span class="btn-spinner" aria-hidden="true"></span><span>' + t('settings.remote_uploading') + '</span>'
+                    : originalHtml;
+            }
+            try {
+                setBusy(true);
+                await saveRemoteSettingsOnly();
+                var enabledTargets = remoteTargets.filter(function(tg) { return tg.enabled; });
+                if (!enabledTargets.length) {
+                    showToast(t('toast.remote_no_enabled_targets'), 'error');
+                    return;
+                }
+                var fd = new FormData();
+                fd.append('action', 'backup-upload-remote');
+                fd.append('csrf_token', CSRF_TOKEN);
+                fd.append('file', file);
+                var res = await fetch('api.php', { method: 'POST', body: fd });
+                var json = await res.json();
+                if (!json.success) throw new Error(json.message);
+                showToast(t('toast.remote_upload_success'), 'success');
+                refresh();
+            } catch (err) {
+                showToast(t('toast.remote_upload_failed', { message: localizeRemoteMessage(err.message || String(err)) }), 'error');
+                refresh();
+            } finally {
+                setBusy(false);
+            }
+        }
+
+        async function loadRemoteFiles(targetId) {
+            try {
+                var res = await fetch('api.php?action=backup-remote-list&target_id=' + encodeURIComponent(targetId));
+                var json = await res.json();
+                if (!json.success) throw new Error(json.message);
+                remoteFileCache[targetId] = json.data.files || [];
+                renderRemoteTargets();
+            } catch (err) {
+                showToast(t('toast.remote_list_failed', { message: localizeRemoteMessage(err.message || String(err)) }), 'error');
+            }
+        }
+
+        async function importRemoteBackup(targetId, file) {
+            try {
+                var fd = new FormData();
+                fd.append('action', 'backup-remote-import');
+                fd.append('csrf_token', CSRF_TOKEN);
+                fd.append('target_id', targetId);
+                fd.append('file', file);
+                var res = await fetch('api.php', { method: 'POST', body: fd });
+                var json = await res.json();
+                if (!json.success) throw new Error(json.message);
+                showToast(t('toast.remote_import_success'), 'success');
+                refresh();
+            } catch (err) {
+                showToast(t('toast.remote_import_failed', { message: localizeRemoteMessage(err.message || String(err)) }), 'error');
+            }
+        }
+
+        function deleteRemoteBackup(targetId, file) {
+            showModal(t('settings.remote_delete'), t('settings.remote_delete_confirm'), async function() {
+                closeModal();
+                try {
+                    var fd = new FormData();
+                    fd.append('action', 'backup-remote-delete');
+                    fd.append('csrf_token', CSRF_TOKEN);
+                    fd.append('target_id', targetId);
+                    fd.append('file', file);
+                    var res = await fetch('api.php', { method: 'POST', body: fd });
+                    var json = await res.json();
+                    if (!json.success) throw new Error(json.message);
+                    showToast(t('toast.remote_delete_success'), 'success');
+                    await loadRemoteFiles(targetId);
+                } catch (err) {
+                    showToast(t('toast.remote_delete_failed', { message: localizeRemoteMessage(err.message || String(err)) }), 'error');
+                }
             });
         }
 
@@ -5795,6 +6372,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 fd.append('retention_monthly', monthlyEl.value);
                 fd.append('retention_yearly', yearlyEl.value);
                 fd.append('storage_limit_mb', limitEl.value);
+                remoteTargets = collectRemoteTargets();
+                fd.append('remote_targets', JSON.stringify(remoteTargets));
                 var res = await fetch('api.php', { method: 'POST', body: fd });
                 var json = await res.json();
                 if (json.success) {
@@ -5810,24 +6389,43 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             }
         });
 
-        cronCopyBtn.addEventListener('click', function() {
-            var text = cronLineEl.textContent;
-            var done = function() {
-                var orig = cronCopyBtn.textContent;
-                cronCopyBtn.textContent = t('settings.cron_copied');
-                setTimeout(function() { cronCopyBtn.textContent = orig; }, 1500);
-            };
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text).then(done, done);
-            } else {
-                // Fallback: select + execCommand
-                var range = document.createRange();
-                range.selectNode(cronLineEl);
-                window.getSelection().removeAllRanges();
-                window.getSelection().addRange(range);
-                try { document.execCommand('copy'); done(); } catch (e) { done(); }
-                window.getSelection().removeAllRanges();
+        if (remoteAddBtn) {
+            remoteAddBtn.addEventListener('click', function() {
+                remoteTargets = collectRemoteTargets();
+                remoteTargets.push(makeTarget(remoteSelectEl.value));
+                renderRemoteTargets();
+            });
+        }
+
+        window.addEventListener('message', function(event) {
+            if (event.origin === window.location.origin && event.data && event.data.type === 'nibbly:backup-oauth') {
+                refresh();
+                showToast(t('toast.remote_oauth_connected'), 'success');
             }
+        });
+
+        cronCopyBtns.forEach(function(cronCopyBtn) {
+            cronCopyBtn.addEventListener('click', function() {
+                var codeEl = document.getElementById(cronCopyBtn.dataset.copyCode);
+                if (!codeEl) return;
+                var text = codeEl.textContent;
+                var done = function() {
+                    var orig = cronCopyBtn.textContent;
+                    cronCopyBtn.textContent = t('settings.cron_copied');
+                    setTimeout(function() { cronCopyBtn.textContent = orig; }, 1500);
+                };
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(done, done);
+                } else {
+                    // Fallback: select + execCommand
+                    var range = document.createRange();
+                    range.selectNode(codeEl);
+                    window.getSelection().removeAllRanges();
+                    window.getSelection().addRange(range);
+                    try { document.execCommand('copy'); done(); } catch (e) { done(); }
+                    window.getSelection().removeAllRanges();
+                }
+            });
         });
 
         // Refresh whenever the backup tab is shown (lazy: only fetch when visible).
@@ -6695,7 +7293,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     // Delete user
     function deleteUserConfirm(userId, username) {
-        showConfirmModal(
+        showModal(
             t('settings.delete_user'),
             t('settings.delete_user_confirm', {username: username}),
             function() {
@@ -6708,6 +7306,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     .then(r => r.json())
                     .then(result => {
                         if (result.success) {
+                            closeModal();
                             loadUsers();
                             showToast(result.message, 'success');
                         } else {
@@ -6725,14 +7324,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     document.querySelectorAll('.settings-tab-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
             var tab = this.getAttribute('data-settings-tab');
-            if (tab === 'users' && !_usersLoaded) {
-                _usersLoaded = true;
-                loadUsers();
-            }
-            if (tab === 'menus' && !_menuOrderLoaded) {
-                _menuOrderLoaded = true;
-                loadMenuOrder();
-            }
+            loadSettingsTabData(tab);
         });
     });
 

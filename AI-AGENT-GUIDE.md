@@ -670,11 +670,13 @@ The dashboard's "Automated backups" card is the operator surface for `cli/backup
 **Setup:**
 1. Configure retention and storage limit in the dashboard (Backup tab → Automated backups).
 2. Toggle "Scheduled backups enabled".
-3. Copy the cron line shown in the dashboard into your hoster's cron UI (Plesk, cPanel, or `crontab -e`). The line includes the absolute site path so it works as-is.
+3. Create a daily scheduled task, usually at 03:00. In Plesk prefer "Run a PHP script": enter the dashboard's script path and set arguments to `--action=run`. This avoids relying on a `php` command in Plesk's `PATH`. In cPanel or shell cron, use `php /path/to/site/cli/backup.php --action=run` as the job body, replacing `php` with the absolute PHP CLI binary path if needed.
 
 **Default retention** (grandfather-father-son): 7 daily, 4 weekly, 12 monthly, 3 yearly — total ~26 long-term snapshots. Each backup is auto-tagged with the highest tier whose bucket (year, month, week, day) is still empty for "now," so a single nightly run fills weekly/monthly/yearly slots automatically when their bucket opens.
 
 **Storage budget:** The hard `storage_limit_mb` cap evicts the oldest non-manual backups when total backup size exceeds the limit, even if they're still within their retention window. Manual backups are exempt — the admin asked for them on purpose.
+
+**Remote targets:** Scheduled backups can upload the finished ZIP to external storage after local creation/pruning. The supported target types are Dropbox, Google Drive, Microsoft OneDrive, SFTP/SCP, S3-compatible object storage, and WebDAV. Target configuration lives under `backup.remote_targets` in `content/settings.json`; the dashboard masks saved secrets, and empty secret fields keep their previous value. Remote upload is intentionally a post-create step: local backup creation remains the source of truth, and failed remote uploads are reported without deleting the local ZIP. Dropbox, Google Drive, and Microsoft OneDrive support OAuth PKCE connect flows from the dashboard: enter the provider app/client ID, save/connect, and the callback stores the refresh token for cron uploads. Google/Microsoft client secrets are optional so both public PKCE clients and confidential web apps can be configured. ZIP files use `{site-domain}-backup-YYYY-MM-DD_HHMMSS-{tier}.zip`, and remote uploads are placed in a per-site subfolder below the configured remote path.
 
 **CLI usage** (also runnable directly, e.g. for ad-hoc operations):
 
@@ -684,6 +686,8 @@ php cli/backup.php --action=prune      # apply retention without creating
 php cli/backup.php --action=status     # current state
 php cli/backup.php --action=list       # all stored backups
 php cli/backup.php --action=run --tier=manual  # force a manual backup even when scheduled is off
+php cli/backup.php --action=run --skip-remote  # create/prune locally only
+php cli/backup.php --action=upload-remote --file=example.com-backup-YYYY-MM-DD_HHMMSS-daily.zip
 ```
 
 Lock-file (`backups/.backup.lock`) prevents concurrent runs. Stale locks (>30 min old) are auto-cleared. Exit codes: `0` success, `1` failure, `2` invalid args, `3` lock contention — useful for cron monitoring scripts.
