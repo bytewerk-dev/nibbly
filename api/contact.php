@@ -158,6 +158,7 @@ $method = $emailConfig['method'] ?? 'inactive';
 $to = $emailConfig['recipientEmail'] ?? '';
 $fromEmail = $emailConfig['fromEmail'] ?? $to;
 $fromName = $emailConfig['fromName'] ?? '';
+$replyToEmail = filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : '';
 $isEmailConfigured = $emailConfig
     && $method !== 'inactive'
     && !empty($to)
@@ -178,13 +179,15 @@ if ($isEmailConfigured && $method === 'smtp') {
         $body,
         $fromEmail,
         $fromName,
-        $email  // Reply-To
+        $replyToEmail
     );
 } elseif ($isEmailConfigured && $method === 'sendmail') {
     // PHP mail() — requires server IP to be whitelisted for sending
     $headers = [];
     $headers[] = 'From: ' . ($fromName ? "=?UTF-8?B?" . base64_encode($fromName) . "?= <$fromEmail>" : $fromEmail);
-    $headers[] = 'Reply-To: ' . $email;
+    if ($replyToEmail) {
+        $headers[] = 'Reply-To: ' . $replyToEmail;
+    }
     $headers[] = 'Content-Type: text/plain; charset=UTF-8';
     $headers[] = 'X-Mailer: Nibbly CMS';
 
