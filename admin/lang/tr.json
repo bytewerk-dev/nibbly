@@ -132,6 +132,7 @@
     "settings.admin_language_default": "Varsayılan ({lang})",
     "settings.save_language": "Dili Kaydet",
     "settings.password": "Şifre",
+    "settings.my_account": "Hesabım",
     "settings.change_password": "Şifre Değiştir",
     "settings.current_password": "Mevcut Şifre",
     "settings.new_password": "Yeni Şifre",

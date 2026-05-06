@@ -124,3 +124,46 @@ The extracted CSS is saved to `css/page-{slug}.css` and automatically linked via
 2. The page appears in navigation automatically via auto-discovery. To control ordering or labels, add it to `includes/nav-config.php` (`$PAGE_MAPPING` + `$NAV_ITEMS`)
 3. Copy images to `assets/images/` and update paths if needed
 4. Test with `php -S localhost:3000 router.php`
+
+---
+
+## backup.php — Site Backup Runner
+
+Creates full-site ZIP backups for cron jobs and ad-hoc maintenance. The dashboard writes backup policy to `content/settings.json`; the CLI reads the same settings.
+
+### Usage
+
+```bash
+# Run from project root
+php cli/backup.php --action=run
+```
+
+### Actions
+
+| Action | Description |
+|---|---|
+| `run` | Create one full-site ZIP, apply retention, then upload enabled remote targets |
+| `prune` | Apply retention and storage limits without creating a new backup |
+| `status` | Print schedule, retention, storage, and remote-target status |
+| `list` | List stored backup ZIP files |
+| `upload-remote` | Upload an existing backup ZIP to enabled remote targets |
+
+### Examples
+
+```bash
+# Nightly cron job in shell/cPanel. In Plesk, prefer "Run a PHP script":
+# script path: /path/to/site/cli/backup.php
+# arguments:   --action=run
+0 3 * * * php /path/to/site/cli/backup.php --action=run
+
+# Manual protected snapshot
+php cli/backup.php --action=run --tier=manual
+
+# Local ZIP only, no remote upload
+php cli/backup.php --action=run --skip-remote
+
+# Retry remote upload for an existing backup
+php cli/backup.php --action=upload-remote --file=example.com-backup-2026-05-02_030000-daily.zip
+```
+
+Remote targets supported by the dashboard: Dropbox, Google Drive, Microsoft OneDrive, SFTP/SCP, S3-compatible storage, and WebDAV. Dropbox, Google Drive, and OneDrive include browser-based OAuth connect flows for refresh-token based cron uploads. Remote uploads are placed in a per-site subfolder below the configured remote path.

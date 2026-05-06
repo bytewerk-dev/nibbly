@@ -132,6 +132,7 @@
     "settings.admin_language_default": "Par défaut ({lang})",
     "settings.save_language": "Enregistrer la langue",
     "settings.password": "Mot de passe",
+    "settings.my_account": "Mon compte",
     "settings.change_password": "Changer le mot de passe",
     "settings.current_password": "Mot de passe actuel",
     "settings.new_password": "Nouveau mot de passe",

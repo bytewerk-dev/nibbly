@@ -248,15 +248,15 @@ if (!empty($_GET['redirect'])) {
     if ($loginMode === 'auto') {
         $_SESSION['redirect_after_login'] = $sourceUrl;
     } else {
-        $_SESSION['redirect_after_login'] = 'dashboard.php';
+        $_SESSION['redirect_after_login'] = 'dashboard';
     }
 } elseif (!isset($_SESSION['redirect_after_login'])) {
-    $_SESSION['redirect_after_login'] = 'dashboard.php';
+    $_SESSION['redirect_after_login'] = 'dashboard';
 }
 
 // Already logged in? Redirect to saved page
 if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
-    $redirect = $_SESSION['redirect_after_login'] ?? 'dashboard.php';
+    $redirect = $_SESSION['redirect_after_login'] ?? 'dashboard';
     unset($_SESSION['redirect_after_login']);
     header('Location: ' . $redirect);
     exit;
@@ -313,7 +313,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['email_missing'] = true;
             }
 
-            $redirect = $_SESSION['redirect_after_login'] ?? 'dashboard.php';
+            $redirect = $_SESSION['redirect_after_login'] ?? 'dashboard';
             unset($_SESSION['redirect_after_login']);
             header('Location: ' . $redirect);
             exit;

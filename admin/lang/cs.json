@@ -132,6 +132,7 @@
     "settings.admin_language_default": "Výchozí ({lang})",
     "settings.save_language": "Uložit jazyk",
     "settings.password": "Heslo",
+    "settings.my_account": "Můj účet",
     "settings.change_password": "Změnit heslo",
     "settings.current_password": "Současné heslo",
     "settings.new_password": "Nové heslo",

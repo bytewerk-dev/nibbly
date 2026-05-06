@@ -12,9 +12,10 @@
  *   php cli/backup.php --action=prune       # apply retention only
  *   php cli/backup.php --action=status      # show current state
  *   php cli/backup.php --action=list        # list backup files
+ *   php cli/backup.php --action=upload-remote --file=example.com-backup-...
  *
- * Cron example (one nightly run, log appended):
- *   0 3 * * * cd /path/to/site && php cli/backup.php --action=run >> backups/backup.log 2>&1
+ * Cron example (one nightly run):
+ *   0 3 * * * php /path/to/site/cli/backup.php --action=run
  *
  * Exit codes:
  *   0  success (or status/list completed)
@@ -27,7 +28,7 @@ $projectRoot = dirname(__DIR__);
 
 if (!file_exists($projectRoot . '/router.php')) {
     fwrite(STDERR, "Error: Run this script from the Nibbly project root.\n");
-    fwrite(STDERR, "  cd /path/to/nibbly && php cli/backup.php --action=run\n");
+    fwrite(STDERR, "  php /path/to/nibbly/cli/backup.php --action=run\n");
     exit(1);
 }
 
@@ -57,10 +58,15 @@ Actions:
             a new backup. Useful after manually changing settings.
   status    Print current backup state, last run, retention settings.
   list      List backup files with size and tier.
+  upload-remote
+            Upload an existing backup file to enabled remote targets.
 
 Options:
   --tier=TIER       Force a specific tier (daily|weekly|monthly|yearly|manual)
                     instead of letting backupTierFor() pick. For run only.
+  --skip-remote     Create/prune locally without uploading remote targets.
+  --file=FILENAME   Backup filename for upload-remote.
+  --target=ID       Upload to one configured remote target ID only.
   --quiet           Suppress per-file output, just print final summary.
   --help            Show this help.
 
@@ -77,7 +83,12 @@ USAGE;
 $action = $opts['action'];
 $quiet = !empty($opts['quiet']);
 
-require_once $projectRoot . '/admin/config.php';
+$configFile = $projectRoot . '/admin/config.php';
+if (!is_file($configFile)) {
+    fwrite(STDERR, "Error: admin/config.php not found. Run admin/setup.php first.\n");
+    exit(1);
+}
+require_once $configFile;
 require_once $projectRoot . '/includes/backup-helper.php';
 
 if (!defined('BACKUP_PATH')) {
@@ -111,13 +122,14 @@ switch ($action) {
         }
 
         try {
-            $result = backupWithLock(function() use ($tier) {
+            $skipRemote = !empty($GLOBALS['opts']['skip-remote']);
+            $result = backupWithLock(function() use ($tier, $skipRemote) {
                 $started = time();
                 if (!($GLOBALS['quiet'] ?? false)) {
                     echo "[" . date('c', $started) . "] Backup run starting (tier="
                         . ($tier ?? 'auto') . ")...\n";
                 }
-                return backupRun($started, $tier);
+                return backupRun($started, $tier, !$skipRemote);
             });
         } catch (BackupLockException $e) {
             fwrite(STDERR, $e->getMessage() . "\n");
@@ -133,6 +145,12 @@ switch ($action) {
                     foreach ($result['deleted'] as $f) echo "  - $f\n";
                 }
             }
+            if (!$quiet && !empty($result['remote'])) {
+                echo "Remote uploads:\n";
+                foreach ($result['remote'] as $remote) {
+                    echo "  - {$remote['name']}: " . ($remote['ok'] ? 'ok' : 'failed') . " ({$remote['message']})\n";
+                }
+            }
             $status = backupStatus();
             echo "Total stored: {$status['count']} backups, " . fmtSize($status['total_bytes']) . "\n";
             exit(0);
@@ -142,7 +160,7 @@ switch ($action) {
         }
 
     case 'prune':
-        $deleted = withLock(fn() => backupPrune());
+        $deleted = backupWithLock(fn() => backupPrune());
         echo "Pruned: " . count($deleted) . " backup(s)\n";
         if (!$quiet) {
             foreach ($deleted as $f) echo "  - $f\n";
@@ -167,6 +185,12 @@ switch ($action) {
         if ($s['last_message']) {
             echo "Last message: {$s['last_message']}\n";
         }
+        echo "Remote targets: " . count($s['remote_targets']) . "\n";
+        foreach ($s['remote_targets'] as $target) {
+            echo "  {$target['id']} ({$target['type']}): "
+                . ($target['enabled'] ? 'enabled' : 'disabled')
+                . ', last=' . ($target['last_status'] ?: '-') . "\n";
+        }
         exit(0);
 
     case 'list':
@@ -184,6 +208,29 @@ switch ($action) {
                 . date('Y-m-d H:i:s', $b['mtime']) . "\n";
         }
         exit(0);
+
+    case 'upload-remote':
+        $file = $opts['file'] ?? '';
+        if (!backupIsPoolFilename($file)) {
+            fwrite(STDERR, "Invalid or missing --file value.\n");
+            exit(2);
+        }
+        if (!is_file(BACKUP_PATH . $file)) {
+            fwrite(STDERR, "Backup file not found: $file\n");
+            exit(1);
+        }
+        try {
+            $results = backupWithLock(fn() => backupUploadRemoteTargets($file, $opts['target'] ?? null));
+        } catch (BackupLockException $e) {
+            fwrite(STDERR, $e->getMessage() . "\n");
+            exit(3);
+        }
+        $failed = 0;
+        foreach ($results as $remote) {
+            echo "{$remote['name']}: " . ($remote['ok'] ? 'ok' : 'failed') . " ({$remote['message']})\n";
+            if (!$remote['ok']) $failed++;
+        }
+        exit($failed > 0 ? 1 : 0);
 
     default:
         fwrite(STDERR, "Unknown action: $action (try --help)\n");

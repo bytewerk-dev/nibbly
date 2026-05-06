@@ -13,8 +13,10 @@ A flat-file CMS built on PHP with no database. Content lives in JSON files, page
 - **Render components** -- pricing tables, FAQ accordions, team grids, feature grids, galleries, timelines, stats, testimonials, comparison tables, news listings, breadcrumbs
 - **Dark/light theme** -- toggle with localStorage persistence
 - **Custom layouts** -- full PHP template control with editable field API
-- **Automatic backups** -- content versioning with restore via admin panel
+- **Automatic backups** -- per-page JSON history with restore via admin panel
 - **Site backup & restore** -- download full site as ZIP, restore from backup
+- **Scheduled backups** -- cron-friendly full-site ZIP backups with retention and storage limits
+- **Remote backup targets** -- upload scheduled ZIPs to Dropbox, Google Drive, OneDrive, SFTP/SCP, S3-compatible storage, or WebDAV
 - **Contact form** -- built-in form with file-based message storage, optional SMTP
 - **News/blog system** -- post management with listing and single-post views
 - **Event management** -- calendar events with multi-language support

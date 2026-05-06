@@ -9,7 +9,7 @@
 // VERSION
 // ============================================================
 
-define('NIBBLY_VERSION', '1.1.0');
+define('NIBBLY_VERSION', '1.2.0');
 
 // Default favicon path used as fallback by the admin UI before settings.json
 // values are applied. Override in settings.json -> "favicon".
@@ -20,6 +20,9 @@ define('NIBBLY_DEFAULT_FAVICON', '/assets/images/favicon.svg');
 // ============================================================
 
 define('SITE_NAME', 'My Website');
+// Optional stable identifier for backup filenames and remote folders.
+// If omitted, Nibbly derives it from the request host or hosting path.
+// define('NIBBLY_SITE_DOMAIN', 'example.com');
 
 // ============================================================
 // LANGUAGES
@@ -58,3 +61,10 @@ define('USERS_PATH', __DIR__ . '/../content/users.json');
 define('MAX_BACKUPS', 30);
 define('SESSION_LIFETIME', 3600); // 1 hour
 
+// ============================================================
+// REMOTE BACKUP OAUTH
+// ============================================================
+// Public Nibbly OAuth broker for Dropbox connect flows. The broker only
+// handles OAuth codes/tokens; backup ZIP files upload directly from this
+// installation to the selected remote target.
+define('NIBBLY_AUTH_BROKER_URL', 'https://auth.nibbly.dev');
