@@ -129,7 +129,7 @@ The extracted CSS is saved to `css/page-{slug}.css` and automatically linked via
 
 ## backup.php — Site Backup Runner
 
-Creates full-site ZIP backups for cron jobs and ad-hoc maintenance. The dashboard writes backup policy to `content/settings.json`; the CLI reads the same settings.
+Creates full-site ZIP backups for cron jobs and ad-hoc maintenance. The dashboard writes backup policy to `content/settings.json`; the CLI reads the same settings. If a hosting plan does not allow server cron jobs, the dashboard can also generate a secret web-cron URL for external schedulers.
 
 ### Usage
 
@@ -155,6 +155,9 @@ php cli/backup.php --action=run
 # script path: /path/to/site/cli/backup.php
 # arguments:   --action=run
 0 3 * * * php /path/to/site/cli/backup.php --action=run
+
+# Web-cron fallback for external schedulers such as cron-job.org or EasyCron:
+# https://example.com/api/backup-cron.php?token=<secret-token>
 
 # Manual protected snapshot
 php cli/backup.php --action=run --tier=manual

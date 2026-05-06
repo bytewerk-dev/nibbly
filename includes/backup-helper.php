@@ -44,6 +44,8 @@ function backupDefaults() {
             'yearly'  => 3,
         ],
         'storage_limit_mb' => 2048,
+        'cron_mode'        => 'server',
+        'web_cron_token'   => '',
         'remote_targets'   => [],
         'last_run'         => null,
         'last_status'      => null,  // 'success' | 'error' | null
@@ -62,8 +64,25 @@ function backupConfig() {
         $merged['retention'][$tier] = max(0, (int)($merged['retention'][$tier] ?? 0));
     }
     $merged['storage_limit_mb'] = max(0, (int)($merged['storage_limit_mb'] ?? 0));
+    $merged['cron_mode'] = ($merged['cron_mode'] ?? 'server') === 'web' ? 'web' : 'server';
+    $merged['web_cron_token'] = is_string($merged['web_cron_token'] ?? null) ? $merged['web_cron_token'] : '';
     $merged['remote_targets'] = backupNormalizeRemoteTargets($merged['remote_targets'] ?? []);
     return $merged;
+}
+
+function backupGenerateWebCronToken() {
+    return bin2hex(random_bytes(32));
+}
+
+function backupEnsureWebCronToken() {
+    $config = backupConfig();
+    $token = trim((string)($config['web_cron_token'] ?? ''));
+    if ($token !== '') {
+        return $token;
+    }
+    $token = backupGenerateWebCronToken();
+    backupSaveConfig(['web_cron_token' => $token]);
+    return $token;
 }
 
 function backupRemoteProviders() {
@@ -1720,6 +1739,8 @@ function backupStatus() {
         'enabled'          => (bool)$config['enabled'],
         'retention'        => $config['retention'],
         'storage_limit_mb' => $config['storage_limit_mb'],
+        'cron_mode'        => $config['cron_mode'],
+        'web_cron_token'   => backupEnsureWebCronToken(),
         'last_run'         => $config['last_run'],
         'last_status'      => $config['last_status'],
         'last_message'     => $config['last_message'],
