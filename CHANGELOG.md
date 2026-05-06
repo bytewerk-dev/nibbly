@@ -52,6 +52,31 @@ All notable changes to Nibbly are documented in this file. The project follows
   unverified-publisher status. Other remote target types do not depend on those
   provider approvals.
 
+### Changed files
+- `.gitignore`
+- `AI-AGENT-GUIDE.md`
+- `README.md`
+- `admin/api.php`
+- `admin/config.example.php`
+- `admin/dashboard.php`
+- `admin/index.php`
+- `admin/setup.php`
+- `admin/style.css`
+- `admin/lang/cs.json`
+- `admin/lang/de.json`
+- `admin/lang/en.json`
+- `admin/lang/es.json`
+- `admin/lang/fr.json`
+- `admin/lang/it.json`
+- `admin/lang/pl.json`
+- `admin/lang/pt.json`
+- `admin/lang/tr.json`
+- `architecture.md`
+- `cli/README.md`
+- `cli/backup.php`
+- `css/nibbly-admin-components.css`
+- `includes/backup-helper.php`
+
 ## [1.1.0] — 2026-04-27
 
 ### Added
