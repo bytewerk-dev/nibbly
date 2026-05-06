@@ -316,7 +316,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // VERSION
 // ============================================================
 
-define('NIBBLY_VERSION', '1.2.0');
+define('NIBBLY_VERSION', '1.2.1');
 
 // Default favicon path used as fallback by the admin UI before settings.json
 // values are applied. Override in settings.json -> "favicon".
