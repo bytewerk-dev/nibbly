@@ -3402,6 +3402,10 @@ input.color-picker::-moz-color-swatch,
     color: var(--nb-text);
     grid-column: 1 / -1;
 }
+.scheduled-form__toggle.toggle-label {
+    justify-content: space-between;
+    padding: 0;
+}
 .scheduled-form__hint {
     margin: 0;
     font-size: 0.8125rem;
@@ -3412,6 +3416,18 @@ input.color-picker::-moz-color-swatch,
     grid-column: 1 / -1;
     margin-top: 0;
     margin-bottom: var(--nb-space-2);
+}
+.scheduled-form__mode {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--nb-space-2);
+    max-width: 40rem;
+}
+.scheduled-form__mode > label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--nb-text);
 }
 .scheduled-form__fieldset {
     border: 1px solid var(--nb-border);
@@ -3466,7 +3482,7 @@ input.color-picker::-moz-color-swatch,
     flex-direction: column;
     gap: var(--nb-space-3);
     grid-column: 2;
-    grid-row: 3 / span 2;
+    grid-row: 4 / span 2;
     width: 100%;
     max-width: 100%;
 }
@@ -3475,7 +3491,7 @@ input.color-picker::-moz-color-swatch,
     justify-content: flex-end;
     align-self: center;
     grid-column: 2;
-    grid-row: 4;
+    grid-row: 5;
 }
 
 /* Remote backup targets */
@@ -3695,6 +3711,10 @@ input.color-picker::-moz-color-swatch,
     font-size: 0.8125rem;
     color: var(--nb-text-muted);
     line-height: 1.4;
+}
+.scheduled-cron .scheduled-cron__hint {
+    padding-top: var(--nb-space-2);
+    padding-bottom: var(--nb-space-4);
 }
 .scheduled-cron__line {
     display: grid;

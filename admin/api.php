@@ -3231,6 +3231,9 @@ switch ($action) {
         if (isset($_POST['storage_limit_mb'])) {
             $patch['storage_limit_mb'] = max(0, (int)$_POST['storage_limit_mb']);
         }
+        if (isset($_POST['cron_mode'])) {
+            $patch['cron_mode'] = $_POST['cron_mode'] === 'web' ? 'web' : 'server';
+        }
         $retention = [];
         foreach (['daily', 'weekly', 'monthly', 'yearly'] as $tier) {
             $key = "retention_$tier";

@@ -1228,11 +1228,29 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
             <!-- Settings form -->
             <form id="scheduledBackupForm" class="scheduled-form">
-                <label class="scheduled-form__toggle">
-                    <input type="checkbox" id="scheduledEnabled" name="enabled">
-                    <span><strong><?php echo t('settings.scheduled_enabled'); ?></strong></span>
+                <label class="toggle-label scheduled-form__toggle">
+                    <span><?php echo t('settings.scheduled_enabled'); ?></span>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="scheduledEnabled" name="enabled">
+                        <span class="toggle-slider"></span>
+                    </div>
                 </label>
                 <p class="scheduled-form__hint"><?php echo t('settings.scheduled_enabled_hint'); ?></p>
+
+                <div class="scheduled-form__mode">
+                    <label><?php echo t('settings.cron_mode'); ?></label>
+                    <div class="radio-group radio-group--segmented">
+                        <label class="radio-option">
+                            <input type="radio" name="scheduledCronMode" value="server" checked>
+                            <span><?php echo t('settings.cron_mode_server'); ?></span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="scheduledCronMode" value="web">
+                            <span><?php echo t('settings.cron_mode_web'); ?></span>
+                        </label>
+                    </div>
+                    <p class="scheduled-form__hint"><?php echo t('settings.cron_mode_hint'); ?></p>
+                </div>
 
                 <fieldset class="scheduled-form__fieldset">
                     <legend><?php echo t('settings.retention_title'); ?></legend>
@@ -1332,6 +1350,14 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     <span><?php echo t('settings.cron_shell_command'); ?></span>
                     <code id="cronShellCommand"><?php echo htmlspecialchars('/absolute/path/to/php ' . escapeshellarg($backupScriptPath) . ' --action=run'); ?></code>
                 </div>
+                <div class="scheduled-cron__line">
+                    <span><?php echo t('settings.web_cron_url'); ?></span>
+                    <code id="webCronUrl">—</code>
+                    <button type="button" class="btn btn-secondary btn-sm" data-copy-code="webCronUrl">
+                        <?php echo t('settings.cron_copy'); ?>
+                    </button>
+                </div>
+                <p class="scheduled-cron__hint"><?php echo t('settings.web_cron_hint'); ?></p>
             </details>
         </div>
     </div>
@@ -5700,6 +5726,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var storageDatesEl = document.getElementById('scheduledStorageDates');
         var form           = document.getElementById('scheduledBackupForm');
         var enabledEl      = document.getElementById('scheduledEnabled');
+        var cronModeEls    = Array.from(document.querySelectorAll('input[name="scheduledCronMode"]'));
+        var webCronUrlEl   = document.getElementById('webCronUrl');
         var dailyEl        = document.getElementById('retentionDaily');
         var weeklyEl       = document.getElementById('retentionWeekly');
         var monthlyEl      = document.getElementById('retentionMonthly');
@@ -5777,6 +5805,21 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             if (isNaN(d.getTime())) return '—';
             return d.toLocaleString();
         }
+        function selectedCronMode() {
+            var checked = cronModeEls.find(function(input) { return input.checked; });
+            return checked ? checked.value : 'server';
+        }
+        function setCronMode(mode) {
+            cronModeEls.forEach(function(input) {
+                input.checked = input.value === (mode === 'web' ? 'web' : 'server');
+            });
+        }
+        function webCronUrl(token) {
+            if (!token) return '—';
+            var url = new URL('../api/backup-cron.php', window.location.href);
+            url.searchParams.set('token', token);
+            return url.toString();
+        }
 
         async function refresh() {
             try {
@@ -5787,6 +5830,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
                 // Form fields
                 enabledEl.checked = !!s.enabled;
+                setCronMode(s.cron_mode || 'server');
+                if (webCronUrlEl) webCronUrlEl.textContent = webCronUrl(s.web_cron_token || '');
                 dailyEl.value     = s.retention.daily;
                 weeklyEl.value    = s.retention.weekly;
                 monthlyEl.value   = s.retention.monthly;
@@ -6367,6 +6412,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 fd.append('action', 'backup-update-settings');
                 fd.append('csrf_token', CSRF_TOKEN);
                 fd.append('enabled', enabledEl.checked ? 'true' : 'false');
+                fd.append('cron_mode', selectedCronMode());
                 fd.append('retention_daily', dailyEl.value);
                 fd.append('retention_weekly', weeklyEl.value);
                 fd.append('retention_monthly', monthlyEl.value);
