@@ -203,6 +203,7 @@ body.edit-mode-active .editable-section.editable-empty:hover {
 }
 
 body.edit-mode-active .editable-section:hover .editable-overlay,
+body.edit-mode-active .editable-section.is-overlay-active .editable-overlay,
 body.edit-mode-active .editable-overlay:hover {
     opacity: 1;
     pointer-events: auto;
@@ -1779,6 +1780,7 @@ body.edit-mode-active .editable-list-item:hover {
 }
 
 body.edit-mode-active .editable-list-item:hover .editable-list-overlay,
+body.edit-mode-active .editable-list-item.is-overlay-active .editable-list-overlay,
 body.edit-mode-active .editable-list-overlay:hover {
     opacity: 1;
     pointer-events: auto;
