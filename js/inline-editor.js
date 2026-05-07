@@ -955,7 +955,7 @@
                 from: entry.to,
                 to: entry.from
             });
-            executeSectionReorder(entry.from, entry.to, entry.contentPage);
+            executeSectionReorder(entry.to, entry.from, entry.contentPage);
         } else {
             // Snapshot-based undo
             EditorConfig.redoStack.push({
@@ -991,7 +991,7 @@
                 from: entry.to,
                 to: entry.from
             });
-            executeSectionReorder(entry.to, entry.from, entry.contentPage);
+            executeSectionReorder(entry.from, entry.to, entry.contentPage);
         } else {
             EditorConfig.undoStack.push({
                 type: 'snapshot',
@@ -1395,6 +1395,34 @@
         return EditorConfig.currentPage;
     }
 
+    function keepOverlayOpenWhileCrossing(owner, overlay) {
+        let hideTimer = null;
+
+        const show = () => {
+            if (hideTimer) {
+                clearTimeout(hideTimer);
+                hideTimer = null;
+            }
+            owner.classList.add('is-overlay-active');
+        };
+
+        const hideIfInactive = () => {
+            hideTimer = setTimeout(() => {
+                if (owner.matches(':hover') || overlay.matches(':hover') || overlay.contains(document.activeElement)) {
+                    return;
+                }
+                owner.classList.remove('is-overlay-active');
+            }, 650);
+        };
+
+        owner.addEventListener('mouseenter', show);
+        owner.addEventListener('mouseleave', hideIfInactive);
+        overlay.addEventListener('mouseenter', show);
+        overlay.addEventListener('mouseleave', hideIfInactive);
+        overlay.addEventListener('focusin', show);
+        overlay.addEventListener('focusout', hideIfInactive);
+    }
+
     function attachEditHandlers() {
         const sections = document.querySelectorAll('.editable-section');
 
@@ -1429,6 +1457,7 @@
                 <span class="overlay-drag-handle" title="${t('drag_reorder')}">${Icons.drag}</span>
             `;
             wrapper.appendChild(overlay);
+            keepOverlayOpenWhileCrossing(wrapper, overlay);
 
             // Apply hidden state
             if (isHidden) {
@@ -1811,11 +1840,12 @@
         const pageData = EditorConfig.contentData[contentPage];
         if (!pageData) return;
 
+        pushUndoState();
         const newSection = createNewSection(type, pageData.sections.length);
         const insertIndex = afterIndex + 1;
         pageData.sections.splice(insertIndex, 0, newSection);
 
-        saveAndInsertSection(insertIndex, contentPage);
+        saveAndInsertSection(insertIndex, contentPage, false);
     }
 
     function addSection(type) {
@@ -1824,12 +1854,13 @@
         const pageData = EditorConfig.contentData[addContentPage];
         if (!pageData) return;
 
+        pushUndoState();
         const newSection = createNewSection(type, pageData.sections.length);
         const insertIndex = addAfterIndex + 1;
         pageData.sections.splice(insertIndex, 0, newSection);
 
         closeAddModal();
-        saveAndInsertSection(insertIndex, addContentPage);
+        saveAndInsertSection(insertIndex, addContentPage, false);
     }
 
     function createNewSection(type, count) {
@@ -1848,8 +1879,8 @@
      * re-wire handlers. Avoids a full page reload so the admin bar and
      * edit-mode state stay intact.
      */
-    async function saveAndInsertSection(index, contentPage) {
-        pushUndoState();
+    async function saveAndInsertSection(index, contentPage, shouldPushUndo = true) {
+        if (shouldPushUndo) pushUndoState();
         EditorConfig.dirtyPages.add(contentPage);
         updateUndoRedoButtons();
 
@@ -1987,13 +2018,13 @@
     /**
      * Populates an editor field with data from the section.
      */
-    function populateEditorField(field, section) {
+    function populateEditorField(field, section, defaults = {}) {
         const { fid, iid } = editorFieldIds(field);
         const fieldEl = document.getElementById(fid);
         if (!fieldEl) return;
 
         fieldEl.style.display = 'block';
-        const value = section[field.key] ?? '';
+        const value = section[field.key] ?? defaults[field.key] ?? '';
 
         switch (field.type) {
             case 'input':
@@ -2101,7 +2132,7 @@
 
         // Show and populate fields from registry
         for (const field of (def.fields || [])) {
-            populateEditorField(field, section);
+            populateEditorField(field, section, def.defaults || {});
 
             // Special preview triggers
             if (field.key === 'videoId') updateYoutubePreview();
@@ -3596,6 +3627,8 @@
 
     function saveLinkEditor() {
         const modal = document.getElementById('link-editor-modal');
+        const inlineInsert = modal._inlineInsert;
+        const editTarget = modal._editTarget;
         const newText = document.getElementById('link-editor-text').value;
         const newHref = document.getElementById('link-editor-href').value;
         const newTarget = document.getElementById('link-editor-target').checked ? '_blank' : '';
@@ -3610,9 +3643,8 @@
         closeLinkEditor();
 
         // Mode: inline insert (from floating toolbar)
-        if (modal._inlineInsert) {
-            const { field, savedRange } = modal._inlineInsert;
-            modal._inlineInsert = null;
+        if (inlineInsert) {
+            const { field, savedRange } = inlineInsert;
             if (newHref && savedRange) {
                 field.focus();
                 const sel = window.getSelection();
@@ -3636,7 +3668,8 @@
         }
 
         // Mode: editableLink field
-        const { element, page, fieldKey } = modal._editTarget;
+        if (!editTarget) return;
+        const { element, page, fieldKey } = editTarget;
 
         // Push undo state
         pushUndoState();
@@ -3823,6 +3856,7 @@
                 `;
                 item.style.position = 'relative';
                 item.appendChild(overlay);
+                keepOverlayOpenWhileCrossing(item, overlay);
 
                 // Apply hidden state
                 if (isItemHidden) {
@@ -4236,10 +4270,11 @@
         const pageData = EditorConfig.contentData[page];
         const items = getNestedObj(pageData, listKey) || {};
 
-        const arr = objectToArray(items);
+        const itemsAreArray = Array.isArray(items);
+        const arr = itemsAreArray ? [...items] : objectToArray(items);
         arr.splice(afterIndex + 1, 0, { ...defaults });
 
-        setNestedObj(pageData, listKey, arrayToNumberedObject(arr));
+        setNestedObj(pageData, listKey, itemsAreArray ? arr : arrayToNumberedObject(arr));
         EditorConfig.dirtyPages.add(page);
         updateUndoRedoButtons();
 
