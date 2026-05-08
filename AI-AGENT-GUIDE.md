@@ -184,6 +184,9 @@ The pattern is always the same:
 | `data-field` | all | Dot-notation key in JSON (e.g. `hero.title`) |
 | `data-editable-link` | links | JS discovers editable links via this attribute |
 | `data-editable-image` | images | JS discovers editable images via this attribute |
+| `data-editable-group` | component wrappers | Opens one modal for several custom-layout fields |
+| `data-group` | grouped component wrappers | Dot path used as the base for grouped fields |
+| `data-group-schema` | grouped component wrappers | JSON schema describing the grouped editor fields |
 | `data-editable-list` | list containers | Marks a repeating-items container |
 | `data-list-key` | list containers/items | Dot path to items object |
 | `data-list-index` | list items | Numeric index (0, 1, 2...) |
@@ -272,6 +275,69 @@ editableImage($page, $fieldKey, $defaultSrc = '', $defaultAlt = '', $class = '')
 editableLink($page, $fieldKey, $defaultText = '', $defaultHref = '#', $class = '', $attrs = '')
 // Link. Admin: <a data-editable-link data-page="..." data-field="...">
 // Visitor: plain <a>. JSON stores {text, href}.
+
+editableIcon($page, $fieldKey, $default = '', $class = '')
+// Icon token. Stores a plain text icon key and renders SVG from the icon set.
+```
+
+Icon keys are resolved through `content/settings/iconset.json` first. That file
+is site-owned and upgrade-safe. Nibbly also ships `includes/default-iconset.json`
+as the core fallback, and unknown icon keys render the `default` icon. Icon
+definitions may include an optional `viewBox`; if omitted, Nibbly uses
+`0 0 24 24`. Prefer `renderIconSvg($iconKey)` when rendering complete icons so
+custom viewBox values are preserved. `getIconSvg($iconKey)` remains available
+for legacy code that needs only inner SVG markup. The dashboard Icon Manager can
+import selected icons from a whitelisted Iconify set; imports are copied into the
+site-owned iconset JSON, so visitor pages do not depend on Iconify at runtime.
+
+### Editable Groups
+
+Use editable groups for custom-layout components whose fields belong together:
+feature cards, team cards, icon + title + text blocks, CTA cards, image + caption
+and copyright blocks, contact cards, and similar components.
+
+Groups are explicit. Do not infer them from DOM proximity. If an `h3` and a
+paragraph should be edited together, wrap them in an editable group or add
+`editableGroupAttrs()` to their component wrapper.
+
+```php
+<article class="feature-card"<?php echo editableGroupAttrs($_p, "features.items.$i", [
+    'label' => 'Feature',
+    'fields' => [
+        ['key' => 'icon', 'type' => 'icon', 'label' => 'Icon'],
+        ['key' => 'title', 'type' => 'text', 'label' => 'Title'],
+        ['key' => 'desc', 'type' => 'textarea', 'label' => 'Description'],
+        ['key' => 'link', 'type' => 'link', 'label' => 'Link'],
+    ],
+]); ?>>
+    <?php echo editableIcon($_p, "features.items.$i.icon", 'heart-pulse', 'feature-card__icon'); ?>
+    <h3><?php echo editableText($_p, "features.items.$i.title", 'Feature title'); ?></h3>
+    <p><?php echo editableText($_p, "features.items.$i.desc", 'Feature description'); ?></p>
+    <?php echo editableLink($_p, "features.items.$i.link", 'Learn more', '/contact', 'feature-card__link'); ?>
+</article>
+```
+
+Available group field types: `text`/`input`, `textarea`, `html`/`wysiwyg`,
+`select`, `checkbox`, `number`, `url`, `image`, `link`, and `icon`. Field keys
+are relative to the group key unless a field defines an absolute `path`.
+For `icon` fields, all icons from the icon set are selectable by default. Add an
+`icons` array to the field schema to restrict a picker to a contextual subset.
+
+For templates where adding attributes to the existing wrapper is awkward, use
+the admin-only wrapper helpers:
+
+```php
+<?php editableGroupStart($_p, 'hero.media', [
+    'label' => 'Image',
+    'fields' => [
+        ['key' => 'image', 'type' => 'image', 'label' => 'Image'],
+        ['key' => 'caption', 'type' => 'text', 'label' => 'Caption'],
+        ['key' => 'copyright', 'type' => 'text', 'label' => 'Copyright'],
+    ],
+]); ?>
+    <?php echo editableImage($_p, 'hero.media.image', 'assets/images/hero.jpg', 'Hero'); ?>
+    <figcaption><?php echo editableText($_p, 'hero.media.caption', 'Caption'); ?></figcaption>
+<?php editableGroupEnd(); ?>
 ```
 
 ### Editable Lists

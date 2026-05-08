@@ -500,6 +500,82 @@ function editableImageSplit($page, $srcFieldKey, $altFieldKey, $defaultSrc = '',
     return '<img src="' . htmlspecialchars($src) . '" alt="' . htmlspecialchars($alt) . '"' . $classAttr . '>';
 }
 
+/**
+ * Render an editable icon token for custom layouts.
+ * The value is intentionally stored as plain text (e.g. "heart-pulse",
+ * "check", "icon-service") so templates can map it to their own icon system.
+ */
+function editableIcon($page, $fieldKey, $default = '', $class = '') {
+    $data = loadContentCached($page);
+    $value = getNestedValue($data, $fieldKey);
+    if ($value === null) {
+        $value = $default;
+        if (isAdminLoggedIn()) {
+            autoGenerateContentField($page, $fieldKey, $value);
+        }
+    }
+
+    $hidden = isFieldHidden($data, $fieldKey);
+    $classAttr = trim('editable-field editable-field-icon ' . $class);
+    $safeValue = htmlspecialchars((string)$value);
+
+    if (isAdminLoggedIn()) {
+        $hiddenAttr = $hidden ? ' data-hidden="true"' : '';
+        return '<span class="' . htmlspecialchars($classAttr) . '" data-editable-icon data-page="' . htmlspecialchars($page) . '" data-field="' . htmlspecialchars($fieldKey) . '" data-icon="' . $safeValue . '"' . $hiddenAttr . '>'
+            . $safeValue
+            . '</span>';
+    }
+
+    if ($hidden) return '';
+    return '<span class="' . htmlspecialchars($class) . '" data-icon="' . $safeValue . '">' . $safeValue . '</span>';
+}
+
+// ============================================================
+// EDITABLE GROUPS (Custom Layout Composite Editors)
+// ============================================================
+
+/**
+ * Return HTML attributes for a custom editable group.
+ * Use on an existing component wrapper when several editable fields should be
+ * edited together in one modal (e.g. icon + title + text + link cards).
+ *
+ * @param string $page      JSON page name (e.g. 'en_home')
+ * @param string $groupKey  Dot-notation base key (e.g. 'features.0')
+ * @param array  $schema    ['label' => 'Feature', 'fields' => [...]]
+ * @return string HTML attributes string or empty for visitors
+ */
+function editableGroupAttrs($page, $groupKey, $schema = []) {
+    if (!isAdminLoggedIn()) return '';
+
+    $schemaJson = json_encode($schema, JSON_UNESCAPED_UNICODE);
+    if ($schemaJson === false) $schemaJson = '{}';
+
+    return ' data-editable-group'
+        . ' data-page="' . htmlspecialchars($page) . '"'
+        . ' data-group="' . htmlspecialchars($groupKey) . '"'
+        . ' data-group-schema="' . htmlspecialchars($schemaJson, ENT_QUOTES, 'UTF-8') . '"';
+}
+
+/**
+ * Start an admin-only editable group wrapper. The function echoes directly so
+ * templates can use `<?php editableGroupStart(...); ?>` without `echo`.
+ */
+function editableGroupStart($page, $groupKey, $schema = [], $attrs = '') {
+    if (!isAdminLoggedIn()) return '';
+    $extraAttrs = trim($attrs);
+    echo '<div class="editable-group"' . editableGroupAttrs($page, $groupKey, $schema) . ($extraAttrs ? ' ' . $extraAttrs : '') . '>';
+    return '';
+}
+
+/**
+ * Close an editable group wrapper opened with editableGroupStart().
+ */
+function editableGroupEnd() {
+    if (!isAdminLoggedIn()) return '';
+    echo '</div>';
+    return '';
+}
+
 // ============================================================
 // EDITABLE LISTS (Repeatable Items)
 // ============================================================
@@ -621,6 +697,256 @@ function editableTextList($page, $listKey, $defaults = ['content' => '']) {
 }
 
 /**
+ * Return the core fallback icon set.
+ * Sites can override or extend this via content/settings/iconset.json.
+ *
+ * @return array<string,array{label:string,tags:array,svg:string}>
+ */
+function getDefaultIconSet() {
+    static $cache = null;
+    if ($cache !== null) return $cache;
+
+    $path = __DIR__ . '/default-iconset.json';
+    if (is_file($path)) {
+        $raw = json_decode(file_get_contents($path), true);
+        $icons = normalizeIconSet($raw);
+        if (!empty($icons)) {
+            $cache = $icons;
+            return $cache;
+        }
+    }
+
+    $cache = getEmergencyDefaultIconSet();
+    return $cache;
+}
+
+/**
+ * Return a single hard-coded fallback icon for broken or missing icon files.
+ * This keeps getIconSvg() safe even when both JSON icon sets are unavailable.
+ *
+ * @return array<string,array{label:string,tags:array,svg:string}>
+ */
+function getEmergencyDefaultIconSet() {
+    return [
+        'default' => [
+            'label' => 'Default',
+            'tags' => ['fallback'],
+            'svg' => '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>',
+            'viewBox' => '0 0 24 24',
+        ],
+    ];
+}
+
+/**
+ * Path to the site-owned icon set. This lives below content/ so it survives
+ * Nibbly core updates.
+ */
+function getIconSetPath() {
+    $contentDir = defined('SETTINGS_PATH')
+        ? dirname(SETTINGS_PATH)
+        : (__DIR__ . '/../content');
+    return $contentDir . '/settings/iconset.json';
+}
+
+/**
+ * Very small SVG fragment sanitizer for icon inner markup.
+ * Allows common SVG shape tags/attributes and strips scripts, event handlers,
+ * external references, and full <svg> wrappers.
+ */
+function sanitizeIconSvgMarkup($svg) {
+    $svg = trim((string)$svg);
+    if ($svg === '') return '';
+    $svg = preg_replace('#<\?xml[\s\S]*?\?>#i', '', $svg);
+    $svg = preg_replace('#<!DOCTYPE[\s\S]*?>#i', '', $svg);
+    $svg = preg_replace('#<\s*/?\s*svg\b[^>]*>#i', '', $svg);
+    $svg = preg_replace('#<!--[\s\S]*?-->#', '', $svg);
+    $svg = preg_replace('#<\s*script\b[^>]*>.*?<\s*/\s*script\s*>#is', '', $svg);
+    $svg = preg_replace('#<\s*(metadata|desc|style|sodipodi:namedview)\b[^>]*>[\s\S]*?<\s*/\s*\1\s*>#is', '', $svg);
+    $svg = preg_replace('#<\s*defs\b[^>]*>\s*(?:<\s*style\b[^>]*>[\s\S]*?<\s*/\s*style\s*>\s*)*<\s*/\s*defs\s*>#is', '', $svg);
+    $svg = preg_replace('/\s+on[a-z]+\s*=\s*(["\']).*?\1/is', '', $svg);
+    $svg = preg_replace('/\s+(href|xlink:href)\s*=\s*(["\'])\s*(?!#)[^"\']*\2/is', '', $svg);
+    $svg = preg_replace('/\s+(class|style)\s*=\s*(["\']).*?\2/is', '', $svg);
+
+    $allowedTags = 'path|circle|ellipse|line|polyline|polygon|rect|g|defs|clipPath|mask|linearGradient|radialGradient|stop|title';
+    $svg = preg_replace_callback('#</?([a-zA-Z][a-zA-Z0-9:-]*)(\s[^>]*)?>#', function($m) use ($allowedTags) {
+        return preg_match('/^(' . $allowedTags . ')$/i', $m[1]) ? $m[0] : '';
+    }, $svg);
+    $svg = preg_replace('/^\s*(?:\.[\w-]+\s*\{[^}]*\}\s*)+/m', '', $svg);
+
+    $previous = null;
+    while ($previous !== $svg) {
+        $previous = $svg;
+        $svg = preg_replace('#<defs\b[^>]*>\s*</defs>#i', '', $svg);
+        $svg = preg_replace('#<g\b[^>]*>\s*</g>#i', '', $svg);
+        $svg = preg_replace('#<clipPath\b[^>]*>\s*</clipPath>#i', '', $svg);
+        $svg = preg_replace('#<mask\b[^>]*>\s*</mask>#i', '', $svg);
+    }
+
+    return trim($svg);
+}
+
+/**
+ * Normalize an SVG viewBox string. Falls back to the 24x24 icon grid used by
+ * Nibbly's bundled icons.
+ */
+function normalizeIconViewBox($viewBox) {
+    $viewBox = trim((string)$viewBox);
+    if ($viewBox === '') {
+        return '0 0 24 24';
+    }
+
+    $parts = preg_split('/[\s,]+/', $viewBox);
+    if (count($parts) !== 4) {
+        return '0 0 24 24';
+    }
+
+    $normalized = [];
+    foreach ($parts as $part) {
+        if (!is_numeric($part)) {
+            return '0 0 24 24';
+        }
+        $normalized[] = rtrim(rtrim(sprintf('%.6F', (float)$part), '0'), '.');
+    }
+
+    if ((float)$normalized[2] <= 0 || (float)$normalized[3] <= 0) {
+        return '0 0 24 24';
+    }
+
+    return implode(' ', $normalized);
+}
+
+/**
+ * Extract a viewBox from a full <svg> wrapper before the wrapper is stripped.
+ */
+function extractIconViewBoxFromSvg($svg) {
+    if (!is_string($svg)) {
+        return '';
+    }
+    if (preg_match('#<\s*svg\b[^>]*\sviewBox\s*=\s*(["\'])(.*?)\1#is', $svg, $m)) {
+        return normalizeIconViewBox($m[2]);
+    }
+    if (preg_match('#<\s*svg\b[^>]*\swidth\s*=\s*(["\'])([0-9.]+)(?:px)?\1[^>]*\sheight\s*=\s*(["\'])([0-9.]+)(?:px)?\3#is', $svg, $m)) {
+        return normalizeIconViewBox('0 0 ' . $m[2] . ' ' . $m[4]);
+    }
+    return '';
+}
+
+/**
+ * Normalize icon definitions from either the rich format
+ * { "key": {"label": "...", "svg": "...", "tags": []} }
+ * or the legacy/simple format { "key": "<path .../>" }.
+ */
+function normalizeIconSet($raw) {
+    if (!is_array($raw)) return [];
+
+    $icons = [];
+    foreach ($raw as $key => $value) {
+        if ($key === '_deleted') continue;
+        if (!is_string($key) || !preg_match('/^[a-zA-Z0-9_-]+$/', $key)) continue;
+
+        if (is_string($value)) {
+            $label = ucwords(str_replace(['-', '_'], ' ', $key));
+            $tags = [];
+            $svg = $value;
+            $viewBox = extractIconViewBoxFromSvg($svg);
+            $style = '';
+            $createdAt = '';
+            $updatedAt = '';
+        } elseif (is_array($value)) {
+            $label = isset($value['label']) && is_string($value['label']) ? $value['label'] : ucwords(str_replace(['-', '_'], ' ', $key));
+            $tags = isset($value['tags']) && is_array($value['tags']) ? array_values(array_filter($value['tags'], 'is_string')) : [];
+            $svg = isset($value['svg']) && is_string($value['svg']) ? $value['svg'] : '';
+            $viewBox = isset($value['viewBox']) && is_string($value['viewBox'])
+                ? normalizeIconViewBox($value['viewBox'])
+                : extractIconViewBoxFromSvg($svg);
+            $style = isset($value['style']) && is_string($value['style']) ? $value['style'] : '';
+            $createdAt = isset($value['createdAt']) && is_string($value['createdAt']) ? $value['createdAt'] : '';
+            $updatedAt = isset($value['updatedAt']) && is_string($value['updatedAt']) ? $value['updatedAt'] : '';
+        } else {
+            continue;
+        }
+
+        $svg = sanitizeIconSvgMarkup($svg);
+        if ($svg === '') continue;
+
+        $icons[$key] = [
+            'label' => $label,
+            'tags' => $tags,
+            'svg' => $svg,
+            'viewBox' => $viewBox ?: '0 0 24 24',
+            'style' => in_array($style ?? '', ['fill', 'stroke'], true) ? $style : 'stroke',
+            'createdAt' => $createdAt ?? '',
+            'updatedAt' => $updatedAt ?? '',
+        ];
+    }
+
+    return $icons;
+}
+
+/**
+ * Extract hidden core icon keys from a site icon set.
+ *
+ * @return array<int,string>
+ */
+function getDeletedIconKeys($raw) {
+    if (!is_array($raw) || !isset($raw['_deleted']) || !is_array($raw['_deleted'])) {
+        return [];
+    }
+
+    $deleted = [];
+    foreach ($raw['_deleted'] as $key) {
+        if (is_string($key) && preg_match('/^[a-zA-Z0-9_-]+$/', $key)) {
+            $deleted[] = $key;
+        }
+    }
+    return array_values(array_unique($deleted));
+}
+
+/**
+ * Return available icon definitions, merging core defaults with the site-owned
+ * content/settings/iconset.json file when present.
+ */
+function getAvailableIconDefinitions() {
+    static $cache = null;
+    if ($cache !== null) return $cache;
+
+    $icons = getDefaultIconSet();
+    $path = getIconSetPath();
+
+    if (is_file($path)) {
+        $raw = json_decode(file_get_contents($path), true);
+        foreach (getDeletedIconKeys($raw) as $deletedKey) {
+            unset($icons[$deletedKey]);
+        }
+        $customIcons = normalizeIconSet($raw);
+        if (!empty($customIcons)) {
+            $icons = array_merge($icons, $customIcons);
+        }
+    }
+
+    if (empty($icons['default'])) {
+        $defaults = getEmergencyDefaultIconSet();
+        $icons['default'] = $defaults['default'];
+    }
+
+    $cache = $icons;
+    return $cache;
+}
+
+/**
+ * Return available icon SVG path markup keyed by icon identifier.
+ *
+ * @return array<string,string>
+ */
+function getAvailableIcons() {
+    $icons = [];
+    foreach (getAvailableIconDefinitions() as $key => $definition) {
+        $icons[$key] = $definition['svg'];
+    }
+    return $icons;
+}
+
+/**
  * Map an icon identifier to SVG path markup.
  * Used for feature cards and similar elements where icons are stored as IDs in JSON.
  *
@@ -628,27 +954,42 @@ function editableTextList($page, $listKey, $defaults = ['content' => '']) {
  * @return string SVG inner markup (paths, circles, etc.)
  */
 function getIconSvg($iconId) {
-    $icons = [
-        'database'  => '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><line x1="4" y1="4" x2="20" y2="20" stroke="currentColor" stroke-width="2.5"/>',
-        'edit'      => '<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>',
-        'backup'    => '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 105.64-11.36L1 10"/><circle cx="12" cy="12" r="1" fill="currentColor"/><polyline points="12 7 12 12 15 14"/>',
-        'image'     => '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><polyline points="21 15 16 10 5 21"/>',
-        'globe'     => '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>',
-        'link'      => '<path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>',
-        'shield'    => '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>',
-        'feather'   => '<path d="M20.24 12.24a6 6 0 00-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/>',
-        'star'      => '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
-        'sparkles'  => '<path d="M12 3l1.45 4.35L18 9l-4.55 1.65L12 15l-1.45-4.35L6 9l4.55-1.65L12 3z"/><path d="M19 13l.75 2.25L22 16l-2.25.75L19 19l-.75-2.25L16 16l2.25-.75L19 13z"/><path d="M5 17l.5 1.5L7 19l-1.5.5L5 21l-.5-1.5L3 19l1.5-.5L5 17z"/>',
-        'zap'       => '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
-        'terminal'  => '<polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>',
-        'upload'    => '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
-        'server'    => '<rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/>',
-        'folder'    => '<path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>',
-        'wand'      => '<path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8L19 13"/><path d="M15 9h.01"/><path d="M17.8 6.2L19 5"/><path d="M11 6.2L9.7 5"/><path d="M11 11.8L9.7 13"/><path d="M2 21l9-9"/>',
-        'default'   => '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>',
-    ];
+    $icons = getAvailableIcons();
 
     return $icons[$iconId] ?? $icons['default'];
+}
+
+/**
+ * Map an icon identifier to the full normalized icon definition.
+ *
+ * @param string $iconId Icon identifier
+ * @return array{label:string,tags:array,svg:string,viewBox:string}
+ */
+function getIconDefinition($iconId) {
+    $icons = getAvailableIconDefinitions();
+
+    return $icons[$iconId] ?? $icons['default'];
+}
+
+/**
+ * Render a complete SVG for an icon identifier, preserving custom viewBox
+ * values while keeping the old getIconSvg() inner-markup helper available.
+ */
+function renderIconSvg($iconId, $attributes = '') {
+    $icon = getIconDefinition($iconId);
+    $viewBox = htmlspecialchars($icon['viewBox'] ?? '0 0 24 24', ENT_QUOTES, 'UTF-8');
+    $attributes = trim((string)$attributes);
+    $svg = $icon['svg'];
+    if ($attributes === '') {
+        if (($icon['style'] ?? 'stroke') === 'fill') {
+            $attributes = 'fill="currentColor"';
+            $svg = preg_replace('/\s+stroke\s*=\s*(["\'])currentColor\1/i', '', $svg);
+        } else {
+            $attributes = 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+        }
+    }
+
+    return '<svg viewBox="' . $viewBox . '" ' . $attributes . '>' . $svg . '</svg>';
 }
 
 // ============================================================
@@ -941,9 +1282,8 @@ function renderFeatureGrid($page) {
     $html = '<div class="feature-grid stagger-reveal"' . editableListAttrs($page, 'features.items', ['icon' => 'star', 'title' => 'Feature', 'desc' => 'Description']) . '>';
     foreach ($items as $i => $item) {
         $iconId = $item['icon'] ?? 'default';
-        $iconSvg = getIconSvg($iconId);
         $html .= '<div class="feature-card"' . editableListItemAttrs($page, 'features.items', $i) . '>';
-        $html .= '<div class="feature-card__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' . $iconSvg . '</svg></div>';
+        $html .= '<div class="feature-card__icon">' . renderIconSvg($iconId) . '</div>';
         $html .= '<h3 class="feature-card__title">' . editableText($page, "features.items.$i.title", 'Feature') . '</h3>';
         $html .= '<p class="feature-card__desc">' . editableText($page, "features.items.$i.desc", 'Description') . '</p>';
         $html .= '</div>';

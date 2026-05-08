@@ -206,7 +206,8 @@ $saved = saveMailBackup($mailsFile, [
     'date' => $date,
     'message' => $message,
     'status' => $status,
-    'read' => false
+    'read' => false,
+    'starred' => false
 ]);
 
 if (!$saved) {

@@ -5,6 +5,7 @@
 
 session_start();
 require_once 'config.php';
+require_once __DIR__ . '/../includes/version.php';
 require_once __DIR__ . '/lang/i18n.php';
 require_once __DIR__ . '/users.php';
 require_once __DIR__ . '/../includes/asset-helpers.php';
@@ -60,6 +61,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         'eye'       => '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
         'mail'      => '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/>',
         'calendar'  => '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+        'image'     => '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>',
+        'icons'     => '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
         'settings'  => '<path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="3"/>',
         'logout'    => '<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>',
         'trash'     => '<path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/>',
@@ -169,7 +172,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <button class="btn btn-primary btn-sm" onclick="loadContent()"><?php echo t('btn.load'); ?></button>
         </div>
         <div class="topbar-actions">
-            <a href=".." target="_blank" class="topbar-viewsite">
+            <a href=".." class="topbar-viewsite">
                 <?php echo nbIcon('eye'); ?>
                 <span><?php echo t('nav.view_site'); ?></span>
             </a>
@@ -197,6 +200,16 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     <span><?php echo t('nav.messages'); ?></span>
                     <span class="mail-badge mail-badge--hidden" id="mailBadge">0</span>
                 </button>
+                <?php if ($isAdminUser): ?>
+                <button class="sidebar-nav-item" onclick="openImageManager()" type="button">
+                    <?php echo nbIcon('image'); ?>
+                    <span><?php echo t('nav.image_manager'); ?></span>
+                </button>
+                <button class="sidebar-nav-item" onclick="switchTab('icons')" data-tab="icons">
+                    <?php echo nbIcon('icons'); ?>
+                    <span><?php echo t('nav.icon_manager'); ?></span>
+                </button>
+                <?php endif; ?>
             </nav>
         </div>
         <div class="sidebar-bottom">
@@ -214,7 +227,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 <?php echo nbIcon('logout'); ?>
                 <span><?php echo t('nav.logout'); ?></span>
             </a>
-            <div class="sidebar-version">Nibbly <?php echo defined('NIBBLY_VERSION') ? NIBBLY_VERSION : 'dev'; ?></div>
+            <a class="sidebar-version" href="https://nibbly.dev" target="_blank" rel="noopener noreferrer">Nibbly <?php echo htmlspecialchars(nibblyVersion(), ENT_QUOTES, 'UTF-8'); ?></a>
         </div>
     </aside>
 
@@ -367,7 +380,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         <button class="btn btn-secondary btn-sm" id="redoBtn" onclick="editorRedo()" title="<?php echo t('editor.redo'); ?>" disabled><?php echo nbIcon('redo', 14); ?></button>
                     </div>
                     <button class="btn btn-primary btn-sm" onclick="saveContent()"><?php echo t('btn.save'); ?></button>
-                    <a class="btn btn-secondary btn-sm" id="editorViewBtn" href="#" target="_blank" title="<?php echo t('pages.view'); ?>"><?php echo nbIcon('eye', 14); ?></a>
+                    <a class="btn btn-secondary btn-sm" id="editorViewBtn" href="#" title="<?php echo t('pages.view'); ?>"><?php echo nbIcon('eye', 14); ?></a>
                     <button class="btn btn-secondary btn-sm editor-trash-btn" id="editorTrashBtn" onclick="trashCurrentPage()" title="<?php echo t('editor.move_to_trash'); ?>"><?php echo nbIcon('trash', 14); ?></button>
                 </div>
             </div>
@@ -519,7 +532,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 <div class="editor-header-right">
                     <span class="last-modified" id="newsLastModified"></span>
                     <button class="btn btn-primary btn-sm" onclick="savePost()"><?php echo t('btn.save'); ?></button>
-                    <a class="btn btn-secondary btn-sm" id="newsViewBtn" href="#" target="_blank" style="display:none;" title="<?php echo t('news.view'); ?>"><?php echo nbIcon('eye', 14); ?></a>
+                    <a class="btn btn-secondary btn-sm" id="newsViewBtn" href="#" style="display:none;" title="<?php echo t('news.view'); ?>"><?php echo nbIcon('eye', 14); ?></a>
                     <button class="btn btn-secondary btn-sm editor-trash-btn" id="newsTrashBtn" onclick="deleteCurrentPost()" style="display:none;" title="<?php echo t('news.delete'); ?>"><?php echo nbIcon('trash', 14); ?></button>
                 </div>
             </div>
@@ -554,9 +567,15 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 <table class="page-list-table" id="mailsListTable">
                     <thead>
                         <tr>
-                            <th class="page-list-col-title"><?php echo t('mails.col_from'); ?></th>
-                            <th><?php echo t('mails.col_subject'); ?></th>
-                            <th class="page-list-col-date"><?php echo t('mails.col_received'); ?></th>
+                            <th class="mail-col-flag page-list-sortable" data-mail-sort="read" onclick="sortMails('read')" title="<?php echo t('mails.sort_read'); ?>">
+                                <button type="button" class="mail-header-sort" tabindex="-1" aria-label="<?php echo t('mails.sort_read'); ?>"><span class="page-list-sort-icon"></span></button>
+                            </th>
+                            <th class="mail-col-flag page-list-sortable" data-mail-sort="starred" onclick="sortMails('starred')" title="<?php echo t('mails.sort_starred'); ?>">
+                                <button type="button" class="mail-header-sort" tabindex="-1" aria-label="<?php echo t('mails.sort_starred'); ?>">☆<span class="page-list-sort-icon"></span></button>
+                            </th>
+                            <th class="page-list-col-title page-list-sortable" data-mail-sort="from" onclick="sortMails('from')"><?php echo t('mails.col_from'); ?> <span class="page-list-sort-icon"></span></th>
+                            <th class="page-list-sortable" data-mail-sort="subject" onclick="sortMails('subject')"><?php echo t('mails.col_subject'); ?> <span class="page-list-sort-icon"></span></th>
+                            <th class="page-list-col-date page-list-sortable" data-mail-sort="received" onclick="sortMails('received')"><?php echo t('mails.col_received'); ?> <span class="page-list-sort-icon"></span></th>
                         </tr>
                     </thead>
                     <tbody id="mailsList">
@@ -588,6 +607,39 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             </div>
         </div>
     </div>
+
+    <?php if ($isAdminUser): ?>
+    <!-- Icon Manager Tab -->
+    <div class="admin-container" id="iconsTab" style="display: none;">
+        <div class="page-list-container">
+            <div class="page-list-header">
+                <div class="page-list-header-left">
+                    <h2><?php echo t('icons.title'); ?></h2>
+                    <button class="btn btn-secondary btn-sm" id="iconManagerRefreshBtn" onclick="loadIconManager()"><?php echo t('btn.refresh'); ?></button>
+                    <button class="btn btn-secondary btn-sm" onclick="openIconifyImportModal()"><?php echo t('icons.import_icon'); ?></button>
+                    <button class="btn btn-primary btn-sm" onclick="openIconManagerModal()"><?php echo t('icons.add_icon'); ?></button>
+                </div>
+            </div>
+            <div class="icon-manager-toolbar">
+                <label class="modal-label"><?php echo t('icons.filter'); ?>
+                    <input type="search" id="iconManagerSearch" class="modal-input" placeholder="<?php echo htmlspecialchars(t('icons.filter_placeholder'), ENT_QUOTES, 'UTF-8'); ?>">
+                </label>
+                <label class="modal-label"><?php echo t('icons.sort'); ?>
+                    <select id="iconManagerSort" class="modal-input">
+                        <option value="alpha"><?php echo t('icons.sort_alpha'); ?></option>
+                        <option value="newest"><?php echo t('icons.sort_newest'); ?></option>
+                        <option value="oldest"><?php echo t('icons.sort_oldest'); ?></option>
+                    </select>
+                </label>
+            </div>
+            <p class="icon-manager-path" id="iconManagerPath"></p>
+            <div class="icon-manager-grid" id="iconManagerGrid">
+                <!-- Icons inserted via JS -->
+            </div>
+            <p class="trash-empty-msg" id="iconManagerEmpty" style="display:none;"><?php echo t('icons.empty'); ?></p>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- Settings Tab -->
     <div class="admin-container" id="settingsTab" style="display: none;">
@@ -1381,6 +1433,85 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     </div>
 
     <?php if ($isAdminUser): ?>
+    <!-- Icon Manager Modal -->
+    <div class="modal-overlay" id="iconManagerModalOverlay" style="display: none;">
+        <div class="modal modal-large icon-manager-modal">
+            <h3 id="iconManagerModalTitle"><?php echo t('icons.edit_icon'); ?></h3>
+            <form id="iconManagerForm">
+                <input type="hidden" id="iconManagerOldKey" value="">
+                <div class="modal-form">
+                    <label class="modal-label"><?php echo t('icons.key'); ?>
+                        <input type="text" id="iconManagerKey" class="modal-input" required>
+                    </label>
+                    <p class="form-hint"><?php echo t('icons.key_hint'); ?></p>
+                    <label class="modal-label"><?php echo t('icons.label'); ?>
+                        <input type="text" id="iconManagerLabel" class="modal-input">
+                    </label>
+                    <label class="modal-label"><?php echo t('icons.tags'); ?>
+                        <input type="text" id="iconManagerTags" class="modal-input" placeholder="media, file, feature">
+                    </label>
+                    <p class="form-hint"><?php echo t('icons.tags_hint'); ?></p>
+                    <label class="modal-label"><?php echo t('icons.viewbox'); ?>
+                        <input type="text" id="iconManagerViewBox" class="modal-input" placeholder="0 0 24 24">
+                    </label>
+                    <div class="icon-manager-svg-field">
+                        <label class="modal-label"><?php echo t('icons.svg'); ?>
+                            <textarea id="iconManagerSvg" class="modal-input icon-manager-svg-input" required rows="8"></textarea>
+                        </label>
+                        <div class="icon-manager-svg-tools">
+                            <button type="button" class="btn btn-secondary btn-sm" id="iconManagerCleanupBtn"><?php echo t('icons.cleanup'); ?></button>
+                            <button type="button" class="btn btn-secondary btn-sm" id="iconManagerCurrentColorBtn"><?php echo t('icons.current_color'); ?></button>
+                        </div>
+                        <small class="form-hint"><?php echo htmlspecialchars(t('icons.svg_hint'), ENT_QUOTES, 'UTF-8'); ?></small>
+                    </div>
+                    <div class="icon-manager-preview-box">
+                        <span><?php echo t('icons.preview'); ?></span>
+                        <svg id="iconManagerPreview" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+                    </div>
+                    <div class="info-banner info-banner--warning icon-manager-rename-warning" id="iconRenameWarning" hidden>
+                        <div class="info-banner__inner">
+                            <strong class="info-banner__title"><?php echo nbIcon('alert'); ?> <?php echo t('icons.rename_warning_title'); ?></strong>
+                            <span class="info-banner__body"><?php echo t('icons.rename_warning'); ?></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeIconManagerModal()"><?php echo t('btn.cancel'); ?></button>
+                    <button type="submit" class="btn btn-primary"><?php echo t('btn.save'); ?></button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Iconify Import Modal -->
+    <div class="modal-overlay" id="iconifyImportModalOverlay" style="display: none;">
+        <div class="modal modal-large icon-manager-modal">
+            <h3><?php echo t('icons.import_icon'); ?></h3>
+            <div class="modal-form">
+                <div class="iconify-import-controls">
+                    <label class="modal-label"><?php echo t('icons.icon_set'); ?>
+                        <select id="iconifyImportSet" class="modal-input">
+                            <option value="lucide">Lucide</option>
+                            <option value="tabler">Tabler Icons</option>
+                            <option value="heroicons">Heroicons</option>
+                            <option value="bi">Bootstrap Icons</option>
+                        </select>
+                    </label>
+                    <label class="modal-label"><?php echo t('icons.search'); ?>
+                        <input type="search" id="iconifyImportQuery" class="modal-input" placeholder="search, home, calendar">
+                    </label>
+                    <button type="button" class="btn btn-secondary btn-sm" id="iconifyImportSearchBtn"><?php echo t('icons.search'); ?></button>
+                </div>
+                <p class="form-hint" id="iconifyImportLicense"><?php echo t('icons.import_license_hint'); ?></p>
+                <div class="iconify-import-results" id="iconifyImportResults"></div>
+                <p class="trash-empty-msg" id="iconifyImportEmpty" style="display:none;"><?php echo t('icons.import_empty'); ?></p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeIconifyImportModal()"><?php echo t('btn.close'); ?></button>
+            </div>
+        </div>
+    </div>
+
     <!-- User Modal (Add/Edit) -->
     <div class="modal-overlay" id="userModalOverlay" style="display: none;">
         <div class="modal modal-large">
@@ -3355,7 +3486,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     });
 
     const DASHBOARD_PATH = window.location.pathname.replace(/\/dashboard\.php$/, '/dashboard');
-    const VALID_DASHBOARD_TABS = ['content', 'news', 'events', 'mails', 'settings', 'backup'];
+    const VALID_DASHBOARD_TABS = <?php echo json_encode($isAdminUser ? ['content', 'news', 'events', 'mails', 'icons', 'settings', 'backup'] : ['content', 'news', 'events', 'mails', 'settings']); ?>;
     const DASHBOARD_HASH_ALIASES = { pages: 'content', messages: 'mails' };
     let dashboardRouteApplying = false;
 
@@ -3510,6 +3641,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         document.getElementById('newsTab').style.display = tab === 'news' ? 'block' : 'none';
         document.getElementById('eventsTab').style.display = tab === 'events' ? 'block' : 'none';
         document.getElementById('mailsTab').style.display = tab === 'mails' ? 'block' : 'none';
+        const iconsTab = document.getElementById('iconsTab');
+        if (iconsTab) iconsTab.style.display = tab === 'icons' ? 'block' : 'none';
         document.getElementById('settingsTab').style.display = tab === 'settings' ? 'block' : 'none';
         document.getElementById('backupTab').style.display = tab === 'backup' ? 'block' : 'none';
 
@@ -3534,7 +3667,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         if (activeNavItem) activeNavItem.classList.add('active');
 
         // Update topbar title
-        const titles = { content: currentPage ? t('editor.title') : t('pages.title'), news: t('news.title'), mails: t('mails.title'), events: t('events.title'), settings: t('settings.title'), backup: t('settings.backup') };
+        const titles = { content: currentPage ? t('editor.title') : t('pages.title'), news: t('news.title'), mails: t('mails.title'), events: t('events.title'), icons: t('icons.title'), settings: t('settings.title'), backup: t('settings.backup') };
         const topbarTitle = document.getElementById('topbarTitle');
         if (topbarTitle) topbarTitle.textContent = titles[tab] || 'Dashboard';
 
@@ -3570,6 +3703,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 loadEventsEditor();
             }
         }
+        if (tab === 'icons' && typeof loadIconManager === 'function') {
+            loadIconManager();
+        }
         if (tab === 'settings' && options.settingsTab) {
             activateSettingsTab(options.settingsTab, { silent: true });
         }
@@ -3581,11 +3717,552 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         updateDashboardHash(tab, tab === 'settings' ? (options.settingsTab || getActiveSettingsTab()) : '', !!options.replace);
     }
 
+    <?php if ($isAdminUser): ?>
+    // ============================================================
+    // ICON MANAGER
+    // ============================================================
+
+    let iconManagerData = [];
+    let iconManagerPath = '';
+    let iconManagerSortMode = 'alpha';
+    let iconManagerSearchTerm = '';
+    let iconManagerHighlightedKeys = new Set();
+    let iconManagerHighlightTimer = null;
+    const ICONIFY_IMPORT_SETS = {
+        lucide: { label: 'Lucide', license: 'ISC', licenseUrl: 'https://github.com/lucide-icons/lucide/blob/main/LICENSE' },
+        tabler: { label: 'Tabler Icons', license: 'MIT', licenseUrl: 'https://github.com/tabler/tabler-icons/blob/master/LICENSE' },
+        heroicons: { label: 'Heroicons', license: 'MIT', licenseUrl: 'https://github.com/tailwindlabs/heroicons/blob/master/LICENSE' },
+        bi: { label: 'Bootstrap Icons', license: 'MIT', licenseUrl: 'https://github.com/twbs/icons/blob/main/LICENSE.md', style: 'fill' }
+    };
+
+    async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 12000) {
+        const controller = new AbortController();
+        const timer = setTimeout(function() { controller.abort(); }, timeoutMs);
+        try {
+            const response = await fetch(url, Object.assign({}, options, {
+                signal: controller.signal,
+                cache: 'no-store',
+            }));
+            return await response.json();
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+
+    function cleanSvgAttributes(attrs) {
+        if (!attrs) return '';
+        const allowedAttrs = new Set([
+            'd', 'points', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy', 'r', 'rx', 'ry',
+            'width', 'height', 'fill', 'stroke', 'stroke-width', 'stroke-linecap',
+            'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset',
+            'fill-rule', 'clip-rule', 'opacity', 'fill-opacity', 'stroke-opacity',
+            'transform', 'id', 'clip-path', 'mask', 'offset', 'stop-color', 'stop-opacity',
+            'gradientUnits', 'gradientTransform'
+        ]);
+        let cleaned = '';
+        attrs.replace(/\s+([a-zA-Z_:][-a-zA-Z0-9_:.]*)(?:\s*=\s*("[^"]*"|'[^']*'|[^\s>\/]+))?/g, function(match, rawName, rawValue) {
+            const name = rawName.replace(/^xlink:/i, '').trim();
+            const lower = name.toLowerCase();
+            if (lower.startsWith('on') || lower === 'style' || lower === 'class') return '';
+            if (!allowedAttrs.has(name) && !allowedAttrs.has(lower)) return '';
+
+            const attrName = allowedAttrs.has(name) ? name : lower;
+            let value = rawValue || '';
+            if (value) {
+                const unquoted = value.replace(/^["']|["']$/g, '').trim();
+                if ((lower === 'clip-path' || lower === 'mask') && unquoted && !/^url\(#[-_a-zA-Z0-9]+\)$/.test(unquoted)) return '';
+                if ((lower === 'fill' || lower === 'stroke') && /^url\(/i.test(unquoted) && !/^url\(#[-_a-zA-Z0-9]+\)$/i.test(unquoted)) return '';
+                value = '="' + escapeHtml(unquoted) + '"';
+            }
+            cleaned += ' ' + attrName + value;
+            return '';
+        });
+        return cleaned;
+    }
+
+    function sanitizeIconSvgClient(svg) {
+        svg = (svg || '').trim()
+            .replace(/<\?xml[\s\S]*?\?>/gi, '')
+            .replace(/<!DOCTYPE[\s\S]*?>/gi, '')
+            .replace(/<\s*\/?\s*svg\b[^>]*>/gi, '')
+            .replace(/<!--[\s\S]*?-->/g, '')
+            .replace(/<\s*script\b[^>]*>[\s\S]*?<\s*\/\s*script\s*>/gi, '')
+            .replace(/<\s*(metadata|desc|style|sodipodi:namedview)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
+            .replace(/<\s*defs\b[^>]*>\s*(?:<\s*style\b[^>]*>[\s\S]*?<\s*\/\s*style\s*>\s*)*<\s*\/\s*defs\s*>/gi, '')
+            .replace(/\s+on[a-z]+\s*=\s*(["']).*?\1/gi, '')
+            .replace(/\s+(href|xlink:href)\s*=\s*(["'])\s*(?!#)[^"']*\2/gi, '');
+        const allowed = new Set(['path', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'rect', 'g', 'defs', 'clipPath', 'mask', 'linearGradient', 'radialGradient', 'stop', 'title']);
+        svg = svg.replace(/<\s*(\/?)([a-zA-Z][a-zA-Z0-9:-]*)([^>]*)>/g, function(match, closing, tag, attrs) {
+            if (!allowed.has(tag)) return '';
+            if (closing) return `</${tag}>`;
+            const selfClosing = /\/\s*$/.test(attrs || '');
+            const cleanedAttrs = cleanSvgAttributes(attrs || '');
+            return `<${tag}${cleanedAttrs}${selfClosing ? '/' : ''}>`;
+        });
+        svg = svg.replace(/^\s*(?:\.[\w-]+\s*\{[^}]*\}\s*)+/gm, '');
+        svg = removeEmptySvgContainers(svg);
+        return svg.trim();
+    }
+
+    function normalizeIconViewBoxClient(viewBox) {
+        const raw = (viewBox || '').trim();
+        if (!raw) return '0 0 24 24';
+        const parts = raw.split(/[\s,]+/);
+        if (parts.length !== 4) return '0 0 24 24';
+        const numbers = parts.map(Number);
+        if (numbers.some(function(value) { return !Number.isFinite(value); }) || numbers[2] <= 0 || numbers[3] <= 0) {
+            return '0 0 24 24';
+        }
+        return numbers.map(function(value) {
+            return Number.isInteger(value) ? String(value) : String(parseFloat(value.toFixed(6)));
+        }).join(' ');
+    }
+
+    function extractIconViewBoxClient(svg) {
+        const markup = String(svg || '');
+        const viewBoxMatch = markup.match(/<\s*svg\b[^>]*\sviewBox\s*=\s*(["'])(.*?)\1/i);
+        if (viewBoxMatch) return normalizeIconViewBoxClient(viewBoxMatch[2]);
+
+        const widthMatch = markup.match(/<\s*svg\b[^>]*\swidth\s*=\s*(["'])([0-9.]+)(?:px)?\1/i);
+        const heightMatch = markup.match(/<\s*svg\b[^>]*\sheight\s*=\s*(["'])([0-9.]+)(?:px)?\1/i);
+        if (widthMatch && heightMatch) return normalizeIconViewBoxClient('0 0 ' + widthMatch[2] + ' ' + heightMatch[2]);
+
+        return '';
+    }
+
+    function removeEmptySvgContainers(svg) {
+        let previous = '';
+        let cleaned = svg || '';
+        while (cleaned !== previous) {
+            previous = cleaned;
+            cleaned = cleaned
+                .replace(/<defs\b[^>]*>\s*<\/defs>/gi, '')
+                .replace(/<g\b[^>]*>\s*<\/g>/gi, '')
+                .replace(/<clipPath\b[^>]*>\s*<\/clipPath>/gi, '')
+                .replace(/<mask\b[^>]*>\s*<\/mask>/gi, '');
+        }
+        return cleaned;
+    }
+
+    function forceIconCurrentColor(svg) {
+        let normalized = sanitizeIconSvgClient(svg)
+            .replace(/\s(fill|stroke)\s*=\s*(["'])(?!none\2|currentColor\2|url\(#)[^"']*\2/gi, ' $1="currentColor"')
+            .replace(/\sstop-color\s*=\s*(["'])(?!currentColor\1|none\1)[^"']*\1/gi, ' stop-color="currentColor"');
+        normalized = normalized.replace(/<\s*(polygon|circle|ellipse|rect)\b([^>]*)\/?>/gi, function(match, tag, attrs) {
+            if (/\s(?:fill|stroke)\s*=/i.test(attrs)) return match;
+            const selfClosing = /\/\s*>$/.test(match);
+            const cleanedAttrs = (attrs || '').replace(/\/\s*$/, '');
+            return `<${tag}${cleanedAttrs} fill="currentColor"${selfClosing ? '/>' : '>'}`;
+        });
+        return normalized;
+    }
+
+    async function loadIconManager() {
+        const button = document.getElementById('iconManagerRefreshBtn');
+        if (button) button.disabled = true;
+        try {
+            const result = await fetchJsonWithTimeout('api.php?action=list-icons&csrf_token=' + encodeURIComponent(CSRF_TOKEN) + '&_=' + Date.now());
+            if (result.success) {
+                iconManagerData = result.data.icons || [];
+                iconManagerPath = result.data.path || 'content/settings/iconset.json';
+                renderIconManager(result.data);
+            } else {
+                showToast(result.message, 'error');
+            }
+        } catch (error) {
+            showToast(t('icons.load_error', {message: error.message}), 'error');
+        } finally {
+            if (button) button.disabled = false;
+        }
+    }
+
+    function getFilteredIconManagerIcons() {
+        const term = iconManagerSearchTerm.toLowerCase();
+        let icons = iconManagerData.slice();
+        if (term) {
+            icons = icons.filter(function(iconItem) {
+                const haystack = [
+                    iconItem.key || '',
+                    iconItem.label || '',
+                    (iconItem.tags || []).join(' '),
+                    iconItem.source || ''
+                ].join(' ').toLowerCase();
+                return haystack.includes(term);
+            });
+        }
+
+        icons.sort(function(a, b) {
+            if (iconManagerSortMode === 'newest' || iconManagerSortMode === 'oldest') {
+                const aTime = Date.parse(a.createdAt || a.updatedAt || '') || 0;
+                const bTime = Date.parse(b.createdAt || b.updatedAt || '') || 0;
+                if (aTime !== bTime) {
+                    return iconManagerSortMode === 'newest' ? bTime - aTime : aTime - bTime;
+                }
+            }
+            return String(a.key || '').localeCompare(String(b.key || ''), undefined, { sensitivity: 'base' });
+        });
+
+        return icons;
+    }
+
+    function iconSvgAttributes(iconItem) {
+        return (iconItem.style || 'stroke') === 'fill'
+            ? 'fill="currentColor"'
+            : 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+    }
+
+    function iconSvgMarkup(iconItem) {
+        const svg = iconItem.svg || '';
+        return (iconItem.style || 'stroke') === 'fill'
+            ? svg.replace(/\s+stroke\s*=\s*(["'])currentColor\1/gi, '')
+            : svg;
+    }
+
+    function highlightIconManagerCard(key) {
+        if (key) iconManagerHighlightedKeys.add(key);
+        if (iconManagerHighlightTimer) clearTimeout(iconManagerHighlightTimer);
+        if (iconManagerHighlightedKeys.size) {
+            iconManagerHighlightTimer = setTimeout(function() {
+                iconManagerHighlightedKeys.clear();
+                renderIconManager();
+            }, 60000);
+        }
+    }
+
+    function renderIconManager(data = null) {
+        const grid = document.getElementById('iconManagerGrid');
+        const empty = document.getElementById('iconManagerEmpty');
+        const path = document.getElementById('iconManagerPath');
+        if (!grid) return;
+
+        if (data) {
+            iconManagerData = data.icons || [];
+            iconManagerPath = data.path || iconManagerPath;
+        }
+
+        grid.innerHTML = '';
+        if (path) path.textContent = t('icons.path', {path: iconManagerPath || 'content/settings/iconset.json'});
+
+        const icons = getFilteredIconManagerIcons();
+        if (!icons.length) {
+            if (empty) empty.style.display = '';
+            return;
+        }
+        if (empty) empty.style.display = 'none';
+
+        icons.forEach(function(iconItem) {
+            const card = document.createElement('article');
+            card.className = 'icon-manager-card';
+            if (iconManagerHighlightedKeys.has(iconItem.key)) {
+                card.classList.add('icon-manager-card--highlight');
+            }
+            const sourceLabel = iconItem.source === 'custom' ? t('icons.source_custom') : t('icons.source_core');
+            card.title = sourceLabel;
+            card.dataset.iconKey = iconItem.key || '';
+            card.dataset.iconTags = (iconItem.tags || []).join(' ');
+            card.innerHTML = `
+                <div class="icon-manager-card__preview">
+                    <svg viewBox="${escapeHtml(iconItem.viewBox || '0 0 24 24')}" ${iconSvgAttributes(iconItem)}>${iconSvgMarkup(iconItem)}</svg>
+                </div>
+                <div class="icon-manager-card__body">
+                    <strong>${escapeHtml(iconItem.key)}</strong>
+                    <span>${escapeHtml(iconItem.label || '')}</span>
+                </div>
+                <div class="icon-manager-card__actions">
+                    <button type="button" class="icon-manager-action-btn" data-icon-edit="${escapeHtml(iconItem.key)}" title="${t('pages.edit')}" aria-label="${t('pages.edit')}">${icon('edit', 14, '2')}</button>
+                    <button type="button" class="icon-manager-action-btn icon-manager-action-btn--danger" data-icon-delete="${escapeHtml(iconItem.key)}" title="${t('btn.delete')}" aria-label="${t('btn.delete')}"${iconItem.canDelete ? '' : ' disabled'}>${icon('trash', 14, '2')}</button>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+
+        grid.querySelectorAll('[data-icon-edit]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const iconItem = iconManagerData.find(function(item) { return item.key === btn.dataset.iconEdit; });
+                if (iconItem) openIconManagerModal(iconItem);
+            });
+        });
+        grid.querySelectorAll('[data-icon-delete]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const iconItem = iconManagerData.find(function(item) { return item.key === btn.dataset.iconDelete; });
+                if (iconItem) deleteIconManagerIcon(iconItem);
+            });
+        });
+    }
+
+    function openIconManagerModal(iconItem) {
+        const isEdit = !!iconItem;
+        document.getElementById('iconManagerModalTitle').textContent = isEdit ? t('icons.edit_icon') : t('icons.add_icon');
+        document.getElementById('iconManagerOldKey').value = isEdit ? iconItem.key : '';
+        document.getElementById('iconManagerKey').value = isEdit ? iconItem.key : '';
+        document.getElementById('iconManagerLabel').value = isEdit ? (iconItem.label || '') : '';
+        document.getElementById('iconManagerTags').value = isEdit ? (iconItem.tags || []).join(', ') : '';
+        document.getElementById('iconManagerViewBox').value = isEdit ? (iconItem.viewBox || '0 0 24 24') : '0 0 24 24';
+        document.getElementById('iconManagerSvg').value = isEdit ? (iconItem.svg || '') : '';
+        document.getElementById('iconRenameWarning').hidden = true;
+        updateIconManagerPreview();
+        document.getElementById('iconManagerModalOverlay').style.display = 'flex';
+    }
+
+    function closeIconManagerModal() {
+        document.getElementById('iconManagerModalOverlay').style.display = 'none';
+    }
+
+    function openIconifyImportModal() {
+        const overlay = document.getElementById('iconifyImportModalOverlay');
+        if (!overlay) return;
+        overlay.style.display = 'flex';
+        updateIconifyImportLicense();
+        setTimeout(function() {
+            document.getElementById('iconifyImportQuery')?.focus();
+        }, 50);
+    }
+
+    function closeIconifyImportModal() {
+        document.getElementById('iconifyImportModalOverlay').style.display = 'none';
+    }
+
+    function updateIconifyImportLicense() {
+        const prefix = document.getElementById('iconifyImportSet')?.value || 'lucide';
+        const setInfo = ICONIFY_IMPORT_SETS[prefix] || ICONIFY_IMPORT_SETS.lucide;
+        const license = document.getElementById('iconifyImportLicense');
+        if (license) {
+            license.innerHTML = escapeHtml(t('icons.import_license_hint', {
+                set: setInfo.label,
+                license: setInfo.license
+            }));
+        }
+    }
+
+    async function searchIconifyImport() {
+        const prefix = document.getElementById('iconifyImportSet')?.value || 'lucide';
+        const query = document.getElementById('iconifyImportQuery')?.value.trim() || '';
+        const results = document.getElementById('iconifyImportResults');
+        const empty = document.getElementById('iconifyImportEmpty');
+        const button = document.getElementById('iconifyImportSearchBtn');
+        if (!results || query.length < 2) {
+            showToast(t('icons.import_query_short'), 'error');
+            return;
+        }
+
+        results.innerHTML = '<p class="form-hint">' + escapeHtml(t('icons.import_loading')) + '</p>';
+        if (empty) empty.style.display = 'none';
+        if (button) button.disabled = true;
+
+        try {
+            const url = 'api.php?action=iconify-search&csrf_token=' + encodeURIComponent(CSRF_TOKEN)
+                + '&prefix=' + encodeURIComponent(prefix)
+                + '&query=' + encodeURIComponent(query);
+            const result = await fetchJsonWithTimeout(url, {}, 15000);
+            if (!result.success) {
+                showToast(result.message, 'error');
+                results.innerHTML = '';
+                return;
+            }
+            renderIconifyImportResults(result.data.icons || []);
+        } catch (error) {
+            showToast(t('icons.import_error', {message: error.message}), 'error');
+            results.innerHTML = '';
+        } finally {
+            if (button) button.disabled = false;
+        }
+    }
+
+    function renderIconifyImportResults(icons) {
+        const results = document.getElementById('iconifyImportResults');
+        const empty = document.getElementById('iconifyImportEmpty');
+        if (!results) return;
+        results.innerHTML = '';
+        if (!icons.length) {
+            if (empty) empty.style.display = '';
+            return;
+        }
+        if (empty) empty.style.display = 'none';
+
+        icons.forEach(function(iconItem) {
+            const card = document.createElement('article');
+            card.className = 'iconify-import-card';
+            card.innerHTML = `
+                <div class="iconify-import-card__preview">
+                    <svg viewBox="${escapeHtml(iconItem.viewBox || '0 0 24 24')}" ${iconSvgAttributes(iconItem)}>${iconSvgMarkup(iconItem)}</svg>
+                </div>
+                <div class="iconify-import-card__body">
+                    <strong>${escapeHtml(iconItem.name || '')}</strong>
+                    <span>${escapeHtml(iconItem.setLabel || iconItem.prefix || '')} · ${escapeHtml(iconItem.license || '')}</span>
+                    <code>${escapeHtml(iconItem.key || '')}</code>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" data-iconify-import="${escapeHtml(iconItem.full || '')}" data-iconify-key="${escapeHtml(iconItem.key || '')}">${iconManagerData.some(item => item.key === iconItem.key) ? t('icons.imported_short') : t('icons.import')}</button>
+            `;
+            if (iconManagerData.some(item => item.key === iconItem.key)) {
+                card.querySelector('[data-iconify-import]').disabled = true;
+                card.classList.add('iconify-import-card--imported');
+            }
+            results.appendChild(card);
+        });
+
+        results.querySelectorAll('[data-iconify-import]').forEach(function(button) {
+            button.addEventListener('click', function() {
+                importIconifyIcon(button.dataset.iconifyImport, button);
+            });
+        });
+    }
+
+    async function importIconifyIcon(fullName, button) {
+        const formData = new FormData();
+        formData.append('action', 'iconify-import');
+        formData.append('csrf_token', CSRF_TOKEN);
+        formData.append('icon', fullName);
+
+        if (button) button.disabled = true;
+        try {
+            const result = await fetchJsonWithTimeout('api.php', { method: 'POST', body: formData }, 15000);
+            if (!result.success) {
+                showToast(result.message, 'error');
+                return;
+            }
+            iconManagerSortMode = 'newest';
+            const sortInput = document.getElementById('iconManagerSort');
+            if (sortInput) sortInput.value = 'newest';
+            const importedKey = String(fullName || '').replace(':', '-');
+            highlightIconManagerCard(importedKey);
+            renderIconManager(result.data);
+            showToast(t('icons.imported'), 'success');
+            if (button) {
+                button.textContent = t('icons.imported_short');
+                button.disabled = true;
+                button.closest('.iconify-import-card')?.classList.add('iconify-import-card--imported');
+            }
+        } catch (error) {
+            showToast(t('icons.import_error', {message: error.message}), 'error');
+        } finally {
+            if (button && button.textContent !== t('icons.imported_short')) button.disabled = false;
+        }
+    }
+
+    function updateIconManagerPreview() {
+        const preview = document.getElementById('iconManagerPreview');
+        const svgInput = document.getElementById('iconManagerSvg');
+        const viewBoxInput = document.getElementById('iconManagerViewBox');
+        if (preview) {
+            preview.setAttribute('viewBox', normalizeIconViewBoxClient(viewBoxInput?.value || ''));
+            preview.innerHTML = sanitizeIconSvgClient(svgInput.value);
+        }
+        const oldKey = document.getElementById('iconManagerOldKey').value;
+        const newKey = document.getElementById('iconManagerKey').value;
+        const warning = document.getElementById('iconRenameWarning');
+        if (warning) warning.hidden = !(oldKey && newKey && oldKey !== newKey);
+    }
+
+    document.getElementById('iconManagerSvg')?.addEventListener('input', function() {
+        const viewBoxInput = document.getElementById('iconManagerViewBox');
+        const extractedViewBox = extractIconViewBoxClient(this.value);
+        if (extractedViewBox && viewBoxInput && (!viewBoxInput.value.trim() || normalizeIconViewBoxClient(viewBoxInput.value) === '0 0 24 24')) {
+            viewBoxInput.value = extractedViewBox;
+        }
+        updateIconManagerPreview();
+    });
+    document.getElementById('iconManagerViewBox')?.addEventListener('input', updateIconManagerPreview);
+    document.getElementById('iconManagerKey')?.addEventListener('input', updateIconManagerPreview);
+    document.getElementById('iconManagerCleanupBtn')?.addEventListener('click', function() {
+        const input = document.getElementById('iconManagerSvg');
+        const extractedViewBox = extractIconViewBoxClient(input.value);
+        if (extractedViewBox) document.getElementById('iconManagerViewBox').value = extractedViewBox;
+        input.value = sanitizeIconSvgClient(input.value);
+        updateIconManagerPreview();
+        showToast(t('icons.cleanup_done'), 'success');
+    });
+    document.getElementById('iconManagerCurrentColorBtn')?.addEventListener('click', function() {
+        const input = document.getElementById('iconManagerSvg');
+        input.value = forceIconCurrentColor(input.value);
+        updateIconManagerPreview();
+        showToast(t('icons.current_color_done'), 'success');
+    });
+    document.getElementById('iconManagerForm')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const oldKey = document.getElementById('iconManagerOldKey').value;
+        const newKey = document.getElementById('iconManagerKey').value.trim();
+        if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(newKey)) {
+            showToast('Invalid icon key. Use lowercase letters, numbers, hyphens, and underscores.', 'error');
+            return;
+        }
+        const formData = new FormData();
+        formData.append('action', 'save-icon');
+        formData.append('csrf_token', CSRF_TOKEN);
+        formData.append('old_key', oldKey);
+        formData.append('key', newKey);
+        formData.append('label', document.getElementById('iconManagerLabel').value);
+        formData.append('tags', document.getElementById('iconManagerTags').value);
+        formData.append('viewBox', document.getElementById('iconManagerViewBox').value);
+        formData.append('svg', document.getElementById('iconManagerSvg').value);
+
+        try {
+            const result = await fetchJsonWithTimeout('api.php', { method: 'POST', body: formData }, 15000);
+            if (result.success) {
+                closeIconManagerModal();
+                iconManagerSortMode = 'newest';
+                const sortInput = document.getElementById('iconManagerSort');
+                if (sortInput) sortInput.value = 'newest';
+                highlightIconManagerCard(newKey);
+                renderIconManager(result.data);
+                showToast(t('icons.saved'), 'success');
+            } else {
+                showToast(result.message, 'error');
+            }
+        } catch (error) {
+            showToast(t('icons.save_error', {message: error.message}), 'error');
+        }
+    });
+    document.getElementById('iconifyImportSet')?.addEventListener('change', function() {
+        updateIconifyImportLicense();
+        const query = document.getElementById('iconifyImportQuery')?.value.trim() || '';
+        if (query.length >= 2) searchIconifyImport();
+    });
+    document.getElementById('iconManagerSearch')?.addEventListener('input', function() {
+        iconManagerSearchTerm = this.value.trim();
+        renderIconManager();
+    });
+    document.getElementById('iconManagerSort')?.addEventListener('change', function() {
+        iconManagerSortMode = this.value || 'alpha';
+        renderIconManager();
+    });
+    document.getElementById('iconifyImportQuery')?.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            searchIconifyImport();
+        }
+    });
+    document.getElementById('iconifyImportSearchBtn')?.addEventListener('click', searchIconifyImport);
+
+    function deleteIconManagerIcon(iconItem) {
+        showModal(t('icons.delete_icon'), t('icons.delete_confirm', {key: iconItem.key}), async function() {
+            closeModal();
+            const formData = new FormData();
+            formData.append('action', 'delete-icon');
+            formData.append('csrf_token', CSRF_TOKEN);
+            formData.append('key', iconItem.key);
+
+            try {
+                const result = await fetchJsonWithTimeout('api.php', { method: 'POST', body: formData }, 15000);
+                if (result.success) {
+                    renderIconManager(result.data);
+                    showToast(t('icons.deleted'), 'success');
+                } else {
+                    showToast(result.message, 'error');
+                }
+            } catch (error) {
+                showToast(t('icons.delete_error', {message: error.message}), 'error');
+            }
+        });
+    }
+    <?php endif; ?>
+
     // ============================================================
     // MAIL MANAGEMENT
     // ============================================================
 
     let mailsData = [];
+    let mailSortField = 'received';
+    let mailSortDir = 'desc';
 
     async function loadMails() {
         try {
@@ -3615,21 +4292,53 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
         if (!mailsData || mailsData.length === 0) {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td colspan="3" style="color: var(--nb-text-muted); text-align: center; padding: var(--nb-space-6);">${escapeHtml(t('mails.no_messages'))}</td>`;
+            tr.innerHTML = `<td colspan="5" style="color: var(--nb-text-muted); text-align: center; padding: var(--nb-space-6);">${escapeHtml(t('mails.no_messages'))}</td>`;
             tbody.appendChild(tr);
             updateMailBulkActions();
+            updateMailSortIndicators();
             return;
         }
 
-        mailsData.forEach(mail => {
+        getSortedMails().forEach(mail => {
             const date = new Date(mail.timestamp);
             const dateStr = date.toLocaleDateString();
             const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const isUnread = !mail.read;
+            const isStarred = !!mail.starred;
 
             const tr = document.createElement('tr');
             tr.className = 'page-list-row';
             if (isUnread) tr.classList.add('mail-row-unread');
+
+            const tdRead = document.createElement('td');
+            tdRead.className = 'mail-cell-flag';
+            const readBtn = document.createElement('button');
+            readBtn.type = 'button';
+            readBtn.className = 'mail-flag-btn mail-read-toggle' + (isUnread ? ' is-active' : '');
+            readBtn.title = isUnread ? t('mails.mark_read') : t('mails.mark_unread');
+            readBtn.setAttribute('aria-label', readBtn.title);
+            readBtn.innerHTML = `<span class="mail-read-dot" aria-hidden="true"></span>`;
+            readBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setMailFlags(mail.id, { read: isUnread });
+            };
+            tdRead.appendChild(readBtn);
+
+            const tdStar = document.createElement('td');
+            tdStar.className = 'mail-cell-flag';
+            const starBtn = document.createElement('button');
+            starBtn.type = 'button';
+            starBtn.className = 'mail-flag-btn mail-star-toggle' + (isStarred ? ' is-active' : '');
+            starBtn.title = isStarred ? t('mails.unstar') : t('mails.star');
+            starBtn.setAttribute('aria-label', starBtn.title);
+            starBtn.textContent = isStarred ? '★' : '☆';
+            starBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setMailFlags(mail.id, { starred: !isStarred });
+            };
+            tdStar.appendChild(starBtn);
 
             const tdFrom = document.createElement('td');
             tdFrom.className = 'page-list-cell-title';
@@ -3672,12 +4381,57 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             tdDate.className = 'page-list-cell-date';
             tdDate.textContent = `${dateStr} ${timeStr}`;
 
+            tr.appendChild(tdRead);
+            tr.appendChild(tdStar);
             tr.appendChild(tdFrom);
             tr.appendChild(tdSubject);
             tr.appendChild(tdDate);
             tbody.appendChild(tr);
         });
         updateMailBulkActions();
+        updateMailSortIndicators();
+    }
+
+    function getSortedMails() {
+        return [...mailsData].sort((a, b) => {
+            let cmp = 0;
+            if (mailSortField === 'read') {
+                cmp = Number(!!a.read) - Number(!!b.read);
+            } else if (mailSortField === 'starred') {
+                cmp = Number(!!a.starred) - Number(!!b.starred);
+            } else if (mailSortField === 'from') {
+                cmp = String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' });
+            } else if (mailSortField === 'subject') {
+                cmp = String(a.occasion || '').localeCompare(String(b.occasion || ''), undefined, { sensitivity: 'base' });
+            } else {
+                cmp = new Date(a.timestamp || 0).getTime() - new Date(b.timestamp || 0).getTime();
+            }
+            return mailSortDir === 'asc' ? cmp : -cmp;
+        });
+    }
+
+    function sortMails(field) {
+        if (mailSortField === field) {
+            mailSortDir = mailSortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+            mailSortField = field;
+            mailSortDir = field === 'read' || field === 'from' || field === 'subject' ? 'asc' : 'desc';
+        }
+        renderMails();
+    }
+
+    function updateMailSortIndicators() {
+        document.querySelectorAll('#mailsListTable .page-list-sortable').forEach(th => {
+            const iconEl = th.querySelector('.page-list-sort-icon');
+            if (!iconEl) return;
+            if (th.dataset.mailSort === mailSortField) {
+                th.classList.add('sorted');
+                iconEl.textContent = mailSortDir === 'asc' ? '▲' : '▼';
+            } else {
+                th.classList.remove('sorted');
+                iconEl.textContent = '';
+            }
+        });
     }
 
     function updateMailBadge() {
@@ -3808,11 +4562,18 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     }
 
     async function markMailRead(mailId) {
+        return setMailFlags(mailId, { read: true }, { silent: true });
+    }
+
+    async function setMailFlags(mailId, flags, options = {}) {
         try {
             const formData = new FormData();
-            formData.append('action', 'mark-mail-read');
+            formData.append('action', 'update-mail-flags');
             formData.append('mail_id', mailId);
             formData.append('csrf_token', CSRF_TOKEN);
+            Object.entries(flags).forEach(([key, value]) => {
+                formData.append(key, value ? '1' : '0');
+            });
 
             const response = await fetch('api.php', {
                 method: 'POST',
@@ -3823,12 +4584,20 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
             if (result.success) {
                 const mail = mailsData.find(m => m.id === mailId);
-                if (mail) mail.read = true;
+                if (mail) {
+                    Object.assign(mail, flags);
+                }
                 renderMails();
                 updateMailBadge();
+            } else if (!options.silent) {
+                showToast(result.message, 'error');
             }
         } catch (error) {
-            console.error('Error marking:', error);
+            if (options.silent) {
+                console.error('Error updating mail flags:', error);
+            } else {
+                showToast(t('toast.error_generic', {message: error.message}), 'error');
+            }
         }
     }
 

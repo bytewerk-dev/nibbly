@@ -6,6 +6,7 @@
 
 require_once 'config.php';
 require_once __DIR__ . '/users.php';
+require_once __DIR__ . '/../includes/content-loader.php';
 ensureUsersFile();
 
 // Prevent PHP HTML error output from corrupting JSON responses
@@ -87,6 +88,331 @@ function cleanupOldBackups($pagePrefix) {
         $oldBackup = array_pop($backups);
         unlink($oldBackup);
     }
+}
+
+function readSiteIconSetRaw() {
+    $path = getIconSetPath();
+    if (!is_file($path)) {
+        return [];
+    }
+
+    $raw = json_decode(file_get_contents($path), true);
+    return is_array($raw) ? $raw : [];
+}
+
+function writeSiteIconSetRaw(array $iconSet) {
+    $path = getIconSetPath();
+    $dir = dirname($path);
+    if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
+        return false;
+    }
+
+    if (isset($iconSet['_deleted']) && is_array($iconSet['_deleted'])) {
+        $iconSet['_deleted'] = array_values(array_unique(array_filter($iconSet['_deleted'], function($key) {
+            return is_string($key) && preg_match('/^[a-zA-Z0-9_-]+$/', $key);
+        })));
+        if (empty($iconSet['_deleted'])) {
+            unset($iconSet['_deleted']);
+        }
+    }
+
+    ksort($iconSet);
+    return file_put_contents(
+        $path,
+        json_encode($iconSet, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        LOCK_EX
+    ) !== false;
+}
+
+function sanitizeIconKeyInput($key) {
+    $key = trim((string)$key);
+    if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/', $key)) {
+        return '';
+    }
+    return $key;
+}
+
+function getIconifyAllowedSets() {
+    return [
+        'lucide' => [
+            'label' => 'Lucide',
+            'license' => 'ISC',
+            'licenseUrl' => 'https://github.com/lucide-icons/lucide/blob/main/LICENSE',
+            'defaultWidth' => 24,
+            'defaultHeight' => 24,
+        ],
+        'tabler' => [
+            'label' => 'Tabler Icons',
+            'license' => 'MIT',
+            'licenseUrl' => 'https://github.com/tabler/tabler-icons/blob/master/LICENSE',
+            'defaultWidth' => 24,
+            'defaultHeight' => 24,
+        ],
+        'heroicons' => [
+            'label' => 'Heroicons',
+            'license' => 'MIT',
+            'licenseUrl' => 'https://github.com/tailwindlabs/heroicons/blob/master/LICENSE',
+            'defaultWidth' => 24,
+            'defaultHeight' => 24,
+        ],
+        'bi' => [
+            'label' => 'Bootstrap Icons',
+            'license' => 'MIT',
+            'licenseUrl' => 'https://github.com/twbs/icons/blob/main/LICENSE.md',
+            'style' => 'fill',
+            'defaultWidth' => 16,
+            'defaultHeight' => 16,
+        ],
+    ];
+}
+
+function fetchIconifyJson($url) {
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 8,
+            'header' => "User-Agent: Nibbly-CMS/1.0\r\nAccept: application/json\r\n",
+        ],
+    ]);
+
+    $json = @file_get_contents($url, false, $context);
+    if ($json === false && function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_TIMEOUT => 8,
+            CURLOPT_USERAGENT => 'Nibbly-CMS/1.0',
+            CURLOPT_HTTPHEADER => ['Accept: application/json'],
+        ]);
+        $json = curl_exec($ch);
+        $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($json === false || $status >= 400) {
+            return null;
+        }
+    }
+
+    $data = is_string($json) ? json_decode($json, true) : null;
+    return is_array($data) ? $data : null;
+}
+
+function iconifyIconToDefinition($prefix, $name, array $data, array $setInfo) {
+    $icon = $data['icons'][$name] ?? null;
+    if (!$icon && isset($data['aliases'][$name]['parent'])) {
+        $parent = $data['aliases'][$name]['parent'];
+        $icon = $data['icons'][$parent] ?? null;
+    }
+    if (!is_array($icon) || empty($icon['body']) || !is_string($icon['body'])) {
+        return null;
+    }
+
+    $width = $icon['width'] ?? $data['width'] ?? $setInfo['defaultWidth'] ?? 24;
+    $height = $icon['height'] ?? $data['height'] ?? $setInfo['defaultHeight'] ?? 24;
+    $left = $icon['left'] ?? 0;
+    $top = $icon['top'] ?? 0;
+    $viewBox = normalizeIconViewBox($left . ' ' . $top . ' ' . $width . ' ' . $height);
+    $label = ucwords(str_replace(['-', '_'], ' ', $name));
+    $style = $setInfo['style'] ?? 'stroke';
+
+    $normalized = normalizeIconSet([
+        $prefix . '-' . $name => [
+            'label' => $label,
+            'tags' => [$setInfo['label'], $prefix],
+            'svg' => $icon['body'],
+            'viewBox' => $viewBox,
+            'style' => $style,
+        ],
+    ]);
+    $key = array_key_first($normalized);
+    if (!$key) {
+        return null;
+    }
+
+    return [
+        'key' => $key,
+        'prefix' => $prefix,
+        'name' => $name,
+        'full' => $prefix . ':' . $name,
+        'label' => $normalized[$key]['label'],
+        'tags' => $normalized[$key]['tags'],
+        'svg' => $normalized[$key]['svg'],
+        'viewBox' => $normalized[$key]['viewBox'],
+        'style' => $normalized[$key]['style'] ?? $style,
+        'license' => $setInfo['license'],
+        'licenseUrl' => $setInfo['licenseUrl'],
+        'setLabel' => $setInfo['label'],
+    ];
+}
+
+function searchIconifyIcons($prefix, $query) {
+    $allowedSets = getIconifyAllowedSets();
+    if (!isset($allowedSets[$prefix])) {
+        return [false, null, 'Icon set is not allowed.'];
+    }
+    $query = trim((string)$query);
+    if (strlen($query) < 2) {
+        return [false, null, 'Enter at least 2 characters.'];
+    }
+
+    $searchUrl = 'https://api.iconify.design/search?query=' . rawurlencode($query) . '&prefix=' . rawurlencode($prefix) . '&limit=48';
+    $search = fetchIconifyJson($searchUrl);
+    if (!$search || empty($search['icons']) || !is_array($search['icons'])) {
+        return [true, ['icons' => [], 'sets' => $allowedSets], ''];
+    }
+
+    $names = [];
+    foreach ($search['icons'] as $iconName) {
+        if (is_string($iconName) && str_starts_with($iconName, $prefix . ':')) {
+            $names[] = substr($iconName, strlen($prefix) + 1);
+        }
+    }
+    $names = array_slice(array_values(array_unique($names)), 0, 48);
+    if (!$names) {
+        return [true, ['icons' => [], 'sets' => $allowedSets], ''];
+    }
+
+    $dataUrl = 'https://api.iconify.design/' . rawurlencode($prefix) . '.json?icons=' . rawurlencode(implode(',', $names));
+    $data = fetchIconifyJson($dataUrl);
+    if (!$data) {
+        return [false, null, 'Could not load icon data from Iconify.'];
+    }
+
+    $icons = [];
+    foreach ($names as $name) {
+        $definition = iconifyIconToDefinition($prefix, $name, $data, $allowedSets[$prefix]);
+        if ($definition) {
+            $icons[] = $definition;
+        }
+    }
+
+    return [true, ['icons' => $icons, 'sets' => $allowedSets], ''];
+}
+
+function importIconifyIcon($fullName) {
+    $allowedSets = getIconifyAllowedSets();
+    $fullName = trim((string)$fullName);
+    if (!preg_match('/^([a-z0-9-]+):([a-z0-9-]+)$/', $fullName, $m)) {
+        return [false, null, 'Invalid Iconify icon name.'];
+    }
+
+    $prefix = $m[1];
+    $name = $m[2];
+    if (!isset($allowedSets[$prefix])) {
+        return [false, null, 'Icon set is not allowed.'];
+    }
+
+    $dataUrl = 'https://api.iconify.design/' . rawurlencode($prefix) . '.json?icons=' . rawurlencode($name);
+    $data = fetchIconifyJson($dataUrl);
+    if (!$data) {
+        return [false, null, 'Could not load icon data from Iconify.'];
+    }
+
+    $definition = iconifyIconToDefinition($prefix, $name, $data, $allowedSets[$prefix]);
+    if (!$definition) {
+        return [false, null, 'Icon could not be imported.'];
+    }
+
+    $rawIconSet = readSiteIconSetRaw();
+    $availableKeys = array_column(iconManagerListData()['icons'], 'key');
+    if (in_array($definition['key'], $availableKeys, true)) {
+        return [false, null, 'An icon with this key already exists.'];
+    }
+
+    $rawIconSet[$definition['key']] = [
+        'label' => $definition['label'],
+        'tags' => array_values(array_unique(array_merge($definition['tags'], ['iconify', $definition['full']]))),
+        'svg' => $definition['svg'],
+        'viewBox' => $definition['viewBox'],
+        'style' => $definition['style'],
+        'createdAt' => date('c'),
+        'updatedAt' => date('c'),
+        'source' => [
+            'type' => 'iconify',
+            'icon' => $definition['full'],
+            'license' => $definition['license'],
+            'licenseUrl' => $definition['licenseUrl'],
+        ],
+    ];
+
+    if (!writeSiteIconSetRaw($rawIconSet)) {
+        return [false, null, 'Could not write icon set.'];
+    }
+
+    return [true, iconManagerListData(), ''];
+}
+
+function normalizeIconManagerPayload($key, $label, $tags, $svg, $viewBox = '') {
+    $key = sanitizeIconKeyInput($key);
+    if ($key === '') {
+        return [false, null, 'Invalid icon key. Use lowercase letters, numbers, hyphens, and underscores.'];
+    }
+
+    $tagsArray = [];
+    if (is_string($tags) && trim($tags) !== '') {
+        $tagsArray = array_values(array_filter(array_map('trim', explode(',', $tags)), 'strlen'));
+    } elseif (is_array($tags)) {
+        $tagsArray = array_values(array_filter($tags, 'is_string'));
+    }
+
+    $extractedViewBox = extractIconViewBoxFromSvg((string)$svg);
+    $rawViewBox = trim((string)$viewBox);
+
+    $definition = [
+        'label' => trim((string)$label) ?: ucwords(str_replace(['-', '_'], ' ', $key)),
+        'tags' => $tagsArray,
+        'svg' => (string)$svg,
+        'viewBox' => ($extractedViewBox && ($rawViewBox === '' || normalizeIconViewBox($rawViewBox) === '0 0 24 24'))
+            ? $extractedViewBox
+            : normalizeIconViewBox($rawViewBox),
+    ];
+    $normalized = normalizeIconSet([$key => $definition]);
+    if (empty($normalized[$key])) {
+        return [false, null, 'SVG code is empty or contains no supported SVG elements.'];
+    }
+
+    return [true, [$key, $normalized[$key]], ''];
+}
+
+function iconManagerListData() {
+    $core = getDefaultIconSet();
+    $raw = readSiteIconSetRaw();
+    $custom = normalizeIconSet($raw);
+    $deleted = getDeletedIconKeys($raw);
+    $merged = $core;
+
+    foreach ($deleted as $deletedKey) {
+        unset($merged[$deletedKey]);
+    }
+    $merged = array_merge($merged, $custom);
+    if (empty($merged['default'])) {
+        $fallback = getEmergencyDefaultIconSet();
+        $merged['default'] = $fallback['default'];
+    }
+
+    $icons = [];
+    foreach ($merged as $key => $definition) {
+        $icons[] = [
+            'key' => $key,
+            'label' => $definition['label'] ?? ucwords(str_replace(['-', '_'], ' ', $key)),
+            'tags' => $definition['tags'] ?? [],
+            'svg' => $definition['svg'] ?? '',
+            'viewBox' => $definition['viewBox'] ?? '0 0 24 24',
+            'style' => $definition['style'] ?? 'stroke',
+            'createdAt' => $definition['createdAt'] ?? '',
+            'updatedAt' => $definition['updatedAt'] ?? '',
+            'source' => isset($custom[$key]) ? 'custom' : 'core',
+            'canDelete' => $key !== 'default',
+        ];
+    }
+    usort($icons, function($a, $b) {
+        return strcasecmp($a['key'], $b['key']);
+    });
+
+    return [
+        'icons' => $icons,
+        'path' => getIconSetPath(),
+        'deleted' => $deleted,
+    ];
 }
 
 
@@ -182,6 +508,132 @@ switch ($action) {
 
     case 'list-pages':
         jsonResponse(true, buildPageList());
+        break;
+
+    case 'list-icons':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        jsonResponse(true, iconManagerListData());
+        break;
+
+    case 'iconify-search':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        [$validSearch, $searchData, $searchError] = searchIconifyIcons($_GET['prefix'] ?? '', $_GET['query'] ?? '');
+        if (!$validSearch) {
+            jsonResponse(false, null, $searchError);
+        }
+        jsonResponse(true, $searchData);
+        break;
+
+    case 'iconify-import':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        [$validImport, $importData, $importError] = importIconifyIcon($_POST['icon'] ?? '');
+        if (!$validImport) {
+            jsonResponse(false, null, $importError);
+        }
+        jsonResponse(true, $importData, 'Icon imported.');
+        break;
+
+    case 'save-icon':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $oldKey = sanitizeIconKeyInput($_POST['old_key'] ?? '');
+        [$validIcon, $normalizedIcon, $iconError] = normalizeIconManagerPayload(
+            $_POST['key'] ?? '',
+            $_POST['label'] ?? '',
+            $_POST['tags'] ?? '',
+            $_POST['svg'] ?? '',
+            $_POST['viewBox'] ?? ''
+        );
+        if (!$validIcon) {
+            jsonResponse(false, null, $iconError);
+        }
+
+        [$newKey, $definition] = $normalizedIcon;
+        if ($oldKey === 'default' && $newKey !== 'default') {
+            jsonResponse(false, null, 'The fallback icon key cannot be renamed.');
+        }
+        $rawIconSet = readSiteIconSetRaw();
+        $customIcons = normalizeIconSet($rawIconSet);
+        $availableIcons = iconManagerListData()['icons'];
+        $availableKeys = array_column($availableIcons, 'key');
+
+        if (($oldKey === '' || $oldKey !== $newKey) && in_array($newKey, $availableKeys, true)) {
+            jsonResponse(false, null, 'An icon with this key already exists.');
+        }
+
+        if ($oldKey !== '' && $oldKey !== $newKey) {
+            unset($rawIconSet[$oldKey]);
+            if (isset(getDefaultIconSet()[$oldKey])) {
+                $rawIconSet['_deleted'] = $rawIconSet['_deleted'] ?? [];
+                $rawIconSet['_deleted'][] = $oldKey;
+            }
+        }
+
+        $previousKey = $oldKey ?: $newKey;
+        $previousDefinition = isset($rawIconSet[$previousKey]) && is_array($rawIconSet[$previousKey]) ? $rawIconSet[$previousKey] : [];
+        $definition['createdAt'] = isset($previousDefinition['createdAt']) && is_string($previousDefinition['createdAt'])
+            ? $previousDefinition['createdAt']
+            : date('c');
+        $definition['updatedAt'] = date('c');
+        $rawIconSet[$newKey] = $definition;
+        if (isset($rawIconSet['_deleted']) && is_array($rawIconSet['_deleted'])) {
+            $rawIconSet['_deleted'] = array_values(array_filter($rawIconSet['_deleted'], function($key) use ($newKey) {
+                return $key !== $newKey;
+            }));
+        }
+
+        if (!writeSiteIconSetRaw($rawIconSet)) {
+            jsonResponse(false, null, 'Could not write icon set.');
+        }
+
+        jsonResponse(true, iconManagerListData(), 'Icon saved.');
+        break;
+
+    case 'delete-icon':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $key = sanitizeIconKeyInput($_POST['key'] ?? '');
+        if ($key === '') {
+            jsonResponse(false, null, 'Invalid icon key.');
+        }
+        if ($key === 'default') {
+            jsonResponse(false, null, 'The fallback icon cannot be deleted.');
+        }
+
+        $rawIconSet = readSiteIconSetRaw();
+        unset($rawIconSet[$key]);
+        if (isset(getDefaultIconSet()[$key])) {
+            $rawIconSet['_deleted'] = $rawIconSet['_deleted'] ?? [];
+            $rawIconSet['_deleted'][] = $key;
+        }
+
+        if (!writeSiteIconSetRaw($rawIconSet)) {
+            jsonResponse(false, null, 'Could not write icon set.');
+        }
+
+        jsonResponse(true, iconManagerListData(), 'Icon deleted.');
         break;
 
     case 'create-page':
@@ -1591,6 +2043,55 @@ switch ($action) {
 
         file_put_contents($mailsFile, json_encode($mails, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
         jsonResponse(true, null, 'Mail marked as read');
+        break;
+
+    case 'update-mail-flags':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $mailId = $_POST['mail_id'] ?? '';
+        if (empty($mailId)) {
+            jsonResponse(false, null, 'Mail ID missing');
+        }
+
+        $allowedFlags = ['read', 'starred'];
+        $updates = [];
+        foreach ($allowedFlags as $flag) {
+            if (array_key_exists($flag, $_POST)) {
+                $updates[$flag] = filter_var($_POST[$flag], FILTER_VALIDATE_BOOLEAN);
+            }
+        }
+
+        if (empty($updates)) {
+            jsonResponse(false, null, 'No mail flags provided');
+        }
+
+        $mailsFile = dirname(CONTENT_PATH) . '/mails.json';
+        if (!file_exists($mailsFile)) {
+            jsonResponse(false, null, 'No mails found');
+        }
+
+        $mails = json_decode(file_get_contents($mailsFile), true) ?: [];
+        $found = false;
+
+        foreach ($mails as &$mail) {
+            if (($mail['id'] ?? '') === $mailId) {
+                foreach ($updates as $flag => $value) {
+                    $mail[$flag] = $value;
+                }
+                $found = true;
+                break;
+            }
+        }
+        unset($mail);
+
+        if (!$found) {
+            jsonResponse(false, null, 'Mail not found');
+        }
+
+        file_put_contents($mailsFile, json_encode($mails, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+        jsonResponse(true, ['mail_id' => $mailId, 'updates' => $updates], 'Mail flags updated');
         break;
 
     case 'mark-all-mails-read':

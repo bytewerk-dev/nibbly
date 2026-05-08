@@ -20,6 +20,7 @@
     "add_block": "Adicionar bloco",
     "search_blocks": "Buscar blocos...",
     "edit": "Editar",
+    "edit_block_title": "Editar {label}",
     "show": "Mostrar",
     "hide": "Ocultar",
     "drag_reorder": "Arraste para reordenar",

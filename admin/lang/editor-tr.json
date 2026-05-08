@@ -20,6 +20,7 @@
     "add_block": "Blok ekle",
     "search_blocks": "Blok ara...",
     "edit": "Düzenle",
+    "edit_block_title": "{label} düzenle",
     "show": "Göster",
     "hide": "Gizle",
     "drag_reorder": "Sıralamak için sürükleyin",

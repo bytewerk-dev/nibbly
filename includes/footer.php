@@ -511,6 +511,7 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
     ?>
     window.NB_LANG = <?php echo json_encode(tEditorAll(), JSON_UNESCAPED_UNICODE); ?>;
     window.NB_MENUS = <?php echo json_encode(getMenuRegistry()['menus'] ?? [], JSON_UNESCAPED_UNICODE); ?>;
+    window.NB_AVAILABLE_ICONS = <?php echo json_encode(function_exists('getAvailableIcons') ? getAvailableIcons() : [], JSON_UNESCAPED_UNICODE); ?>;
     <?php
     // Build lightweight page list for link picker (slug → title for current language)
     $_linkPages = [];
