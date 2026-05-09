@@ -601,6 +601,7 @@
     "modal.delete_read_messages": "Gelesene Nachrichten löschen",
     "modal.delete_read_messages_confirm": "{count} gelesene Nachrichten löschen? Das kann nicht rückgängig gemacht werden.",
     "nav.image_manager": "Bild Manager",
+    "nav.media_library": "Mediathek",
     "nav.icon_manager": "Icon Manager",
     "icons.title": "Icon Manager",
     "icons.add_icon": "Icon hinzufügen",

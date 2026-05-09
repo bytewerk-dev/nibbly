@@ -352,6 +352,10 @@ define('IMAGES_PATH', __DIR__ . '/../assets/images/');
 define('IMAGES_TRASH_PATH', __DIR__ . '/../assets/images-trash/');
 define('AUDIO_PATH', __DIR__ . '/../assets/audio/');
 define('AUDIO_TRASH_PATH', __DIR__ . '/../assets/audio-trash/');
+define('VIDEO_PATH', __DIR__ . '/../assets/videos/');
+define('VIDEO_TRASH_PATH', __DIR__ . '/../assets/videos-trash/');
+define('DOCUMENTS_PATH', __DIR__ . '/../assets/documents/');
+define('DOCUMENTS_TRASH_PATH', __DIR__ . '/../assets/documents-trash/');
 define('SETTINGS_PATH', __DIR__ . '/../content/settings.json');
 define('USERS_PATH', __DIR__ . '/../content/users.json');
 

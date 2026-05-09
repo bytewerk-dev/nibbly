@@ -3,7 +3,7 @@
  *
  * Shared between the frontend inline editor and the backend dashboard.
  * Consumers initialize it once via NbImageManager.init({...}) and then
- * call NbImageManager.open(callback) to pick an image.
+ * call NbImageManager.open(callback, currentPath, { types: ['image'] }) to pick media.
  *
  * Depends on css/image-manager.css and css/nibbly-admin-tokens.css.
  */
@@ -31,6 +31,8 @@
         selectedPath: null,
         callback: null,
         isPicker: false,
+        allowedTypes: ['image'],
+        activeType: 'image',
         view: 'grid',
         mode: 'library',
         sort: { field: 'date', dir: 'desc' },
@@ -38,6 +40,40 @@
     };
 
     var replaceTarget = null;
+    var mediaTypes = {
+        image: {
+            labelKey: 'media.type_images',
+            uploadLabelKey: 'image.upload',
+            formatsKey: 'image.formats_hint',
+            accept: '.jpg,.jpeg,.png,.webp,.gif,.svg,image/*',
+            extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'],
+            maxSize: 5 * 1024 * 1024,
+        },
+        audio: {
+            labelKey: 'media.type_audio',
+            uploadLabelKey: 'audio.upload',
+            formatsKey: 'audio.formats_hint',
+            accept: '.mp3,.wav,.ogg,.m4a,.aac,.flac,audio/*',
+            extensions: ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'],
+            maxSize: 50 * 1024 * 1024,
+        },
+        video: {
+            labelKey: 'media.type_video',
+            uploadLabelKey: 'media.upload',
+            formatsKey: 'media.video_formats_hint',
+            accept: '.mp4,.webm,.mov,.m4v,video/*',
+            extensions: ['mp4', 'webm', 'mov', 'm4v'],
+            maxSize: 250 * 1024 * 1024,
+        },
+        document: {
+            labelKey: 'media.type_documents',
+            uploadLabelKey: 'media.upload',
+            formatsKey: 'media.document_formats_hint',
+            accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,application/pdf,text/plain',
+            extensions: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf'],
+            maxSize: 50 * 1024 * 1024,
+        },
+    };
 
     // ============================================================
     // SVG ICONS
@@ -80,6 +116,44 @@
         }
     }
 
+    function getActiveUploadType() {
+        if (state.activeType && state.activeType !== 'all') return state.activeType;
+        return state.allowedTypes[0] || 'image';
+    }
+
+    function mediaTypeLabel(type) {
+        return t((mediaTypes[type] || mediaTypes.image).labelKey);
+    }
+
+    function isImageOnlyPicker() {
+        return state.allowedTypes.length === 1 && state.allowedTypes[0] === 'image';
+    }
+
+    function normalizeTypes(types) {
+        var input = Array.isArray(types) ? types : [types || 'image'];
+        var normalized = input.filter(function (type) { return !!mediaTypes[type]; });
+        return normalized.length ? normalized : ['image'];
+    }
+
+    function isImage(item) { return (item.type || 'image') === 'image'; }
+    function isAudio(item) { return item.type === 'audio'; }
+    function isVideo(item) { return item.type === 'video'; }
+    function isDocument(item) { return item.type === 'document'; }
+
+    function mediaIcon(item) {
+        if (isAudio(item)) return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.5A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>';
+        if (isVideo(item)) return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h12a2 2 0 0 1 2 2v1.2l4-2.2v12l-4-2.2V17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg>';
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8M8 9h2"/></svg>';
+    }
+
+    function mediaThumbHtml(item, className, previewAction) {
+        var actionAttr = previewAction ? ' data-action="preview"' : '';
+        if (isImage(item)) {
+            return '<div class="' + className + '" style="background-image:url(\'' + escapeHtml(item.path) + '\')"' + actionAttr + '></div>';
+        }
+        return '<div class="' + className + ' nb-imgmgr-media-icon nb-imgmgr-media-icon--' + escapeHtml(item.type || 'document') + '"' + actionAttr + '>' + mediaIcon(item) + '</div>';
+    }
+
     // ============================================================
     // MODAL CREATION
     // ============================================================
@@ -93,11 +167,12 @@
             '<div class="nb-imgmgr-backdrop"></div>' +
             '<div class="nb-imgmgr-dialog">' +
                 '<div class="nb-imgmgr-header">' +
-                    '<h3>' + escapeHtml(t('image_manager')) + '</h3>' +
+                    '<h3>' + escapeHtml(t('media_manager')) + '</h3>' +
                     '<button type="button" class="nb-imgmgr-close" aria-label="Close">&times;</button>' +
                 '</div>' +
                 '<div class="nb-imgmgr-toolbar">' +
                     '<span class="nb-imgmgr-formats">' + escapeHtml(t('image.formats_hint')) + '</span>' +
+                    '<div class="nb-imgmgr-type-toggle"></div>' +
                     '<div class="nb-imgmgr-mode-toggle">' +
                         '<button type="button" class="nb-imgmgr-mode-btn nb-imgmgr-mode-btn--active" data-mode="library">' + escapeHtml(t('image.library')) + '</button>' +
                         '<button type="button" class="nb-imgmgr-mode-btn" data-mode="trash">' + escapeHtml(t('image.trash')) + '</button>' +
@@ -127,6 +202,7 @@
                 '<div class="nb-imgmgr-dropzone">' +
                     '<span class="nb-imgmgr-dropzone-text">' + escapeHtml(t('image.drop_files')) + '</span>' +
                     '<span class="nb-imgmgr-dropzone-or">' + escapeHtml(t('image.or')) + '</span>' +
+                    '<select class="nb-imgmgr-upload-type"></select>' +
                     '<label class="nb-imgmgr-upload-btn">' +
                         Icons.upload + ' <span>' + escapeHtml(t('image.upload')) + '</span>' +
                         '<input type="file" class="nb-imgmgr-upload-input" accept=".jpg,.jpeg,.png,.webp">' +
@@ -189,6 +265,12 @@
             });
         });
 
+        modal.querySelector('.nb-imgmgr-upload-type').addEventListener('change', function (e) {
+            state.activeType = e.target.value;
+            updateTypeUI();
+            loadImages();
+        });
+
         modal.querySelectorAll('.nb-imgmgr-list-header-col.sortable').forEach(function (col) {
             col.addEventListener('click', function () {
                 sort(col.dataset.sort);
@@ -223,17 +305,24 @@
     // ============================================================
     // OPEN / CLOSE
     // ============================================================
-    function open(callback, currentPath) {
+    function open(callback, currentPath, options) {
+        options = options || {};
         createModal();
         state.callback = typeof callback === 'function' ? callback : null;
         state.isPicker = typeof callback === 'function';
+        state.allowedTypes = normalizeTypes(options.types || (state.isPicker ? ['image'] : ['image', 'audio', 'video', 'document']));
+        state.activeType = options.type && state.allowedTypes.indexOf(options.type) !== -1
+            ? options.type
+            : (state.allowedTypes.length > 1 && !state.isPicker ? 'all' : state.allowedTypes[0]);
         state.selectedPath = normalizeImagePath(currentPath);
         state.search = '';
         state.mode = 'library';
 
         var modal = document.getElementById('nb-imgmgr-modal');
         modal.querySelector('.nb-imgmgr-search').value = '';
+        renderTypeControls();
         updateModeUI();
+        updateTypeUI();
 
         loadImages();
         updateSelectionUI();
@@ -266,6 +355,78 @@
         close();
     }
 
+    function renderTypeControls() {
+        var modal = document.getElementById('nb-imgmgr-modal');
+        if (!modal) return;
+
+        var typeToggle = modal.querySelector('.nb-imgmgr-type-toggle');
+        var uploadType = modal.querySelector('.nb-imgmgr-upload-type');
+        var types = state.allowedTypes.slice();
+
+        typeToggle.innerHTML = '';
+        if (types.length > 1 && !state.isPicker) {
+            var allBtn = document.createElement('button');
+            allBtn.type = 'button';
+            allBtn.className = 'nb-imgmgr-type-btn';
+            allBtn.dataset.type = 'all';
+            allBtn.textContent = t('media.type_all');
+            typeToggle.appendChild(allBtn);
+        }
+
+        types.forEach(function (type) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'nb-imgmgr-type-btn';
+            btn.dataset.type = type;
+            btn.textContent = mediaTypeLabel(type);
+            typeToggle.appendChild(btn);
+        });
+
+        typeToggle.querySelectorAll('.nb-imgmgr-type-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                state.activeType = btn.dataset.type;
+                updateTypeUI();
+                loadImages();
+            });
+        });
+
+        uploadType.innerHTML = '';
+        types.forEach(function (type) {
+            var option = document.createElement('option');
+            option.value = type;
+            option.textContent = mediaTypeLabel(type);
+            uploadType.appendChild(option);
+        });
+    }
+
+    function updateTypeUI() {
+        var modal = document.getElementById('nb-imgmgr-modal');
+        if (!modal) return;
+
+        var uploadType = modal.querySelector('.nb-imgmgr-upload-type');
+        var uploadInput = modal.querySelector('.nb-imgmgr-upload-input');
+        var uploadLabel = modal.querySelector('.nb-imgmgr-upload-btn span');
+        var confirmBtn = modal.querySelector('[data-action="confirm"]');
+        var formats = modal.querySelector('.nb-imgmgr-formats');
+        var uploadTypeValue = getActiveUploadType();
+        var typeConfig = mediaTypes[uploadTypeValue] || mediaTypes.image;
+
+        modal.querySelectorAll('.nb-imgmgr-type-btn').forEach(function (btn) {
+            btn.classList.toggle('nb-imgmgr-type-btn--active', btn.dataset.type === state.activeType);
+        });
+
+        uploadType.hidden = state.allowedTypes.length <= 1;
+        uploadType.value = uploadTypeValue;
+        uploadInput.accept = typeConfig.accept;
+        uploadLabel.textContent = t(typeConfig.uploadLabelKey);
+        if (confirmBtn) {
+            confirmBtn.textContent = t(uploadTypeValue === 'image' ? 'image.select' : (uploadTypeValue === 'audio' ? 'audio.select' : 'media.select_file'));
+        }
+        formats.textContent = t(typeConfig.formatsKey);
+        var title = modal.querySelector('.nb-imgmgr-header h3');
+        if (title) title.textContent = t(isImageOnlyPicker() ? 'image_manager' : 'media_manager');
+    }
+
     // ============================================================
     // LOAD / RENDER
     // ============================================================
@@ -273,18 +434,23 @@
         var modal = document.getElementById('nb-imgmgr-modal');
         var gridEl = modal.querySelector('.nb-imgmgr-grid');
         var listBody = modal.querySelector('.nb-imgmgr-list-body');
-        var action = state.mode === 'trash' ? 'list-image-trash' : 'list-images';
+        var typeParam = state.activeType === 'all' ? state.allowedTypes.join(',') : state.activeType;
+        var url = config.apiUrl + '?action=list-media&type=' + encodeURIComponent(typeParam) + '&trash=' + (state.mode === 'trash' ? '1' : '0') + '&_=' + Date.now();
 
         gridEl.innerHTML = '<p class="nb-imgmgr-loading">' + escapeHtml(t('image.loading')) + '</p>';
         listBody.innerHTML = '';
 
-        fetch(config.apiUrl + '?action=' + action)
+        fetch(url)
             .then(function (r) { return r.json(); })
             .then(function (result) {
-                if (result.success && result.data && result.data.length > 0) {
-                    state.data = result.data.map(function (img) {
+                var items = result.success && result.data
+                    ? (Array.isArray(result.data) ? result.data : (result.data.items || []))
+                    : [];
+                if (items.length > 0) {
+                    state.data = items.map(function (img) {
                         return Object.assign({}, img, {
-                            path: img.path.replace(/^\.\.\//, '/')
+                            type: img.type || 'image',
+                            path: img.path.indexOf('api.php?') === 0 ? img.path : img.path.replace(/^\.\.\//, '/')
                         });
                     });
                     updateSortHeaderClasses();
@@ -293,7 +459,7 @@
                 } else {
                     state.data = [];
                     state.filtered = [];
-                    var emptyKey = state.mode === 'trash' ? 'image.trash_empty' : 'image.no_images';
+                    var emptyKey = state.mode === 'trash' ? (isImageOnlyPicker() ? 'image.trash_empty' : 'media.trash_empty') : 'media.no_files';
                     var empty = '<p class="nb-imgmgr-empty">' + escapeHtml(t(emptyKey)) + '</p>';
                     gridEl.innerHTML = empty;
                     listBody.innerHTML = empty;
@@ -353,7 +519,7 @@
         if (state.filtered.length === 0) {
             var msg = state.search
                 ? t('image.no_search_results', { term: state.search })
-                : t('image.no_images');
+                : t('media.no_files');
             gridEl.innerHTML = '<p class="nb-imgmgr-empty">' + escapeHtml(msg) + '</p>';
             return;
         }
@@ -365,7 +531,7 @@
             item.className = 'nb-imgmgr-item' + (isSelected ? ' selected' : '');
             item.dataset.path = image.path;
             item.innerHTML = state.mode === 'trash'
-                ? '<div class="nb-imgmgr-thumb" style="background-image:url(\'' + escapeHtml(image.path) + '\')"></div>' +
+                ? mediaThumbHtml(image, 'nb-imgmgr-thumb', false) +
                 '<div class="nb-imgmgr-name" title="' + escapeHtml(image.name) + '">' + escapeHtml(image.name) + '</div>' +
                 '<div class="nb-imgmgr-actions">' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
@@ -373,12 +539,12 @@
                     '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete-permanent" title="' + escapeHtml(t('image.delete_permanently')) + '">' + Icons.delete + '</button>' +
                 '</div>'
                 :
-                '<div class="nb-imgmgr-thumb" style="background-image:url(\'' + escapeHtml(image.path) + '\')"></div>' +
+                mediaThumbHtml(image, 'nb-imgmgr-thumb', false) +
                 '<div class="nb-imgmgr-name" title="' + escapeHtml(image.name) + '">' + escapeHtml(image.name) + '</div>' +
                 '<div class="nb-imgmgr-actions">' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="copy" title="' + escapeHtml(t('image.copy_path')) + '">' + Icons.copy + '</button>' +
-                    '<button type="button" class="nb-imgmgr-action-btn" data-action="replace" title="' + escapeHtml(t('image.replace')) + '">' + Icons.replace + '</button>' +
+                    (isImage(image) ? '<button type="button" class="nb-imgmgr-action-btn" data-action="replace" title="' + escapeHtml(t('image.replace')) + '">' + Icons.replace + '</button>' : '') +
                     '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete" title="' + escapeHtml(t('delete')) + '">' + Icons.delete + '</button>' +
                 '</div>';
             if (state.mode !== 'trash' && state.isPicker) {
@@ -396,7 +562,7 @@
         if (state.filtered.length === 0) {
             var msg = state.search
                 ? t('image.no_search_results', { term: state.search })
-                : t('image.no_images');
+                : t('media.no_files');
             listBody.innerHTML = '<p class="nb-imgmgr-empty">' + escapeHtml(msg) + '</p>';
             return;
         }
@@ -409,7 +575,7 @@
             row.dataset.path = image.path;
             row.innerHTML = state.mode === 'trash'
                 ? '<div></div>' +
-                '<div class="nb-imgmgr-list-thumb" style="background-image:url(\'' + escapeHtml(image.path) + '\')" data-action="preview"></div>' +
+                mediaThumbHtml(image, 'nb-imgmgr-list-thumb', true) +
                 '<div class="nb-imgmgr-list-name" title="' + escapeHtml(image.name) + '">' + escapeHtml(image.name) + '</div>' +
                 '<div class="nb-imgmgr-list-size">' + escapeHtml(image.size || '-') + '</div>' +
                 '<div class="nb-imgmgr-list-date">' + escapeHtml(image.dateFormatted || '-') + '</div>' +
@@ -420,14 +586,14 @@
                 '</div>'
                 :
                 '<div></div>' +
-                '<div class="nb-imgmgr-list-thumb" style="background-image:url(\'' + escapeHtml(image.path) + '\')" data-action="preview"></div>' +
+                mediaThumbHtml(image, 'nb-imgmgr-list-thumb', true) +
                 '<div class="nb-imgmgr-list-name" title="' + escapeHtml(image.name) + '">' + escapeHtml(image.name) + '</div>' +
                 '<div class="nb-imgmgr-list-size">' + escapeHtml(image.size || '-') + '</div>' +
                 '<div class="nb-imgmgr-list-date">' + escapeHtml(image.dateFormatted || '-') + '</div>' +
                 '<div class="nb-imgmgr-list-actions">' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="copy" title="' + escapeHtml(t('image.copy_path')) + '">' + Icons.copy + '</button>' +
-                    '<button type="button" class="nb-imgmgr-action-btn" data-action="replace" title="' + escapeHtml(t('image.replace')) + '">' + Icons.replace + '</button>' +
+                    (isImage(image) ? '<button type="button" class="nb-imgmgr-action-btn" data-action="replace" title="' + escapeHtml(t('image.replace')) + '">' + Icons.replace + '</button>' : '') +
                     '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete" title="' + escapeHtml(t('delete')) + '">' + Icons.delete + '</button>' +
                 '</div>';
             if (state.mode !== 'trash' && state.isPicker) {
@@ -452,12 +618,12 @@
             if (actionEl) {
                 e.stopPropagation();
                 var action = actionEl.dataset.action;
-                if (action === 'preview') openLightbox(image.path, image.name);
+                if (action === 'preview') openLightbox(image);
                 else if (action === 'copy') copyPath(image.path);
                 else if (action === 'replace') openReplaceDialog(image.name, image.path);
-                else if (action === 'delete') deleteImage(image.name);
-                else if (action === 'restore') restoreImage(image.name);
-                else if (action === 'delete-permanent') deleteImagePermanently(image.name);
+                else if (action === 'delete') deleteMedia(image);
+                else if (action === 'restore') restoreMedia(image);
+                else if (action === 'delete-permanent') deleteMediaPermanently(image);
                 return;
             }
             // Click elsewhere on item = toggle selection
@@ -507,7 +673,7 @@
             info.classList.add('has-selection');
             confirmBtn.disabled = false;
         } else {
-            info.textContent = t('image.no_selection');
+            info.textContent = t(isImageOnlyPicker() ? 'image.no_selection' : 'media.no_selection');
             info.classList.remove('has-selection');
             confirmBtn.disabled = true;
         }
@@ -605,10 +771,12 @@
         document.body.removeChild(ta);
     }
 
-    function deleteImage(filename) {
+    function deleteMedia(item) {
+        if (!item || !item.name) return;
         var formData = new FormData();
-        formData.append('action', 'delete-image');
-        formData.append('filename', filename);
+        formData.append('action', 'delete-media');
+        formData.append('type', item.type || 'image');
+        formData.append('filename', item.name);
         formData.append('csrf_token', config.csrfToken);
 
         fetch(config.apiUrl, { method: 'POST', body: formData })
@@ -616,7 +784,7 @@
             .then(function (result) {
                 if (result.success) {
                     config.showToast(t('image.trashed'), 'success');
-                    if (state.selectedPath && state.selectedPath.indexOf('/' + filename) !== -1) {
+                    if (state.selectedPath === item.path || (state.selectedPath && state.selectedPath.indexOf('/' + item.name) !== -1)) {
                         state.selectedPath = null;
                     }
                     loadImages();
@@ -629,10 +797,12 @@
             });
     }
 
-    function restoreImage(filename) {
+    function restoreMedia(item) {
+        if (!item || !item.name) return;
         var formData = new FormData();
-        formData.append('action', 'restore-image');
-        formData.append('filename', filename);
+        formData.append('action', 'restore-media');
+        formData.append('type', item.type || 'image');
+        formData.append('filename', item.name);
         formData.append('csrf_token', config.csrfToken);
 
         fetch(config.apiUrl, { method: 'POST', body: formData })
@@ -650,14 +820,16 @@
             });
     }
 
-    function deleteImagePermanently(filename) {
+    function deleteMediaPermanently(item) {
+        if (!item || !item.name) return;
         confirmAction(
             t('image.delete_permanently'),
-            t('image.delete_permanently_confirm', { filename: filename }),
+            t('image.delete_permanently_confirm', { filename: item.name }),
             function () {
                 var formData = new FormData();
-                formData.append('action', 'delete-image-trash');
-                formData.append('filename', filename);
+                formData.append('action', 'delete-media-trash');
+                formData.append('type', item.type || 'image');
+                formData.append('filename', item.name);
                 formData.append('csrf_token', config.csrfToken);
 
                 fetch(config.apiUrl, { method: 'POST', body: formData })
@@ -679,7 +851,7 @@
 
     function emptyImageTrash() {
         if (!state.data.length) {
-            config.showToast(t('image.trash_empty'), 'info');
+            config.showToast(t(isImageOnlyPicker() ? 'image.trash_empty' : 'media.trash_empty'), 'info');
             return;
         }
 
@@ -688,7 +860,8 @@
             t('image.empty_trash_confirm'),
             function () {
                 var formData = new FormData();
-                formData.append('action', 'empty-image-trash');
+                formData.append('action', 'empty-media-trash');
+                formData.append('type', state.activeType === 'all' ? state.allowedTypes.join(',') : state.activeType);
                 formData.append('csrf_token', config.csrfToken);
 
                 fetch(config.apiUrl, { method: 'POST', body: formData })
@@ -717,19 +890,22 @@
     function uploadFile(file) {
         if (!file) return;
 
-        var allowed = ['image/jpeg', 'image/png', 'image/webp'];
-        if (allowed.indexOf(file.type) === -1) {
-            config.showToast(t('image.format_error'), 'error');
+        var type = getActiveUploadType();
+        var typeConfig = mediaTypes[type] || mediaTypes.image;
+        var ext = (file.name.split('.').pop() || '').toLowerCase();
+        if (typeConfig.extensions.indexOf(ext) === -1) {
+            config.showToast(t(type === 'image' ? 'image.format_error' : 'media.format_error'), 'error');
             return;
         }
-        if (file.size > 5 * 1024 * 1024) {
-            config.showToast(t('image.size_error'), 'error');
+        if (file.size > typeConfig.maxSize) {
+            config.showToast(t(type === 'image' ? 'image.size_error' : 'media.size_error'), 'error');
             return;
         }
 
         var formData = new FormData();
-        formData.append('action', 'upload-image');
-        formData.append('image', file);
+        formData.append('action', 'upload-media');
+        formData.append('type', type);
+        formData.append('file', file);
         formData.append('csrf_token', config.csrfToken);
 
         config.showToast(t('image.uploading'), 'info');
@@ -740,6 +916,9 @@
                 if (result.success) {
                     config.showToast(t('image.uploaded'), 'success');
                     state.sort = { field: 'date', dir: 'desc' };
+                    if (state.isPicker) {
+                        state.activeType = type;
+                    }
                     loadImages();
                     if (result.data && result.data.path) {
                         state.selectedPath = result.data.path.replace(/^\.\.\//, '/');
@@ -766,7 +945,7 @@
         lb.innerHTML =
             '<div class="nb-imgmgr-lightbox-content">' +
                 '<button type="button" class="nb-imgmgr-lightbox-close" aria-label="Close">&times;</button>' +
-                '<img alt="">' +
+                '<div class="nb-imgmgr-lightbox-stage"></div>' +
                 '<div class="nb-imgmgr-lightbox-info"></div>' +
             '</div>';
         document.body.appendChild(lb);
@@ -781,17 +960,39 @@
         });
     }
 
-    function openLightbox(path, name) {
+    function openLightbox(itemOrPath, name) {
+        var item = typeof itemOrPath === 'object'
+            ? itemOrPath
+            : { type: 'image', path: itemOrPath, name: name || '' };
         var lb = document.getElementById('nb-imgmgr-lightbox');
         if (!lb) { createLightbox(); lb = document.getElementById('nb-imgmgr-lightbox'); }
-        lb.querySelector('img').src = path;
-        lb.querySelector('.nb-imgmgr-lightbox-info').textContent = name;
+        var stage = lb.querySelector('.nb-imgmgr-lightbox-stage');
+        var label = item.name || '';
+        if (isImage(item)) {
+            stage.innerHTML = '<img alt="" src="' + escapeHtml(item.path) + '">';
+        } else if (isAudio(item)) {
+            stage.innerHTML = '<div class="nb-imgmgr-lightbox-media nb-imgmgr-lightbox-media--audio">' +
+                mediaIcon(item) +
+                '<audio controls src="' + escapeHtml(item.path) + '"></audio>' +
+            '</div>';
+        } else if (isVideo(item)) {
+            stage.innerHTML = '<video class="nb-imgmgr-lightbox-video" controls src="' + escapeHtml(item.path) + '"></video>';
+        } else {
+            stage.innerHTML = '<div class="nb-imgmgr-lightbox-media nb-imgmgr-lightbox-media--document">' +
+                mediaIcon(item) +
+                '<a href="' + escapeHtml(item.path) + '" target="_blank" rel="noopener">' + escapeHtml(t('media.open_file')) + '</a>' +
+            '</div>';
+        }
+        lb.querySelector('.nb-imgmgr-lightbox-info').textContent = label;
         lb.classList.add('active');
     }
 
     function closeLightbox() {
         var lb = document.getElementById('nb-imgmgr-lightbox');
-        if (lb) lb.classList.remove('active');
+        if (lb) {
+            lb.querySelectorAll('audio, video').forEach(function (media) { media.pause(); });
+            lb.classList.remove('active');
+        }
     }
 
     // ============================================================

@@ -99,6 +99,87 @@ function validateImageFilename(string $filename): bool {
     return in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'], true);
 }
 
+function getMediaConfig(?string $type = null): array {
+    $root = dirname(__DIR__);
+    $configs = [
+        'image' => [
+            'type' => 'image',
+            'label' => 'Images',
+            'field' => 'image',
+            'path' => defined('IMAGES_PATH') ? IMAGES_PATH : $root . '/assets/images/',
+            'trashPath' => defined('IMAGES_TRASH_PATH') ? IMAGES_TRASH_PATH : $root . '/assets/images-trash/',
+            'publicPath' => '../assets/images/',
+            'extensions' => ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'],
+            'mimeTypes' => ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'],
+            'maxSize' => 5 * 1024 * 1024,
+            'fallbackName' => 'image',
+        ],
+        'audio' => [
+            'type' => 'audio',
+            'label' => 'Audio',
+            'field' => 'audio',
+            'path' => defined('AUDIO_PATH') ? AUDIO_PATH : $root . '/assets/audio/',
+            'trashPath' => defined('AUDIO_TRASH_PATH') ? AUDIO_TRASH_PATH : $root . '/assets/audio-trash/',
+            'publicPath' => '../assets/audio/',
+            'extensions' => ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'],
+            'mimeTypes' => ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/x-m4a', 'audio/mp4', 'audio/aac', 'audio/flac'],
+            'maxSize' => 50 * 1024 * 1024,
+            'fallbackName' => 'audio',
+        ],
+        'video' => [
+            'type' => 'video',
+            'label' => 'Video',
+            'field' => 'media',
+            'path' => defined('VIDEO_PATH') ? VIDEO_PATH : $root . '/assets/videos/',
+            'trashPath' => defined('VIDEO_TRASH_PATH') ? VIDEO_TRASH_PATH : $root . '/assets/videos-trash/',
+            'publicPath' => '../assets/videos/',
+            'extensions' => ['mp4', 'webm', 'mov', 'm4v'],
+            'mimeTypes' => ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v'],
+            'maxSize' => 250 * 1024 * 1024,
+            'fallbackName' => 'video',
+        ],
+        'document' => [
+            'type' => 'document',
+            'label' => 'Documents',
+            'field' => 'media',
+            'path' => defined('DOCUMENTS_PATH') ? DOCUMENTS_PATH : $root . '/assets/documents/',
+            'trashPath' => defined('DOCUMENTS_TRASH_PATH') ? DOCUMENTS_TRASH_PATH : $root . '/assets/documents-trash/',
+            'publicPath' => '../assets/documents/',
+            'extensions' => ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf'],
+            'mimeTypes' => [
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-powerpoint',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                'text/plain',
+                'application/rtf',
+                'text/rtf',
+            ],
+            'maxSize' => 50 * 1024 * 1024,
+            'fallbackName' => 'document',
+        ],
+    ];
+
+    return $type === null ? $configs : ($configs[$type] ?? []);
+}
+
+function normalizeMediaType(string $type): string {
+    return array_key_exists($type, getMediaConfig()) ? $type : '';
+}
+
+function validateMediaFilename(string $filename, string $type): bool {
+    $config = getMediaConfig($type);
+    if (!$config || $filename === '' || strpos($filename, '/') !== false || strpos($filename, '\\') !== false || strpos($filename, '..') !== false) {
+        return false;
+    }
+
+    $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+    return in_array($ext, $config['extensions'], true);
+}
+
 function formatAssetSize(int $sizeBytes): string {
     if ($sizeBytes >= 1048576) {
         return round($sizeBytes / 1048576, 1) . ' MB';
@@ -147,6 +228,63 @@ function listImageFiles(string $directory, string $publicBasePath): array {
     return $images;
 }
 
+function listMediaFiles(string $type, bool $trash = false): array {
+    $config = getMediaConfig($type);
+    if (!$config) {
+        return [];
+    }
+
+    $directory = $trash ? $config['trashPath'] : $config['path'];
+    if (!is_dir($directory)) {
+        return [];
+    }
+
+    $media = [];
+    foreach (scandir($directory) as $file) {
+        if ($file === '.' || $file === '..' || !validateMediaFilename($file, $type)) {
+            continue;
+        }
+
+        $path = $directory . $file;
+        if (!is_file($path)) {
+            continue;
+        }
+
+        $sizeBytes = filesize($path);
+        $modified = filemtime($path);
+        $media[] = [
+            'type' => $type,
+            'name' => $file,
+            'path' => $trash
+                ? 'api.php?action=media-trash-file&type=' . rawurlencode($type) . '&filename=' . rawurlencode($file)
+                : $config['publicPath'] . $file,
+            'sizeBytes' => $sizeBytes,
+            'size' => formatAssetSize($sizeBytes),
+            'modified' => $modified,
+            'dateFormatted' => date('d.m.Y H:i', $modified),
+            'extension' => strtolower(pathinfo($file, PATHINFO_EXTENSION)),
+        ];
+    }
+
+    usort($media, function($a, $b) {
+        return strcasecmp($a['name'], $b['name']);
+    });
+
+    return $media;
+}
+
+function uniqueMediaFilename(string $directory, string $filename): string {
+    $targetFilename = $filename;
+    $counter = 1;
+    while (file_exists($directory . $targetFilename)) {
+        $name = pathinfo($filename, PATHINFO_FILENAME);
+        $ext = pathinfo($filename, PATHINFO_EXTENSION);
+        $targetFilename = $name . '-' . $counter . ($ext !== '' ? '.' . $ext : '');
+        $counter++;
+    }
+    return $targetFilename;
+}
+
 function serveLocalImage(string $path, string $filename): void {
     $mimeTypes = [
         'jpg' => 'image/jpeg',
@@ -155,6 +293,25 @@ function serveLocalImage(string $path, string $filename): void {
         'webp' => 'image/webp',
         'gif' => 'image/gif',
         'svg' => 'image/svg+xml',
+        'mp3' => 'audio/mpeg',
+        'wav' => 'audio/wav',
+        'ogg' => 'audio/ogg',
+        'm4a' => 'audio/mp4',
+        'aac' => 'audio/aac',
+        'flac' => 'audio/flac',
+        'mp4' => 'video/mp4',
+        'webm' => 'video/webm',
+        'mov' => 'video/quicktime',
+        'm4v' => 'video/x-m4v',
+        'pdf' => 'application/pdf',
+        'doc' => 'application/msword',
+        'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'xls' => 'application/vnd.ms-excel',
+        'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'ppt' => 'application/vnd.ms-powerpoint',
+        'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'txt' => 'text/plain',
+        'rtf' => 'application/rtf',
     ];
     $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 
@@ -1555,6 +1712,226 @@ switch ($action) {
 
     case 'list-images':
         jsonResponse(true, listImageFiles(IMAGES_PATH, '../assets/images/'));
+        break;
+
+    case 'list-media':
+        $requestedType = $_GET['type'] ?? 'all';
+        $trash = ($_GET['trash'] ?? '0') === '1';
+        $types = $requestedType === 'all'
+            ? array_keys(getMediaConfig())
+            : array_filter(array_map('normalizeMediaType', explode(',', $requestedType)));
+
+        $items = [];
+        foreach ($types as $type) {
+            $items = array_merge($items, listMediaFiles($type, $trash));
+        }
+        usort($items, function($a, $b) {
+            return ($b['modified'] ?? 0) <=> ($a['modified'] ?? 0);
+        });
+
+        jsonResponse(true, [
+            'items' => $items,
+            'types' => array_values(array_map(function($config) {
+                return [
+                    'type' => $config['type'],
+                    'label' => $config['label'],
+                    'extensions' => $config['extensions'],
+                    'maxSize' => $config['maxSize'],
+                ];
+            }, getMediaConfig())),
+        ]);
+        break;
+
+    case 'upload-media':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $type = normalizeMediaType($_POST['type'] ?? 'image');
+        $config = getMediaConfig($type);
+        if (!$config) {
+            jsonResponse(false, null, 'Invalid media type');
+        }
+
+        $field = $config['field'];
+        if (!isset($_FILES[$field]) || $_FILES[$field]['error'] !== UPLOAD_ERR_OK) {
+            $field = 'file';
+        }
+
+        if (!isset($_FILES[$field]) || $_FILES[$field]['error'] !== UPLOAD_ERR_OK) {
+            jsonResponse(false, null, 'Upload error');
+        }
+
+        $file = $_FILES[$field];
+        $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if (!in_array($extension, $config['extensions'], true)) {
+            jsonResponse(false, null, 'Invalid file extension');
+        }
+
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+        if (!in_array($mimeType, $config['mimeTypes'], true)) {
+            jsonResponse(false, null, 'Invalid file type');
+        }
+
+        if ($file['size'] > $config['maxSize']) {
+            jsonResponse(false, null, 'File too large');
+        }
+
+        $originalName = pathinfo($file['name'], PATHINFO_FILENAME);
+        $safeName = preg_replace('/[^a-z0-9\-_]/i', '-', $originalName);
+        $safeName = preg_replace('/-+/', '-', $safeName);
+        $safeName = trim($safeName, '-');
+        if ($safeName === '') {
+            $safeName = $config['fallbackName'] . '-' . time();
+        }
+
+        $filename = uniqueMediaFilename($config['path'], $safeName . '.' . $extension);
+        if (!is_dir($config['path'])) {
+            mkdir($config['path'], 0755, true);
+        }
+
+        if (move_uploaded_file($file['tmp_name'], $config['path'] . $filename)) {
+            jsonResponse(true, [
+                'type' => $type,
+                'name' => $filename,
+                'path' => $config['publicPath'] . $filename,
+            ], 'Media uploaded');
+        }
+
+        jsonResponse(false, null, 'Error saving');
+        break;
+
+    case 'delete-media':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $type = normalizeMediaType($_POST['type'] ?? '');
+        $filename = $_POST['filename'] ?? '';
+        $config = getMediaConfig($type);
+        if (!$config || !validateMediaFilename($filename, $type)) {
+            jsonResponse(false, null, 'Invalid media file');
+        }
+
+        $sourcePath = $config['path'] . $filename;
+        if (!file_exists($sourcePath)) {
+            jsonResponse(false, null, 'File not found');
+        }
+
+        if (!is_dir($config['trashPath'])) {
+            mkdir($config['trashPath'], 0755, true);
+        }
+
+        $targetFilename = uniqueMediaFilename($config['trashPath'], $filename);
+        if (rename($sourcePath, $config['trashPath'] . $targetFilename)) {
+            jsonResponse(true, null, 'Media moved to trash');
+        }
+
+        jsonResponse(false, null, 'Error moving');
+        break;
+
+    case 'restore-media':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $type = normalizeMediaType($_POST['type'] ?? '');
+        $filename = $_POST['filename'] ?? '';
+        $config = getMediaConfig($type);
+        if (!$config || !validateMediaFilename($filename, $type)) {
+            jsonResponse(false, null, 'Invalid media file');
+        }
+
+        $sourcePath = $config['trashPath'] . $filename;
+        if (!file_exists($sourcePath)) {
+            jsonResponse(false, null, 'File not found');
+        }
+
+        if (!is_dir($config['path'])) {
+            mkdir($config['path'], 0755, true);
+        }
+
+        $targetFilename = uniqueMediaFilename($config['path'], $filename);
+        if (rename($sourcePath, $config['path'] . $targetFilename)) {
+            jsonResponse(true, [
+                'type' => $type,
+                'name' => $targetFilename,
+                'path' => $config['publicPath'] . $targetFilename,
+            ], 'Media restored');
+        }
+
+        jsonResponse(false, null, 'Error restoring');
+        break;
+
+    case 'delete-media-trash':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $type = normalizeMediaType($_POST['type'] ?? '');
+        $filename = $_POST['filename'] ?? '';
+        $config = getMediaConfig($type);
+        if (!$config || !validateMediaFilename($filename, $type)) {
+            jsonResponse(false, null, 'Invalid media file');
+        }
+
+        $path = $config['trashPath'] . $filename;
+        if (!file_exists($path)) {
+            jsonResponse(false, null, 'File not found');
+        }
+
+        if (unlink($path)) {
+            jsonResponse(true, null, 'Media permanently deleted');
+        }
+
+        jsonResponse(false, null, 'Error deleting');
+        break;
+
+    case 'empty-media-trash':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $requestedType = $_POST['type'] ?? 'all';
+        $types = $requestedType === 'all'
+            ? array_keys(getMediaConfig())
+            : array_filter(array_map('normalizeMediaType', explode(',', $requestedType)));
+        $deleted = 0;
+        foreach ($types as $type) {
+            $config = getMediaConfig($type);
+            foreach (listMediaFiles($type, true) as $media) {
+                $path = $config['trashPath'] . $media['name'];
+                if (is_file($path) && unlink($path)) {
+                    $deleted++;
+                }
+            }
+        }
+
+        jsonResponse(true, ['deleted' => $deleted], 'Media trash emptied');
+        break;
+
+    case 'media-trash-file':
+        $type = normalizeMediaType($_GET['type'] ?? '');
+        $filename = $_GET['filename'] ?? '';
+        $config = getMediaConfig($type);
+        if (!$config || !validateMediaFilename($filename, $type)) {
+            http_response_code(400);
+            header_remove('Content-Type');
+            echo 'Invalid media file';
+            exit;
+        }
+
+        $path = $config['trashPath'] . $filename;
+        if (!is_file($path)) {
+            http_response_code(404);
+            header_remove('Content-Type');
+            echo 'File not found';
+            exit;
+        }
+
+        serveLocalImage($path, $filename);
         break;
 
     case 'list-image-trash':

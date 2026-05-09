@@ -5250,7 +5250,7 @@
             }
         };
         const currentInput = targetInputId ? document.getElementById(targetInputId) : null;
-        NbImageManager.open(cb, currentInput ? currentInput.value : null);
+        NbImageManager.open(cb, currentInput ? currentInput.value : null, { types: ['image'], type: 'image' });
     }
 
     function closeImageManager() { NbImageManager.close(); }
@@ -5268,7 +5268,7 @@
                     updateEventImagePreview();
                 }
             }
-        }, eventInput ? eventInput.value : null);
+        }, eventInput ? eventInput.value : null, { types: ['image'], type: 'image' });
     }
 
     // Lightbox for previewing the image currently entered in the editor's image input
@@ -5368,31 +5368,32 @@
     }
 
     function openAudioManager(targetInputIdOrCallback) {
-        createAudioManagerModal();
+        ensureImageManagerInit();
         // Allow either a callback function or a target input ID
+        let currentPath = null;
+        let callback;
         if (typeof targetInputIdOrCallback === 'function') {
-            audioManagerCallback = targetInputIdOrCallback;
+            callback = targetInputIdOrCallback;
         } else {
             const targetInputId = targetInputIdOrCallback || 'editor-input-src-audio';
-            audioManagerCallback = (audioPath) => {
+            const input = document.getElementById(targetInputId);
+            currentPath = input ? input.value : null;
+            callback = (audioPath) => {
                 const input = document.getElementById(targetInputId);
                 if (input) input.value = audioPath;
                 updateAudioPreview();
             };
         }
 
-        loadAudioFiles();
-
-        // Reset search field
-        const searchInput = document.getElementById('audio-search-input');
-        if (searchInput) searchInput.value = '';
-
-        document.getElementById('audio-manager-modal').classList.add('active');
-        document.body.style.overflow = 'hidden';
+        NbImageManager.open(callback, currentPath, { types: ['audio'], type: 'audio' });
     }
 
     function closeAudioManager() {
         const modal = document.getElementById('audio-manager-modal');
+        if (!modal) {
+            if (window.NbImageManager) NbImageManager.close();
+            return;
+        }
         modal.classList.remove('active');
         ModalResize.reset(modal.querySelector('.editor-modal-content'));
         document.body.style.overflow = '';

@@ -203,7 +203,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 <?php if ($isAdminUser): ?>
                 <button class="sidebar-nav-item" onclick="openImageManager()" type="button">
                     <?php echo nbIcon('image'); ?>
-                    <span><?php echo t('nav.image_manager'); ?></span>
+                    <span><?php echo t('nav.media_library'); ?></span>
                 </button>
                 <button class="sidebar-nav-item" onclick="switchTab('icons')" data-tab="icons">
                     <?php echo nbIcon('icons'); ?>
@@ -2904,23 +2904,24 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 if (img) { img.src = path.startsWith('/') ? '..' + path : path; img.style.display = ''; }
             }
             markDirty();
-        }, inputEl ? inputEl.value : null);
+        }, inputEl ? inputEl.value : null, { types: ['image'], type: 'image' });
     }
 
     // Backward-compat globals (in case any onclick attribute still references them)
-    window.openImageManager = function() { NbImageManager.open(); };
+    window.openImageManager = function() { NbImageManager.open(null, null, { types: ['image', 'audio', 'video', 'document'] }); };
     window.closeImageManager = function() { NbImageManager.close(); };
-    window.browseSectionImage = function(btn) {
+    window.browseSectionMedia = function(btn, type) {
+        type = type || 'image';
         const input = btn.parentElement.querySelector('.section-field');
         const preview = btn.closest('.form-group').querySelector('.ce-image-preview');
         NbImageManager.open(function(path) {
             if (path && input) {
                 input.value = path;
                 input.dispatchEvent(new Event('input', { bubbles: true }));
-                if (preview) {
+                if (type === 'image' && preview) {
                     const src = path.startsWith('/') ? '..' + path : path;
                     preview.innerHTML = '<img src="' + escapeHtml(src) + '" alt="preview" onerror="this.style.display=\'none\'">';
-                } else {
+                } else if (type === 'image') {
                     const previewDiv = document.createElement('div');
                     previewDiv.className = 'ce-image-preview';
                     const src = path.startsWith('/') ? '..' + path : path;
@@ -2929,7 +2930,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 }
                 markDirty();
             }
-        }, input ? input.value : null);
+        }, input ? input.value : null, { types: [type], type: type });
+    };
+    window.browseSectionImage = function(btn) {
+        window.browseSectionMedia(btn, 'image');
     };
 
     // Track unsaved changes
@@ -3171,7 +3175,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     case 'audio':
                         content += `<div class="form-group">
                             <label>${field.label}</label>
-                            <input type="text" class="section-field" data-key="${field.key}" value="${val}" placeholder="Path to audio file...">
+                            <div class="ce-image-input-row">
+                                <input type="text" class="section-field ce-input" data-key="${field.key}" value="${val}" placeholder="Path to audio file...">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="browseSectionMedia(this, 'audio')">${t('btn.browse')}</button>
+                            </div>
                         </div>`;
                         break;
                 }
@@ -5770,7 +5777,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         NbImageManager.open(function(path) {
             input.value = path;
             input.dispatchEvent(new Event('input', { bubbles: true }));
-        }, input ? input.value : null);
+        }, input ? input.value : null, { types: ['image'], type: 'image' });
     });
 
     // Browse dark-logo button — opens the image manager
@@ -5779,7 +5786,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         NbImageManager.open(function(path) {
             input.value = path;
             input.dispatchEvent(new Event('input', { bubbles: true }));
-        }, input ? input.value : null);
+        }, input ? input.value : null, { types: ['image'], type: 'image' });
     });
 
     // Browse admin-logo button — opens the image manager
@@ -5788,7 +5795,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         NbImageManager.open(function(path) {
             input.value = path;
             input.dispatchEvent(new Event('input', { bubbles: true }));
-        }, input ? input.value : null);
+        }, input ? input.value : null, { types: ['image'], type: 'image' });
     });
 
     // Browse favicon button — opens the image manager
@@ -5797,7 +5804,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         NbImageManager.open(function(path) {
             input.value = path;
             input.dispatchEvent(new Event('input', { bubbles: true }));
-        }, input ? input.value : null);
+        }, input ? input.value : null, { types: ['image'], type: 'image' });
     });
 
     // Browse PNG favicon button — opens the image manager
@@ -5806,7 +5813,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         NbImageManager.open(function(path) {
             input.value = path;
             input.dispatchEvent(new Event('input', { bubbles: true }));
-        }, input ? input.value : null);
+        }, input ? input.value : null, { types: ['image'], type: 'image' });
     });
 
     // Manual edits to the logo path also toggle the 3-way selector

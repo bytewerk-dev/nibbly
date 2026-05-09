@@ -601,6 +601,7 @@
     "modal.delete_read_messages": "Delete read messages",
     "modal.delete_read_messages_confirm": "Delete {count} read messages? This cannot be undone.",
     "nav.image_manager": "Image Manager",
+    "nav.media_library": "Media Library",
     "nav.icon_manager": "Icon Manager",
     "icons.title": "Icon Manager",
     "icons.add_icon": "Add Icon",
