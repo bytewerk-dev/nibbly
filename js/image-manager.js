@@ -30,7 +30,9 @@
         filtered: [],
         selectedPath: null,
         callback: null,
+        isPicker: false,
         view: 'grid',
+        mode: 'library',
         sort: { field: 'date', dir: 'desc' },
         search: '',
     };
@@ -48,6 +50,7 @@
         replace: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
         delete: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
         copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+        restore: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>',
     };
 
     // ============================================================
@@ -95,6 +98,11 @@
                 '</div>' +
                 '<div class="nb-imgmgr-toolbar">' +
                     '<span class="nb-imgmgr-formats">' + escapeHtml(t('image.formats_hint')) + '</span>' +
+                    '<div class="nb-imgmgr-mode-toggle">' +
+                        '<button type="button" class="nb-imgmgr-mode-btn nb-imgmgr-mode-btn--active" data-mode="library">' + escapeHtml(t('image.library')) + '</button>' +
+                        '<button type="button" class="nb-imgmgr-mode-btn" data-mode="trash">' + escapeHtml(t('image.trash')) + '</button>' +
+                    '</div>' +
+                    '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--secondary nb-imgmgr-empty-trash-btn" data-action="empty-trash" hidden>' + escapeHtml(t('image.empty_trash')) + '</button>' +
                     '<span class="nb-imgmgr-spacer"></span>' +
                     '<input type="text" class="nb-imgmgr-search" placeholder="' + escapeHtml(t('image.search')) + '">' +
                     '<div class="nb-imgmgr-view-toggle">' +
@@ -127,7 +135,7 @@
                 '<div class="nb-imgmgr-footer">' +
                     '<div class="nb-imgmgr-selection-info"></div>' +
                     '<div class="nb-imgmgr-footer-actions">' +
-                        '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--secondary" data-action="cancel">' + escapeHtml(t('cancel')) + '</button>' +
+                        '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--secondary" data-action="cancel">' + escapeHtml(t('close')) + '</button>' +
                         '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--primary" data-action="confirm" disabled>' + escapeHtml(t('image.select')) + '</button>' +
                     '</div>' +
                 '</div>' +
@@ -140,6 +148,7 @@
         modal.querySelector('.nb-imgmgr-close').addEventListener('click', close);
         modal.querySelector('[data-action="cancel"]').addEventListener('click', close);
         modal.querySelector('[data-action="confirm"]').addEventListener('click', confirmSelection);
+        modal.querySelector('[data-action="empty-trash"]').addEventListener('click', emptyImageTrash);
 
         modal.querySelector('.nb-imgmgr-upload-input').addEventListener('change', handleUpload);
 
@@ -171,6 +180,12 @@
         modal.querySelectorAll('.nb-imgmgr-view-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 switchView(btn.dataset.view);
+            });
+        });
+
+        modal.querySelectorAll('.nb-imgmgr-mode-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                switchMode(btn.dataset.mode);
             });
         });
 
@@ -210,12 +225,15 @@
     // ============================================================
     function open(callback, currentPath) {
         createModal();
-        state.callback = callback || null;
+        state.callback = typeof callback === 'function' ? callback : null;
+        state.isPicker = typeof callback === 'function';
         state.selectedPath = normalizeImagePath(currentPath);
         state.search = '';
+        state.mode = 'library';
 
         var modal = document.getElementById('nb-imgmgr-modal');
         modal.querySelector('.nb-imgmgr-search').value = '';
+        updateModeUI();
 
         loadImages();
         updateSelectionUI();
@@ -255,11 +273,12 @@
         var modal = document.getElementById('nb-imgmgr-modal');
         var gridEl = modal.querySelector('.nb-imgmgr-grid');
         var listBody = modal.querySelector('.nb-imgmgr-list-body');
+        var action = state.mode === 'trash' ? 'list-image-trash' : 'list-images';
 
         gridEl.innerHTML = '<p class="nb-imgmgr-loading">' + escapeHtml(t('image.loading')) + '</p>';
         listBody.innerHTML = '';
 
-        fetch(config.apiUrl + '?action=list-images')
+        fetch(config.apiUrl + '?action=' + action)
             .then(function (r) { return r.json(); })
             .then(function (result) {
                 if (result.success && result.data && result.data.length > 0) {
@@ -274,7 +293,8 @@
                 } else {
                     state.data = [];
                     state.filtered = [];
-                    var empty = '<p class="nb-imgmgr-empty">' + escapeHtml(t('image.no_images')) + '</p>';
+                    var emptyKey = state.mode === 'trash' ? 'image.trash_empty' : 'image.no_images';
+                    var empty = '<p class="nb-imgmgr-empty">' + escapeHtml(t(emptyKey)) + '</p>';
                     gridEl.innerHTML = empty;
                     listBody.innerHTML = empty;
                 }
@@ -341,11 +361,18 @@
         gridEl.innerHTML = '';
         state.filtered.forEach(function (image) {
             var item = document.createElement('div');
-            var isSelected = state.selectedPath === image.path;
+            var isSelected = state.isPicker && state.selectedPath === image.path;
             item.className = 'nb-imgmgr-item' + (isSelected ? ' selected' : '');
             item.dataset.path = image.path;
-            item.innerHTML =
-                '<div class="nb-imgmgr-check' + (isSelected ? ' checked' : '') + '"></div>' +
+            item.innerHTML = state.mode === 'trash'
+                ? '<div class="nb-imgmgr-thumb" style="background-image:url(\'' + escapeHtml(image.path) + '\')"></div>' +
+                '<div class="nb-imgmgr-name" title="' + escapeHtml(image.name) + '">' + escapeHtml(image.name) + '</div>' +
+                '<div class="nb-imgmgr-actions">' +
+                    '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
+                    '<button type="button" class="nb-imgmgr-action-btn" data-action="restore" title="' + escapeHtml(t('image.restore')) + '">' + Icons.restore + '</button>' +
+                    '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete-permanent" title="' + escapeHtml(t('image.delete_permanently')) + '">' + Icons.delete + '</button>' +
+                '</div>'
+                :
                 '<div class="nb-imgmgr-thumb" style="background-image:url(\'' + escapeHtml(image.path) + '\')"></div>' +
                 '<div class="nb-imgmgr-name" title="' + escapeHtml(image.name) + '">' + escapeHtml(image.name) + '</div>' +
                 '<div class="nb-imgmgr-actions">' +
@@ -354,6 +381,9 @@
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="replace" title="' + escapeHtml(t('image.replace')) + '">' + Icons.replace + '</button>' +
                     '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete" title="' + escapeHtml(t('delete')) + '">' + Icons.delete + '</button>' +
                 '</div>';
+            if (state.mode !== 'trash' && state.isPicker) {
+                item.insertAdjacentHTML('afterbegin', '<div class="nb-imgmgr-check' + (isSelected ? ' checked' : '') + '"></div>');
+            }
             gridEl.appendChild(item);
             attachItemEvents(item, image);
         });
@@ -374,11 +404,22 @@
         listBody.innerHTML = '';
         state.filtered.forEach(function (image) {
             var row = document.createElement('div');
-            var isSelected = state.selectedPath === image.path;
+            var isSelected = state.isPicker && state.selectedPath === image.path;
             row.className = 'nb-imgmgr-row' + (isSelected ? ' selected' : '');
             row.dataset.path = image.path;
-            row.innerHTML =
-                '<div class="nb-imgmgr-check nb-imgmgr-check--list' + (isSelected ? ' checked' : '') + '"></div>' +
+            row.innerHTML = state.mode === 'trash'
+                ? '<div></div>' +
+                '<div class="nb-imgmgr-list-thumb" style="background-image:url(\'' + escapeHtml(image.path) + '\')" data-action="preview"></div>' +
+                '<div class="nb-imgmgr-list-name" title="' + escapeHtml(image.name) + '">' + escapeHtml(image.name) + '</div>' +
+                '<div class="nb-imgmgr-list-size">' + escapeHtml(image.size || '-') + '</div>' +
+                '<div class="nb-imgmgr-list-date">' + escapeHtml(image.dateFormatted || '-') + '</div>' +
+                '<div class="nb-imgmgr-list-actions">' +
+                    '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
+                    '<button type="button" class="nb-imgmgr-action-btn" data-action="restore" title="' + escapeHtml(t('image.restore')) + '">' + Icons.restore + '</button>' +
+                    '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete-permanent" title="' + escapeHtml(t('image.delete_permanently')) + '">' + Icons.delete + '</button>' +
+                '</div>'
+                :
+                '<div></div>' +
                 '<div class="nb-imgmgr-list-thumb" style="background-image:url(\'' + escapeHtml(image.path) + '\')" data-action="preview"></div>' +
                 '<div class="nb-imgmgr-list-name" title="' + escapeHtml(image.name) + '">' + escapeHtml(image.name) + '</div>' +
                 '<div class="nb-imgmgr-list-size">' + escapeHtml(image.size || '-') + '</div>' +
@@ -389,6 +430,9 @@
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="replace" title="' + escapeHtml(t('image.replace')) + '">' + Icons.replace + '</button>' +
                     '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete" title="' + escapeHtml(t('delete')) + '">' + Icons.delete + '</button>' +
                 '</div>';
+            if (state.mode !== 'trash' && state.isPicker) {
+                row.querySelector('div:first-child').outerHTML = '<div class="nb-imgmgr-check nb-imgmgr-check--list' + (isSelected ? ' checked' : '') + '"></div>';
+            }
             listBody.appendChild(row);
             attachItemEvents(row, image);
         });
@@ -412,10 +456,12 @@
                 else if (action === 'copy') copyPath(image.path);
                 else if (action === 'replace') openReplaceDialog(image.name, image.path);
                 else if (action === 'delete') deleteImage(image.name);
+                else if (action === 'restore') restoreImage(image.name);
+                else if (action === 'delete-permanent') deleteImagePermanently(image.name);
                 return;
             }
             // Click elsewhere on item = toggle selection
-            toggleSelection(image.path);
+            if (state.mode !== 'trash' && state.isPicker) toggleSelection(image.path);
         });
     }
 
@@ -439,6 +485,23 @@
         var info = modal.querySelector('.nb-imgmgr-selection-info');
         var confirmBtn = modal.querySelector('[data-action="confirm"]');
 
+        if (!state.isPicker) {
+            info.textContent = '';
+            info.classList.remove('has-selection');
+            confirmBtn.hidden = true;
+            confirmBtn.disabled = true;
+            return;
+        }
+
+        if (state.mode === 'trash') {
+            info.textContent = t('image.trash_hint');
+            info.classList.remove('has-selection');
+            confirmBtn.hidden = true;
+            confirmBtn.disabled = true;
+            return;
+        }
+
+        confirmBtn.hidden = false;
         if (state.selectedPath) {
             info.textContent = state.selectedPath;
             info.classList.add('has-selection');
@@ -450,9 +513,41 @@
         }
     }
 
+    function updateModeUI() {
+        var modal = document.getElementById('nb-imgmgr-modal');
+        if (!modal) return;
+
+        modal.querySelectorAll('.nb-imgmgr-mode-btn').forEach(function (btn) {
+            btn.classList.toggle('nb-imgmgr-mode-btn--active', btn.dataset.mode === state.mode);
+        });
+
+        var dropzone = modal.querySelector('.nb-imgmgr-dropzone');
+        var emptyBtn = modal.querySelector('.nb-imgmgr-empty-trash-btn');
+        if (dropzone) dropzone.hidden = state.mode === 'trash';
+        if (emptyBtn) emptyBtn.hidden = state.mode !== 'trash';
+
+        if (state.mode === 'trash') {
+            state.selectedPath = null;
+        }
+
+        updateSelectionUI();
+    }
+
     // ============================================================
     // VIEW / SORT
     // ============================================================
+    function switchMode(mode) {
+        if (mode !== 'library' && mode !== 'trash') return;
+        if (state.mode === mode) return;
+
+        state.mode = mode;
+        state.search = '';
+        var modal = document.getElementById('nb-imgmgr-modal');
+        modal.querySelector('.nb-imgmgr-search').value = '';
+        updateModeUI();
+        loadImages();
+    }
+
     function switchView(view) {
         state.view = view;
         var modal = document.getElementById('nb-imgmgr-modal');
@@ -511,12 +606,57 @@
     }
 
     function deleteImage(filename) {
+        var formData = new FormData();
+        formData.append('action', 'delete-image');
+        formData.append('filename', filename);
+        formData.append('csrf_token', config.csrfToken);
+
+        fetch(config.apiUrl, { method: 'POST', body: formData })
+            .then(function (r) { return r.json(); })
+            .then(function (result) {
+                if (result.success) {
+                    config.showToast(t('image.trashed'), 'success');
+                    if (state.selectedPath && state.selectedPath.indexOf('/' + filename) !== -1) {
+                        state.selectedPath = null;
+                    }
+                    loadImages();
+                } else {
+                    config.showToast(result.message || t('toast.error'), 'error');
+                }
+            })
+            .catch(function (err) {
+                config.showToast(err.message || t('toast.error'), 'error');
+            });
+    }
+
+    function restoreImage(filename) {
+        var formData = new FormData();
+        formData.append('action', 'restore-image');
+        formData.append('filename', filename);
+        formData.append('csrf_token', config.csrfToken);
+
+        fetch(config.apiUrl, { method: 'POST', body: formData })
+            .then(function (r) { return r.json(); })
+            .then(function (result) {
+                if (result.success) {
+                    config.showToast(t('image.restored'), 'success');
+                    loadImages();
+                } else {
+                    config.showToast(result.message || t('toast.error'), 'error');
+                }
+            })
+            .catch(function (err) {
+                config.showToast(err.message || t('toast.error'), 'error');
+            });
+    }
+
+    function deleteImagePermanently(filename) {
         confirmAction(
-            t('image.delete'),
-            t('image.delete_confirm', { filename: filename }),
+            t('image.delete_permanently'),
+            t('image.delete_permanently_confirm', { filename: filename }),
             function () {
                 var formData = new FormData();
-                formData.append('action', 'delete-image');
+                formData.append('action', 'delete-image-trash');
                 formData.append('filename', filename);
                 formData.append('csrf_token', config.csrfToken);
 
@@ -524,10 +664,38 @@
                     .then(function (r) { return r.json(); })
                     .then(function (result) {
                         if (result.success) {
-                            config.showToast(t('image.trashed'), 'success');
-                            if (state.selectedPath && state.selectedPath.indexOf('/' + filename) !== -1) {
-                                state.selectedPath = null;
-                            }
+                            config.showToast(t('image.deleted_permanently'), 'success');
+                            loadImages();
+                        } else {
+                            config.showToast(result.message || t('toast.error'), 'error');
+                        }
+                    })
+                    .catch(function (err) {
+                        config.showToast(err.message || t('toast.error'), 'error');
+                    });
+            }
+        );
+    }
+
+    function emptyImageTrash() {
+        if (!state.data.length) {
+            config.showToast(t('image.trash_empty'), 'info');
+            return;
+        }
+
+        confirmAction(
+            t('image.empty_trash'),
+            t('image.empty_trash_confirm'),
+            function () {
+                var formData = new FormData();
+                formData.append('action', 'empty-image-trash');
+                formData.append('csrf_token', config.csrfToken);
+
+                fetch(config.apiUrl, { method: 'POST', body: formData })
+                    .then(function (r) { return r.json(); })
+                    .then(function (result) {
+                        if (result.success) {
+                            config.showToast(t('image.trash_emptied'), 'success');
                             loadImages();
                         } else {
                             config.showToast(result.message || t('toast.error'), 'error');

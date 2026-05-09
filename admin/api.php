@@ -90,6 +90,82 @@ function cleanupOldBackups($pagePrefix) {
     }
 }
 
+function validateImageFilename(string $filename): bool {
+    if ($filename === '' || strpos($filename, '/') !== false || strpos($filename, '\\') !== false || strpos($filename, '..') !== false) {
+        return false;
+    }
+
+    $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+    return in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'], true);
+}
+
+function formatAssetSize(int $sizeBytes): string {
+    if ($sizeBytes >= 1048576) {
+        return round($sizeBytes / 1048576, 1) . ' MB';
+    }
+
+    if ($sizeBytes >= 1024) {
+        return round($sizeBytes / 1024, 0) . ' KB';
+    }
+
+    return $sizeBytes . ' B';
+}
+
+function listImageFiles(string $directory, string $publicBasePath): array {
+    if (!is_dir($directory)) {
+        return [];
+    }
+
+    $images = [];
+    $files = scandir($directory);
+    foreach ($files as $file) {
+        if ($file === '.' || $file === '..' || !validateImageFilename($file)) {
+            continue;
+        }
+
+        $path = $directory . $file;
+        if (!is_file($path)) {
+            continue;
+        }
+
+        $sizeBytes = filesize($path);
+        $modified = filemtime($path);
+        $images[] = [
+            'name' => $file,
+            'path' => $publicBasePath . $file,
+            'sizeBytes' => $sizeBytes,
+            'size' => formatAssetSize($sizeBytes),
+            'modified' => $modified,
+            'dateFormatted' => date('d.m.Y H:i', $modified)
+        ];
+    }
+
+    usort($images, function($a, $b) {
+        return strcasecmp($a['name'], $b['name']);
+    });
+
+    return $images;
+}
+
+function serveLocalImage(string $path, string $filename): void {
+    $mimeTypes = [
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        'gif' => 'image/gif',
+        'svg' => 'image/svg+xml',
+    ];
+    $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+    header_remove('Content-Type');
+    header('Content-Type: ' . ($mimeTypes[$ext] ?? 'application/octet-stream'));
+    header('Content-Length: ' . filesize($path));
+    header('Cache-Control: private, max-age=300');
+    readfile($path);
+    exit;
+}
+
 function readSiteIconSetRaw() {
     $path = getIconSetPath();
     if (!is_file($path)) {
@@ -1478,46 +1554,36 @@ switch ($action) {
     // ============================================================
 
     case 'list-images':
-        if (!is_dir(IMAGES_PATH)) {
-            jsonResponse(true, []);
+        jsonResponse(true, listImageFiles(IMAGES_PATH, '../assets/images/'));
+        break;
+
+    case 'list-image-trash':
+        $images = listImageFiles(IMAGES_TRASH_PATH, 'api.php?action=image-trash-file&filename=');
+        foreach ($images as &$image) {
+            $image['path'] = 'api.php?action=image-trash-file&filename=' . rawurlencode($image['name']);
         }
-
-        $images = [];
-        $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'];
-
-        $files = scandir(IMAGES_PATH);
-        foreach ($files as $file) {
-            if ($file === '.' || $file === '..') continue;
-
-            $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-            if (in_array($ext, $allowedExtensions)) {
-                $sizeBytes = filesize(IMAGES_PATH . $file);
-                $modified = filemtime(IMAGES_PATH . $file);
-
-                if ($sizeBytes >= 1048576) {
-                    $sizeFormatted = round($sizeBytes / 1048576, 1) . ' MB';
-                } elseif ($sizeBytes >= 1024) {
-                    $sizeFormatted = round($sizeBytes / 1024, 0) . ' KB';
-                } else {
-                    $sizeFormatted = $sizeBytes . ' B';
-                }
-
-                $images[] = [
-                    'name' => $file,
-                    'path' => '../assets/images/' . $file,
-                    'sizeBytes' => $sizeBytes,
-                    'size' => $sizeFormatted,
-                    'modified' => $modified,
-                    'dateFormatted' => date('d.m.Y H:i', $modified)
-                ];
-            }
-        }
-
-        usort($images, function($a, $b) {
-            return strcasecmp($a['name'], $b['name']);
-        });
-
+        unset($image);
         jsonResponse(true, $images);
+        break;
+
+    case 'image-trash-file':
+        $filename = $_GET['filename'] ?? '';
+        if (!validateImageFilename($filename)) {
+            http_response_code(400);
+            header_remove('Content-Type');
+            echo 'Invalid filename';
+            exit;
+        }
+
+        $path = IMAGES_TRASH_PATH . $filename;
+        if (!is_file($path)) {
+            http_response_code(404);
+            header_remove('Content-Type');
+            echo 'File not found';
+            exit;
+        }
+
+        serveLocalImage($path, $filename);
         break;
 
     case 'upload-image':
@@ -1627,7 +1693,7 @@ switch ($action) {
 
         $filename = $_POST['filename'] ?? '';
 
-        if (empty($filename) || strpos($filename, '/') !== false || strpos($filename, '\\') !== false || strpos($filename, '..') !== false) {
+        if (!validateImageFilename($filename)) {
             jsonResponse(false, null, 'Invalid filename');
         }
 
@@ -1655,6 +1721,82 @@ switch ($action) {
         } else {
             jsonResponse(false, null, 'Error moving');
         }
+        break;
+
+    case 'restore-image':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $filename = $_POST['filename'] ?? '';
+        if (!validateImageFilename($filename)) {
+            jsonResponse(false, null, 'Invalid filename');
+        }
+
+        $sourcePath = IMAGES_TRASH_PATH . $filename;
+        if (!file_exists($sourcePath)) {
+            jsonResponse(false, null, 'File not found');
+        }
+
+        if (!is_dir(IMAGES_PATH)) {
+            mkdir(IMAGES_PATH, 0755, true);
+        }
+
+        $targetFilename = $filename;
+        $counter = 1;
+        while (file_exists(IMAGES_PATH . $targetFilename)) {
+            $name = pathinfo($filename, PATHINFO_FILENAME);
+            $ext = pathinfo($filename, PATHINFO_EXTENSION);
+            $targetFilename = $name . '-' . $counter . '.' . $ext;
+            $counter++;
+        }
+
+        if (rename($sourcePath, IMAGES_PATH . $targetFilename)) {
+            jsonResponse(true, [
+                'name' => $targetFilename,
+                'path' => '../assets/images/' . $targetFilename
+            ], 'Image restored');
+        }
+
+        jsonResponse(false, null, 'Error restoring');
+        break;
+
+    case 'delete-image-trash':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $filename = $_POST['filename'] ?? '';
+        if (!validateImageFilename($filename)) {
+            jsonResponse(false, null, 'Invalid filename');
+        }
+
+        $path = IMAGES_TRASH_PATH . $filename;
+        if (!file_exists($path)) {
+            jsonResponse(false, null, 'File not found');
+        }
+
+        if (unlink($path)) {
+            jsonResponse(true, null, 'Image permanently deleted');
+        }
+
+        jsonResponse(false, null, 'Error deleting');
+        break;
+
+    case 'empty-image-trash':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $deleted = 0;
+        foreach (listImageFiles(IMAGES_TRASH_PATH, '../assets/images-trash/') as $image) {
+            $path = IMAGES_TRASH_PATH . $image['name'];
+            if (is_file($path) && unlink($path)) {
+                $deleted++;
+            }
+        }
+
+        jsonResponse(true, ['deleted' => $deleted], 'Image trash emptied');
         break;
 
     // ============================================================

@@ -91,7 +91,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     ?>
     <link rel="icon" href="<?php echo htmlspecialchars($_dashFavicon); ?>" type="<?php echo $_dashFaviconType; ?>">
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="../css/image-manager.css">
+    <link rel="stylesheet" href="../css/image-manager.css?v=<?php echo @filemtime(__DIR__ . '/../css/image-manager.css') ?: time(); ?>">
     <?php if ($adminTheme === 'system'): ?>
     <script>
     (function() {
@@ -1587,7 +1587,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     </div>
     <?php endif; ?>
 
-    <script src="../js/image-manager.js"></script>
+    <script src="../js/image-manager.js?v=<?php echo @filemtime(__DIR__ . '/../js/image-manager.js') ?: time(); ?>"></script>
     <script>
     // Block Type Registry
     window.BlockTypeRegistry = <?php
