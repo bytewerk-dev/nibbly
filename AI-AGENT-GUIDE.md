@@ -45,6 +45,39 @@ php -S localhost:3000 router.php
 
 The `router.php` handles clean URLs, language routing, and news post URLs without requiring Apache.
 
+## Protected Public Forms
+
+Use the form protection helpers for public forms instead of hand-rolling
+tokens or honeypots. The default contact form includes are lazy-loaded and
+protected automatically.
+
+For custom forms, include the helper fields inside the `<form>` and validate
+the matching form id in the submit endpoint:
+
+```php
+<?php require_once __DIR__ . '/../includes/form-protection.php'; ?>
+
+<form class="contact-form" action="<?php echo $basePath; ?>api/contact.php" method="post">
+    <?php echo nibblyFormProtectionFields('contact'); ?>
+    <!-- visible form fields -->
+</form>
+```
+
+For a lazy-loaded form placeholder, use:
+
+```php
+<?php
+echo nibblyLazyFormPlaceholder('contact', [
+    'basePath' => $basePath,
+    'params' => ['lang' => $currentLang, 'basePath' => $basePath],
+]);
+?>
+```
+
+The lazy endpoint (`api/form.php`) only renders whitelisted core forms. Add new
+custom forms there deliberately; never include arbitrary PHP paths from request
+parameters.
+
 ## How to Create a Standard Page
 
 The fastest way is with the scaffolding tool:

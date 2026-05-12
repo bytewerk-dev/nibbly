@@ -7,6 +7,19 @@
 
 $_cfLang = $currentLang ?? 'en';
 $_cfBasePath = $basePath ?? '';
+require_once __DIR__ . '/form-protection.php';
+$_cfLazy = $_cfLazy ?? true;
+
+if ($_cfLazy && !nibblyIsLazyFormRender()) {
+    echo nibblyLazyFormPlaceholder('contact', [
+        'basePath' => $_cfBasePath,
+        'params' => [
+            'lang' => $_cfLang,
+            'basePath' => $_cfBasePath,
+        ],
+    ]);
+    return;
+}
 
 // Translations
 $_cfStrings = [
@@ -57,10 +70,7 @@ $_cf = $_cfStrings[$_cfLang] ?? $_cfStrings['en'];
     <form id="contactForm" class="contact-form" action="<?php echo $_cfBasePath; ?>api/contact.php" method="post">
         <input type="hidden" name="lang" value="<?php echo htmlspecialchars($_cfLang); ?>">
         <input type="hidden" name="occasion" value="<?php echo htmlspecialchars($_cf['occasion']); ?>">
-        <!-- Honeypot -->
-        <div style="position:absolute;left:-9999px" aria-hidden="true">
-            <input type="text" name="website" tabindex="-1" autocomplete="off">
-        </div>
+        <?php echo nibblyFormProtectionFields('contact'); ?>
 
         <div class="form-row">
             <div class="form-group">

@@ -381,6 +381,14 @@
     transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.content-inner .testimonial-card {
+    border-left: 1px solid var(--color-border-dark);
+    padding: var(--spacing-md);
+    margin: 0;
+    font-style: normal;
+    color: inherit;
+}
+
 .testimonial-card:hover {
     border-color: rgba(97, 171, 205, 0.2);
 }
@@ -1502,4 +1510,9 @@
 
 .demo-buttons > a:not([class]) {
     padding: 0 var(--spacing-sm);
+}
+
+.demo-buttons .btn,
+.demo-buttons .btn:hover {
+    text-decoration: none;
 }

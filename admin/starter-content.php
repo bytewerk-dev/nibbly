@@ -171,7 +171,7 @@ function getStarterI18n($siteName) {
             'comp_tl_3_title' => 'Go Live',
             'comp_tl_3_desc' => 'Upload to your server and share with the world. Any PHP hosting works.',
             'comp_tl_3_version' => 'Step 3',
-            'comp_closing' => '<p>All components above are rendered from JSON data using built-in PHP functions like <code>renderFeatureGrid()</code>, <code>renderFaqAccordion()</code>, <code>renderTeamGrid()</code>, and others. See the documentation for the full list.</p>',
+            'comp_closing' => '<p>These examples use Nibbly\'s structured component helpers: <code>renderFeatureGrid()</code>, <code>renderStats()</code>, <code>renderTestimonials()</code>, <code>renderTeamGrid()</code>, <code>renderFaqAccordion()</code>, <code>renderTimeline()</code>, and <code>renderEventList()</code>. Standard page content is still handled by <code>renderAllSections()</code> and the individual block renderers.</p>',
 
             // News
             'news_title' => 'News',
@@ -350,7 +350,7 @@ function getStarterI18n($siteName) {
             'comp_tl_3_title' => 'Online gehen',
             'comp_tl_3_desc' => 'Lade die Dateien auf deinen Server und teile die Seite mit der Welt. Jedes PHP-Hosting funktioniert.',
             'comp_tl_3_version' => 'Schritt 3',
-            'comp_closing' => '<p>Alle Komponenten oben werden aus JSON-Daten gerendert, mit eingebauten PHP-Funktionen wie <code>renderFeatureGrid()</code>, <code>renderFaqAccordion()</code>, <code>renderTeamGrid()</code> und anderen. Siehe die Dokumentation für die vollständige Liste.</p>',
+            'comp_closing' => '<p>Diese Beispiele nutzen Nibblys strukturierte Komponenten-Helper: <code>renderFeatureGrid()</code>, <code>renderStats()</code>, <code>renderTestimonials()</code>, <code>renderTeamGrid()</code>, <code>renderFaqAccordion()</code>, <code>renderTimeline()</code> und <code>renderEventList()</code>. Standard-Seiteninhalte laufen weiterhin über <code>renderAllSections()</code> und die einzelnen Block-Renderer.</p>',
 
             // News
             'news_title' => 'Neuigkeiten',
@@ -529,7 +529,7 @@ function getStarterI18n($siteName) {
             'comp_tl_3_title' => 'Publicar',
             'comp_tl_3_desc' => 'Sube los archivos a tu servidor y compártelo con el mundo. Cualquier hosting PHP funciona.',
             'comp_tl_3_version' => 'Paso 3',
-            'comp_closing' => '<p>Todos los componentes de arriba se renderizan desde datos JSON con funciones PHP integradas como <code>renderFeatureGrid()</code>, <code>renderFaqAccordion()</code>, <code>renderTeamGrid()</code> y otras. Consulta la documentación para la lista completa.</p>',
+            'comp_closing' => '<p>Estos ejemplos usan los helpers de componentes estructurados de Nibbly: <code>renderFeatureGrid()</code>, <code>renderStats()</code>, <code>renderTestimonials()</code>, <code>renderTeamGrid()</code>, <code>renderFaqAccordion()</code>, <code>renderTimeline()</code> y <code>renderEventList()</code>. El contenido estándar de página sigue usando <code>renderAllSections()</code> y los renderers de bloque individuales.</p>',
 
             // News
             'news_title' => 'Noticias',
