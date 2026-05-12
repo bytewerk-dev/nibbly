@@ -20,6 +20,7 @@
     "add_block": "Přidat blok",
     "search_blocks": "Hledat bloky...",
     "edit": "Upravit",
+    "edit_block_title": "Upravit {label}",
     "show": "Zobrazit",
     "hide": "Skrýt",
     "drag_reorder": "Přetáhněte pro změnu pořadí",

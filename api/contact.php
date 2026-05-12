@@ -15,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 require_once __DIR__ . '/SmtpMailer.php';
+require_once __DIR__ . '/../includes/form-protection.php';
 
 // Load email configuration from settings.json or fallback to smtp-config.php
 $emailConfig = null;
@@ -88,6 +89,31 @@ $phone = sanitizeHeaderValue($_POST['phone'] ?? '');
 $occasion = sanitizeHeaderValue($_POST['occasion'] ?? '');
 $date = sanitizeHeaderValue($_POST['date'] ?? '');
 $message = trim($_POST['message'] ?? '');
+$clientKey = nibblyFormClientKey();
+
+if (nibblyFormIsRateLimited($clientKey)) {
+    http_response_code(429);
+    echo json_encode([
+        'success' => false,
+        'message' => $lang === 'de'
+            ? 'Zu viele Versuche. Bitte versuchen Sie es später erneut.'
+            : 'Too many attempts. Please try again later.'
+    ]);
+    exit;
+}
+
+// Honeypot check. Return a neutral success response so simple bots cannot
+// distinguish this from a real submission, but do not store or send anything.
+if (!empty($_POST['website'])) {
+    nibblyFormRecordAttempt($clientKey, false);
+    echo json_encode([
+        'success' => true,
+        'message' => $lang === 'de'
+            ? 'Vielen Dank für Ihre Nachricht!'
+            : 'Thank you for your message!'
+    ]);
+    exit;
+}
 
 // Validation
 $errors = [];
@@ -108,19 +134,34 @@ if (empty($message)) {
     $errors[] = $lang === 'de' ? 'Nachricht ist erforderlich' : 'Message is required';
 }
 
-// Honeypot check
-if (!empty($_POST['website'])) {
+if (!empty($errors)) {
+    echo json_encode(['success' => false, 'message' => implode(', ', $errors)]);
+    exit;
+}
+
+if (nibblyFormLooksLikeSpam([$name, $email, $phone, $occasion, $date, $message])) {
+    nibblyFormRecordAttempt($clientKey, false);
     echo json_encode([
-        'success' => true,
+        'success' => false,
         'message' => $lang === 'de'
-            ? 'Vielen Dank für Ihre Nachricht!'
-            : 'Thank you for your message!'
+            ? 'Die Nachricht konnte nicht gesendet werden. Bitte prüfen Sie Ihre Eingaben.'
+            : 'The message could not be sent. Please check your input.'
     ]);
     exit;
 }
 
-if (!empty($errors)) {
-    echo json_encode(['success' => false, 'message' => implode(', ', $errors)]);
+$tokenResult = nibblyValidateFormToken($_POST['form_token'] ?? null, 'contact');
+if (empty($tokenResult['valid'])) {
+    nibblyFormRecordAttempt($clientKey, false);
+    $newToken = nibblyCreateFormToken('contact');
+    http_response_code(400);
+    echo json_encode([
+        'success' => false,
+        'formToken' => $newToken,
+        'message' => $lang === 'de'
+            ? 'Das Formular ist abgelaufen oder wurde zu schnell gesendet. Bitte versuchen Sie es erneut.'
+            : 'The form expired or was submitted too quickly. Please try again.'
+    ]);
     exit;
 }
 
@@ -206,7 +247,8 @@ $saved = saveMailBackup($mailsFile, [
     'date' => $date,
     'message' => $message,
     'status' => $status,
-    'read' => false
+    'read' => false,
+    'starred' => false
 ]);
 
 if (!$saved) {
@@ -220,9 +262,13 @@ if (!$saved) {
     exit;
 }
 
+nibblyFormRecordAttempt($clientKey, true);
+$newToken = nibblyCreateFormToken('contact');
+
 echo json_encode([
     'success' => true,
     'status' => $status,
+    'formToken' => $newToken,
     'message' => $lang === 'de'
         ? 'Vielen Dank für Ihre Nachricht!'
         : 'Thank you for your message!'

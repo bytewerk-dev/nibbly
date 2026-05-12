@@ -1,0 +1,138 @@
+{
+    "database": {
+        "label": "Database",
+        "tags": [
+            "data",
+            "storage"
+        ],
+        "svg": "<ellipse cx=\"12\" cy=\"5\" rx=\"9\" ry=\"3\"\/><path d=\"M21 12c0 1.66-4 3-9 3s-9-1.34-9-3\"\/><path d=\"M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5\"\/><line x1=\"4\" y1=\"4\" x2=\"20\" y2=\"20\" stroke=\"currentColor\" stroke-width=\"2.5\"\/>"
+    },
+    "edit": {
+        "label": "Edit",
+        "tags": [
+            "write",
+            "pencil"
+        ],
+        "svg": "<path d=\"M12 20h9\"\/><path d=\"M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z\"\/>"
+    },
+    "backup": {
+        "label": "Backup",
+        "tags": [
+            "history",
+            "restore"
+        ],
+        "svg": "<polyline points=\"1 4 1 10 7 10\"\/><path d=\"M3.51 15a9 9 0 105.64-11.36L1 10\"\/><circle cx=\"12\" cy=\"12\" r=\"1\" fill=\"currentColor\"\/><polyline points=\"12 7 12 12 15 14\"\/>"
+    },
+    "image": {
+        "label": "Image",
+        "tags": [
+            "media",
+            "photo"
+        ],
+        "svg": "<rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\" ry=\"2\"\/><circle cx=\"8.5\" cy=\"8.5\" r=\"1.5\" fill=\"currentColor\"\/><polyline points=\"21 15 16 10 5 21\"\/>"
+    },
+    "globe": {
+        "label": "Globe",
+        "tags": [
+            "world",
+            "language"
+        ],
+        "svg": "<circle cx=\"12\" cy=\"12\" r=\"10\"\/><line x1=\"2\" y1=\"12\" x2=\"22\" y2=\"12\"\/><path d=\"M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z\"\/>"
+    },
+    "link": {
+        "label": "Link",
+        "tags": [
+            "url",
+            "chain"
+        ],
+        "svg": "<path d=\"M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71\"\/><path d=\"M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71\"\/>"
+    },
+    "shield": {
+        "label": "Shield",
+        "tags": [
+            "security",
+            "safe"
+        ],
+        "svg": "<path d=\"M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z\"\/><polyline points=\"9 12 11 14 15 10\"\/>"
+    },
+    "feather": {
+        "label": "Feather",
+        "tags": [
+            "lightweight",
+            "write"
+        ],
+        "svg": "<path d=\"M20.24 12.24a6 6 0 00-8.49-8.49L5 10.5V19h8.5z\"\/><line x1=\"16\" y1=\"8\" x2=\"2\" y2=\"22\"\/><line x1=\"17.5\" y1=\"15\" x2=\"9\" y2=\"15\"\/>"
+    },
+    "star": {
+        "label": "Star",
+        "tags": [
+            "favorite",
+            "featured"
+        ],
+        "svg": "<polygon points=\"12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2\"\/>"
+    },
+    "sparkles": {
+        "label": "Sparkles",
+        "tags": [
+            "ai",
+            "magic"
+        ],
+        "svg": "<path d=\"M12 3l1.45 4.35L18 9l-4.55 1.65L12 15l-1.45-4.35L6 9l4.55-1.65L12 3z\"\/><path d=\"M19 13l.75 2.25L22 16l-2.25.75L19 19l-.75-2.25L16 16l2.25-.75L19 13z\"\/><path d=\"M5 17l.5 1.5L7 19l-1.5.5L5 21l-.5-1.5L3 19l1.5-.5L5 17z\"\/>"
+    },
+    "zap": {
+        "label": "Zap",
+        "tags": [
+            "fast",
+            "energy"
+        ],
+        "svg": "<polygon points=\"13 2 3 14 12 14 11 22 21 10 12 10 13 2\"\/>"
+    },
+    "terminal": {
+        "label": "Terminal",
+        "tags": [
+            "code",
+            "cli"
+        ],
+        "svg": "<polyline points=\"4 17 10 11 4 5\"\/><line x1=\"12\" y1=\"19\" x2=\"20\" y2=\"19\"\/>"
+    },
+    "upload": {
+        "label": "Upload",
+        "tags": [
+            "deploy",
+            "file"
+        ],
+        "svg": "<path d=\"M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4\"\/><polyline points=\"17 8 12 3 7 8\"\/><line x1=\"12\" y1=\"3\" x2=\"12\" y2=\"15\"\/>"
+    },
+    "server": {
+        "label": "Server",
+        "tags": [
+            "hosting",
+            "infrastructure"
+        ],
+        "svg": "<rect x=\"2\" y=\"2\" width=\"20\" height=\"8\" rx=\"2\" ry=\"2\"\/><rect x=\"2\" y=\"14\" width=\"20\" height=\"8\" rx=\"2\" ry=\"2\"\/><line x1=\"6\" y1=\"6\" x2=\"6.01\" y2=\"6\"\/><line x1=\"6\" y1=\"18\" x2=\"6.01\" y2=\"18\"\/>"
+    },
+    "folder": {
+        "label": "Folder",
+        "tags": [
+            "files",
+            "storage"
+        ],
+        "svg": "<path d=\"M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z\"\/>"
+    },
+    "wand": {
+        "label": "Wand",
+        "tags": [
+            "magic",
+            "generate"
+        ],
+        "svg": "<path d=\"M15 4V2\"\/><path d=\"M15 16v-2\"\/><path d=\"M8 9h2\"\/><path d=\"M20 9h2\"\/><path d=\"M17.8 11.8L19 13\"\/><path d=\"M15 9h.01\"\/><path d=\"M17.8 6.2L19 5\"\/><path d=\"M11 6.2L9.7 5\"\/><path d=\"M11 11.8L9.7 13\"\/><path d=\"M2 21l9-9\"\/>"
+    },
+    "default": {
+        "label": "Default",
+        "tags": [
+            "fallback",
+            "plus"
+        ],
+        "svg": "<circle cx=\"12\" cy=\"12\" r=\"10\"\/><line x1=\"12\" y1=\"8\" x2=\"12\" y2=\"16\"\/><line x1=\"8\" y1=\"12\" x2=\"16\" y2=\"12\"\/>"
+    }
+}

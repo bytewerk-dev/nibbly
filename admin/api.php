@@ -6,6 +6,7 @@
 
 require_once 'config.php';
 require_once __DIR__ . '/users.php';
+require_once __DIR__ . '/../includes/content-loader.php';
 ensureUsersFile();
 
 // Prevent PHP HTML error output from corrupting JSON responses
@@ -87,6 +88,564 @@ function cleanupOldBackups($pagePrefix) {
         $oldBackup = array_pop($backups);
         unlink($oldBackup);
     }
+}
+
+function validateImageFilename(string $filename): bool {
+    if ($filename === '' || strpos($filename, '/') !== false || strpos($filename, '\\') !== false || strpos($filename, '..') !== false) {
+        return false;
+    }
+
+    $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+    return in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'], true);
+}
+
+function getMediaConfig(?string $type = null): array {
+    $root = dirname(__DIR__);
+    $configs = [
+        'image' => [
+            'type' => 'image',
+            'label' => 'Images',
+            'field' => 'image',
+            'path' => defined('IMAGES_PATH') ? IMAGES_PATH : $root . '/assets/images/',
+            'trashPath' => defined('IMAGES_TRASH_PATH') ? IMAGES_TRASH_PATH : $root . '/assets/images-trash/',
+            'publicPath' => '../assets/images/',
+            'extensions' => ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'],
+            'mimeTypes' => ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'],
+            'maxSize' => 5 * 1024 * 1024,
+            'fallbackName' => 'image',
+        ],
+        'audio' => [
+            'type' => 'audio',
+            'label' => 'Audio',
+            'field' => 'audio',
+            'path' => defined('AUDIO_PATH') ? AUDIO_PATH : $root . '/assets/audio/',
+            'trashPath' => defined('AUDIO_TRASH_PATH') ? AUDIO_TRASH_PATH : $root . '/assets/audio-trash/',
+            'publicPath' => '../assets/audio/',
+            'extensions' => ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'],
+            'mimeTypes' => ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/x-m4a', 'audio/mp4', 'audio/aac', 'audio/flac'],
+            'maxSize' => 50 * 1024 * 1024,
+            'fallbackName' => 'audio',
+        ],
+        'video' => [
+            'type' => 'video',
+            'label' => 'Video',
+            'field' => 'media',
+            'path' => defined('VIDEO_PATH') ? VIDEO_PATH : $root . '/assets/videos/',
+            'trashPath' => defined('VIDEO_TRASH_PATH') ? VIDEO_TRASH_PATH : $root . '/assets/videos-trash/',
+            'publicPath' => '../assets/videos/',
+            'extensions' => ['mp4', 'webm', 'mov', 'm4v'],
+            'mimeTypes' => ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v'],
+            'maxSize' => 250 * 1024 * 1024,
+            'fallbackName' => 'video',
+        ],
+        'document' => [
+            'type' => 'document',
+            'label' => 'Documents',
+            'field' => 'media',
+            'path' => defined('DOCUMENTS_PATH') ? DOCUMENTS_PATH : $root . '/assets/documents/',
+            'trashPath' => defined('DOCUMENTS_TRASH_PATH') ? DOCUMENTS_TRASH_PATH : $root . '/assets/documents-trash/',
+            'publicPath' => '../assets/documents/',
+            'extensions' => ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf'],
+            'mimeTypes' => [
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-powerpoint',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                'text/plain',
+                'application/rtf',
+                'text/rtf',
+            ],
+            'maxSize' => 50 * 1024 * 1024,
+            'fallbackName' => 'document',
+        ],
+    ];
+
+    return $type === null ? $configs : ($configs[$type] ?? []);
+}
+
+function normalizeMediaType(string $type): string {
+    return array_key_exists($type, getMediaConfig()) ? $type : '';
+}
+
+function validateMediaFilename(string $filename, string $type): bool {
+    $config = getMediaConfig($type);
+    if (!$config || $filename === '' || strpos($filename, '/') !== false || strpos($filename, '\\') !== false || strpos($filename, '..') !== false) {
+        return false;
+    }
+
+    $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+    return in_array($ext, $config['extensions'], true);
+}
+
+function formatAssetSize(int $sizeBytes): string {
+    if ($sizeBytes >= 1048576) {
+        return round($sizeBytes / 1048576, 1) . ' MB';
+    }
+
+    if ($sizeBytes >= 1024) {
+        return round($sizeBytes / 1024, 0) . ' KB';
+    }
+
+    return $sizeBytes . ' B';
+}
+
+function listImageFiles(string $directory, string $publicBasePath): array {
+    if (!is_dir($directory)) {
+        return [];
+    }
+
+    $images = [];
+    $files = scandir($directory);
+    foreach ($files as $file) {
+        if ($file === '.' || $file === '..' || !validateImageFilename($file)) {
+            continue;
+        }
+
+        $path = $directory . $file;
+        if (!is_file($path)) {
+            continue;
+        }
+
+        $sizeBytes = filesize($path);
+        $modified = filemtime($path);
+        $images[] = [
+            'name' => $file,
+            'path' => $publicBasePath . $file,
+            'sizeBytes' => $sizeBytes,
+            'size' => formatAssetSize($sizeBytes),
+            'modified' => $modified,
+            'dateFormatted' => date('d.m.Y H:i', $modified)
+        ];
+    }
+
+    usort($images, function($a, $b) {
+        return strcasecmp($a['name'], $b['name']);
+    });
+
+    return $images;
+}
+
+function listMediaFiles(string $type, bool $trash = false): array {
+    $config = getMediaConfig($type);
+    if (!$config) {
+        return [];
+    }
+
+    $directory = $trash ? $config['trashPath'] : $config['path'];
+    if (!is_dir($directory)) {
+        return [];
+    }
+
+    $media = [];
+    foreach (scandir($directory) as $file) {
+        if ($file === '.' || $file === '..' || !validateMediaFilename($file, $type)) {
+            continue;
+        }
+
+        $path = $directory . $file;
+        if (!is_file($path)) {
+            continue;
+        }
+
+        $sizeBytes = filesize($path);
+        $modified = filemtime($path);
+        $media[] = [
+            'type' => $type,
+            'name' => $file,
+            'path' => $trash
+                ? 'api.php?action=media-trash-file&type=' . rawurlencode($type) . '&filename=' . rawurlencode($file)
+                : $config['publicPath'] . $file,
+            'sizeBytes' => $sizeBytes,
+            'size' => formatAssetSize($sizeBytes),
+            'modified' => $modified,
+            'dateFormatted' => date('d.m.Y H:i', $modified),
+            'extension' => strtolower(pathinfo($file, PATHINFO_EXTENSION)),
+        ];
+    }
+
+    usort($media, function($a, $b) {
+        return strcasecmp($a['name'], $b['name']);
+    });
+
+    return $media;
+}
+
+function uniqueMediaFilename(string $directory, string $filename): string {
+    $targetFilename = $filename;
+    $counter = 1;
+    while (file_exists($directory . $targetFilename)) {
+        $name = pathinfo($filename, PATHINFO_FILENAME);
+        $ext = pathinfo($filename, PATHINFO_EXTENSION);
+        $targetFilename = $name . '-' . $counter . ($ext !== '' ? '.' . $ext : '');
+        $counter++;
+    }
+    return $targetFilename;
+}
+
+function serveLocalImage(string $path, string $filename): void {
+    $mimeTypes = [
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        'gif' => 'image/gif',
+        'svg' => 'image/svg+xml',
+        'mp3' => 'audio/mpeg',
+        'wav' => 'audio/wav',
+        'ogg' => 'audio/ogg',
+        'm4a' => 'audio/mp4',
+        'aac' => 'audio/aac',
+        'flac' => 'audio/flac',
+        'mp4' => 'video/mp4',
+        'webm' => 'video/webm',
+        'mov' => 'video/quicktime',
+        'm4v' => 'video/x-m4v',
+        'pdf' => 'application/pdf',
+        'doc' => 'application/msword',
+        'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'xls' => 'application/vnd.ms-excel',
+        'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'ppt' => 'application/vnd.ms-powerpoint',
+        'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'txt' => 'text/plain',
+        'rtf' => 'application/rtf',
+    ];
+    $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+    header_remove('Content-Type');
+    header('Content-Type: ' . ($mimeTypes[$ext] ?? 'application/octet-stream'));
+    header('Content-Length: ' . filesize($path));
+    header('Cache-Control: private, max-age=300');
+    readfile($path);
+    exit;
+}
+
+function readSiteIconSetRaw() {
+    $path = getIconSetPath();
+    if (!is_file($path)) {
+        return [];
+    }
+
+    $raw = json_decode(file_get_contents($path), true);
+    return is_array($raw) ? $raw : [];
+}
+
+function writeSiteIconSetRaw(array $iconSet) {
+    $path = getIconSetPath();
+    $dir = dirname($path);
+    if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
+        return false;
+    }
+
+    if (isset($iconSet['_deleted']) && is_array($iconSet['_deleted'])) {
+        $iconSet['_deleted'] = array_values(array_unique(array_filter($iconSet['_deleted'], function($key) {
+            return is_string($key) && preg_match('/^[a-zA-Z0-9_-]+$/', $key);
+        })));
+        if (empty($iconSet['_deleted'])) {
+            unset($iconSet['_deleted']);
+        }
+    }
+
+    ksort($iconSet);
+    return file_put_contents(
+        $path,
+        json_encode($iconSet, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        LOCK_EX
+    ) !== false;
+}
+
+function sanitizeIconKeyInput($key) {
+    $key = trim((string)$key);
+    if (!preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/', $key)) {
+        return '';
+    }
+    return $key;
+}
+
+function getIconifyAllowedSets() {
+    return [
+        'lucide' => [
+            'label' => 'Lucide',
+            'license' => 'ISC',
+            'licenseUrl' => 'https://github.com/lucide-icons/lucide/blob/main/LICENSE',
+            'defaultWidth' => 24,
+            'defaultHeight' => 24,
+        ],
+        'tabler' => [
+            'label' => 'Tabler Icons',
+            'license' => 'MIT',
+            'licenseUrl' => 'https://github.com/tabler/tabler-icons/blob/master/LICENSE',
+            'defaultWidth' => 24,
+            'defaultHeight' => 24,
+        ],
+        'heroicons' => [
+            'label' => 'Heroicons',
+            'license' => 'MIT',
+            'licenseUrl' => 'https://github.com/tailwindlabs/heroicons/blob/master/LICENSE',
+            'defaultWidth' => 24,
+            'defaultHeight' => 24,
+        ],
+        'bi' => [
+            'label' => 'Bootstrap Icons',
+            'license' => 'MIT',
+            'licenseUrl' => 'https://github.com/twbs/icons/blob/main/LICENSE.md',
+            'style' => 'fill',
+            'defaultWidth' => 16,
+            'defaultHeight' => 16,
+        ],
+    ];
+}
+
+function fetchIconifyJson($url) {
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 8,
+            'header' => "User-Agent: Nibbly-CMS/1.0\r\nAccept: application/json\r\n",
+        ],
+    ]);
+
+    $json = @file_get_contents($url, false, $context);
+    if ($json === false && function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_TIMEOUT => 8,
+            CURLOPT_USERAGENT => 'Nibbly-CMS/1.0',
+            CURLOPT_HTTPHEADER => ['Accept: application/json'],
+        ]);
+        $json = curl_exec($ch);
+        $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($json === false || $status >= 400) {
+            return null;
+        }
+    }
+
+    $data = is_string($json) ? json_decode($json, true) : null;
+    return is_array($data) ? $data : null;
+}
+
+function iconifyIconToDefinition($prefix, $name, array $data, array $setInfo) {
+    $icon = $data['icons'][$name] ?? null;
+    if (!$icon && isset($data['aliases'][$name]['parent'])) {
+        $parent = $data['aliases'][$name]['parent'];
+        $icon = $data['icons'][$parent] ?? null;
+    }
+    if (!is_array($icon) || empty($icon['body']) || !is_string($icon['body'])) {
+        return null;
+    }
+
+    $width = $icon['width'] ?? $data['width'] ?? $setInfo['defaultWidth'] ?? 24;
+    $height = $icon['height'] ?? $data['height'] ?? $setInfo['defaultHeight'] ?? 24;
+    $left = $icon['left'] ?? 0;
+    $top = $icon['top'] ?? 0;
+    $viewBox = normalizeIconViewBox($left . ' ' . $top . ' ' . $width . ' ' . $height);
+    $label = ucwords(str_replace(['-', '_'], ' ', $name));
+    $style = $setInfo['style'] ?? 'stroke';
+
+    $normalized = normalizeIconSet([
+        $prefix . '-' . $name => [
+            'label' => $label,
+            'tags' => [$setInfo['label'], $prefix],
+            'svg' => $icon['body'],
+            'viewBox' => $viewBox,
+            'style' => $style,
+        ],
+    ]);
+    $key = array_key_first($normalized);
+    if (!$key) {
+        return null;
+    }
+
+    return [
+        'key' => $key,
+        'prefix' => $prefix,
+        'name' => $name,
+        'full' => $prefix . ':' . $name,
+        'label' => $normalized[$key]['label'],
+        'tags' => $normalized[$key]['tags'],
+        'svg' => $normalized[$key]['svg'],
+        'viewBox' => $normalized[$key]['viewBox'],
+        'style' => $normalized[$key]['style'] ?? $style,
+        'license' => $setInfo['license'],
+        'licenseUrl' => $setInfo['licenseUrl'],
+        'setLabel' => $setInfo['label'],
+    ];
+}
+
+function searchIconifyIcons($prefix, $query) {
+    $allowedSets = getIconifyAllowedSets();
+    if (!isset($allowedSets[$prefix])) {
+        return [false, null, 'Icon set is not allowed.'];
+    }
+    $query = trim((string)$query);
+    if (strlen($query) < 2) {
+        return [false, null, 'Enter at least 2 characters.'];
+    }
+
+    $searchUrl = 'https://api.iconify.design/search?query=' . rawurlencode($query) . '&prefix=' . rawurlencode($prefix) . '&limit=48';
+    $search = fetchIconifyJson($searchUrl);
+    if (!$search || empty($search['icons']) || !is_array($search['icons'])) {
+        return [true, ['icons' => [], 'sets' => $allowedSets], ''];
+    }
+
+    $names = [];
+    foreach ($search['icons'] as $iconName) {
+        if (is_string($iconName) && str_starts_with($iconName, $prefix . ':')) {
+            $names[] = substr($iconName, strlen($prefix) + 1);
+        }
+    }
+    $names = array_slice(array_values(array_unique($names)), 0, 48);
+    if (!$names) {
+        return [true, ['icons' => [], 'sets' => $allowedSets], ''];
+    }
+
+    $dataUrl = 'https://api.iconify.design/' . rawurlencode($prefix) . '.json?icons=' . rawurlencode(implode(',', $names));
+    $data = fetchIconifyJson($dataUrl);
+    if (!$data) {
+        return [false, null, 'Could not load icon data from Iconify.'];
+    }
+
+    $icons = [];
+    foreach ($names as $name) {
+        $definition = iconifyIconToDefinition($prefix, $name, $data, $allowedSets[$prefix]);
+        if ($definition) {
+            $icons[] = $definition;
+        }
+    }
+
+    return [true, ['icons' => $icons, 'sets' => $allowedSets], ''];
+}
+
+function importIconifyIcon($fullName) {
+    $allowedSets = getIconifyAllowedSets();
+    $fullName = trim((string)$fullName);
+    if (!preg_match('/^([a-z0-9-]+):([a-z0-9-]+)$/', $fullName, $m)) {
+        return [false, null, 'Invalid Iconify icon name.'];
+    }
+
+    $prefix = $m[1];
+    $name = $m[2];
+    if (!isset($allowedSets[$prefix])) {
+        return [false, null, 'Icon set is not allowed.'];
+    }
+
+    $dataUrl = 'https://api.iconify.design/' . rawurlencode($prefix) . '.json?icons=' . rawurlencode($name);
+    $data = fetchIconifyJson($dataUrl);
+    if (!$data) {
+        return [false, null, 'Could not load icon data from Iconify.'];
+    }
+
+    $definition = iconifyIconToDefinition($prefix, $name, $data, $allowedSets[$prefix]);
+    if (!$definition) {
+        return [false, null, 'Icon could not be imported.'];
+    }
+
+    $rawIconSet = readSiteIconSetRaw();
+    $availableKeys = array_column(iconManagerListData()['icons'], 'key');
+    if (in_array($definition['key'], $availableKeys, true)) {
+        return [false, null, 'An icon with this key already exists.'];
+    }
+
+    $rawIconSet[$definition['key']] = [
+        'label' => $definition['label'],
+        'tags' => array_values(array_unique(array_merge($definition['tags'], ['iconify', $definition['full']]))),
+        'svg' => $definition['svg'],
+        'viewBox' => $definition['viewBox'],
+        'style' => $definition['style'],
+        'createdAt' => date('c'),
+        'updatedAt' => date('c'),
+        'source' => [
+            'type' => 'iconify',
+            'icon' => $definition['full'],
+            'license' => $definition['license'],
+            'licenseUrl' => $definition['licenseUrl'],
+        ],
+    ];
+
+    if (!writeSiteIconSetRaw($rawIconSet)) {
+        return [false, null, 'Could not write icon set.'];
+    }
+
+    return [true, iconManagerListData(), ''];
+}
+
+function normalizeIconManagerPayload($key, $label, $tags, $svg, $viewBox = '') {
+    $key = sanitizeIconKeyInput($key);
+    if ($key === '') {
+        return [false, null, 'Invalid icon key. Use lowercase letters, numbers, hyphens, and underscores.'];
+    }
+
+    $tagsArray = [];
+    if (is_string($tags) && trim($tags) !== '') {
+        $tagsArray = array_values(array_filter(array_map('trim', explode(',', $tags)), 'strlen'));
+    } elseif (is_array($tags)) {
+        $tagsArray = array_values(array_filter($tags, 'is_string'));
+    }
+
+    $extractedViewBox = extractIconViewBoxFromSvg((string)$svg);
+    $rawViewBox = trim((string)$viewBox);
+
+    $definition = [
+        'label' => trim((string)$label) ?: ucwords(str_replace(['-', '_'], ' ', $key)),
+        'tags' => $tagsArray,
+        'svg' => (string)$svg,
+        'viewBox' => ($extractedViewBox && ($rawViewBox === '' || normalizeIconViewBox($rawViewBox) === '0 0 24 24'))
+            ? $extractedViewBox
+            : normalizeIconViewBox($rawViewBox),
+    ];
+    $normalized = normalizeIconSet([$key => $definition]);
+    if (empty($normalized[$key])) {
+        return [false, null, 'SVG code is empty or contains no supported SVG elements.'];
+    }
+
+    return [true, [$key, $normalized[$key]], ''];
+}
+
+function iconManagerListData() {
+    $core = getDefaultIconSet();
+    $raw = readSiteIconSetRaw();
+    $custom = normalizeIconSet($raw);
+    $deleted = getDeletedIconKeys($raw);
+    $merged = $core;
+
+    foreach ($deleted as $deletedKey) {
+        unset($merged[$deletedKey]);
+    }
+    $merged = array_merge($merged, $custom);
+    if (empty($merged['default'])) {
+        $fallback = getEmergencyDefaultIconSet();
+        $merged['default'] = $fallback['default'];
+    }
+
+    $icons = [];
+    foreach ($merged as $key => $definition) {
+        $icons[] = [
+            'key' => $key,
+            'label' => $definition['label'] ?? ucwords(str_replace(['-', '_'], ' ', $key)),
+            'tags' => $definition['tags'] ?? [],
+            'svg' => $definition['svg'] ?? '',
+            'viewBox' => $definition['viewBox'] ?? '0 0 24 24',
+            'style' => $definition['style'] ?? 'stroke',
+            'createdAt' => $definition['createdAt'] ?? '',
+            'updatedAt' => $definition['updatedAt'] ?? '',
+            'source' => isset($custom[$key]) ? 'custom' : 'core',
+            'canDelete' => $key !== 'default',
+        ];
+    }
+    usort($icons, function($a, $b) {
+        return strcasecmp($a['key'], $b['key']);
+    });
+
+    return [
+        'icons' => $icons,
+        'path' => getIconSetPath(),
+        'deleted' => $deleted,
+    ];
 }
 
 
@@ -182,6 +741,132 @@ switch ($action) {
 
     case 'list-pages':
         jsonResponse(true, buildPageList());
+        break;
+
+    case 'list-icons':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        jsonResponse(true, iconManagerListData());
+        break;
+
+    case 'iconify-search':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        [$validSearch, $searchData, $searchError] = searchIconifyIcons($_GET['prefix'] ?? '', $_GET['query'] ?? '');
+        if (!$validSearch) {
+            jsonResponse(false, null, $searchError);
+        }
+        jsonResponse(true, $searchData);
+        break;
+
+    case 'iconify-import':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        [$validImport, $importData, $importError] = importIconifyIcon($_POST['icon'] ?? '');
+        if (!$validImport) {
+            jsonResponse(false, null, $importError);
+        }
+        jsonResponse(true, $importData, 'Icon imported.');
+        break;
+
+    case 'save-icon':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $oldKey = sanitizeIconKeyInput($_POST['old_key'] ?? '');
+        [$validIcon, $normalizedIcon, $iconError] = normalizeIconManagerPayload(
+            $_POST['key'] ?? '',
+            $_POST['label'] ?? '',
+            $_POST['tags'] ?? '',
+            $_POST['svg'] ?? '',
+            $_POST['viewBox'] ?? ''
+        );
+        if (!$validIcon) {
+            jsonResponse(false, null, $iconError);
+        }
+
+        [$newKey, $definition] = $normalizedIcon;
+        if ($oldKey === 'default' && $newKey !== 'default') {
+            jsonResponse(false, null, 'The fallback icon key cannot be renamed.');
+        }
+        $rawIconSet = readSiteIconSetRaw();
+        $customIcons = normalizeIconSet($rawIconSet);
+        $availableIcons = iconManagerListData()['icons'];
+        $availableKeys = array_column($availableIcons, 'key');
+
+        if (($oldKey === '' || $oldKey !== $newKey) && in_array($newKey, $availableKeys, true)) {
+            jsonResponse(false, null, 'An icon with this key already exists.');
+        }
+
+        if ($oldKey !== '' && $oldKey !== $newKey) {
+            unset($rawIconSet[$oldKey]);
+            if (isset(getDefaultIconSet()[$oldKey])) {
+                $rawIconSet['_deleted'] = $rawIconSet['_deleted'] ?? [];
+                $rawIconSet['_deleted'][] = $oldKey;
+            }
+        }
+
+        $previousKey = $oldKey ?: $newKey;
+        $previousDefinition = isset($rawIconSet[$previousKey]) && is_array($rawIconSet[$previousKey]) ? $rawIconSet[$previousKey] : [];
+        $definition['createdAt'] = isset($previousDefinition['createdAt']) && is_string($previousDefinition['createdAt'])
+            ? $previousDefinition['createdAt']
+            : date('c');
+        $definition['updatedAt'] = date('c');
+        $rawIconSet[$newKey] = $definition;
+        if (isset($rawIconSet['_deleted']) && is_array($rawIconSet['_deleted'])) {
+            $rawIconSet['_deleted'] = array_values(array_filter($rawIconSet['_deleted'], function($key) use ($newKey) {
+                return $key !== $newKey;
+            }));
+        }
+
+        if (!writeSiteIconSetRaw($rawIconSet)) {
+            jsonResponse(false, null, 'Could not write icon set.');
+        }
+
+        jsonResponse(true, iconManagerListData(), 'Icon saved.');
+        break;
+
+    case 'delete-icon':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $key = sanitizeIconKeyInput($_POST['key'] ?? '');
+        if ($key === '') {
+            jsonResponse(false, null, 'Invalid icon key.');
+        }
+        if ($key === 'default') {
+            jsonResponse(false, null, 'The fallback icon cannot be deleted.');
+        }
+
+        $rawIconSet = readSiteIconSetRaw();
+        unset($rawIconSet[$key]);
+        if (isset(getDefaultIconSet()[$key])) {
+            $rawIconSet['_deleted'] = $rawIconSet['_deleted'] ?? [];
+            $rawIconSet['_deleted'][] = $key;
+        }
+
+        if (!writeSiteIconSetRaw($rawIconSet)) {
+            jsonResponse(false, null, 'Could not write icon set.');
+        }
+
+        jsonResponse(true, iconManagerListData(), 'Icon deleted.');
         break;
 
     case 'create-page':
@@ -1026,46 +1711,256 @@ switch ($action) {
     // ============================================================
 
     case 'list-images':
-        if (!is_dir(IMAGES_PATH)) {
-            jsonResponse(true, []);
+        jsonResponse(true, listImageFiles(IMAGES_PATH, '../assets/images/'));
+        break;
+
+    case 'list-media':
+        $requestedType = $_GET['type'] ?? 'all';
+        $trash = ($_GET['trash'] ?? '0') === '1';
+        $types = $requestedType === 'all'
+            ? array_keys(getMediaConfig())
+            : array_filter(array_map('normalizeMediaType', explode(',', $requestedType)));
+
+        $items = [];
+        foreach ($types as $type) {
+            $items = array_merge($items, listMediaFiles($type, $trash));
+        }
+        usort($items, function($a, $b) {
+            return ($b['modified'] ?? 0) <=> ($a['modified'] ?? 0);
+        });
+
+        jsonResponse(true, [
+            'items' => $items,
+            'types' => array_values(array_map(function($config) {
+                return [
+                    'type' => $config['type'],
+                    'label' => $config['label'],
+                    'extensions' => $config['extensions'],
+                    'maxSize' => $config['maxSize'],
+                ];
+            }, getMediaConfig())),
+        ]);
+        break;
+
+    case 'upload-media':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
         }
 
-        $images = [];
-        $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'];
+        $type = normalizeMediaType($_POST['type'] ?? 'image');
+        $config = getMediaConfig($type);
+        if (!$config) {
+            jsonResponse(false, null, 'Invalid media type');
+        }
 
-        $files = scandir(IMAGES_PATH);
-        foreach ($files as $file) {
-            if ($file === '.' || $file === '..') continue;
+        $field = $config['field'];
+        if (!isset($_FILES[$field]) || $_FILES[$field]['error'] !== UPLOAD_ERR_OK) {
+            $field = 'file';
+        }
 
-            $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-            if (in_array($ext, $allowedExtensions)) {
-                $sizeBytes = filesize(IMAGES_PATH . $file);
-                $modified = filemtime(IMAGES_PATH . $file);
+        if (!isset($_FILES[$field]) || $_FILES[$field]['error'] !== UPLOAD_ERR_OK) {
+            jsonResponse(false, null, 'Upload error');
+        }
 
-                if ($sizeBytes >= 1048576) {
-                    $sizeFormatted = round($sizeBytes / 1048576, 1) . ' MB';
-                } elseif ($sizeBytes >= 1024) {
-                    $sizeFormatted = round($sizeBytes / 1024, 0) . ' KB';
-                } else {
-                    $sizeFormatted = $sizeBytes . ' B';
+        $file = $_FILES[$field];
+        $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if (!in_array($extension, $config['extensions'], true)) {
+            jsonResponse(false, null, 'Invalid file extension');
+        }
+
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+        if (!in_array($mimeType, $config['mimeTypes'], true)) {
+            jsonResponse(false, null, 'Invalid file type');
+        }
+
+        if ($file['size'] > $config['maxSize']) {
+            jsonResponse(false, null, 'File too large');
+        }
+
+        $originalName = pathinfo($file['name'], PATHINFO_FILENAME);
+        $safeName = preg_replace('/[^a-z0-9\-_]/i', '-', $originalName);
+        $safeName = preg_replace('/-+/', '-', $safeName);
+        $safeName = trim($safeName, '-');
+        if ($safeName === '') {
+            $safeName = $config['fallbackName'] . '-' . time();
+        }
+
+        $filename = uniqueMediaFilename($config['path'], $safeName . '.' . $extension);
+        if (!is_dir($config['path'])) {
+            mkdir($config['path'], 0755, true);
+        }
+
+        if (move_uploaded_file($file['tmp_name'], $config['path'] . $filename)) {
+            jsonResponse(true, [
+                'type' => $type,
+                'name' => $filename,
+                'path' => $config['publicPath'] . $filename,
+            ], 'Media uploaded');
+        }
+
+        jsonResponse(false, null, 'Error saving');
+        break;
+
+    case 'delete-media':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $type = normalizeMediaType($_POST['type'] ?? '');
+        $filename = $_POST['filename'] ?? '';
+        $config = getMediaConfig($type);
+        if (!$config || !validateMediaFilename($filename, $type)) {
+            jsonResponse(false, null, 'Invalid media file');
+        }
+
+        $sourcePath = $config['path'] . $filename;
+        if (!file_exists($sourcePath)) {
+            jsonResponse(false, null, 'File not found');
+        }
+
+        if (!is_dir($config['trashPath'])) {
+            mkdir($config['trashPath'], 0755, true);
+        }
+
+        $targetFilename = uniqueMediaFilename($config['trashPath'], $filename);
+        if (rename($sourcePath, $config['trashPath'] . $targetFilename)) {
+            jsonResponse(true, null, 'Media moved to trash');
+        }
+
+        jsonResponse(false, null, 'Error moving');
+        break;
+
+    case 'restore-media':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $type = normalizeMediaType($_POST['type'] ?? '');
+        $filename = $_POST['filename'] ?? '';
+        $config = getMediaConfig($type);
+        if (!$config || !validateMediaFilename($filename, $type)) {
+            jsonResponse(false, null, 'Invalid media file');
+        }
+
+        $sourcePath = $config['trashPath'] . $filename;
+        if (!file_exists($sourcePath)) {
+            jsonResponse(false, null, 'File not found');
+        }
+
+        if (!is_dir($config['path'])) {
+            mkdir($config['path'], 0755, true);
+        }
+
+        $targetFilename = uniqueMediaFilename($config['path'], $filename);
+        if (rename($sourcePath, $config['path'] . $targetFilename)) {
+            jsonResponse(true, [
+                'type' => $type,
+                'name' => $targetFilename,
+                'path' => $config['publicPath'] . $targetFilename,
+            ], 'Media restored');
+        }
+
+        jsonResponse(false, null, 'Error restoring');
+        break;
+
+    case 'delete-media-trash':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $type = normalizeMediaType($_POST['type'] ?? '');
+        $filename = $_POST['filename'] ?? '';
+        $config = getMediaConfig($type);
+        if (!$config || !validateMediaFilename($filename, $type)) {
+            jsonResponse(false, null, 'Invalid media file');
+        }
+
+        $path = $config['trashPath'] . $filename;
+        if (!file_exists($path)) {
+            jsonResponse(false, null, 'File not found');
+        }
+
+        if (unlink($path)) {
+            jsonResponse(true, null, 'Media permanently deleted');
+        }
+
+        jsonResponse(false, null, 'Error deleting');
+        break;
+
+    case 'empty-media-trash':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $requestedType = $_POST['type'] ?? 'all';
+        $types = $requestedType === 'all'
+            ? array_keys(getMediaConfig())
+            : array_filter(array_map('normalizeMediaType', explode(',', $requestedType)));
+        $deleted = 0;
+        foreach ($types as $type) {
+            $config = getMediaConfig($type);
+            foreach (listMediaFiles($type, true) as $media) {
+                $path = $config['trashPath'] . $media['name'];
+                if (is_file($path) && unlink($path)) {
+                    $deleted++;
                 }
-
-                $images[] = [
-                    'name' => $file,
-                    'path' => '../assets/images/' . $file,
-                    'sizeBytes' => $sizeBytes,
-                    'size' => $sizeFormatted,
-                    'modified' => $modified,
-                    'dateFormatted' => date('d.m.Y H:i', $modified)
-                ];
             }
         }
 
-        usort($images, function($a, $b) {
-            return strcasecmp($a['name'], $b['name']);
-        });
+        jsonResponse(true, ['deleted' => $deleted], 'Media trash emptied');
+        break;
 
+    case 'media-trash-file':
+        $type = normalizeMediaType($_GET['type'] ?? '');
+        $filename = $_GET['filename'] ?? '';
+        $config = getMediaConfig($type);
+        if (!$config || !validateMediaFilename($filename, $type)) {
+            http_response_code(400);
+            header_remove('Content-Type');
+            echo 'Invalid media file';
+            exit;
+        }
+
+        $path = $config['trashPath'] . $filename;
+        if (!is_file($path)) {
+            http_response_code(404);
+            header_remove('Content-Type');
+            echo 'File not found';
+            exit;
+        }
+
+        serveLocalImage($path, $filename);
+        break;
+
+    case 'list-image-trash':
+        $images = listImageFiles(IMAGES_TRASH_PATH, 'api.php?action=image-trash-file&filename=');
+        foreach ($images as &$image) {
+            $image['path'] = 'api.php?action=image-trash-file&filename=' . rawurlencode($image['name']);
+        }
+        unset($image);
         jsonResponse(true, $images);
+        break;
+
+    case 'image-trash-file':
+        $filename = $_GET['filename'] ?? '';
+        if (!validateImageFilename($filename)) {
+            http_response_code(400);
+            header_remove('Content-Type');
+            echo 'Invalid filename';
+            exit;
+        }
+
+        $path = IMAGES_TRASH_PATH . $filename;
+        if (!is_file($path)) {
+            http_response_code(404);
+            header_remove('Content-Type');
+            echo 'File not found';
+            exit;
+        }
+
+        serveLocalImage($path, $filename);
         break;
 
     case 'upload-image':
@@ -1175,7 +2070,7 @@ switch ($action) {
 
         $filename = $_POST['filename'] ?? '';
 
-        if (empty($filename) || strpos($filename, '/') !== false || strpos($filename, '\\') !== false || strpos($filename, '..') !== false) {
+        if (!validateImageFilename($filename)) {
             jsonResponse(false, null, 'Invalid filename');
         }
 
@@ -1203,6 +2098,82 @@ switch ($action) {
         } else {
             jsonResponse(false, null, 'Error moving');
         }
+        break;
+
+    case 'restore-image':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $filename = $_POST['filename'] ?? '';
+        if (!validateImageFilename($filename)) {
+            jsonResponse(false, null, 'Invalid filename');
+        }
+
+        $sourcePath = IMAGES_TRASH_PATH . $filename;
+        if (!file_exists($sourcePath)) {
+            jsonResponse(false, null, 'File not found');
+        }
+
+        if (!is_dir(IMAGES_PATH)) {
+            mkdir(IMAGES_PATH, 0755, true);
+        }
+
+        $targetFilename = $filename;
+        $counter = 1;
+        while (file_exists(IMAGES_PATH . $targetFilename)) {
+            $name = pathinfo($filename, PATHINFO_FILENAME);
+            $ext = pathinfo($filename, PATHINFO_EXTENSION);
+            $targetFilename = $name . '-' . $counter . '.' . $ext;
+            $counter++;
+        }
+
+        if (rename($sourcePath, IMAGES_PATH . $targetFilename)) {
+            jsonResponse(true, [
+                'name' => $targetFilename,
+                'path' => '../assets/images/' . $targetFilename
+            ], 'Image restored');
+        }
+
+        jsonResponse(false, null, 'Error restoring');
+        break;
+
+    case 'delete-image-trash':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $filename = $_POST['filename'] ?? '';
+        if (!validateImageFilename($filename)) {
+            jsonResponse(false, null, 'Invalid filename');
+        }
+
+        $path = IMAGES_TRASH_PATH . $filename;
+        if (!file_exists($path)) {
+            jsonResponse(false, null, 'File not found');
+        }
+
+        if (unlink($path)) {
+            jsonResponse(true, null, 'Image permanently deleted');
+        }
+
+        jsonResponse(false, null, 'Error deleting');
+        break;
+
+    case 'empty-image-trash':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $deleted = 0;
+        foreach (listImageFiles(IMAGES_TRASH_PATH, '../assets/images-trash/') as $image) {
+            $path = IMAGES_TRASH_PATH . $image['name'];
+            if (is_file($path) && unlink($path)) {
+                $deleted++;
+            }
+        }
+
+        jsonResponse(true, ['deleted' => $deleted], 'Image trash emptied');
         break;
 
     // ============================================================
@@ -1591,6 +2562,55 @@ switch ($action) {
 
         file_put_contents($mailsFile, json_encode($mails, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
         jsonResponse(true, null, 'Mail marked as read');
+        break;
+
+    case 'update-mail-flags':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $mailId = $_POST['mail_id'] ?? '';
+        if (empty($mailId)) {
+            jsonResponse(false, null, 'Mail ID missing');
+        }
+
+        $allowedFlags = ['read', 'starred'];
+        $updates = [];
+        foreach ($allowedFlags as $flag) {
+            if (array_key_exists($flag, $_POST)) {
+                $updates[$flag] = filter_var($_POST[$flag], FILTER_VALIDATE_BOOLEAN);
+            }
+        }
+
+        if (empty($updates)) {
+            jsonResponse(false, null, 'No mail flags provided');
+        }
+
+        $mailsFile = dirname(CONTENT_PATH) . '/mails.json';
+        if (!file_exists($mailsFile)) {
+            jsonResponse(false, null, 'No mails found');
+        }
+
+        $mails = json_decode(file_get_contents($mailsFile), true) ?: [];
+        $found = false;
+
+        foreach ($mails as &$mail) {
+            if (($mail['id'] ?? '') === $mailId) {
+                foreach ($updates as $flag => $value) {
+                    $mail[$flag] = $value;
+                }
+                $found = true;
+                break;
+            }
+        }
+        unset($mail);
+
+        if (!$found) {
+            jsonResponse(false, null, 'Mail not found');
+        }
+
+        file_put_contents($mailsFile, json_encode($mails, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+        jsonResponse(true, ['mail_id' => $mailId, 'updates' => $updates], 'Mail flags updated');
         break;
 
     case 'mark-all-mails-read':

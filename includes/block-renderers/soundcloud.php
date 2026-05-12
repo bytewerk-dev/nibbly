@@ -16,8 +16,12 @@ if (!empty($section['trackId'])) {
 }
 
 if (!empty($scUrl)) {
+    $title = trim((string)($section['title'] ?? ''));
     $html .= '<div class="audio-embed audio-embed-soundcloud">' . "\n";
-    $html .= '    <iframe width="100%" height="20" scrolling="no" frameborder="no" allow="autoplay"' . "\n";
+    if ($title !== '') {
+        $html .= '    <div class="audio-embed__title">' . htmlspecialchars($title) . '</div>' . "\n";
+    }
+    $html .= '    <iframe width="100%" height="120" scrolling="no" frameborder="no" allow="autoplay"' . "\n";
     $html .= '        src="https://w.soundcloud.com/player/?url=' . $scUrl . '&color=%233b82f6&inverse=true&auto_play=false&show_user=false">' . "\n";
     $html .= '    </iframe>' . "\n";
     $html .= '</div>' . "\n";

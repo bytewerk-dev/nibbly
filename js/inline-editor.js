@@ -60,6 +60,7 @@
         contentData: {},
         loadedPages: [],
         currentEvent: null,
+        currentGroup: null,
         eventsData: null,
         draggedElement: null,
         draggedIndex: null,
@@ -513,6 +514,9 @@
         document.querySelectorAll('[data-content-page]').forEach(el => {
             contentPages.add(el.dataset.contentPage);
         });
+        document.querySelectorAll('[data-editable-group][data-page]').forEach(el => {
+            contentPages.add(el.dataset.page);
+        });
 
         // Alle Content-Daten laden
         const loadPromises = Array.from(contentPages).map(page => loadContent(page));
@@ -520,11 +524,13 @@
 
         Promise.all(loadPromises).then(async () => {
             createEditorUI();
+            createGroupEditorUI();
             createEventEditorUI();
             createAddSectionUI();
             attachEditHandlers();
             attachEventEditHandlers();
             attachFooterEditHandlers();
+            attachGroupEditHandlers();
             attachFieldEditHandlers();
             attachLinkEditHandlers();
             attachImageEditHandlers();
@@ -1048,8 +1054,15 @@
             const value = getNestedValue(pageData, fieldKey);
             if (!value || typeof value !== 'object') return;
 
-            if (value.text) link.textContent = value.text;
-            if (value.href) link.setAttribute('href', value.href);
+            if (value.text !== undefined) link.textContent = value.text;
+            if (value.href !== undefined) link.setAttribute('href', value.href);
+            if (value.target === '_blank') {
+                link.setAttribute('target', '_blank');
+                link.setAttribute('rel', 'noopener');
+            } else {
+                link.removeAttribute('target');
+                link.removeAttribute('rel');
+            }
         });
 
         // Update editable images
@@ -1066,6 +1079,44 @@
 
             if (value.src) img.setAttribute('src', value.src);
             if (value.alt !== undefined) img.setAttribute('alt', value.alt);
+        });
+
+        // Update custom editable icon values
+        document.querySelectorAll('[data-editable-icon]').forEach(iconEl => {
+            const page = iconEl.dataset.page;
+            const fieldKey = iconEl.dataset.field;
+            if (!page || !fieldKey) return;
+
+            const pageData = EditorConfig.contentData[page];
+            if (!pageData) return;
+
+            const value = getNestedValue(pageData, fieldKey);
+            if (value === null || value === undefined) return;
+
+            iconEl.textContent = value;
+            iconEl.dataset.icon = value;
+        });
+
+        // Update visible SVGs for grouped custom components that use icon fields.
+        document.querySelectorAll('[data-editable-group]').forEach(group => {
+            const page = group.dataset.page;
+            const groupKey = group.dataset.group || '';
+            if (!page || !groupKey) return;
+
+            const schema = parseGroupSchema(group);
+            const iconField = Array.isArray(schema.fields)
+                ? schema.fields.find(field => (field.type || '') === 'icon')
+                : null;
+            if (!iconField) return;
+
+            const pageData = EditorConfig.contentData[page];
+            if (!pageData) return;
+
+            const iconId = getNestedValue(pageData, groupFieldPath(groupKey, iconField));
+            const svg = group.querySelector('.feature-icon svg, .vibecoding-icon svg, svg');
+            if (svg && iconId !== null && iconId !== undefined) {
+                svg.innerHTML = getIconMarkup(iconId);
+            }
         });
 
     }
@@ -1228,6 +1279,173 @@
         }
     }
 
+    function normalizeGroupField(field) {
+        const normalized = { ...field };
+        normalized.type = normalized.type || 'text';
+        if (normalized.type === 'text') normalized.type = 'input';
+        if (normalized.type === 'html' || normalized.type === 'richtext') normalized.type = 'wysiwyg';
+        return normalized;
+    }
+
+    function getAvailableIconsForField(field = {}) {
+        const allIcons = window.NB_AVAILABLE_ICONS && typeof window.NB_AVAILABLE_ICONS === 'object'
+            ? window.NB_AVAILABLE_ICONS
+            : {};
+        const allowed = Array.isArray(field.icons) ? field.icons : null;
+        if (!allowed || allowed.length === 0) return allIcons;
+
+        return allowed.reduce((icons, key) => {
+            if (Object.prototype.hasOwnProperty.call(allIcons, key)) {
+                icons[key] = allIcons[key];
+            }
+            return icons;
+        }, {});
+    }
+
+    function getIconMarkup(iconId) {
+        const icons = window.NB_AVAILABLE_ICONS && typeof window.NB_AVAILABLE_ICONS === 'object'
+            ? window.NB_AVAILABLE_ICONS
+            : {};
+        return icons[iconId] || icons.default || '';
+    }
+
+    function groupFieldPath(groupKey, field) {
+        if (field.path) return field.path;
+        const key = field.key || '';
+        if (!groupKey) return key;
+        if (!key) return groupKey;
+        if (key === groupKey || key.startsWith(groupKey + '.')) return key;
+        return groupKey + '.' + key;
+    }
+
+    function groupFieldIds(index, suffix = '') {
+        const id = `group-editor-input-${index}${suffix ? '-' + suffix : ''}`;
+        return { id, fieldId: `group-editor-field-${index}` };
+    }
+
+    function renderGroupEditorField(field, index) {
+        const normalized = normalizeGroupField(field);
+        const { id, fieldId } = groupFieldIds(index);
+        const label = escHtml(normalized.label || normalized.key || normalized.path || '');
+        const hint = normalized.hint ? `<small>${escHtml(normalized.hint)}</small>` : '';
+
+        switch (normalized.type) {
+            case 'icon': {
+                const icons = getAvailableIconsForField(normalized);
+                const iconButtons = Object.entries(icons).map(([key, markup]) => `
+                    <button type="button" class="group-icon-option" data-group-icon-value="${escHtml(key)}" title="${escHtml(key)}" aria-label="${escHtml(key)}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${markup}</svg>
+                        <span>${escHtml(key)}</span>
+                    </button>
+                `).join('');
+
+                return `<div class="editor-field group-editor-field" id="${fieldId}" data-group-field-index="${index}">
+                    <label>${label}</label>
+                    <input type="hidden" id="${id}">
+                    <div class="group-icon-picker" data-group-icon-picker="${index}">
+                        <div class="group-icon-selected">
+                            <span class="group-icon-selected-preview" id="group-editor-icon-preview-${index}"></span>
+                            <span class="group-icon-selected-label" id="group-editor-icon-label-${index}"></span>
+                        </div>
+                        <input type="search" class="group-icon-search" data-group-icon-search="${index}" placeholder="Search icons...">
+                        <div class="group-icon-grid">${iconButtons}</div>
+                    </div>
+                    ${hint}
+                </div>`;
+            }
+
+            case 'textarea':
+                return `<div class="editor-field group-editor-field" id="${fieldId}" data-group-field-index="${index}">
+                    <label>${label}</label>
+                    <textarea id="${id}" rows="3" placeholder="${label}..."></textarea>
+                    ${hint}
+                </div>`;
+
+            case 'wysiwyg':
+                return `<div class="editor-field group-editor-field" id="${fieldId}" data-group-field-index="${index}">
+                    <label>${label}</label>
+                    <textarea id="${id}" class="editor-html group-editor-html" rows="6"></textarea>
+                    ${hint}
+                </div>`;
+
+            case 'select': {
+                const opts = (normalized.options || []).map(o =>
+                    `<option value="${escHtml(o.value || '')}">${escHtml(o.label || o.value || '')}</option>`
+                ).join('');
+                return `<div class="editor-field group-editor-field" id="${fieldId}" data-group-field-index="${index}">
+                    <label>${label}</label>
+                    <select id="${id}">${opts}</select>
+                    ${hint}
+                </div>`;
+            }
+
+            case 'checkbox':
+                return `<div class="editor-field group-editor-field" id="${fieldId}" data-group-field-index="${index}">
+                    <label class="editor-checkbox-label">
+                        <input type="checkbox" id="${id}">
+                        <span>${label}</span>
+                    </label>
+                    ${hint}
+                </div>`;
+
+            case 'number':
+                return `<div class="editor-field group-editor-field" id="${fieldId}" data-group-field-index="${index}">
+                    <label>${label}</label>
+                    <input type="number" id="${id}" placeholder="${label}...">
+                    ${hint}
+                </div>`;
+
+            case 'url':
+                return `<div class="editor-field group-editor-field" id="${fieldId}" data-group-field-index="${index}">
+                    <label>${label}</label>
+                    <input type="url" id="${id}" placeholder="https://...">
+                    ${hint}
+                </div>`;
+
+            case 'link': {
+                const textId = groupFieldIds(index, 'text').id;
+                const hrefId = groupFieldIds(index, 'href').id;
+                const targetId = groupFieldIds(index, 'target').id;
+                return `<div class="editor-field group-editor-field" id="${fieldId}" data-group-field-index="${index}">
+                    <label>${label}</label>
+                    <input type="text" id="${textId}" placeholder="Link text">
+                    <div class="group-link-target">
+                        ${buildPagePickerHtml(groupFieldIds(index, 'page').id, hrefId)}
+                    </div>
+                    <label class="link-editor-option group-link-option">
+                        <input type="checkbox" id="${targetId}">
+                        <span>${t('link_open_new_tab') || 'Open in new tab'}</span>
+                    </label>
+                    ${hint}
+                </div>`;
+            }
+
+            case 'image': {
+                const srcId = groupFieldIds(index, 'src').id;
+                const altId = groupFieldIds(index, 'alt').id;
+                return `<div class="editor-field group-editor-field" id="${fieldId}" data-group-field-index="${index}">
+                    <label>${label}</label>
+                    <div class="editor-image-row">
+                        <input type="text" id="${srcId}" placeholder="Path to image..." readonly>
+                        <button type="button" class="editor-btn editor-btn-secondary" data-group-image-pick="${index}">
+                            ${Icons.folder} ${t('image_manager')}
+                        </button>
+                    </div>
+                    <input type="text" id="${altId}" placeholder="Alt text" class="group-image-alt">
+                    <div id="group-editor-image-preview-${index}" class="editor-image-preview"></div>
+                    ${hint}
+                </div>`;
+            }
+
+            default:
+                return `<div class="editor-field group-editor-field" id="${fieldId}" data-group-field-index="${index}">
+                    <label>${label}</label>
+                    <input type="text" id="${id}" placeholder="${label}...">
+                    ${hint}
+                </div>`;
+        }
+    }
+
     function createEditorUI() {
         // Build all field HTML from all block types
         const allFieldsHtml = {};
@@ -1286,6 +1504,269 @@
 
         // Resizable Modal
         ModalResize.init(modal.querySelector('.editor-modal-content'));
+    }
+
+    function createGroupEditorUI() {
+        if (document.getElementById('editable-group-modal')) return;
+
+        const modal = document.createElement('div');
+        modal.id = 'editable-group-modal';
+        modal.className = 'editor-modal';
+        modal.innerHTML = `
+            <div class="editor-modal-backdrop"></div>
+            <div class="editor-modal-content">
+                <div class="editor-modal-header">
+                    <h3 id="editable-group-modal-title">${t('edit')}</h3>
+                    <button type="button" class="editor-close-btn" onclick="InlineEditor.closeGroupEditor()">&times;</button>
+                </div>
+                <div class="editor-modal-body" id="editable-group-modal-body"></div>
+                <div class="editor-modal-footer">
+                    <button type="button" class="editor-btn editor-btn-secondary" onclick="InlineEditor.closeGroupEditor()">${t('cancel')}</button>
+                    <button type="button" class="editor-btn editor-btn-primary" onclick="InlineEditor.saveGroupEditor()">${t('save')}</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.querySelector('.editor-modal-backdrop').addEventListener('click', closeGroupEditor);
+        ModalResize.init(modal.querySelector('.editor-modal-content'));
+    }
+
+    function attachGroupEditHandlers() {
+        const groups = document.querySelectorAll('[data-editable-group]');
+        if (groups.length === 0) return;
+
+        groups.forEach(group => {
+            if (group.dataset.groupEditorReady === 'true') return;
+            group.dataset.groupEditorReady = 'true';
+            group.classList.add('editable-group-active');
+
+            if (!group.hasAttribute('data-list-index')) {
+                const overlay = document.createElement('button');
+                overlay.type = 'button';
+                overlay.className = 'editable-group-overlay';
+                overlay.innerHTML = `${Icons.edit}<span>${t('edit')}</span>`;
+                overlay.title = t('edit');
+                overlay.addEventListener('click', (e) => {
+                    if (!EditorConfig.editMode) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openGroupEditor(group);
+                });
+                group.appendChild(overlay);
+            }
+
+            group.addEventListener('click', (e) => {
+                if (!EditorConfig.editMode) return;
+                if (group.hasAttribute('data-list-index')) return;
+                if (e.target.closest('.editable-group-overlay')) return;
+                if (e.target.closest('.editable-list-overlay')) return;
+                if (e.target.closest('.editable-field, [data-editable-link], [data-editable-image]')) return;
+                e.preventDefault();
+                e.stopPropagation();
+                openGroupEditor(group);
+            });
+        });
+    }
+
+    function parseGroupSchema(groupEl) {
+        try {
+            const parsed = JSON.parse(groupEl.dataset.groupSchema || '{}');
+            return parsed && typeof parsed === 'object' ? parsed : {};
+        } catch (e) {
+            console.warn('Invalid editable group schema', e);
+            return {};
+        }
+    }
+
+    function openGroupEditor(groupEl) {
+        const page = groupEl.dataset.page;
+        const groupKey = groupEl.dataset.group || '';
+        if (!page || !groupKey) return;
+
+        const schema = parseGroupSchema(groupEl);
+        const fields = Array.isArray(schema.fields) ? schema.fields : [];
+        if (fields.length === 0) {
+            showToast(t('toast.error_generic', { message: 'Editable group has no fields.' }), 'error');
+            return;
+        }
+
+        const modal = document.getElementById('editable-group-modal');
+        const body = document.getElementById('editable-group-modal-body');
+        const title = document.getElementById('editable-group-modal-title');
+        const label = schema.label || groupKey.split('.').pop() || groupKey;
+
+        EditorConfig.currentGroup = { element: groupEl, page, groupKey, schema, fields };
+        title.textContent = formatEditorTitle(label);
+        body.innerHTML = fields.map((field, index) => renderGroupEditorField(field, index)).join('\n');
+
+        fields.forEach((field, index) => populateGroupEditorField(field, index, page, groupKey));
+        body.querySelectorAll('[data-group-icon-picker]').forEach(picker => {
+            picker.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-group-icon-value]');
+                if (!btn) return;
+                e.preventDefault();
+                const index = parseInt(picker.dataset.groupIconPicker, 10);
+                const input = document.getElementById(groupFieldIds(index).id);
+                if (input) input.value = btn.dataset.groupIconValue || '';
+                updateGroupIconPicker(index, btn.dataset.groupIconValue || '');
+            });
+        });
+        body.querySelectorAll('[data-group-icon-search]').forEach(search => {
+            search.addEventListener('input', () => {
+                const index = parseInt(search.dataset.groupIconSearch, 10);
+                filterGroupIconPicker(index, search.value);
+            });
+        });
+        body.querySelectorAll('[data-group-image-pick]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const index = parseInt(btn.dataset.groupImagePick, 10);
+                openImageManager((imagePath) => {
+                    const srcInput = document.getElementById(groupFieldIds(index, 'src').id);
+                    if (srcInput) srcInput.value = imagePath;
+                    updateGroupImagePreview(index, imagePath);
+                });
+            });
+        });
+
+        fields.forEach((field, index) => {
+            if (normalizeGroupField(field).type === 'link') {
+                initPagePicker(groupFieldIds(index, 'page').id, groupFieldIds(index, 'href').id);
+            }
+        });
+
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function populateGroupEditorField(field, index, page, groupKey) {
+        const normalized = normalizeGroupField(field);
+        const pageData = EditorConfig.contentData[page] || {};
+        const path = groupFieldPath(groupKey, normalized);
+        const value = getNestedValue(pageData, path);
+
+        if (normalized.type === 'link') {
+            const linkValue = value && typeof value === 'object' ? value : {};
+            const textInput = document.getElementById(groupFieldIds(index, 'text').id);
+            const hrefInput = document.getElementById(groupFieldIds(index, 'href').id);
+            const targetInput = document.getElementById(groupFieldIds(index, 'target').id);
+            if (textInput) textInput.value = linkValue.text || '';
+            if (hrefInput) hrefInput.value = linkValue.href || '';
+            if (targetInput) targetInput.checked = linkValue.target === '_blank';
+            setTimeout(() => syncPagePicker(groupFieldIds(index, 'page').id, groupFieldIds(index, 'href').id, linkValue.href || ''), 0);
+            return;
+        }
+
+        if (normalized.type === 'image') {
+            const imgValue = value && typeof value === 'object' ? value : { src: value || '', alt: '' };
+            const srcInput = document.getElementById(groupFieldIds(index, 'src').id);
+            const altInput = document.getElementById(groupFieldIds(index, 'alt').id);
+            if (srcInput) srcInput.value = imgValue.src || '';
+            if (altInput) altInput.value = imgValue.alt || '';
+            updateGroupImagePreview(index, imgValue.src || '');
+            return;
+        }
+
+        const input = document.getElementById(groupFieldIds(index).id);
+        if (!input) return;
+        if (normalized.type === 'checkbox') {
+            input.checked = value === true;
+        } else if (normalized.type === 'icon') {
+            input.value = value || 'default';
+            updateGroupIconPicker(index, input.value);
+        } else {
+            input.value = value ?? '';
+        }
+    }
+
+    function readGroupEditorField(field, index, groupKey) {
+        const normalized = normalizeGroupField(field);
+        const path = groupFieldPath(groupKey, normalized);
+
+        if (normalized.type === 'link') {
+            const text = document.getElementById(groupFieldIds(index, 'text').id)?.value || '';
+            const href = document.getElementById(groupFieldIds(index, 'href').id)?.value || '';
+            const target = document.getElementById(groupFieldIds(index, 'target').id)?.checked ? '_blank' : '';
+            const value = { text, href };
+            if (target) value.target = target;
+            return { path, value };
+        }
+
+        if (normalized.type === 'image') {
+            const src = document.getElementById(groupFieldIds(index, 'src').id)?.value || '';
+            const alt = document.getElementById(groupFieldIds(index, 'alt').id)?.value || '';
+            return { path, value: { src, alt } };
+        }
+
+        const input = document.getElementById(groupFieldIds(index).id);
+        const value = normalized.type === 'checkbox' ? !!input?.checked : (input?.value || '');
+        return { path, value };
+    }
+
+    function updateGroupIconPicker(index, iconId) {
+        const picker = document.querySelector(`[data-group-icon-picker="${index}"]`);
+        if (!picker) return;
+
+        picker.querySelectorAll('[data-group-icon-value]').forEach(btn => {
+            btn.classList.toggle('group-icon-option-active', btn.dataset.groupIconValue === iconId);
+        });
+
+        const preview = document.getElementById(`group-editor-icon-preview-${index}`);
+        const label = document.getElementById(`group-editor-icon-label-${index}`);
+        if (preview) {
+            preview.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${getIconMarkup(iconId)}</svg>`;
+        }
+        if (label) label.textContent = iconId || '';
+    }
+
+    function filterGroupIconPicker(index, query) {
+        const picker = document.querySelector(`[data-group-icon-picker="${index}"]`);
+        if (!picker) return;
+
+        const q = (query || '').trim().toLowerCase();
+        picker.querySelectorAll('[data-group-icon-value]').forEach(btn => {
+            const key = (btn.dataset.groupIconValue || '').toLowerCase();
+            btn.hidden = q !== '' && !key.includes(q);
+        });
+    }
+
+    function updateGroupImagePreview(index, src) {
+        const preview = document.getElementById(`group-editor-image-preview-${index}`);
+        if (!preview) return;
+        if (!src) {
+            preview.innerHTML = '';
+            return;
+        }
+        preview.innerHTML = `<img src="${escHtml(src)}" alt="" onerror="this.style.display='none'">`;
+    }
+
+    function closeGroupEditor() {
+        const modal = document.getElementById('editable-group-modal');
+        if (!modal) return;
+        modal.classList.remove('active');
+        ModalResize.reset(modal.querySelector('.editor-modal-content'));
+        document.body.style.overflow = '';
+        EditorConfig.currentGroup = null;
+    }
+
+    function saveGroupEditor() {
+        const group = EditorConfig.currentGroup;
+        if (!group) return;
+
+        const { page, groupKey, fields } = group;
+        if (!EditorConfig.contentData[page]) EditorConfig.contentData[page] = {};
+
+        pushUndoState();
+        fields.forEach((field, index) => {
+            const { path, value } = readGroupEditorField(field, index, groupKey);
+            if (!path) return;
+            setNestedValue(EditorConfig.contentData[page], path, value);
+        });
+
+        EditorConfig.dirtyPages.add(page);
+        refreshDomFromContentData();
+        updateUndoRedoButtons();
+        showToast(t('toast.change_queued'), 'success');
+        closeGroupEditor();
     }
 
     // ============================================================
@@ -2105,6 +2586,13 @@
         }
     }
 
+    function formatEditorTitle(label) {
+        const template = t('edit_block_title');
+        return template && template !== 'edit_block_title'
+            ? template.replace('{label}', label)
+            : t('edit') + ' ' + label;
+    }
+
     function openEditor(index, section, contentPage) {
         EditorConfig.currentSectionIndex = index;
         EditorConfig.currentSection = { ...section };
@@ -2122,13 +2610,13 @@
         const def = BlockTypes[type];
 
         if (!def) {
-            modalTitle.textContent = t('edit') + ' ' + type;
+            modalTitle.textContent = formatEditorTitle(type);
             modal.classList.add('active');
             document.body.style.overflow = 'hidden';
             return;
         }
 
-        modalTitle.textContent = t('edit') + ' ' + def.label;
+        modalTitle.textContent = formatEditorTitle(def.label);
 
         // Show and populate fields from registry
         for (const field of (def.fields || [])) {
@@ -3564,7 +4052,7 @@
             <div class="editor-modal-backdrop"></div>
             <div class="editor-modal-content editor-modal-small">
                 <div class="editor-modal-header">
-                    <h3>${t('edit')} Link</h3>
+                    <h3>${formatEditorTitle('Link')}</h3>
                     <button type="button" class="editor-close-btn" id="link-editor-cancel-btn">&times;</button>
                 </div>
                 <div class="editor-modal-body">
@@ -3848,11 +4336,13 @@
 
                 // Create overlay with drag handle + hide + delete buttons
                 const overlay = document.createElement('div');
+                const hasGroupEditor = item.hasAttribute('data-editable-group');
                 overlay.className = 'editable-list-overlay';
                 overlay.innerHTML = `
-                    <span class="list-drag-handle" title="${t('drag_reorder')}">${Icons.drag}</span>
+                    ${hasGroupEditor ? `<button type="button" class="overlay-btn overlay-btn-edit list-edit-btn" title="${t('edit')}" data-action="edit">${Icons.edit}</button>` : ''}
                     <button type="button" class="overlay-btn overlay-btn-hide list-hide-btn" title="${isItemHidden ? t('show') : t('hide')}" data-action="hide">${isItemHidden ? Icons.eyeClosed : Icons.eyeOpen}</button>
                     <button type="button" class="overlay-btn overlay-btn-delete list-delete-btn" title="${t('delete')}" data-action="delete">${Icons.delete}</button>
+                    <span class="list-drag-handle" title="${t('drag_reorder')}">${Icons.drag}</span>
                 `;
                 item.style.position = 'relative';
                 item.appendChild(overlay);
@@ -3865,6 +4355,14 @@
 
                 // Make draggable
                 item.setAttribute('draggable', 'true');
+
+                if (hasGroupEditor) {
+                    overlay.querySelector('.list-edit-btn').addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openGroupEditor(item);
+                    });
+                }
 
                 // Drag events — use dynamic index from dataset (survives reorder)
                 item.addEventListener('dragstart', (e) => {
@@ -4752,7 +5250,7 @@
             }
         };
         const currentInput = targetInputId ? document.getElementById(targetInputId) : null;
-        NbImageManager.open(cb, currentInput ? currentInput.value : null);
+        NbImageManager.open(cb, currentInput ? currentInput.value : null, { types: ['image'], type: 'image' });
     }
 
     function closeImageManager() { NbImageManager.close(); }
@@ -4770,7 +5268,7 @@
                     updateEventImagePreview();
                 }
             }
-        }, eventInput ? eventInput.value : null);
+        }, eventInput ? eventInput.value : null, { types: ['image'], type: 'image' });
     }
 
     // Lightbox for previewing the image currently entered in the editor's image input
@@ -4870,31 +5368,32 @@
     }
 
     function openAudioManager(targetInputIdOrCallback) {
-        createAudioManagerModal();
+        ensureImageManagerInit();
         // Allow either a callback function or a target input ID
+        let currentPath = null;
+        let callback;
         if (typeof targetInputIdOrCallback === 'function') {
-            audioManagerCallback = targetInputIdOrCallback;
+            callback = targetInputIdOrCallback;
         } else {
             const targetInputId = targetInputIdOrCallback || 'editor-input-src-audio';
-            audioManagerCallback = (audioPath) => {
+            const input = document.getElementById(targetInputId);
+            currentPath = input ? input.value : null;
+            callback = (audioPath) => {
                 const input = document.getElementById(targetInputId);
                 if (input) input.value = audioPath;
                 updateAudioPreview();
             };
         }
 
-        loadAudioFiles();
-
-        // Reset search field
-        const searchInput = document.getElementById('audio-search-input');
-        if (searchInput) searchInput.value = '';
-
-        document.getElementById('audio-manager-modal').classList.add('active');
-        document.body.style.overflow = 'hidden';
+        NbImageManager.open(callback, currentPath, { types: ['audio'], type: 'audio' });
     }
 
     function closeAudioManager() {
         const modal = document.getElementById('audio-manager-modal');
+        if (!modal) {
+            if (window.NbImageManager) NbImageManager.close();
+            return;
+        }
         modal.classList.remove('active');
         ModalResize.reset(modal.querySelector('.editor-modal-content'));
         document.body.style.overflow = '';
@@ -5211,6 +5710,8 @@
         insertLink: insertLink,
         toggleHtmlMode: toggleHtmlMode,
         saveSection: saveSection,
+        closeGroupEditor: closeGroupEditor,
+        saveGroupEditor: saveGroupEditor,
         cleanHtml: cleanHtml,
         // Add
         openAddModal: openAddModal,

@@ -10,6 +10,7 @@ if (!file_exists(__DIR__ . '/config.php')) {
 }
 
 require_once 'config.php';
+require_once __DIR__ . '/../includes/version.php';
 require_once __DIR__ . '/lang/i18n.php';
 require_once __DIR__ . '/users.php';
 require_once __DIR__ . '/../includes/asset-helpers.php';
@@ -596,7 +597,7 @@ $brandName = $siteSettings['branding']['name'] ?? (defined('SITE_NAME') ? SITE_N
 
             <p class="back-link"><a href="..">&larr; <?php echo t('login.back_to_site'); ?></a></p>
         <?php endif; ?>
-        <p class="login-version">Nibbly <?php echo defined('NIBBLY_VERSION') ? NIBBLY_VERSION : 'dev'; ?></p>
+        <p class="login-version">Nibbly <?php echo htmlspecialchars(nibblyVersion(), ENT_QUOTES, 'UTF-8'); ?></p>
     </div>
 
     <script>

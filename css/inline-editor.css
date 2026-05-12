@@ -532,7 +532,7 @@ body.edit-mode-active .editable-section:hover .video-container::after {
     left: 50%;
     transform: translate(-50%, -50%);
     background: #ffffff;
-    border-radius: 12px;
+    border-radius: 12px 12px 0 12px;
     box-shadow: 0 8px 16px rgba(13, 149, 156, 0.04), 0 16px 48px rgba(0, 0, 0, 0.16);
     width: 90%;
     max-width: 700px;
@@ -617,7 +617,7 @@ body.edit-mode-active .editable-section:hover .video-container::after {
     padding: 16px 24px;
     border-top: 1px solid #e2e2e2;
     background: #f5f5f5;
-    border-radius: 0 0 12px 12px;
+    border-radius: 0 0 0 12px;
 }
 
    ADD SECTION MODAL
@@ -753,6 +753,12 @@ body.edit-mode-active .editable-section:hover .video-container::after {
     font-family: inherit;
     background: white;
     cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='%23666'%3E%3Cpath d='M5 8h14l-7 8z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 42px;
     transition: border-color 0.15s, box-shadow 0.15s;
 }
 
@@ -786,10 +792,10 @@ body.edit-mode-active .editable-section:hover .video-container::after {
     max-width: 100%;
     appearance: none;
     -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23666'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='%23666'%3E%3Cpath d='M5 8h14l-7 8z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 12px center;
-    padding-right: 36px;
+    padding-right: 42px;
     cursor: pointer;
 }
 
@@ -919,6 +925,9 @@ body.edit-mode-active .editable-section:hover .video-container::after {
 }
 
 .editor-toolbar button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: white;
     border: 1px solid #ddd;
     padding: 6px 10px;
@@ -956,21 +965,33 @@ body.edit-mode-active .editable-section:hover .video-container::after {
     margin: 0 8px;
 }
 
-.editor-toggle {
-    display: flex;
+.editor-toolbar .editor-toggle {
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
+    align-self: stretch;
     cursor: pointer;
     user-select: none;
     font-size: 13px;
     color: #666;
+    margin: 0;
+    line-height: 1;
+    padding: 0 2px;
 }
 
-.editor-toggle input {
+.editor-toolbar .editor-toggle input {
     width: 16px;
     height: 16px;
+    flex: 0 0 16px;
     cursor: pointer;
     accent-color: var(--editor-primary, #2563eb);
+    display: block;
+    margin: 0;
+}
+
+.editor-toolbar .editor-toggle span {
+    display: block;
 }
 
 /* Checkbox label for options below the editor */
@@ -1637,6 +1658,170 @@ body.edit-mode-active .editable-field-html.editable-field-active {
     display: block;
 }
 
+/* Composite groups for custom templates */
+.editable-group-active {
+    position: relative;
+}
+
+body.edit-mode-active .editable-group-active {
+    cursor: pointer;
+    outline: 1px solid transparent;
+    outline-offset: 6px;
+    transition: outline-color 0.15s ease, background-color 0.15s ease;
+}
+
+body.edit-mode-active .editable-group-active:hover,
+body.edit-mode-active .editable-group-active:focus-within {
+    outline-color: var(--editor-primary, #2563eb);
+    background: rgba(13, 149, 156, 0.04);
+}
+
+.editable-group-overlay {
+    display: none;
+    position: absolute;
+    top: -28px;
+    right: 0;
+    z-index: 30;
+    align-items: center;
+    gap: 4px;
+    height: 26px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 4px 4px 0 0;
+    background: var(--editor-primary, #2563eb);
+    color: #fff;
+    font: 600 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+
+.editable-group-overlay svg {
+    width: 13px;
+    height: 13px;
+    fill: currentColor;
+}
+
+body.edit-mode-active .editable-group-active:hover > .editable-group-overlay,
+body.edit-mode-active .editable-group-active:focus-within > .editable-group-overlay,
+body.edit-mode-active .editable-group-overlay:focus {
+    display: inline-flex;
+}
+
+.group-editor-field + .group-editor-field {
+    margin-top: 18px;
+}
+
+.group-editor-html {
+    min-height: 160px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.group-link-target {
+    margin-top: 8px;
+}
+
+.group-link-option {
+    margin-top: 10px;
+}
+
+.group-icon-picker {
+    display: grid;
+    gap: 10px;
+}
+
+.group-icon-selected {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 42px;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #f8f8f8;
+}
+
+.group-icon-selected-preview {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    color: var(--editor-primary, #2563eb);
+}
+
+.group-icon-selected-preview svg {
+    width: 22px;
+    height: 22px;
+}
+
+.group-icon-selected-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+}
+
+.group-icon-search {
+    width: 100%;
+}
+
+.group-icon-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 6px;
+    max-height: 260px;
+    overflow: auto;
+    padding: 2px;
+}
+
+.group-icon-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 76px;
+    padding: 8px 6px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    font: inherit;
+    transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.group-icon-option svg {
+    width: 24px;
+    height: 24px;
+}
+
+.group-icon-option span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+    line-height: 1.2;
+}
+
+.group-icon-option:hover,
+.group-icon-option:focus-visible {
+    border-color: var(--editor-primary, #2563eb);
+    color: var(--editor-primary, #2563eb);
+    outline: none;
+}
+
+.group-icon-option-active {
+    border-color: var(--editor-primary, #2563eb);
+    background: color-mix(in srgb, var(--editor-primary, #2563eb) 12%, #fff);
+    color: var(--editor-primary, #2563eb);
+    box-shadow: 0 0 0 1px var(--editor-primary, #2563eb);
+}
+
+.group-image-alt {
+    margin-top: 8px;
+}
+
 /* Reset gradient-text when admin is logged in (editable-field spans
    inside gradient-clip parents inherit transparent fill and become invisible) */
 .hero-title:has(.editable-field),
@@ -1758,6 +1943,11 @@ body.edit-mode-active .editable-list-item {
 
 body.edit-mode-active .editable-list-item:hover {
     outline-color: var(--editor-primary, #2563eb);
+    z-index: 20;
+}
+
+body.edit-mode-active .editable-list-item.is-overlay-active {
+    z-index: 20;
 }
 
 /* Overlay controls — anchored above the item so it never covers small
@@ -1777,6 +1967,13 @@ body.edit-mode-active .editable-list-item:hover {
     transition: opacity 0.2s;
     pointer-events: none;
     z-index: 10;
+}
+
+.editable-list-item.editable-group-active > .editable-list-overlay {
+    top: 8px;
+    bottom: auto;
+    right: 8px;
+    border-radius: 4px;
 }
 
 body.edit-mode-active .editable-list-item:hover .editable-list-overlay,
@@ -1809,6 +2006,10 @@ body.edit-mode-active .editable-list-overlay:hover {
 
 .editable-list-overlay .overlay-btn:hover {
     background: rgba(255, 255, 255, 0.2);
+}
+
+.editable-list-overlay .overlay-btn-edit:hover {
+    background: var(--editor-primary, #2563eb);
 }
 
 .editable-list-overlay .overlay-btn-delete:hover {
@@ -2747,14 +2948,19 @@ body.edit-mode-active .cell-toggle-group {
 
 /* Form fields */
 [data-site-theme="dark"] .editor-modal input[type="text"],
+[data-site-theme="dark"] .editor-modal input[type="search"],
 [data-site-theme="dark"] .editor-modal input[type="url"],
 [data-site-theme="dark"] .editor-modal input[type="date"],
 [data-site-theme="dark"] .editor-modal input[type="time"],
 [data-site-theme="dark"] .editor-modal textarea,
 [data-site-theme="dark"] .editor-modal select {
-    background: #0f0f0f;
+    background-color: #0f0f0f;
     color: #e5e5e5;
     border-color: #2a2a2a;
+}
+
+[data-site-theme="dark"] .editor-modal select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='%23a3a3a3'%3E%3Cpath d='M5 8h14l-7 8z'/%3E%3C/svg%3E");
 }
 
 [data-site-theme="dark"] .editor-modal input::placeholder,
@@ -2763,10 +2969,37 @@ body.edit-mode-active .cell-toggle-group {
 }
 
 [data-site-theme="dark"] .editor-modal input:focus,
+[data-site-theme="dark"] .editor-modal input[type="search"]:focus,
 [data-site-theme="dark"] .editor-modal textarea:focus,
 [data-site-theme="dark"] .editor-modal select:focus {
     border-color: var(--editor-primary, #2563eb);
     outline: none;
+}
+
+[data-site-theme="dark"] .group-icon-selected {
+    background: #111;
+    border-color: #2a2a2a;
+}
+
+[data-site-theme="dark"] .group-icon-selected-label {
+    color: #e5e5e5;
+}
+
+[data-site-theme="dark"] .group-icon-option {
+    background: #0f0f0f;
+    color: #d4d4d4;
+    border-color: #2a2a2a;
+}
+
+[data-site-theme="dark"] .group-icon-option:hover,
+[data-site-theme="dark"] .group-icon-option:focus-visible,
+[data-site-theme="dark"] .group-icon-option-active {
+    border-color: var(--editor-primary, #2563eb);
+    color: var(--editor-primary, #60a5fa);
+}
+
+[data-site-theme="dark"] .group-icon-option-active {
+    background: color-mix(in srgb, var(--editor-primary, #2563eb) 18%, #0f0f0f);
 }
 
 

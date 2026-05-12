@@ -27,6 +27,7 @@ $creditText = $footerData['credit']['text'] ?? '';
 $creditLink = $footerData['credit']['link'] ?? '';
 $creditLinkText = $footerData['credit']['linkText'] ?? '';
 $contactHeading = $footerData['contactHeading'][$currentLang] ?? 'Contact';
+$siteName = $_settings['branding']['name'] ?? (defined('SITE_NAME') ? SITE_NAME : '');
 
 $copyrightVal = $footerData['copyright'] ?? '&copy; [id="adminAccess"]' . date('Y') . '[/id]';
 $copyrightRaw = is_array($copyrightVal) ? ($copyrightVal[$currentLang] ?? $copyrightVal[array_key_first($copyrightVal)] ?? '') : $copyrightVal;
@@ -68,6 +69,9 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
                     echo nibblyIconOrImg($basePath . $_footerLogo, '', ['width' => 40, 'height' => 40, 'class' => 'site-logo-img']);
                     ?>
                 </a>
+                <?php if ($siteName): ?>
+                <p class="footer-brand-name"><?php echo htmlspecialchars($siteName); ?></p>
+                <?php endif; ?>
                 <?php if ($creditText || $creditLinkText): ?>
                 <p class="footer-credit"><span class="<?php echo $isAdminLoggedIn ? 'editable-footer-field' : ''; ?>" data-field="credit.text"><?php echo htmlspecialchars($creditText); ?></span><?php if ($creditLinkText): ?> <a href="<?php echo htmlspecialchars($creditLink); ?>" target="_blank" rel="noopener" class="<?php echo $isAdminLoggedIn ? 'editable-footer-field' : ''; ?>" data-field="credit.link" data-link-href="<?php echo htmlspecialchars($creditLink); ?>"><?php echo htmlspecialchars($creditLinkText); ?></a><?php endif; ?></p>
                 <?php endif; ?>
@@ -409,13 +413,24 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
         // ============================================================
         // CONTACT FORM AJAX SUBMISSION
         // ============================================================
-        const contactForm = document.getElementById('contactForm');
+        const bindContactForm = function(contactForm) {
+            if (!contactForm || contactForm.dataset.nibblyContactBound === 'true') return;
 
-        if (contactForm) {
-            const submitBtn = document.getElementById('contactSubmit');
+            const submitBtn = contactForm.querySelector('[type="submit"]');
+            if (!submitBtn) return;
+
             const btnText = submitBtn.querySelector('.btn-text');
             const btnLoading = submitBtn.querySelector('.btn-loading');
-            const feedback = document.getElementById('formFeedback');
+            const feedback = contactForm.querySelector('.form-feedback');
+            if (!btnText || !btnLoading || !feedback) return;
+            contactForm.dataset.nibblyContactBound = 'true';
+
+            const updateFormToken = function(token) {
+                const tokenField = contactForm.querySelector('input[name="form_token"]');
+                if (!tokenField || !token) return;
+                tokenField.value = token;
+                tokenField.defaultValue = token;
+            };
 
             contactForm.addEventListener('submit', function(e) {
                 e.preventDefault();
@@ -440,9 +455,11 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
                         feedback.className = 'form-feedback success';
                         feedback.textContent = feedback.dataset.success;
                         contactForm.reset();
+                        updateFormToken(data.formToken);
                     } else {
                         feedback.className = 'form-feedback error';
                         feedback.textContent = data.message || feedback.dataset.error;
+                        updateFormToken(data.formToken);
                     }
                 })
                 .catch(function() {
@@ -455,7 +472,61 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
                     submitBtn.disabled = false;
                 });
             });
-        }
+        };
+
+        const runInsertedScripts = function(container) {
+            container.querySelectorAll('script').forEach(function(oldScript) {
+                const script = document.createElement('script');
+                Array.prototype.forEach.call(oldScript.attributes, function(attr) {
+                    script.setAttribute(attr.name, attr.value);
+                });
+                script.textContent = oldScript.textContent;
+                oldScript.replaceWith(script);
+            });
+        };
+
+        const loadLazyForm = function(container) {
+            if (!container || container.dataset.loaded === 'true' || container.dataset.loading === 'true') return;
+
+            container.dataset.loading = 'true';
+            const params = new URLSearchParams();
+            params.set('form', container.dataset.nibblyLazyForm || '');
+
+            Array.prototype.forEach.call(container.attributes, function(attr) {
+                if (attr.name.indexOf('data-param-') !== 0) return;
+                params.set(attr.name.replace('data-param-', ''), attr.value);
+            });
+
+            fetch((container.dataset.endpoint || 'api/form.php') + '?' + params.toString(), {
+                method: 'GET',
+                credentials: 'same-origin'
+            })
+            .then(function(response) {
+                if (!response.ok) throw new Error('Form request failed');
+                return response.text();
+            })
+            .then(function(html) {
+                container.innerHTML = html;
+                runInsertedScripts(container);
+                container.querySelectorAll('form.contact-form').forEach(bindContactForm);
+                container.dataset.loaded = 'true';
+                container.dispatchEvent(new CustomEvent('nibbly:lazy-form-loaded', { bubbles: true }));
+            })
+            .catch(function() {
+                container.innerHTML = '<p class="form-feedback error">This form could not be loaded. Please try again later.</p>';
+            })
+            .finally(function() {
+                delete container.dataset.loading;
+            });
+        };
+
+        document.querySelectorAll('[data-nibbly-lazy-form]').forEach(function(container) {
+            window.setTimeout(function() {
+                loadLazyForm(container);
+            }, parseInt(container.dataset.delay || '3500', 10));
+        });
+
+        document.querySelectorAll('form.contact-form').forEach(bindContactForm);
 
     })();
     </script>
@@ -511,6 +582,7 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
     ?>
     window.NB_LANG = <?php echo json_encode(tEditorAll(), JSON_UNESCAPED_UNICODE); ?>;
     window.NB_MENUS = <?php echo json_encode(getMenuRegistry()['menus'] ?? [], JSON_UNESCAPED_UNICODE); ?>;
+    window.NB_AVAILABLE_ICONS = <?php echo json_encode(function_exists('getAvailableIcons') ? getAvailableIcons() : [], JSON_UNESCAPED_UNICODE); ?>;
     <?php
     // Build lightweight page list for link picker (slug → title for current language)
     $_linkPages = [];

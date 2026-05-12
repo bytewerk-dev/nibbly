@@ -89,6 +89,7 @@ if (!isset($NAV_ITEMS)) {
 
 require_once __DIR__ . '/menu-helpers.php';
 require_once __DIR__ . '/asset-helpers.php';
+require_once __DIR__ . '/version.php';
 
 $_allNavItems = $NAV_ITEMS[$currentLang] ?? $NAV_ITEMS[$defaultLang] ?? [];
 $navItems = getMenuItems('header', $currentLang, $basePath ?? '', $_allNavItems);
@@ -112,7 +113,7 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="<?php echo htmlspecialchars($pageDescription ?? ''); ?>">
     <meta name="robots" content="index, follow">
-    <meta name="generator" content="Nibbly <?php echo defined('NIBBLY_VERSION') ? NIBBLY_VERSION : ''; ?>">
+    <meta name="generator" content="Nibbly <?php echo htmlspecialchars(nibblyVersion(), ENT_QUOTES, 'UTF-8'); ?>">
     <?php $_faviconType = pathinfo($_favicon, PATHINFO_EXTENSION) === 'svg' ? 'image/svg+xml' : 'image/png'; ?>
     <link rel="icon" href="<?php echo $basePath . htmlspecialchars($_favicon); ?>" type="<?php echo $_faviconType; ?>">
     <?php if ($_faviconPng): ?>
