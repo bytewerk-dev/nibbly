@@ -110,6 +110,30 @@ img {
     height: auto;
 }
 
+.skip-link {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 10000;
+    transform: translateY(-160%);
+    padding: 10px 14px;
+    border-radius: 6px;
+    background: var(--color-primary);
+    color: var(--color-white);
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+    transition: transform var(--transition-fast);
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+    transform: translateY(0);
+    color: var(--color-white);
+    outline: 3px solid var(--color-primary-light);
+    outline-offset: 2px;
+}
+
 h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     font-weight: 300;
@@ -2169,6 +2193,17 @@ hr, .divider hr {
 
     h1 { font-size: 2rem; }
     h2 { font-size: 1.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
 }
 /* ============================================
    PRINT STYLES

@@ -2,7 +2,7 @@
 
 A flat-file CMS built on PHP with no database. Content lives in JSON files, pages are PHP templates, and an inline editor lets you edit everything directly on the page. Zero dependencies, zero build steps.
 
-**Version 1.2.4** — Examples and full documentation at [nibbly.dev](https://nibbly.dev/).
+**Version 1.2.5** — Examples and full documentation at [nibbly.dev](https://nibbly.dev/).
 
 ## Features
 
@@ -12,6 +12,9 @@ A flat-file CMS built on PHP with no database. Content lives in JSON files, page
 - **Block-based content** -- 11 block types (text, heading, quote, list, image, card, youtube, soundcloud, audio, divider, spacer)
 - **Render components** -- pricing tables, FAQ accordions, team grids, feature grids, galleries, timelines, stats, testimonials, comparison tables, news listings, breadcrumbs
 - **Dark/light theme** -- toggle with localStorage persistence
+- **Accessibility foundations** -- skip links, landmarks, reduced-motion support, labelled controls, and SEO health checks for missing image alt text
+- **Access controls** -- maintenance mode with preview bypass and password-protected private pages
+- **SEO/AEO tools** -- per-page metadata, Open Graph image fallback, sitemap/robots, and health indicators
 - **Custom layouts** -- full PHP template control with editable field API
 - **Automatic backups** -- per-page JSON history with restore via admin panel
 - **Site backup & restore** -- download full site as ZIP, restore from backup
@@ -82,6 +85,7 @@ includes/
   block-types.php   Block type definitions
   block-renderers/  Per-block-type renderers
   nav-config.php    Navigation configuration
+  access-guard.php  Maintenance mode and private page enforcement
   menu-helpers.php  Menu registry
   page.php          Front controller for JSON-only pages
 js/                 Client-side scripts
@@ -140,6 +144,31 @@ $_p = $contentPage;
 Create `content/pages/en_services.json` with the matching data structure.
 
 See `examples/` for complete working examples.
+
+## Accessibility Best Practices
+
+Nibbly provides a basic accessible foundation for public pages and admin tools: skip links, landmark-friendly templates, keyboard focus styles, reduced-motion handling, labelled controls, and SEO health checks for missing image alt text.
+
+When building custom templates or site-specific components, follow these rules:
+
+- Use one clear `<main>` area per page. Core templates expose `id="main-content"` for the skip link; custom templates should include the same id or let `includes/footer.php` add it to the first `<main>`.
+- Keep heading order meaningful. Each public page should have one visible H1, then nested H2/H3 sections.
+- Enter useful alt text for informative images. Leave alt empty only for purely decorative images.
+- Use real buttons for actions and real links for navigation.
+- Keep visible focus states intact; do not remove outlines without replacing them.
+- Respect `prefers-reduced-motion` for page-specific animations.
+- Label every form field and connect validation errors with nearby text.
+- Test important pages with keyboard-only navigation and a screen reader before launch.
+
+## Access Controls
+
+Nibbly includes frontend access controls without adding a database:
+
+- **Maintenance mode** lives in **Dashboard -> Settings -> Access**. It can show a maintenance, back-soon, or launch-countdown page with custom title/text, optional unavailable-until time, and optional countdown.
+- **Preview bypass** is configured with a URL parameter and secret key. Visiting a URL like `/?preview=secret-value` stores a session bypass so editors or clients can review the site while maintenance mode is active.
+- **Private pages** are set per page in the Content Editor's **Access** card. Set visibility to `Private`, enter a password, and optionally customize the password page title/text.
+- **Logged-in admins and editors bypass** maintenance mode and private page locks automatically.
+- **Passwords and bypass secrets are hashed** in JSON. Do not store plaintext passwords directly in `content/pages/*.json` or `content/settings.json`.
 
 ## Theming
 

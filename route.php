@@ -21,6 +21,10 @@ if (!file_exists($configPath)) {
 }
 require_once $configPath;
 
+require_once __DIR__ . '/includes/access-guard.php';
+nibblyAccessEnforceMaintenance();
+require_once __DIR__ . '/includes/seo-helper.php';
+
 // Apply migration redirects before any other routing — a redirected URL
 // must never accidentally match a real page slug downstream.
 require_once __DIR__ . '/includes/redirect-helper.php';
@@ -32,6 +36,13 @@ $primaryLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
 $uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
 $cleanUri = trim($uri, '/');
 
+if ($cleanUri === 'sitemap.xml') {
+    nibblySeoServeSitemap();
+}
+if ($cleanUri === 'robots.txt') {
+    nibblySeoServeRobots();
+}
+
 // Root URL → homepage
 if ($cleanUri === '') {
     $basePath = '';
@@ -39,6 +50,7 @@ if ($cleanUri === '') {
     $jsonHome = __DIR__ . '/content/pages/' . $primaryLang . '_home.json';
 
     if (is_file($langHome)) {
+        nibblyAccessEnforceCurrentTemplatePage($primaryLang . '_home');
         include $langHome;
     } elseif (is_file($jsonHome)) {
         $lang = $primaryLang;
@@ -82,6 +94,7 @@ if (preg_match('#^([a-z]{2})/([a-zA-Z0-9_-]+)$#', $cleanUri, $m)) {
     // 1. Physical PHP file
     $phpFile = __DIR__ . '/' . $lang . '/' . $slug . '.php';
     if (is_file($phpFile)) {
+        nibblyAccessEnforceCurrentTemplatePage($lang . '_' . $slug);
         include $phpFile;
         exit;
     }
@@ -106,6 +119,7 @@ if (preg_match('#^[a-zA-Z0-9_-]+$#', $cleanUri)) {
     $phpFile = __DIR__ . '/' . $lang . '/' . $slug . '.php';
     if (is_file($phpFile)) {
         $basePath = '';
+        nibblyAccessEnforceCurrentTemplatePage($lang . '_' . $slug);
         include $phpFile;
         exit;
     }

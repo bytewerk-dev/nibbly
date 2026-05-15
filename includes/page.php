@@ -37,6 +37,10 @@ if (!$data) {
     return;
 }
 
+require_once $_includeBase . 'includes/access-guard.php';
+nibblyAccessEnforceMaintenance();
+nibblyAccessEnforcePage($contentPage, $data);
+
 // Set template variables from JSON
 $pageTitle = $data['title'] ?? ucfirst(str_replace('-', ' ', $slug));
 $pageDescription = $data['description'] ?? '';
@@ -60,7 +64,7 @@ include $_includeBase . 'includes/content-loader.php';
 ?>
 
     <!-- Main Content -->
-    <main class="main-content">
+    <main class="main-content" id="main-content">
         <div class="content-inner">
             <?php echo renderBreadcrumb($contentPage, $basePath); ?>
             <?php echo renderAllSections($contentPage); ?>

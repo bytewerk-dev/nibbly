@@ -13,6 +13,7 @@ This is the canonical, tool-neutral guide for AI coding agents. `AGENTS.md` and 
 | News posts | `content/news/{slug}.json` |
 | Footer content | `content/pages/footer.json` |
 | Site settings | `content/settings.json` |
+| Maintenance/private access | `includes/access-guard.php` + `content/settings.json` / page `visibility` |
 | Menu registry | `content/menus.json` |
 | Navigation | `includes/nav-config.php` |
 | Menu helpers | `includes/menu-helpers.php` |
@@ -77,6 +78,103 @@ echo nibblyLazyFormPlaceholder('contact', [
 The lazy endpoint (`api/form.php`) only renders whitelisted core forms. Add new
 custom forms there deliberately; never include arbitrary PHP paths from request
 parameters.
+
+## Accessibility Best Practices
+
+Nibbly Core provides the baseline accessibility plumbing for public pages and
+admin UI: a skip link, `main-content` target handling, landmark-friendly header
+and footer navigation, visible focus states, reduced-motion CSS, labelled
+toolbar controls, modal dialog semantics, live regions for toast/status
+messages, and SEO health checks for missing image alt text.
+
+When creating or adapting site templates, preserve that foundation:
+
+- Use one primary `<main>` element per page. Standard JSON pages get
+  `id="main-content"` automatically; custom templates should add that id or
+  include `includes/footer.php` so the fallback can attach it to the first
+  `<main>`.
+- Keep heading hierarchy semantic. Use one visible H1 for the page topic, then
+  H2/H3 sections in order. Do not choose heading levels only for visual size.
+- Provide meaningful alt text for informative images. Use an empty alt
+  (`alt=""`) only for decorative images. The page SEO health indicator reports
+  missing image alt text.
+- Use native elements: `<button>` for actions, `<a href>` for navigation, and
+  `<label for>` for form controls. Avoid click handlers on plain `<div>` or
+  `<span>` elements.
+- Keep focus visible. Do not remove `outline` or `box-shadow` focus states
+  unless a replacement with comparable contrast is added.
+- Respect `prefers-reduced-motion`. Page-specific animation CSS should include a
+  reduced-motion path or rely on the Core global reduction rules.
+- Connect form errors and hints to their fields with nearby text and, when
+  custom JavaScript is involved, `aria-describedby` plus an `aria-live` status
+  area.
+- Test new public templates with keyboard-only navigation before launch: Tab,
+  Shift+Tab, Enter/Space, Escape for overlays, and visible focus order.
+
+## Frontend Access Controls
+
+Nibbly's access controls are implemented centrally in `includes/access-guard.php`.
+They are loaded by `includes/header.php`, so custom templates must set
+`$contentPage` before including the header if page-level privacy should apply.
+Standard JSON pages already do this through `includes/page.php`.
+
+### Maintenance Mode
+
+Editors configure maintenance mode in **Dashboard -> Settings -> Access**. The
+settings are stored under `access.maintenance` in `content/settings.json`:
+
+```json
+{
+  "access": {
+    "maintenance": {
+      "enabled": true,
+      "mode": "maintenance",
+      "title": "Maintenance",
+      "text": "We will be back online shortly.",
+      "until": "2026-05-20T12:00",
+      "showCountdown": true,
+      "bypassParam": "preview",
+      "bypassKeyHash": "$2y$..."
+    }
+  }
+}
+```
+
+Valid `mode` values are `maintenance`, `offline`, and `launch`. The guard blocks
+public frontend pages with a standalone `503` response and sets `noindex` for the
+lock page. Static assets, admin routes, API routes, `robots.txt`, and
+`sitemap.xml` are excluded. Logged-in admins/editors bypass the lock
+automatically.
+
+The preview bypass is session-based. If `bypassParam` is `preview`, a visitor can
+open `/?preview=<secret>` once; the secret is checked against `bypassKeyHash` and
+the bypass then lasts for the browser session. Do not write plaintext bypass keys
+to JSON; use the admin settings form or hash secrets with `password_hash()`.
+
+### Private Pages
+
+Page-level password protection lives in the page JSON `visibility` object:
+
+```json
+{
+  "visibility": {
+    "status": "private",
+    "title": "Protected page",
+    "text": "Enter the password to continue.",
+    "passwordHash": "$2y$..."
+  }
+}
+```
+
+Use the Content Editor's **Access** card to switch a page to private and set the
+password. The API accepts a transient `visibility.password` value, hashes it, and
+stores only `passwordHash`. Direct JSON edits should use `passwordHash`; never
+commit plaintext page passwords.
+
+Private pages return a standalone password form until the correct password is
+submitted. Successful access is stored in the session per page. Logged-in
+admins/editors bypass page passwords. Password-protected responses use
+`noindex, nofollow` so protected content is not advertised to crawlers.
 
 ## How to Create a Standard Page
 

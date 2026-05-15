@@ -144,6 +144,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     </style>
 </head>
 <body>
+    <a class="skip-link" href="#adminMain">Skip to main content</a>
     <header class="admin-topbar">
         <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
             <?php echo nbIcon('hamburger', 24, '2'); ?>
@@ -180,7 +181,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     </header>
 
     <div class="admin-body">
-    <aside class="admin-sidebar" id="adminSidebar">
+    <aside class="admin-sidebar" id="adminSidebar" aria-label="Admin navigation">
         <div class="sidebar-top">
             <nav class="sidebar-nav">
                 <button class="sidebar-nav-item active" onclick="switchTab('content')" data-tab="content">
@@ -371,6 +372,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <div class="editor-header">
                 <div class="editor-header-left">
                     <h2 id="editorTitle"><?php echo t('editor.title'); ?></h2>
+                    <span id="editorSeoHealth" class="editor-seo-health"></span>
                     <button class="btn btn-secondary btn-sm" id="toggleAllBtn" onclick="toggleAllGroups()" style="display:none;"><?php echo t('editor.expand_all'); ?></button>
                 </div>
                 <div class="editor-header-right">
@@ -649,6 +651,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <button class="settings-tab-btn" data-settings-tab="theme"><?php echo t('settings.theme'); ?></button>
             <button class="settings-tab-btn" data-settings-tab="language"><?php echo t('settings.language'); ?></button>
             <button class="settings-tab-btn" data-settings-tab="login"><?php echo t('settings.login'); ?></button>
+            <button class="settings-tab-btn" data-settings-tab="access"><?php echo t('settings.access'); ?></button>
             <button class="settings-tab-btn" data-settings-tab="email"><?php echo t('settings.email'); ?></button>
             <button class="settings-tab-btn" data-settings-tab="menus"><?php echo t('settings.menus'); ?></button>
             <button class="settings-tab-btn" data-settings-tab="users"><?php echo t('settings.users'); ?></button>
@@ -771,6 +774,24 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                                         <label class="radio-option"><input type="radio" name="settingsLogoSize" value="small"> <span><?php echo t('settings.logo_size_small'); ?></span></label>
                                         <label class="radio-option"><input type="radio" name="settingsLogoSize" value="medium" checked> <span><?php echo t('settings.logo_size_medium'); ?></span></label>
                                         <label class="radio-option"><input type="radio" name="settingsLogoSize" value="large"> <span><?php echo t('settings.logo_size_large'); ?></span></label>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="settingsDefaultOgImage"><?php echo t('settings.default_og_image'); ?></label>
+                                    <small class="form-hint"><?php echo t('settings.default_og_image_hint'); ?></small>
+                                    <div class="logo-preview-group logo-preview-group--with-hint">
+                                        <div class="logo-preview logo-preview--wide" id="defaultOgPreview">
+                                            <img src="" alt="<?php echo t('settings.default_og_image'); ?>" id="defaultOgPreviewImg">
+                                        </div>
+                                        <div class="logo-controls">
+                                            <div class="logo-path-input">
+                                                <span class="input-with-clear">
+                                                    <input type="text" id="settingsDefaultOgImage" value="" placeholder="/assets/images/og-image.jpg">
+                                                    <button type="button" class="input-clear-btn" data-clear-target="settingsDefaultOgImage" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                                </span>
+                                                <button type="button" class="btn btn-secondary btn-sm" id="browseDefaultOgBtn"><?php echo t('btn.browse'); ?></button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -971,6 +992,85 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </div>
                     </div>
                     <button type="submit" class="btn btn-primary" id="saveLoginBtn"><?php echo t('settings.save_login'); ?></button>
+                </form>
+            </div>
+
+            <!-- Access Panel -->
+            <div class="settings-panel" id="settingsPanel-access">
+                <h2><?php echo t('settings.access'); ?></h2>
+                <p class="settings-description"><?php echo t('settings.access_desc'); ?></p>
+                <form id="accessForm" class="settings-form">
+                    <fieldset class="settings-section settings-section--compact settings-section--maintenance">
+                        <legend><?php echo t('settings.maintenance'); ?></legend>
+                        <div class="access-maintenance-grid">
+                        <div class="form-group access-toggle-row">
+                            <label class="toggle-label">
+                                <span><?php echo t('settings.maintenance_enabled'); ?></span>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="maintenanceEnabled">
+                                    <span class="toggle-slider"></span>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label for="maintenanceMode"><?php echo t('settings.maintenance_mode'); ?></label>
+                            <select id="maintenanceMode" class="topbar-select access-select">
+                                <option value="maintenance"><?php echo t('settings.maintenance_mode_maintenance'); ?></option>
+                                <option value="offline"><?php echo t('settings.maintenance_mode_offline'); ?></option>
+                                <option value="launch"><?php echo t('settings.maintenance_mode_launch'); ?></option>
+                            </select>
+                        </div>
+                        <div class="form-group access-wide">
+                            <label for="maintenanceTitle"><?php echo t('settings.maintenance_title'); ?></label>
+                            <input type="text" id="maintenanceTitle" maxlength="160">
+                        </div>
+                        <div class="form-group access-wide">
+                            <label for="maintenanceText"><?php echo t('settings.maintenance_text'); ?></label>
+                            <textarea id="maintenanceText" rows="3"></textarea>
+                        </div>
+                            <div class="form-group">
+                                <label for="maintenanceUntil"><?php echo t('settings.maintenance_until'); ?></label>
+                                <input type="datetime-local" id="maintenanceUntil">
+                            </div>
+                            <div class="form-group access-toggle-row access-toggle-row--inline">
+                                <label class="toggle-label">
+                                    <span><?php echo t('settings.maintenance_countdown'); ?></span>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" id="maintenanceCountdown">
+                                        <span class="toggle-slider"></span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </fieldset>
+                    <fieldset class="settings-section settings-section--compact">
+                        <legend><?php echo t('settings.access_bypass'); ?></legend>
+                        <div class="form-row-inline">
+                            <div class="form-group">
+                                <label for="maintenanceBypassParam"><?php echo t('settings.access_bypass_param'); ?></label>
+                                <input type="text" id="maintenanceBypassParam" placeholder="preview" maxlength="40">
+                            </div>
+                            <div class="form-group">
+                                <label for="maintenanceBypassKey"><?php echo t('settings.access_bypass_key'); ?></label>
+                                <input type="password" id="maintenanceBypassKey" autocomplete="new-password">
+                                <small class="form-hint" id="maintenanceBypassHint"></small>
+                            </div>
+                        </div>
+                    </fieldset>
+                    <fieldset class="settings-section settings-section--compact">
+                        <legend><?php echo t('settings.privacy'); ?></legend>
+                        <div class="form-group access-toggle-row">
+                            <label class="toggle-label">
+                                <span><?php echo t('settings.email_obfuscation'); ?></span>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="emailObfuscation">
+                                    <span class="toggle-slider"></span>
+                                </div>
+                            </label>
+                            <small class="form-hint"><?php echo t('settings.email_obfuscation_hint'); ?></small>
+                        </div>
+                    </fieldset>
+                    <button type="submit" class="btn btn-primary" id="saveAccessBtn"><?php echo t('settings.save_access'); ?></button>
                 </form>
             </div>
 
@@ -1421,8 +1521,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
 
     <!-- Confirmation Modal -->
-    <div class="modal-overlay" id="modalOverlay" style="display: none;">
-        <div class="modal">
+    <div class="modal-overlay" id="modalOverlay" style="display: none;" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalText">
             <h3 id="modalTitle"><?php echo t('btn.confirm'); ?></h3>
             <p id="modalText"></p>
             <div class="modal-actions">
@@ -1675,6 +1775,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     // Page list
     let pageListCache = null;
+    let currentSeoHealth = null;
 
     async function loadPageList() {
         try {
@@ -1758,7 +1859,12 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 e.preventDefault();
                 openPageFromList(viewLang, page.slug);
             };
-            tdTitle.appendChild(titleLink);
+            const titleRow = document.createElement('div');
+            titleRow.className = 'page-list-title-row';
+            titleRow.appendChild(titleLink);
+            const seoBadge = createSeoHealthBadge(viewInfo.seoHealth, 'page-list');
+            if (seoBadge) titleRow.appendChild(seoBadge);
+            tdTitle.appendChild(titleRow);
 
             // Hover action row (WordPress-style)
             const actions = document.createElement('div');
@@ -1957,6 +2063,53 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         const pm = document.getElementById('pageSelectMobile');
         if (pm) pm.value = slug;
         loadContent();
+    }
+
+    function getPageSeoHealth(lang, slug) {
+        const pageData = pageListCache?.pages?.find(p => p.slug === slug);
+        return pageData?.languages?.[lang]?.seoHealth || null;
+    }
+
+    function setPageSeoHealth(lang, slug, seoHealth) {
+        if (!pageListCache || !seoHealth) return;
+        const pageData = pageListCache.pages?.find(p => p.slug === slug);
+        if (pageData?.languages?.[lang]) {
+            pageData.languages[lang].seoHealth = seoHealth;
+        }
+    }
+
+    function createSeoHealthBadge(health, context = '') {
+        if (!health) return null;
+        const status = ['green', 'yellow', 'red'].includes(health.status) ? health.status : 'yellow';
+        const score = Number.isFinite(Number(health.score)) ? Number(health.score) : 0;
+        const label = health.label || 'SEO';
+        const issues = Array.isArray(health.issues) ? health.issues : [];
+        const badge = document.createElement('span');
+        badge.className = `seo-health-badge seo-health-badge--${status}${context ? ' seo-health-badge--' + context : ''}`;
+        badge.tabIndex = 0;
+        badge.setAttribute('role', 'status');
+        badge.setAttribute('aria-label', [label + ' ' + score + '/100'].concat(issues).join('. '));
+        badge.title = [label + ' ' + score + '/100'].concat(issues).join('\n');
+        badge.innerHTML = `
+            <span class="seo-health-badge__dot" aria-hidden="true"></span>
+            <span class="seo-health-badge__text">${escapeHtml(label)}</span>
+            <span class="seo-health-badge__score">${score}/100</span>
+        `;
+        if (issues.length) {
+            const popover = document.createElement('span');
+            popover.className = 'seo-health-badge__popover';
+            popover.innerHTML = `<strong>${escapeHtml(label)}</strong><ul>${issues.map(issue => `<li>${escapeHtml(issue)}</li>`).join('')}</ul>`;
+            badge.appendChild(popover);
+        }
+        return badge;
+    }
+
+    function updateEditorSeoHealth(health) {
+        const holder = document.getElementById('editorSeoHealth');
+        if (!holder) return;
+        holder.innerHTML = '';
+        const badge = createSeoHealthBadge(health, 'editor');
+        if (badge) holder.appendChild(badge);
     }
 
     async function copyPageToLang(sourceLang, sourceSlug, targetLang, targetSlug) {
@@ -2202,6 +2355,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         confirmBtn.className = 'btn btn-primary';
         confirmBtn.style.display = '';
         overlay.style.display = 'flex';
+        overlay.setAttribute('aria-hidden', 'false');
 
         const titleInput = document.getElementById('newPageTitle');
         const slugInput = document.getElementById('newPageSlug');
@@ -2272,6 +2426,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
             if (result.success) {
                 currentContent = result.data;
+                currentSeoHealth = getPageSeoHealth(lang, page);
                 clearUndoHistory();
                 renderEditor();
                 loadBackups();
@@ -2312,18 +2467,75 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     // Keys that get their own special renderer
     const SPECIAL_KEYS = new Set(['sections']);
     // Keys rendered in the dedicated "Page Settings" panel
-    const PAGE_SETTINGS_KEYS = new Set(['title', 'description', 'nav', 'breadcrumb']);
+    const PAGE_SETTINGS_KEYS = new Set(['title', 'description', 'nav', 'breadcrumb', 'visibility', 'seo']);
 
-    // Render the "Page Settings" panel (title, description, nav locations, breadcrumb)
-    function renderPageSettings(container) {
-        const group = document.createElement('div');
-        group.className = 'ce-group ce-group--open ce-group--settings';
-        group.innerHTML = `<div class="ce-group-header" onclick="toggleGroup(this)">
-            <span class="ce-chevron">▼</span>
-            <span class="ce-group-title">${t('editor.page_settings')}</span>
-        </div>
-        <div class="ce-group-body" style="display:block;"></div>`;
-        const body = group.querySelector('.ce-group-body');
+    function createEditorShell(container) {
+        const shell = document.createElement('div');
+        shell.className = 'ce-editor-shell';
+
+        const tabs = document.createElement('div');
+        tabs.className = 'ce-editor-tabs';
+        const tabDefs = [
+            ['content', t('editor.tab_content')],
+            ['settings', t('editor.page_settings')],
+            ['seo', t('editor.seo')],
+            ['access', t('editor.settings_access')]
+        ];
+        tabDefs.forEach(([id, label], index) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'ce-editor-tab' + (index === 0 ? ' active' : '');
+            btn.dataset.editorTab = id;
+            btn.textContent = label;
+            btn.addEventListener('click', () => activateEditorTab(id));
+            tabs.appendChild(btn);
+        });
+        shell.appendChild(tabs);
+
+        const panelsWrap = document.createElement('div');
+        panelsWrap.className = 'ce-editor-panels';
+        const panels = {};
+        tabDefs.forEach(([id], index) => {
+            const panel = document.createElement('div');
+            panel.className = 'ce-editor-panel' + (index === 0 ? ' active' : '');
+            panel.dataset.editorPanel = id;
+            panels[id] = panel;
+            panelsWrap.appendChild(panel);
+        });
+        shell.appendChild(panelsWrap);
+        container.appendChild(shell);
+        return panels;
+    }
+
+    function activateEditorTab(tabId) {
+        document.querySelectorAll('.ce-editor-tab').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.editorTab === tabId);
+        });
+        document.querySelectorAll('.ce-editor-panel').forEach(panel => {
+            panel.classList.toggle('active', panel.dataset.editorPanel === tabId);
+        });
+    }
+
+    // Render the page metadata panels (basics, SEO, access, navigation)
+    function renderPageSettings(panels) {
+        const createSettingsSection = (panel, className, title, subtitle = '') => {
+            const section = document.createElement('section');
+            section.className = `ce-settings-card ${className}`;
+            const header = document.createElement('div');
+            header.className = 'ce-settings-card__header';
+            header.innerHTML = `<h4>${title}</h4>${subtitle ? `<p>${subtitle}</p>` : ''}`;
+            section.appendChild(header);
+            const sectionBody = document.createElement('div');
+            sectionBody.className = 'ce-settings-card__body';
+            section.appendChild(sectionBody);
+            panel.appendChild(section);
+            return sectionBody;
+        };
+
+        const basicsBody = createSettingsSection(panels.settings, 'ce-settings-card--basics', t('editor.settings_basics'));
+        const navBody = createSettingsSection(panels.settings, 'ce-settings-card--navigation', t('editor.settings_navigation'));
+        const seoBody = createSettingsSection(panels.seo, 'ce-settings-card--seo', t('editor.seo'), t('editor.seo_hint'));
+        const accessBody = createSettingsSection(panels.access, 'ce-settings-card--access', t('editor.settings_access'));
 
         // Title
         const titleField = document.createElement('div');
@@ -2336,7 +2548,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         titleInput.dataset.path = 'title';
         titleInput.addEventListener('input', () => markDirty());
         titleField.appendChild(titleInput);
-        body.appendChild(titleField);
+        basicsBody.appendChild(titleField);
 
         // Description
         const descField = document.createElement('div');
@@ -2349,12 +2561,45 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         descInput.dataset.path = 'description';
         descInput.addEventListener('input', () => markDirty());
         descField.appendChild(descInput);
-        body.appendChild(descField);
+        basicsBody.appendChild(descField);
+
+        const seo = currentContent.seo || {};
+        const seoField = document.createElement('div');
+        seoField.className = 'ce-field ce-field--stacked';
+        const seoWrap = document.createElement('div');
+        seoWrap.className = 'ce-seo-grid';
+        seoWrap.innerHTML = `
+            <label class="ce-form-tile ce-form-tile--wide"><span>${t('editor.seo_title')}</span><input type="text" class="ce-input" id="seoTitle" value="${escapeHtml(seo.title || '')}"></label>
+            <label class="ce-form-tile ce-form-tile--wide"><span>${t('editor.seo_description')}</span><textarea class="ce-textarea" id="seoDescription" rows="2">${escapeHtml(seo.description || '')}</textarea></label>
+            <label class="ce-form-tile ce-form-tile--wide"><span>${t('editor.seo_answer_summary')}</span><textarea class="ce-textarea" id="seoAnswerSummary" rows="2">${escapeHtml(seo.answerSummary || '')}</textarea></label>
+            <label class="ce-form-tile"><span>${t('editor.seo_canonical')}</span><input type="url" class="ce-input" id="seoCanonical" value="${escapeHtml(seo.canonical || '')}"></label>
+            <label class="ce-form-tile"><span>Robots</span><select class="ce-input" id="seoRobots">
+                    <option value="index, follow">${t('editor.seo_robots_index')}</option>
+                    <option value="noindex, follow">${t('editor.seo_robots_noindex')}</option>
+                    <option value="noindex, nofollow">${t('editor.seo_robots_private')}</option>
+                </select></label>
+            <label class="ce-form-tile"><span>${t('editor.seo_og_title')}</span><input type="text" class="ce-input" id="seoOgTitle" value="${escapeHtml(seo.ogTitle || '')}"></label>
+            <label class="ce-form-tile"><span>${t('editor.seo_og_description')}</span><textarea class="ce-textarea" id="seoOgDescription" rows="2">${escapeHtml(seo.ogDescription || '')}</textarea></label>
+            <div class="ce-form-tile ce-form-tile--wide">
+                <span>Open Graph image</span>
+                <div class="ce-image-input-row">
+                    <input type="text" class="ce-input" id="seoOgImage" placeholder="/assets/images/og-image.jpg" value="${escapeHtml(seo.ogImage || '')}">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="browseSeoOgImage()">${t('btn.browse')}</button>
+                </div>
+            </div>
+            <label class="ce-nav-check ce-nav-check--standalone"><input type="checkbox" id="seoSitemap"> ${t('editor.seo_sitemap')}</label>
+        `;
+        seoWrap.querySelector('#seoRobots').value = seo.robots || 'index, follow';
+        seoWrap.querySelector('#seoSitemap').checked = seo.sitemap !== false;
+        seoWrap.querySelectorAll('input, textarea, select').forEach(inp => inp.addEventListener('input', () => markDirty()));
+        seoWrap.querySelectorAll('input[type="checkbox"]').forEach(inp => inp.addEventListener('change', () => markDirty()));
+        seoField.appendChild(seoWrap);
+        seoBody.appendChild(seoField);
 
         // Nav locations
         const navField = document.createElement('div');
-        navField.className = 'ce-field';
-        navField.innerHTML = `<label class="ce-field-label">${t('editor.nav_locations')}</label>`;
+        navField.className = 'ce-field ce-field--stacked';
+        navField.innerHTML = `<label class="ce-card-field-label">${t('editor.nav_locations')}</label>`;
         const navRow = document.createElement('div');
         navRow.className = 'ce-nav-checkboxes';
         const navLocations = currentContent.nav || ['header'];
@@ -2383,7 +2628,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         // Custom locations (add-row pattern)
         const customContainer = document.createElement('div');
         customContainer.id = 'navCustomContainer';
-        customContainer.className = 'ce-breadcrumb-editor';
+        customContainer.className = 'ce-breadcrumb-editor ce-nav-custom-editor';
         customLocations.forEach(loc => {
             customContainer.appendChild(createNavCustomRow(loc));
         });
@@ -2397,13 +2642,13 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         });
         customContainer.appendChild(addNavBtn);
         navField.appendChild(customContainer);
-        body.appendChild(navField);
+        navBody.appendChild(navField);
 
         // Breadcrumb editor
         const bcField = document.createElement('div');
-        bcField.className = 'ce-field';
-        bcField.innerHTML = `<label class="ce-field-label">${t('editor.breadcrumb')}</label>
-            <small class="form-hint">${t('editor.breadcrumb_hint')}</small>`;
+        bcField.className = 'ce-field ce-field--stacked';
+        bcField.innerHTML = `<label class="ce-card-field-label">${t('editor.breadcrumb')}</label>
+            <small class="form-hint ce-card-field-hint">${t('editor.breadcrumb_hint')}</small>`;
         const bcContainer = document.createElement('div');
         bcContainer.id = 'breadcrumbEditor';
         bcContainer.className = 'ce-breadcrumb-editor';
@@ -2421,9 +2666,29 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         });
         bcContainer.appendChild(addBtn);
         bcField.appendChild(bcContainer);
-        body.appendChild(bcField);
+        navBody.appendChild(bcField);
 
-        container.appendChild(group);
+        // Visibility / password protection
+        const visibility = currentContent.visibility || {};
+        const visField = document.createElement('div');
+        visField.className = 'ce-field ce-field--stacked';
+        const visWrap = document.createElement('div');
+        visWrap.className = 'ce-visibility-grid';
+        visWrap.innerHTML = `
+            <label class="ce-form-tile"><span>${t('editor.visibility')}</span><select class="ce-input" id="pageVisibilityStatus">
+                    <option value="public">${t('editor.visibility_public')}</option>
+                    <option value="private">${t('editor.visibility_private')}</option>
+                </select></label>
+            <label class="ce-form-tile"><span>${t('editor.visibility_password')}</span><input type="password" class="ce-input" id="pageVisibilityPassword"></label>
+            <label class="ce-form-tile"><span>${t('editor.visibility_title')}</span><input type="text" class="ce-input" id="pageVisibilityTitle" value="${escapeHtml(visibility.title || '')}"></label>
+            <label class="ce-form-tile ce-form-tile--wide"><span>${t('editor.visibility_text')}</span><textarea class="ce-textarea" id="pageVisibilityText" rows="2">${escapeHtml(visibility.text || '')}</textarea></label>
+            <small class="form-hint">${visibility.passwordHash ? t('editor.visibility_password_set') : t('editor.visibility_password_hint')}</small>
+        `;
+        visWrap.querySelector('#pageVisibilityStatus').value = visibility.status || 'public';
+        visWrap.querySelectorAll('input, textarea, select').forEach(inp => inp.addEventListener('input', () => markDirty()));
+        visField.appendChild(visWrap);
+        accessBody.appendChild(visField);
+
     }
 
     function createNavCustomRow(value) {
@@ -2485,6 +2750,114 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         } else {
             delete currentContent.breadcrumb;
         }
+
+        const visStatus = document.getElementById('pageVisibilityStatus')?.value || 'public';
+        const visPassword = document.getElementById('pageVisibilityPassword')?.value || '';
+        const visTitle = document.getElementById('pageVisibilityTitle')?.value?.trim() || '';
+        const visText = document.getElementById('pageVisibilityText')?.value?.trim() || '';
+        if (visStatus === 'private') {
+            currentContent.visibility = Object.assign({}, currentContent.visibility || {}, {
+                status: 'private',
+                title: visTitle,
+                text: visText
+            });
+            if (visPassword) currentContent.visibility.password = visPassword;
+        } else {
+            currentContent.visibility = { status: 'public', title: visTitle, text: visText };
+        }
+
+        currentContent.seo = {
+            title: document.getElementById('seoTitle')?.value?.trim() || '',
+            description: document.getElementById('seoDescription')?.value?.trim() || '',
+            answerSummary: document.getElementById('seoAnswerSummary')?.value?.trim() || '',
+            canonical: document.getElementById('seoCanonical')?.value?.trim() || '',
+            robots: document.getElementById('seoRobots')?.value || 'index, follow',
+            ogTitle: document.getElementById('seoOgTitle')?.value?.trim() || '',
+            ogDescription: document.getElementById('seoOgDescription')?.value?.trim() || '',
+            ogImage: document.getElementById('seoOgImage')?.value?.trim() || '',
+            sitemap: document.getElementById('seoSitemap')?.checked !== false
+        };
+    }
+
+    function getSectionPreview(section) {
+        if (!section || typeof section !== 'object') return '';
+        const preferred = ['title', 'heading', 'headline', 'text', 'content', 'caption', 'src', 'image', 'url'];
+        for (const key of preferred) {
+            const value = section[key];
+            if (typeof value === 'string' && value.trim()) {
+                const clean = value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+                return clean.length > 72 ? clean.slice(0, 72) + '…' : clean;
+            }
+        }
+        for (const value of Object.values(section)) {
+            if (typeof value === 'string' && value.trim() && value.length <= 120) {
+                return value.length > 72 ? value.slice(0, 72) + '…' : value;
+            }
+        }
+        return '';
+    }
+
+    function renderContentPanel(panel) {
+        panel.innerHTML = '';
+        const sections = Array.isArray(currentContent.sections) ? currentContent.sections : [];
+
+        const layout = document.createElement('div');
+        layout.className = 'ce-content-layout';
+
+        const nav = document.createElement('aside');
+        nav.className = 'ce-section-nav';
+        nav.innerHTML = `<div class="ce-section-nav__title">${t('editor.sections')}</div>`;
+        const navList = document.createElement('div');
+        navList.className = 'ce-section-nav__list';
+        nav.appendChild(navList);
+
+        const editor = document.createElement('div');
+        editor.className = 'ce-section-editor';
+        const header = document.createElement('div');
+        header.className = 'ce-section-editor__header';
+        header.innerHTML = `<h3>${t('editor.sections')}</h3><span>${t('editor.items', {count: sections.length})}</span>`;
+        editor.appendChild(header);
+
+        const legacyContainer = document.createElement('div');
+        legacyContainer.id = 'sectionsLegacyContainer';
+        legacyContainer.className = 'ce-section-list';
+        editor.appendChild(legacyContainer);
+
+        if (sections.length > 0) {
+            sections.forEach((section, index) => {
+                addSectionElement(section, index, legacyContainer);
+                const def = window.BlockTypeRegistry?.[section.type];
+                const typeLabel = def?.label || section.type || 'Section';
+                const preview = getSectionPreview(section);
+                const link = document.createElement('a');
+                link.href = `#section-${index}`;
+                link.className = 'ce-section-nav__item';
+                link.innerHTML = `<span>${index + 1}. ${escapeHtml(typeLabel)}</span>${preview ? `<small>${escapeHtml(preview)}</small>` : ''}`;
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    document.getElementById(`section-${index}`)?.scrollIntoView({behavior: 'smooth', block: 'start'});
+                });
+                navList.appendChild(link);
+            });
+        } else {
+            legacyContainer.innerHTML = `<p class="ce-empty-state">${t('editor.add_section')}</p>`;
+        }
+
+        const addBtns = document.createElement('div');
+        addBtns.className = 'add-section-container';
+        let addBtnsHtml = '<p>' + t('editor.add_section') + '</p><div class="add-section-buttons">';
+        if (window.BlockTypeRegistry) {
+            for (const [type, def] of Object.entries(window.BlockTypeRegistry)) {
+                addBtnsHtml += `<button class="btn btn-secondary btn-sm" onclick="addSection('${type}')">+ ${def.label}</button>`;
+            }
+        }
+        addBtnsHtml += '</div>';
+        addBtns.innerHTML = addBtnsHtml;
+        editor.appendChild(addBtns);
+
+        layout.appendChild(nav);
+        layout.appendChild(editor);
+        panel.appendChild(layout);
     }
 
     // Render editor — generic JSON-to-form
@@ -2497,6 +2870,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         const page = document.getElementById('pageSelect').value;
         const pageData = pageListCache?.pages?.find(p => p.slug === page);
         document.getElementById('editorTitle').textContent = pageData?.languages?.[lang]?.title || pageData?.title || page;
+        updateEditorSeoHealth(currentSeoHealth || pageData?.languages?.[lang]?.seoHealth || null);
 
         if (currentContent.lastModified) {
             document.getElementById('lastModified').textContent =
@@ -2512,52 +2886,17 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <span class="ce-meta-item"><strong>${t('editor.meta_lang')}</strong> ${escapeHtml(currentContent.lang || lang)}</span>`;
         container.appendChild(metaDiv);
 
-        // Render page settings panel (title, description, nav, breadcrumb)
-        renderPageSettings(container);
+        const panels = createEditorShell(container);
+        renderPageSettings(panels);
+        renderContentPanel(panels.content);
 
-        // Render each top-level key as a collapsible group
+        // Render any remaining top-level keys below the content sections.
         for (const key of Object.keys(currentContent)) {
-            if (META_KEYS.has(key) || PAGE_SETTINGS_KEYS.has(key)) continue;
-
-            if (SPECIAL_KEYS.has(key)) {
-                // Sections: render with existing special UI
-                const sectionsGroup = document.createElement('div');
-                sectionsGroup.className = 'ce-group';
-                sectionsGroup.innerHTML = `<div class="ce-group-header" onclick="toggleGroup(this)">
-                    <span class="ce-chevron">▶</span>
-                    <span class="ce-group-title">sections</span>
-                    <span class="ce-group-count">${t('editor.items', {count: (currentContent.sections || []).length})}</span>
-                </div>
-                <div class="ce-group-body" style="display:none;">
-                    <div id="sectionsLegacyContainer"></div>
-                </div>`;
-                container.appendChild(sectionsGroup);
-
-                // Render legacy sections inside
-                const legacyContainer = sectionsGroup.querySelector('#sectionsLegacyContainer');
-                if (currentContent.sections && currentContent.sections.length > 0) {
-                    currentContent.sections.forEach((section, index) => {
-                        addSectionElement(section, index, legacyContainer);
-                    });
-                }
-                // Add section buttons
-                const addBtns = document.createElement('div');
-                addBtns.className = 'add-section-container';
-                let addBtnsHtml = '<p>' + t('editor.add_section') + '</p><div class="add-section-buttons">';
-                if (window.BlockTypeRegistry) {
-                    for (const [type, def] of Object.entries(window.BlockTypeRegistry)) {
-                        addBtnsHtml += `<button class="btn btn-secondary btn-sm" onclick="addSection('${type}')">+ ${def.label}</button>`;
-                    }
-                }
-                addBtnsHtml += '</div>';
-                addBtns.innerHTML = addBtnsHtml;
-                legacyContainer.parentElement.appendChild(addBtns);
-                continue;
-            }
+            if (META_KEYS.has(key) || PAGE_SETTINGS_KEYS.has(key) || SPECIAL_KEYS.has(key)) continue;
 
             const value = currentContent[key];
             const group = renderJsonGroup(key, value, key);
-            container.appendChild(group);
+            panels.content.appendChild(group);
         }
 
         // Auto-resize all textareas
@@ -2910,6 +3249,15 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     // Backward-compat globals (in case any onclick attribute still references them)
     window.openImageManager = function() { NbImageManager.open(null, null, { types: ['image', 'audio', 'video', 'document'] }); };
     window.closeImageManager = function() { NbImageManager.close(); };
+    window.browseSeoOgImage = function() {
+        const input = document.getElementById('seoOgImage');
+        if (!input) return;
+        NbImageManager.open(function(path) {
+            input.value = path;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            markDirty();
+        }, input.value || null, { types: ['image'], type: 'image' });
+    };
     window.browseSectionMedia = function(btn, type) {
         type = type || 'image';
         const input = btn.parentElement.querySelector('.section-field');
@@ -3114,35 +3462,38 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         if (!container) container = document.getElementById('sectionsLegacyContainer');
         const div = document.createElement('div');
         div.className = 'section-item';
+        div.id = `section-${index}`;
         div.dataset.index = index;
         div.dataset.type = section.type;
 
         const def = window.BlockTypeRegistry?.[section.type];
         const typeLabel = def?.label || section.type;
+        const preview = getSectionPreview(section);
 
         // Build form fields from registry
         let content = '';
         if (def && def.fields) {
             for (const field of def.fields) {
                 const val = escapeHtml(section[field.key] ?? '');
+                const fieldClass = 'section-field-group section-field-group--' + String(field.key || 'field').replace(/[^a-z0-9_-]/gi, '-').toLowerCase();
                 switch (field.type) {
                     case 'input':
                     case 'url':
                     case 'number':
-                        content += `<div class="form-group">
+                        content += `<div class="form-group ${fieldClass}">
                             <label>${field.label}</label>
                             <input type="${field.type === 'input' ? 'text' : field.type}" class="section-field" data-key="${field.key}" value="${val}" placeholder="${field.label}...">
                             ${field.hint ? `<small style="color: #666;">${field.hint}</small>` : ''}
                         </div>`;
                         break;
                     case 'textarea':
-                        content += `<div class="form-group">
+                        content += `<div class="form-group ${fieldClass}">
                             <label>${field.label}</label>
                             <textarea class="section-field" data-key="${field.key}" placeholder="${field.label}...">${val}</textarea>
                         </div>`;
                         break;
                     case 'wysiwyg':
-                        content += `<div class="form-group html-editor">
+                        content += `<div class="form-group html-editor ${fieldClass}">
                             <label>${field.label} (HTML)</label>
                             <textarea class="section-field" data-key="${field.key}">${val}</textarea>
                         </div>`;
@@ -3151,19 +3502,19 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         const opts = (field.options || []).map(o =>
                             `<option value="${o.value}"${section[field.key] === o.value ? ' selected' : ''}>${o.label}</option>`
                         ).join('');
-                        content += `<div class="form-group">
+                        content += `<div class="form-group ${fieldClass}">
                             <label>${field.label}</label>
                             <select class="section-field" data-key="${field.key}">${opts}</select>
                         </div>`;
                         break;
                     case 'checkbox':
-                        content += `<div class="form-group">
+                        content += `<div class="form-group ${fieldClass}">
                             <label><input type="checkbox" class="section-field" data-key="${field.key}"${section[field.key] ? ' checked' : ''}> ${field.label}</label>
                         </div>`;
                         break;
                     case 'image':
                         const imgSrc = val ? (val.startsWith('/') ? '..' + val : val) : '';
-                        content += `<div class="form-group">
+                        content += `<div class="form-group ${fieldClass}">
                             <label>${field.label}</label>
                             ${imgSrc ? `<div class="ce-image-preview"><img src="${escapeHtml(imgSrc)}" alt="preview" onerror="this.style.display='none'"></div>` : ''}
                             <div class="ce-image-input-row">
@@ -3173,7 +3524,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </div>`;
                         break;
                     case 'audio':
-                        content += `<div class="form-group">
+                        content += `<div class="form-group ${fieldClass}">
                             <label>${field.label}</label>
                             <div class="ce-image-input-row">
                                 <input type="text" class="section-field ce-input" data-key="${field.key}" value="${val}" placeholder="Path to audio file...">
@@ -3187,14 +3538,17 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
         div.innerHTML = `
             <div class="section-header">
-                <span class="section-type ${section.type}">${typeLabel}</span>
+                <div class="section-heading">
+                    <span class="section-type ${section.type}">${typeLabel}</span>
+                    <span class="section-title-preview">${preview ? escapeHtml(preview) : 'Section ' + (index + 1)}</span>
+                </div>
                 <div class="section-actions">
                     <button class="btn btn-sm btn-secondary" onclick="moveSection(${index}, -1)">&#8593;</button>
                     <button class="btn btn-sm btn-secondary" onclick="moveSection(${index}, 1)">&#8595;</button>
                     <button class="btn btn-sm btn-danger" onclick="deleteSection(${index})">${icon('trash', 14)}</button>
                 </div>
             </div>
-            ${content}
+            <div class="section-fields">${content}</div>
         `;
 
         container.appendChild(div);
@@ -3220,7 +3574,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         };
 
         currentContent.sections.push(newSection);
-        addSectionElement(newSection, currentContent.sections.length - 1);
+        renderEditor();
+        markDirty();
     }
 
     // Move section
@@ -3295,6 +3650,13 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             if (result.success) {
                 showToast(t('toast.saved'), 'success');
                 currentContent.lastModified = result.data.lastModified;
+                if (result.data.seoHealth) {
+                    const lang = document.getElementById('langSelect').value;
+                    const page = document.getElementById('pageSelect').value;
+                    currentSeoHealth = result.data.seoHealth;
+                    setPageSeoHealth(lang, page, result.data.seoHealth);
+                    updateEditorSeoHealth(result.data.seoHealth);
+                }
                 document.getElementById('lastModified').textContent =
                     t('editor.last_saved', {date: formatDateShort(result.data.lastModified)});
                 loadBackups();
@@ -3425,11 +3787,15 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         document.getElementById('modalTitle').textContent = title;
         document.getElementById('modalText').textContent = text;
         document.getElementById('modalOverlay').style.display = 'flex';
+        document.getElementById('modalOverlay').setAttribute('aria-hidden', 'false');
         document.getElementById('modalConfirm').onclick = onConfirm;
+        setTimeout(() => document.getElementById('modalConfirm').focus(), 0);
     }
 
     function closeModal() {
-        document.getElementById('modalOverlay').style.display = 'none';
+        const overlay = document.getElementById('modalOverlay');
+        overlay.style.display = 'none';
+        overlay.setAttribute('aria-hidden', 'true');
         // Reset confirm button to default state
         const btn = document.getElementById('modalConfirm');
         btn.textContent = t('btn.confirm');
@@ -3451,6 +3817,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
+        toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+        toast.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
+        toast.setAttribute('aria-atomic', 'true');
         toast.textContent = message;
         document.body.appendChild(toast);
 
@@ -5361,6 +5730,14 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var sizeRadio = document.querySelector('input[name="settingsLogoSize"][value="' + logoSize + '"]');
         if (sizeRadio) sizeRadio.checked = true;
 
+        var defaultOgPath = settings.seo?.defaultOgImage || '';
+        var defaultOgInput = document.getElementById('settingsDefaultOgImage');
+        if (defaultOgInput) {
+            defaultOgInput.value = defaultOgPath;
+            updateDefaultOgPreview(defaultOgPath);
+            updateClearButton(defaultOgInput);
+        }
+
         // Theme
         document.getElementById('settingsAdminTheme').value = settings.theme.adminTheme || 'light';
         document.querySelectorAll('.theme-option').forEach(function(btn) {
@@ -5407,6 +5784,30 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var loginMode = (settings.general && settings.general.frontendLoginRedirect) || 'auto';
         var modeRadio = document.querySelector('input[name="frontendLoginRedirect"][value="' + loginMode + '"]');
         if (modeRadio) modeRadio.checked = true;
+
+        // Access / privacy
+        var access = settings.access || {};
+        var maintenance = access.maintenance || {};
+        var enabledEl = document.getElementById('maintenanceEnabled');
+        if (enabledEl) enabledEl.checked = !!maintenance.enabled;
+        var maintModeEl = document.getElementById('maintenanceMode');
+        if (maintModeEl) maintModeEl.value = maintenance.mode || 'maintenance';
+        var maintTitleEl = document.getElementById('maintenanceTitle');
+        if (maintTitleEl) maintTitleEl.value = maintenance.title || '';
+        var maintTextEl = document.getElementById('maintenanceText');
+        if (maintTextEl) maintTextEl.value = maintenance.text || '';
+        var maintUntilEl = document.getElementById('maintenanceUntil');
+        if (maintUntilEl) maintUntilEl.value = (maintenance.until || '').slice(0, 16);
+        var maintCountdownEl = document.getElementById('maintenanceCountdown');
+        if (maintCountdownEl) maintCountdownEl.checked = !!maintenance.showCountdown;
+        var bypassParamEl = document.getElementById('maintenanceBypassParam');
+        if (bypassParamEl) bypassParamEl.value = maintenance.bypassParam || 'preview';
+        var bypassKeyEl = document.getElementById('maintenanceBypassKey');
+        if (bypassKeyEl) bypassKeyEl.value = '';
+        var bypassHintEl = document.getElementById('maintenanceBypassHint');
+        if (bypassHintEl) bypassHintEl.textContent = maintenance.hasBypassKey ? t('settings.access_bypass_key_set') : t('settings.access_bypass_key_hint');
+        var obfuscationEl = document.getElementById('emailObfuscation');
+        if (obfuscationEl) obfuscationEl.checked = !!(settings.privacy && settings.privacy.emailObfuscation);
 
         updateColorPreview(primary, accent);
         updateBtnStylePreview();
@@ -5490,6 +5891,18 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         }
     }
 
+    function updateDefaultOgPreview(path) {
+        var img = document.getElementById('defaultOgPreviewImg');
+        if (!img) return;
+        if (path) {
+            img.src = path;
+            img.style.display = 'block';
+        } else {
+            img.removeAttribute('src');
+            img.style.display = 'none';
+        }
+    }
+
     // 3-way logo display selector is only relevant when no logo is set
     function updateLogoDisplayVisibility() {
         var logoVal = document.getElementById('settingsLogo').value.trim();
@@ -5523,7 +5936,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         name: <?php echo json_encode(defined('SITE_NAME') ? SITE_NAME : 'CMS'); ?>,
         showBranding: true,
         logoDisplay: 'both',
-        logoSize: 'medium'
+        logoSize: 'medium',
+        defaultOgImage: ''
     };
 
     // Sidebar bg derivations — match the CSS color-mix() on first paint
@@ -5816,6 +6230,14 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         }, input ? input.value : null, { types: ['image'], type: 'image' });
     });
 
+    document.getElementById('browseDefaultOgBtn').addEventListener('click', function() {
+        var input = document.getElementById('settingsDefaultOgImage');
+        NbImageManager.open(function(path) {
+            input.value = path;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }, input ? input.value : null, { types: ['image'], type: 'image' });
+    });
+
     // Manual edits to the logo path also toggle the 3-way selector
     document.getElementById('settingsLogo').addEventListener('input', function() {
         updateLogoPreview(this.value.trim());
@@ -5837,6 +6259,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         updateFaviconPngPreview(this.value.trim());
         updateClearButton(this);
     });
+    document.getElementById('settingsDefaultOgImage').addEventListener('input', function() {
+        updateDefaultOgPreview(this.value.trim());
+        updateClearButton(this);
+    });
 
     document.getElementById('resetBrandingBtn').addEventListener('click', function() {
         document.getElementById('settingsFavicon').value = BRANDING_DEFAULTS.favicon;
@@ -5844,6 +6270,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         document.getElementById('settingsLogo').value = BRANDING_DEFAULTS.logo;
         document.getElementById('settingsLogoDark').value = BRANDING_DEFAULTS.logoDark;
         document.getElementById('settingsAdminLogo').value = BRANDING_DEFAULTS.adminLogo;
+        document.getElementById('settingsDefaultOgImage').value = BRANDING_DEFAULTS.defaultOgImage;
         document.getElementById('settingsName').value = BRANDING_DEFAULTS.name;
         document.getElementById('settingsShowBranding').checked = BRANDING_DEFAULTS.showBranding;
         var displayRadio = document.querySelector('input[name="settingsLogoDisplay"][value="' + BRANDING_DEFAULTS.logoDisplay + '"]');
@@ -5855,6 +6282,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         updateLogoPreview(BRANDING_DEFAULTS.logo);
         updateLogoDarkPreview(BRANDING_DEFAULTS.logoDark);
         updateAdminLogoPreview(BRANDING_DEFAULTS.adminLogo);
+        updateDefaultOgPreview(BRANDING_DEFAULTS.defaultOgImage);
         document.querySelectorAll('.input-clear-btn[data-clear-target]').forEach(function(btn) {
             var input = document.getElementById(btn.dataset.clearTarget);
             if (input) updateClearButton(input);
@@ -5901,6 +6329,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 logoDisplay: displayRadio ? displayRadio.value : 'both',
                 logoSize: sizeRadio ? sizeRadio.value : 'medium'
             };
+            settings.seo = Object.assign({}, settings.seo || {}, {
+                defaultOgImage: document.getElementById('settingsDefaultOgImage').value.trim()
+            });
 
             var formData = new FormData();
             formData.append('action', 'save-settings');
@@ -6148,6 +6579,58 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             } finally {
                 btn.disabled = false;
                 btn.textContent = t('settings.save_login');
+            }
+        });
+    }
+
+    // ============================================================
+    // ACCESS / PRIVACY SETTINGS
+    // ============================================================
+
+    var accessForm = document.getElementById('accessForm');
+    if (accessForm) {
+        accessForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var btn = document.getElementById('saveAccessBtn');
+            btn.disabled = true;
+            btn.textContent = t('btn.saving');
+
+            try {
+                var settings = Object.assign({}, currentSettings || {});
+                settings.access = settings.access || {};
+                settings.access.maintenance = {
+                    enabled: document.getElementById('maintenanceEnabled').checked,
+                    mode: document.getElementById('maintenanceMode').value,
+                    title: document.getElementById('maintenanceTitle').value.trim(),
+                    text: document.getElementById('maintenanceText').value.trim(),
+                    until: document.getElementById('maintenanceUntil').value,
+                    showCountdown: document.getElementById('maintenanceCountdown').checked,
+                    bypassParam: document.getElementById('maintenanceBypassParam').value.trim() || 'preview',
+                    bypassKey: document.getElementById('maintenanceBypassKey').value
+                };
+                settings.privacy = settings.privacy || {};
+                settings.privacy.emailObfuscation = document.getElementById('emailObfuscation').checked;
+
+                var formData = new FormData();
+                formData.append('action', 'save-settings');
+                formData.append('settings', JSON.stringify(settings));
+                formData.append('csrf_token', CSRF_TOKEN);
+
+                var response = await fetch('api.php', { method: 'POST', body: formData });
+                var result = await response.json();
+
+                if (result.success) {
+                    currentSettings = result.data;
+                    populateSettings(currentSettings);
+                    showToast(t('toast.access_saved'), 'success');
+                } else {
+                    showToast(result.message, 'error');
+                }
+            } catch (error) {
+                showToast(t('toast.error_generic', {message: error.message}), 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = t('settings.save_access');
             }
         });
     }

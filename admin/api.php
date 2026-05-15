@@ -7,6 +7,7 @@
 require_once 'config.php';
 require_once __DIR__ . '/users.php';
 require_once __DIR__ . '/../includes/content-loader.php';
+require_once __DIR__ . '/../includes/seo-helper.php';
 ensureUsersFile();
 
 // Prevent PHP HTML error output from corrupting JSON responses
@@ -190,6 +191,134 @@ function formatAssetSize(int $sizeBytes): string {
     }
 
     return $sizeBytes . ' B';
+}
+
+function sanitizeAccessSettings(array $settings, array $existing): array {
+    $access = $settings['access'] ?? [];
+    if (!is_array($access)) {
+        return [];
+    }
+
+    $maintenance = $access['maintenance'] ?? [];
+    if (!is_array($maintenance)) {
+        return [];
+    }
+
+    $mode = $maintenance['mode'] ?? 'maintenance';
+    if (!in_array($mode, ['maintenance', 'offline', 'launch'], true)) {
+        $mode = 'maintenance';
+    }
+
+    $param = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)($maintenance['bypassParam'] ?? 'preview'));
+    if ($param === '') {
+        $param = 'preview';
+    }
+
+    $existingHash = (string)($existing['access']['maintenance']['bypassKeyHash'] ?? '');
+    $newKey = trim((string)($maintenance['bypassKey'] ?? ''));
+    $hash = $existingHash;
+    if ($newKey !== '') {
+        $hash = password_hash($newKey, PASSWORD_DEFAULT);
+    } elseif (!empty($maintenance['clearBypassKey'])) {
+        $hash = '';
+    }
+
+    $until = trim((string)($maintenance['until'] ?? ''));
+    if ($until !== '' && strtotime($until) === false) {
+        jsonResponse(false, null, 'Invalid maintenance date');
+    }
+
+    return [
+        'maintenance' => [
+            'enabled' => !empty($maintenance['enabled']),
+            'mode' => $mode,
+            'title' => substr(trim((string)($maintenance['title'] ?? '')), 0, 160),
+            'text' => substr(trim((string)($maintenance['text'] ?? '')), 0, 2000),
+            'until' => $until,
+            'showCountdown' => !empty($maintenance['showCountdown']),
+            'bypassParam' => substr($param, 0, 40),
+            'bypassKeyHash' => $hash,
+        ],
+    ];
+}
+
+function sanitizePrivacySettings(array $settings): array {
+    $privacy = $settings['privacy'] ?? [];
+    if (!is_array($privacy)) {
+        return [];
+    }
+    return [
+        'emailObfuscation' => !empty($privacy['emailObfuscation']),
+    ];
+}
+
+function normalizePageVisibility(array $contentData, ?array $existingData = null): array {
+    $visibility = $contentData['visibility'] ?? null;
+    if (!is_array($visibility)) {
+        unset($contentData['visibility']);
+        return $contentData;
+    }
+
+    $status = $visibility['status'] ?? 'public';
+    if (!in_array($status, ['public', 'private'], true)) {
+        $status = 'public';
+    }
+
+    $normalized = [
+        'status' => $status,
+        'title' => substr(trim((string)($visibility['title'] ?? '')), 0, 160),
+        'text' => substr(trim((string)($visibility['text'] ?? '')), 0, 1000),
+    ];
+
+    $password = trim((string)($visibility['password'] ?? ''));
+    $existingHash = (string)($existingData['visibility']['passwordHash'] ?? ($visibility['passwordHash'] ?? ''));
+    if ($password !== '') {
+        $normalized['passwordHash'] = password_hash($password, PASSWORD_DEFAULT);
+    } elseif ($status === 'private' && $existingHash !== '') {
+        $normalized['passwordHash'] = $existingHash;
+    } elseif ($status === 'private') {
+        jsonResponse(false, null, 'Private pages require a password');
+    }
+
+    if ($status === 'public' && empty($normalized['title']) && empty($normalized['text'])) {
+        unset($contentData['visibility']);
+        return $contentData;
+    }
+
+    $contentData['visibility'] = $normalized;
+    return $contentData;
+}
+
+function normalizePageSeo(array $contentData): array {
+    $seo = $contentData['seo'] ?? [];
+    if (!is_array($seo)) {
+        unset($contentData['seo']);
+        return $contentData;
+    }
+
+    $robots = trim((string)($seo['robots'] ?? 'index, follow'));
+    if (!in_array($robots, ['index, follow', 'noindex, follow', 'noindex, nofollow'], true)) {
+        $robots = 'index, follow';
+    }
+
+    $canonical = trim((string)($seo['canonical'] ?? ''));
+    if ($canonical !== '' && !filter_var($canonical, FILTER_VALIDATE_URL)) {
+        jsonResponse(false, null, 'Invalid canonical URL');
+    }
+
+    $contentData['seo'] = [
+        'title' => substr(trim((string)($seo['title'] ?? '')), 0, 120),
+        'description' => substr(trim((string)($seo['description'] ?? '')), 0, 260),
+        'answerSummary' => substr(trim((string)($seo['answerSummary'] ?? '')), 0, 500),
+        'canonical' => $canonical,
+        'robots' => $robots,
+        'ogTitle' => substr(trim((string)($seo['ogTitle'] ?? '')), 0, 120),
+        'ogDescription' => substr(trim((string)($seo['ogDescription'] ?? '')), 0, 260),
+        'ogImage' => trim((string)($seo['ogImage'] ?? '')),
+        'sitemap' => ($seo['sitemap'] ?? true) !== false,
+    ];
+
+    return $contentData;
 }
 
 function listImageFiles(string $directory, string $publicBasePath): array {
@@ -662,6 +791,21 @@ if (!isAuthenticated()) {
 }
 
 // Build page list by scanning content/pages/*.json
+function buildPageSeoHealth($lang, $slug, array $data) {
+    if (!function_exists('nibblySeoContext') || !function_exists('nibblySeoHealth')) {
+        return null;
+    }
+
+    return nibblySeoHealth(nibblySeoContext([
+        'contentPage' => $lang . '_' . $slug,
+        'currentLang' => $lang,
+        'currentPage' => $slug,
+        'pageTitle' => $data['title'] ?? '',
+        'pageDescription' => $data['description'] ?? '',
+        'data' => $data,
+    ]));
+}
+
 function buildPageList() {
     global $SITE_LANGUAGES;
     $allLangs = array_keys($SITE_LANGUAGES);
@@ -689,6 +833,7 @@ function buildPageList() {
         $slugsByLang[$slug][$lang] = [
             'title' => $title,
             'lastModified' => $lastModified,
+            'seoHealth' => buildPageSeoHealth($lang, $slug, is_array($data) ? $data : []),
         ];
     }
 
@@ -706,6 +851,7 @@ function buildPageList() {
                     'exists' => true,
                     'title' => $langData[$lang]['title'],
                     'lastModified' => $langData[$lang]['lastModified'],
+                    'seoHealth' => $langData[$lang]['seoHealth'],
                 ];
             }
         }
@@ -899,6 +1045,22 @@ switch ($action) {
             'lang' => $lang,
             'title' => $title,
             'description' => '',
+            'visibility' => [
+                'status' => 'public',
+                'title' => '',
+                'text' => '',
+            ],
+            'seo' => [
+                'title' => '',
+                'description' => '',
+                'answerSummary' => '',
+                'canonical' => '',
+                'robots' => 'index, follow',
+                'ogTitle' => '',
+                'ogDescription' => '',
+                'ogImage' => '',
+                'sitemap' => true,
+            ],
             'lastModified' => date('c'),
             'sections' => [
                 [
@@ -1208,6 +1370,9 @@ switch ($action) {
         }
 
         $filepath = CONTENT_PATH . $page . '.json';
+        $existingData = file_exists($filepath) ? (json_decode(file_get_contents($filepath), true) ?: []) : [];
+        $contentData = normalizePageVisibility($contentData, $existingData);
+        $contentData = normalizePageSeo($contentData);
 
         // Create backup if file exists
         if (file_exists($filepath)) {
@@ -1230,6 +1395,9 @@ switch ($action) {
         }
 
         $responseData = ['lastModified' => $contentData['lastModified']];
+        if (preg_match('/^([a-z]{2})_([a-z0-9]+(?:-[a-z0-9]+)*)$/', $page, $pageParts)) {
+            $responseData['seoHealth'] = buildPageSeoHealth($pageParts[1], $pageParts[2], $contentData);
+        }
 
         // Optional: re-render the full sections list so the client can patch
         // the .editable-content-area DOM without a full page reload (used
@@ -2794,20 +2962,44 @@ switch ($action) {
                 'smtpUsername' => '',
                 'smtpPassword' => '',
                 'smtpEncryption' => 'tls'
+            ],
+            'privacy' => [
+                'emailObfuscation' => false
+            ],
+            'access' => [
+                'maintenance' => [
+                    'enabled' => false,
+                    'mode' => 'maintenance',
+                    'title' => t('settings.maintenance_default_title'),
+                    'text' => t('settings.maintenance_default_text'),
+                    'until' => '',
+                    'showCountdown' => false,
+                    'bypassParam' => 'preview',
+                    'bypassKeyHash' => ''
+                ]
+            ],
+            'seo' => [
+                'defaultOgImage' => ''
             ]
         ];
 
         if (!defined('SETTINGS_PATH') || !file_exists(SETTINGS_PATH)) {
+            $defaults['access']['maintenance']['hasBypassKey'] = false;
+            unset($defaults['access']['maintenance']['bypassKeyHash']);
             jsonResponse(true, $defaults);
         }
 
         $settings = json_decode(file_get_contents(SETTINGS_PATH), true);
         if ($settings === null) {
+            $defaults['access']['maintenance']['hasBypassKey'] = false;
+            unset($defaults['access']['maintenance']['bypassKeyHash']);
             jsonResponse(true, $defaults);
         }
 
         // Merge with defaults to ensure all keys exist
         $merged = array_replace_recursive($defaults, $settings);
+        $merged['access']['maintenance']['hasBypassKey'] = !empty($merged['access']['maintenance']['bypassKeyHash']);
+        unset($merged['access']['maintenance']['bypassKeyHash']);
         jsonResponse(true, $merged);
         break;
 
@@ -2833,7 +3025,8 @@ switch ($action) {
             'branding' => ['logo', 'logoDark', 'adminLogo', 'name', 'showBranding', 'logoDisplay', 'logoSize'],
             'theme' => ['adminTheme', 'primaryColor', 'accentColor', 'sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg', 'buttonGlow', 'buttonRadius'],
             'general' => ['adminLanguage', 'frontendLoginRedirect'],
-            'email' => ['method', 'recipientEmail', 'fromEmail', 'fromName', 'smtpHost', 'smtpPort', 'smtpUsername', 'smtpPassword', 'smtpEncryption']
+            'email' => ['method', 'recipientEmail', 'fromEmail', 'fromName', 'smtpHost', 'smtpPort', 'smtpUsername', 'smtpPassword', 'smtpEncryption'],
+            'seo' => ['defaultOgImage']
         ];
 
         // Top-level scalar settings (not nested under a group)
@@ -2891,6 +3084,17 @@ switch ($action) {
                             preg_match('#[:\x00]#', $value)
                         )) {
                             jsonResponse(false, null, 'Invalid logo path');
+                        }
+                    }
+
+                    if ($group === 'seo' && $key === 'defaultOgImage') {
+                        $value = trim((string)$value);
+                        if ($value !== '' && (
+                            strpos($value, '..') !== false ||
+                            !str_starts_with($value, '/assets/images/') ||
+                            preg_match('#[:\x00]#', $value)
+                        )) {
+                            jsonResponse(false, null, 'Invalid default Open Graph image path');
                         }
                     }
 
@@ -2989,6 +3193,14 @@ switch ($action) {
         if (file_exists(SETTINGS_PATH)) {
             $existing = json_decode(file_get_contents(SETTINGS_PATH), true) ?: [];
         }
+        $accessPatch = sanitizeAccessSettings($settings, $existing);
+        if ($accessPatch) {
+            $sanitized['access'] = $accessPatch;
+        }
+        $privacyPatch = sanitizePrivacySettings($settings);
+        if ($privacyPatch) {
+            $sanitized['privacy'] = $privacyPatch;
+        }
         $merged = array_replace_recursive($existing, $sanitized);
 
         $result = file_put_contents(
@@ -3001,7 +3213,10 @@ switch ($action) {
             jsonResponse(false, null, 'Error saving settings');
         }
 
-        jsonResponse(true, $merged, 'Settings saved');
+        $publicMerged = $merged;
+        $publicMerged['access']['maintenance']['hasBypassKey'] = !empty($publicMerged['access']['maintenance']['bypassKeyHash']);
+        unset($publicMerged['access']['maintenance']['bypassKeyHash']);
+        jsonResponse(true, $publicMerged, 'Settings saved');
         break;
 
     case 'test-email':

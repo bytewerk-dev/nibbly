@@ -21,6 +21,12 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+require_once __DIR__ . '/access-guard.php';
+nibblyAccessEnforceMaintenance();
+if (!empty($contentPage)) {
+    nibblyAccessEnforceCurrentTemplatePage((string)$contentPage);
+}
+
 // Auto-load site config if not already loaded
 $_configPath = __DIR__ . '/../admin/config.php';
 if (!defined('SITE_LANG_DEFAULT') && file_exists($_configPath)) {
@@ -90,6 +96,7 @@ if (!isset($NAV_ITEMS)) {
 require_once __DIR__ . '/menu-helpers.php';
 require_once __DIR__ . '/asset-helpers.php';
 require_once __DIR__ . '/version.php';
+require_once __DIR__ . '/seo-helper.php';
 
 $_allNavItems = $NAV_ITEMS[$currentLang] ?? $NAV_ITEMS[$defaultLang] ?? [];
 $navItems = getMenuItems('header', $currentLang, $basePath ?? '', $_allNavItems);
@@ -127,15 +134,39 @@ if (file_exists($_settingsPath)) {
     if (!empty($_settings['favicon_png'])) $_faviconPng = ltrim($_settings['favicon_png'], '/');
 }
 $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme']['buttonGlow'];
+$_seoContext = nibblySeoContext([
+    'contentPage' => $contentPage ?? null,
+    'currentLang' => $currentLang,
+    'currentPage' => $currentPage ?? '',
+    'pageTitle' => $pageTitle ?? '',
+    'pageDescription' => $pageDescription ?? '',
+    'data' => isset($data) && is_array($data) ? $data : null,
+]);
+$_seoHealth = nibblySeoHealth($_seoContext);
+$_seoJsonLd = nibblySeoJsonLd($_seoContext, $langLinks);
+
+require_once __DIR__ . '/email-obfuscator.php';
+nibblyStartEmailObfuscation();
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo htmlspecialchars($currentLang); ?>"<?php if ($_editorFlat) echo ' class="editor-flat"'; ?>>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="<?php echo htmlspecialchars($pageDescription ?? ''); ?>">
-    <meta name="robots" content="index, follow">
+    <meta name="description" content="<?php echo htmlspecialchars($_seoContext['description']); ?>">
+    <meta name="robots" content="<?php echo htmlspecialchars($_seoContext['robots']); ?>">
     <meta name="generator" content="Nibbly <?php echo htmlspecialchars(nibblyVersion(), ENT_QUOTES, 'UTF-8'); ?>">
+    <?php if (!empty($_seoContext['canonical'])): ?>
+    <link rel="canonical" href="<?php echo htmlspecialchars($_seoContext['canonical']); ?>">
+    <?php endif; ?>
+    <?php foreach ($SITE_LANGUAGES as $_altCode => $_altName): ?>
+    <?php if (isset($langLinks[$_altCode])): ?>
+    <link rel="alternate" hreflang="<?php echo htmlspecialchars($_altCode); ?>" href="<?php echo htmlspecialchars(nibblySeoPageUrl($_altCode, $currentPageKey)); ?>">
+    <?php endif; ?>
+    <?php endforeach; ?>
+    <?php if (isset($langLinks[$defaultLang])): ?>
+    <link rel="alternate" hreflang="x-default" href="<?php echo htmlspecialchars(nibblySeoPageUrl($defaultLang, $currentPageKey)); ?>">
+    <?php endif; ?>
     <?php $_faviconType = pathinfo($_favicon, PATHINFO_EXTENSION) === 'svg' ? 'image/svg+xml' : 'image/png'; ?>
     <link rel="icon" href="<?php echo $basePath . htmlspecialchars($_favicon); ?>" type="<?php echo $_faviconType; ?>">
     <?php if ($_faviconPng): ?>
@@ -149,12 +180,22 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
     <!-- <link rel="stylesheet" href="<?php echo $basePath; ?>css/fonts.css"> -->
 
     <!-- Open Graph -->
-    <meta property="og:title" content="<?php echo htmlspecialchars($pageTitle ?? ''); ?>">
-    <meta property="og:description" content="<?php echo htmlspecialchars($pageDescription ?? ''); ?>">
+    <meta property="og:title" content="<?php echo htmlspecialchars($_seoContext['ogTitle']); ?>">
+    <meta property="og:description" content="<?php echo htmlspecialchars($_seoContext['ogDescription']); ?>">
     <meta property="og:type" content="website">
     <meta property="og:locale" content="<?php echo htmlspecialchars($currentLang); ?>">
+    <meta property="og:url" content="<?php echo htmlspecialchars($_seoContext['canonical'] ?: nibblySeoCurrentUrl()); ?>">
+    <?php if (!empty($_seoContext['ogImage'])): ?>
+    <meta property="og:image" content="<?php echo htmlspecialchars($_seoContext['ogImage']); ?>">
+    <meta name="twitter:card" content="summary_large_image">
+    <?php else: ?>
+    <meta name="twitter:card" content="summary">
+    <?php endif; ?>
+    <meta name="twitter:title" content="<?php echo htmlspecialchars($_seoContext['ogTitle']); ?>">
+    <meta name="twitter:description" content="<?php echo htmlspecialchars($_seoContext['ogDescription']); ?>">
 
-    <title><?php echo htmlspecialchars($pageTitle ?? 'Website'); ?></title>
+    <title><?php echo htmlspecialchars($_seoContext['title'] ?: 'Website'); ?></title>
+    <script type="application/ld+json"><?php echo json_encode($_seoJsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?></script>
 
     <?php echo nibblyCoreStyles($basePath); ?>
     <?php if (file_exists(__DIR__ . '/../css/website.css')): ?>
@@ -209,6 +250,7 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
     </script>
 </head>
 <body class="<?php echo $isHomepage ? 'page-home' : 'page-subpage'; ?><?php echo isset($pageClass) ? ' ' . $pageClass : ''; ?><?php echo !empty($_SESSION['nibbly_dev_login']) ? ' has-dev-login' : ''; ?>"<?php echo !empty($_SESSION['nibbly_dev_login']) ? ' data-dev-login="true"' : ''; ?>>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
 
     <!-- Fixed Header -->
     <header class="site-header" id="siteHeader">
@@ -246,7 +288,7 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
             </a>
 
             <!-- Desktop Navigation -->
-            <nav class="nav-main">
+            <nav class="nav-main" aria-label="Primary navigation">
                 <ul class="nav-list">
                     <?php foreach ($navItems as $item):
                         $hasChildren = !empty($item['children']);
@@ -263,7 +305,7 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
                     <li<?php echo $hasChildren ? ' class="nav-item--has-children"' : ''; ?>>
                         <a href="<?php echo htmlspecialchars($_buildNavHref($item)); ?>"<?php echo $_navLinkAttrs($item, $isActive); ?>>
                             <?php echo htmlspecialchars($item['label']); ?>
-                            <?php if ($hasChildren): ?><svg class="nav-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg><?php endif; ?>
+                            <?php if ($hasChildren): ?><svg class="nav-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><polyline points="6 9 12 15 18 9"/></svg><?php endif; ?>
                         </a>
                         <?php if ($hasChildren): ?>
                         <ul class="nav-dropdown">
@@ -285,11 +327,11 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
 
                 <!-- Language Selector -->
                 <?php if (count($SITE_LANGUAGES) > 1): ?>
-                <div class="nav-lang">
+                <div class="nav-lang" aria-label="Language selection">
                     <?php $langCodes = array_keys($SITE_LANGUAGES); ?>
                     <?php foreach ($langCodes as $i => $code): ?>
                         <?php if ($i > 0): ?><span class="lang-separator">|</span><?php endif; ?>
-                        <a href="<?php echo $langLinks[$code]; ?>" class="lang-link<?php echo ($code === $currentLang) ? ' active' : ''; ?>"><?php echo strtoupper($code); ?></a>
+                        <a href="<?php echo $langLinks[$code]; ?>" class="lang-link<?php echo ($code === $currentLang) ? ' active' : ''; ?>"<?php echo ($code === $currentLang) ? ' aria-current="true"' : ''; ?>><?php echo strtoupper($code); ?></a>
                     <?php endforeach; ?>
                 </div>
                 <?php endif; ?>
@@ -302,7 +344,7 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
             </nav>
 
             <!-- Hamburger Menu Button -->
-            <button class="hamburger" id="hamburger" aria-label="Menu" aria-expanded="false">
+            <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavOverlay">
                 <span></span>
                 <span></span>
                 <span></span>
@@ -311,8 +353,8 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
     </header>
 
     <!-- Mobile Navigation Overlay -->
-    <div class="mobile-nav-overlay" id="mobileNavOverlay">
-        <nav class="mobile-nav">
+    <div class="mobile-nav-overlay" id="mobileNavOverlay" aria-hidden="true">
+        <nav class="mobile-nav" aria-label="Mobile navigation">
             <ul class="mobile-nav-list">
                 <?php foreach ($navItems as $item):
                     $hasChildren = !empty($item['children']);
@@ -351,7 +393,7 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
             <div class="mobile-nav-lang">
                 <?php foreach ($langCodes as $i => $code): ?>
                     <?php if ($i > 0): ?><span>|</span><?php endif; ?>
-                    <a href="<?php echo $langLinks[$code]; ?>"<?php echo ($code === $currentLang) ? ' class="active"' : ''; ?>><?php echo strtoupper($code); ?></a>
+                    <a href="<?php echo $langLinks[$code]; ?>"<?php echo ($code === $currentLang) ? ' class="active" aria-current="true"' : ''; ?>><?php echo strtoupper($code); ?></a>
                 <?php endforeach; ?>
             </div>
             <?php endif; ?>

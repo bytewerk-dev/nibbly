@@ -10,6 +10,8 @@ if (!file_exists(__DIR__ . '/admin/config.php')) {
 }
 
 require_once __DIR__ . '/admin/config.php';
+require_once __DIR__ . '/includes/access-guard.php';
+nibblyAccessEnforceMaintenance();
 $defaultLang = SITE_LANG_DEFAULT;
 $basePath = '';
 
@@ -18,6 +20,7 @@ $langHome = __DIR__ . '/' . $defaultLang . '/index.php';
 $jsonHome = __DIR__ . '/content/pages/' . $defaultLang . '_home.json';
 
 if (file_exists($langHome)) {
+    nibblyAccessEnforceCurrentTemplatePage($defaultLang . '_home');
     include $langHome;
 } elseif (file_exists($jsonHome)) {
     $lang = $defaultLang;

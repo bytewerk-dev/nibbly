@@ -50,6 +50,54 @@
         return value && value !== key ? value : fallback;
     }
 
+    const A11Y_FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    let activeDialog = null;
+    let activeDialogPreviousFocus = null;
+
+    function setupDialogA11y(modal, titleId, initialSelector) {
+        const dialog = modal.querySelector('.editor-modal-content');
+        if (!dialog) return;
+        dialog.setAttribute('role', 'dialog');
+        dialog.setAttribute('aria-modal', 'true');
+        if (titleId) dialog.setAttribute('aria-labelledby', titleId);
+        modal.dataset.initialFocus = initialSelector || '.editor-close-btn';
+        if (modal.dataset.a11yReady === 'true') return;
+        modal.dataset.a11yReady = 'true';
+        modal.addEventListener('keydown', function(e) {
+            if (e.key !== 'Tab' || !modal.classList.contains('active')) return;
+            const focusable = Array.from(modal.querySelectorAll(A11Y_FOCUSABLE)).filter(el => el.offsetParent !== null);
+            if (!focusable.length) return;
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        });
+    }
+
+    function openDialogA11y(modal) {
+        activeDialog = modal;
+        activeDialogPreviousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        setTimeout(() => {
+            const target = modal.querySelector(modal.dataset.initialFocus || A11Y_FOCUSABLE) || modal.querySelector(A11Y_FOCUSABLE);
+            if (target) target.focus();
+        }, 0);
+    }
+
+    function closeDialogA11y(modal) {
+        if (activeDialog === modal && activeDialogPreviousFocus && document.contains(activeDialogPreviousFocus)) {
+            activeDialogPreviousFocus.focus();
+        }
+        if (activeDialog === modal) {
+            activeDialog = null;
+            activeDialogPreviousFocus = null;
+        }
+    }
+
     // ============================================================
     // CONFIGURATION
     // ============================================================
@@ -329,11 +377,11 @@
         modal.id = 'confirm-dialog-modal';
         modal.className = 'editor-modal';
         modal.innerHTML = `
-            <div class="editor-modal-backdrop"></div>
+            <div class="editor-modal-backdrop" aria-hidden="true"></div>
             <div class="editor-modal-content editor-modal-small">
                 <div class="editor-modal-header">
                     <h3 id="confirm-dialog-title">Confirm</h3>
-                    <button type="button" class="editor-close-btn" onclick="InlineEditor.closeConfirmDialog(false)">&times;</button>
+                    <button type="button" class="editor-close-btn" onclick="InlineEditor.closeConfirmDialog(false)" aria-label="${escHtml(tFallback('close', 'Close'))}">&times;</button>
                 </div>
                 <div class="editor-modal-body">
                     <div class="confirm-dialog-content">
@@ -349,6 +397,7 @@
             </div>
         `;
         document.body.appendChild(modal);
+        setupDialogA11y(modal, 'confirm-dialog-title', '#confirm-dialog-action-btn');
 
         modal.querySelector('.editor-modal-backdrop').addEventListener('click', () => closeConfirmDialog(false));
 
@@ -366,8 +415,11 @@
         document.getElementById('confirm-dialog-hint').style.display = hint ? 'block' : 'none';
         document.getElementById('confirm-dialog-action-btn').textContent = buttonText;
 
-        document.getElementById('confirm-dialog-modal').classList.add('active');
+        const modal = document.getElementById('confirm-dialog-modal');
+        modal.classList.add('active');
         document.body.style.overflow = 'hidden';
+        openDialogA11y(modal);
+        openDialogA11y(modal);
     }
 
     function closeConfirmDialog(confirmed) {
@@ -375,6 +427,7 @@
         modal.classList.remove('active');
         ModalResize.reset(modal.querySelector('.editor-modal-content'));
         document.body.style.overflow = '';
+        closeDialogA11y(modal);
 
         if (confirmCallback) {
             const cb = confirmCallback;
@@ -396,11 +449,11 @@
         modal.id = 'prompt-dialog-modal';
         modal.className = 'editor-modal';
         modal.innerHTML = `
-            <div class="editor-modal-backdrop"></div>
+            <div class="editor-modal-backdrop" aria-hidden="true"></div>
             <div class="editor-modal-content editor-modal-small">
                 <div class="editor-modal-header">
                     <h3 id="prompt-dialog-title">Eingabe</h3>
-                    <button type="button" class="editor-close-btn" onclick="InlineEditor.closePromptDialog(null)">&times;</button>
+                    <button type="button" class="editor-close-btn" onclick="InlineEditor.closePromptDialog(null)" aria-label="${escHtml(tFallback('close', 'Close'))}">&times;</button>
                 </div>
                 <div class="editor-modal-body">
                     <div class="prompt-dialog-content">
@@ -415,6 +468,7 @@
             </div>
         `;
         document.body.appendChild(modal);
+        setupDialogA11y(modal, 'prompt-dialog-title', '#prompt-dialog-input');
 
         modal.querySelector('.editor-modal-backdrop').addEventListener('click', () => closePromptDialog(null));
 
@@ -438,8 +492,10 @@
         document.getElementById('prompt-dialog-label').textContent = label;
         document.getElementById('prompt-dialog-input').value = defaultValue || '';
 
-        document.getElementById('prompt-dialog-modal').classList.add('active');
+        const modal = document.getElementById('prompt-dialog-modal');
+        modal.classList.add('active');
         document.body.style.overflow = 'hidden';
+        openDialogA11y(modal);
 
         // Focus on input
         setTimeout(() => {
@@ -453,6 +509,7 @@
         modal.classList.remove('active');
         ModalResize.reset(modal.querySelector('.editor-modal-content'));
         document.body.style.overflow = '';
+        closeDialogA11y(modal);
 
         if (promptCallback) {
             const cb = promptCallback;
@@ -650,6 +707,24 @@
         const logoHtml = showBranding
             ? `<img src="${brandLogo}" alt="${brandName}" width="24" height="24" class="${logoClass}">`
             : '';
+        const seoHealth = window.NB_SEO_HEALTH || { status: 'yellow', score: 0, label: 'SEO prüfen', issues: ['Keine SEO-Prüfung verfügbar.'] };
+        const seoIssues = Array.isArray(seoHealth.issues) ? seoHealth.issues : [];
+        const seoDetail = seoIssues.map(issue => `<li>${escHtml(issue)}</li>`).join('');
+        const seoA11yLabel = [seoHealth.label || 'SEO', `${Number(seoHealth.score || 0)}/100`].concat(seoIssues).join('. ');
+        const contentEditorHref = EditorConfig.isNewsPost
+            ? '/admin/dashboard.php?tab=news&post=' + encodeURIComponent(EditorConfig.newsPostId || '')
+            : '/admin/dashboard#page/' + encodeURIComponent(EditorConfig.currentPage || '');
+        const seoHtml = `
+            <a class="admin-bar-seo admin-bar-seo--${escHtml(seoHealth.status || 'yellow')}" href="${contentEditorHref}" aria-label="${escHtml(seoA11yLabel)}">
+                <span class="admin-bar-seo-dot" aria-hidden="true"></span>
+                <span class="admin-bar-seo-label">${escHtml(seoHealth.label || 'SEO')}</span>
+                <span class="admin-bar-seo-score">${Number(seoHealth.score || 0)}/100</span>
+                <div class="admin-bar-seo-popover" role="tooltip">
+                    <strong>${escHtml(seoHealth.label || 'SEO')}</strong>
+                    <ul>${seoDetail}</ul>
+                </div>
+            </a>
+        `;
         bar.innerHTML = `
             <div class="admin-bar-inner">
                 <div class="admin-bar-left">
@@ -657,7 +732,7 @@
                     <a href="/admin/dashboard" class="admin-bar-link"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg> ${t('dashboard')}</a>
                 </div>
                 <div class="admin-bar-center">
-                    <span class="admin-bar-info" id="admin-bar-info"></span>
+                    <span class="admin-bar-info" id="admin-bar-info" role="status" aria-live="polite" aria-atomic="true"></span>
                     <div class="admin-bar-edit-controls" style="display:none;">
                         <button type="button" class="admin-bar-btn admin-bar-btn-undo" id="admin-btn-undo" disabled title="${t('undo')} (${navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'}+Z)">
                             ${Icons.undo}
@@ -684,6 +759,7 @@
                     </div>
                 </div>
                 <div class="admin-bar-right">
+                    ${seoHtml}
                     <a href="/admin/?logout=1" class="admin-bar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg> ${t('logout')}</a>
                 </div>
             </div>
@@ -1537,11 +1613,11 @@
         modal.id = 'editor-modal';
         modal.className = 'editor-modal';
         modal.innerHTML = `
-            <div class="editor-modal-backdrop"></div>
+            <div class="editor-modal-backdrop" aria-hidden="true"></div>
             <div class="editor-modal-content">
                 <div class="editor-modal-header">
                     <h3 id="editor-modal-title">${t('edit')}</h3>
-                    <button type="button" class="editor-close-btn" onclick="InlineEditor.closeModal()">&times;</button>
+                    <button type="button" class="editor-close-btn" onclick="InlineEditor.closeModal()" aria-label="${escHtml(tFallback('close', 'Close'))}">&times;</button>
                 </div>
                 <div class="editor-modal-body">
                     ${fieldsHtml}
@@ -1553,6 +1629,7 @@
             </div>
         `;
         document.body.appendChild(modal);
+        setupDialogA11y(modal, 'editor-modal-title', '.editor-modal-body input, .editor-modal-body textarea, .editor-modal-body select, .editor-close-btn');
 
         modal.querySelector('.editor-modal-backdrop').addEventListener('click', closeModal);
 
@@ -1583,11 +1660,11 @@
         modal.id = 'editable-group-modal';
         modal.className = 'editor-modal';
         modal.innerHTML = `
-            <div class="editor-modal-backdrop"></div>
+            <div class="editor-modal-backdrop" aria-hidden="true"></div>
             <div class="editor-modal-content">
                 <div class="editor-modal-header">
                     <h3 id="editable-group-modal-title">${t('edit')}</h3>
-                    <button type="button" class="editor-close-btn" onclick="InlineEditor.closeGroupEditor()">&times;</button>
+                    <button type="button" class="editor-close-btn" onclick="InlineEditor.closeGroupEditor()" aria-label="${escHtml(tFallback('close', 'Close'))}">&times;</button>
                 </div>
                 <div class="editor-modal-body" id="editable-group-modal-body"></div>
                 <div class="editor-modal-footer">
@@ -1597,6 +1674,7 @@
             </div>
         `;
         document.body.appendChild(modal);
+        setupDialogA11y(modal, 'editable-group-modal-title', '#editable-group-modal-body input, #editable-group-modal-body textarea, #editable-group-modal-body select, .editor-close-btn');
         modal.querySelector('.editor-modal-backdrop').addEventListener('click', closeGroupEditor);
         ModalResize.init(modal.querySelector('.editor-modal-content'));
     }
@@ -1815,6 +1893,7 @@
         modal.classList.remove('active');
         ModalResize.reset(modal.querySelector('.editor-modal-content'));
         document.body.style.overflow = '';
+        closeDialogA11y(modal);
         EditorConfig.currentGroup = null;
     }
 
@@ -1892,21 +1971,22 @@
         modal.id = 'add-section-modal';
         modal.className = 'editor-modal';
         modal.innerHTML = `
-            <div class="editor-modal-backdrop"></div>
+            <div class="editor-modal-backdrop" aria-hidden="true"></div>
             <div class="editor-modal-content editor-modal-small">
                 <div class="editor-modal-header">
-                    <h3>${t('add_block')}</h3>
-                    <button type="button" class="editor-close-btn" onclick="InlineEditor.closeAddModal()">&times;</button>
+                    <h3 id="add-section-modal-title">${t('add_block')}</h3>
+                    <button type="button" class="editor-close-btn" onclick="InlineEditor.closeAddModal()" aria-label="${escHtml(tFallback('close', 'Close'))}">&times;</button>
                 </div>
                 <div class="editor-modal-body">
                     <div class="add-section-search">
-                        <input type="text" id="add-section-search-input" placeholder="${t('search_blocks')}" autocomplete="off">
+                        <input type="text" id="add-section-search-input" aria-label="${escHtml(t('search_blocks'))}" placeholder="${t('search_blocks')}" autocomplete="off">
                     </div>
                     ${categoriesHtml}
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
+        setupDialogA11y(modal, 'add-section-modal-title', '#add-section-search-input');
 
         modal.querySelector('.editor-modal-backdrop').addEventListener('click', closeAddModal);
 
@@ -2384,6 +2464,7 @@
         const modal = document.getElementById('add-section-modal');
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
+        openDialogA11y(modal);
 
         // Reset search and show all
         const searchInput = document.getElementById('add-section-search-input');
@@ -2399,6 +2480,7 @@
         modal.classList.remove('active');
         ModalResize.reset(modal.querySelector('.editor-modal-content'));
         document.body.style.overflow = '';
+        closeDialogA11y(modal);
         addAfterIndex = null;
         addContentPage = null;
     }
@@ -2699,6 +2781,7 @@
             modalTitle.textContent = formatEditorTitle(type);
             modal.classList.add('active');
             document.body.style.overflow = 'hidden';
+            openDialogA11y(modal);
             return;
         }
 
@@ -2715,6 +2798,7 @@
 
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
+        openDialogA11y(modal);
     }
 
     function closeModal() {
@@ -2722,6 +2806,7 @@
         modal.classList.remove('active');
         ModalResize.reset(modal.querySelector('.editor-modal-content'));
         document.body.style.overflow = '';
+        closeDialogA11y(modal);
         EditorConfig.currentSection = null;
         EditorConfig.currentSectionIndex = null;
         EditorConfig.currentContentPage = null;
@@ -3336,6 +3421,9 @@
 
         const toast = document.createElement('div');
         toast.className = `editor-toast editor-toast-${type}`;
+        toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+        toast.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
+        toast.setAttribute('aria-atomic', 'true');
         toast.innerHTML = `<span class="toast-message">${message}</span>`;
         toastTimeout = setTimeout(() => toast.remove(), 3000);
 

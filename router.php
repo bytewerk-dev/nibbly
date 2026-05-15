@@ -28,9 +28,25 @@ if ($uri !== '/' && is_file($filePath)) {
     return false;
 }
 
+if ($uri === '/sitemap.xml' || $uri === '/robots.txt') {
+    if (!is_file($root . '/admin/config.php')) {
+        http_response_code(404);
+        return true;
+    }
+    require_once $root . '/admin/config.php';
+    require_once $root . '/includes/seo-helper.php';
+    if ($uri === '/sitemap.xml') {
+        nibblySeoServeSitemap();
+    }
+    nibblySeoServeRobots();
+}
+
 // Apply migration redirects before slug-based routing.
 require_once $root . '/includes/redirect-helper.php';
 applyRedirects($_SERVER['REQUEST_URI'] ?? '/');
+
+require_once $root . '/includes/access-guard.php';
+nibblyAccessEnforceMaintenance();
 
 // Serve existing directories with index.php
 if (is_dir($filePath)) {
@@ -88,6 +104,7 @@ if (preg_match('#^([a-z]{2})/([a-zA-Z0-9_-]+)$#', $cleanUri, $m)) {
     // 1. Physical PHP file has priority
     $langFile = $root . '/' . $lang . '/' . $slug . '.php';
     if (is_file($langFile)) {
+        nibblyAccessEnforceCurrentTemplatePage($lang . '_' . $slug);
         include $langFile;
         return true;
     }
@@ -110,6 +127,7 @@ if (preg_match('#^[a-zA-Z0-9_-]+$#', $cleanUri)) {
     $langFile = $root . '/' . $primaryLang . '/' . $slug . '.php';
     if (is_file($langFile)) {
         $basePath = '';
+        nibblyAccessEnforceCurrentTemplatePage($primaryLang . '_' . $slug);
         include $langFile;
         return true;
     }

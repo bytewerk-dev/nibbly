@@ -110,7 +110,7 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
             ?>
             <div class="footer-col footer-col--nav">
                 <p class="footer-col-heading"><?php echo htmlspecialchars(getMenuLabel($_menuId, $currentLang)); ?></p>
-                <nav class="meta-links">
+                <nav class="meta-links" aria-label="<?php echo htmlspecialchars(getMenuLabel($_menuId, $currentLang)); ?>">
                     <?php foreach ($_menuItems as $navItem): ?>
                     <a href="<?php echo $basePath . htmlspecialchars($navItem['href']); ?>"><?php echo htmlspecialchars($navItem['label']); ?></a>
                     <?php endforeach; ?>
@@ -128,6 +128,11 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
     <script>
     (function() {
         'use strict';
+
+        const mainEl = document.querySelector('main');
+        if (mainEl && !mainEl.id) {
+            mainEl.id = 'main-content';
+        }
 
         // ============================================================
         // HEADER SCROLL BEHAVIOR
@@ -179,22 +184,30 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
 
                 if (isOpen) {
                     mobileNavOverlay.classList.remove('active');
+                    mobileNavOverlay.setAttribute('aria-hidden', 'true');
                     hamburger.classList.remove('active');
                     hamburger.setAttribute('aria-expanded', 'false');
+                    hamburger.setAttribute('aria-label', 'Open menu');
                     document.body.style.overflow = '';
                 } else {
                     mobileNavOverlay.classList.add('active');
+                    mobileNavOverlay.setAttribute('aria-hidden', 'false');
                     hamburger.classList.add('active');
                     hamburger.setAttribute('aria-expanded', 'true');
+                    hamburger.setAttribute('aria-label', 'Close menu');
                     document.body.style.overflow = 'hidden';
+                    var firstMobileLink = mobileNavOverlay.querySelector('a, button');
+                    if (firstMobileLink) firstMobileLink.focus();
                 }
             });
 
             mobileNavOverlay.querySelectorAll('a').forEach(function(link) {
                 link.addEventListener('click', function() {
                     mobileNavOverlay.classList.remove('active');
+                    mobileNavOverlay.setAttribute('aria-hidden', 'true');
                     hamburger.classList.remove('active');
                     hamburger.setAttribute('aria-expanded', 'false');
+                    hamburger.setAttribute('aria-label', 'Open menu');
                     document.body.style.overflow = '';
                 });
             });
@@ -202,9 +215,12 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape' && mobileNavOverlay.classList.contains('active')) {
                     mobileNavOverlay.classList.remove('active');
+                    mobileNavOverlay.setAttribute('aria-hidden', 'true');
                     hamburger.classList.remove('active');
                     hamburger.setAttribute('aria-expanded', 'false');
+                    hamburger.setAttribute('aria-label', 'Open menu');
                     document.body.style.overflow = '';
+                    hamburger.focus();
                 }
             });
         }
@@ -605,6 +621,10 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
     <script src="<?php echo $basePath; ?>js/faq-accordion.js"></script>
     <?php endif; ?>
 
+    <?php if (!$isAdminLoggedIn && !empty($_settings['privacy']['emailObfuscation']) && file_exists(__DIR__ . '/../js/email-obfuscator.js')): ?>
+    <script src="<?php echo $basePath; ?>js/email-obfuscator.js"></script>
+    <?php endif; ?>
+
     <?php if ($isAdminLoggedIn): ?>
     <!-- Inline Editor for logged-in admins -->
     <meta name="csrf-token" content="<?php echo htmlspecialchars($csrfToken); ?>">
@@ -640,6 +660,7 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
     window.NB_LANG = <?php echo json_encode(tEditorAll(), JSON_UNESCAPED_UNICODE); ?>;
     window.NB_MENUS = <?php echo json_encode(getMenuRegistry()['menus'] ?? [], JSON_UNESCAPED_UNICODE); ?>;
     window.NB_AVAILABLE_ICONS = <?php echo json_encode(function_exists('getAvailableIcons') ? getAvailableIcons() : [], JSON_UNESCAPED_UNICODE); ?>;
+    window.NB_SEO_HEALTH = <?php echo json_encode($_seoHealth ?? ['status' => 'yellow', 'score' => 0, 'label' => 'SEO prüfen', 'issues' => ['SEO-Daten konnten nicht berechnet werden.']], JSON_UNESCAPED_UNICODE); ?>;
     <?php
     // Build lightweight page list for link picker (slug → title for current language)
     $_linkPages = [];
