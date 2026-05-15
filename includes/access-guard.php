@@ -1,0 +1,268 @@
+<?php
+/**
+ * Central frontend access controls for maintenance mode and private pages.
+ */
+
+function nibblyAccessStartSession(): void {
+    if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
+        session_start();
+    }
+}
+
+function nibblyAccessSiteRoot(): string {
+    return dirname(__DIR__);
+}
+
+function nibblyAccessSettings(): array {
+    $path = nibblyAccessSiteRoot() . '/content/settings.json';
+    if (!is_file($path)) {
+        return [];
+    }
+    $settings = json_decode((string)file_get_contents($path), true);
+    return is_array($settings) ? $settings : [];
+}
+
+function nibblyAccessIsLoggedIn(): bool {
+    nibblyAccessStartSession();
+    if (empty($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+        return false;
+    }
+    if (defined('SESSION_LIFETIME') && !empty($_SESSION['admin_login_time'])) {
+        if (time() - (int)$_SESSION['admin_login_time'] > SESSION_LIFETIME) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function nibblyAccessCurrentPath(): string {
+    $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+    return '/' . ltrim((string)$path, '/');
+}
+
+function nibblyAccessIsBackendOrAssetPath(string $path): bool {
+    return preg_match('#^/(admin|api|assets|css|js)(/|$)#', $path) === 1
+        || preg_match('#^/(favicon\.ico|robots\.txt|sitemap\.xml)$#', $path) === 1;
+}
+
+function nibblyAccessVerifySecret(string $secret, string $hash): bool {
+    $secret = trim($secret);
+    $hash = trim($hash);
+    if ($secret === '' || $hash === '') {
+        return false;
+    }
+    if (str_starts_with($hash, '$2y$') || str_starts_with($hash, '$argon2')) {
+        return password_verify($secret, $hash);
+    }
+    return hash_equals($hash, hash('sha256', $secret));
+}
+
+function nibblyAccessCheckMaintenanceBypass(array $maintenance): bool {
+    nibblyAccessStartSession();
+    if (!empty($_SESSION['nibbly_maintenance_bypass'])) {
+        return true;
+    }
+
+    $param = trim((string)($maintenance['bypassParam'] ?? ''));
+    $hash = trim((string)($maintenance['bypassKeyHash'] ?? ''));
+    if ($param === '' || !array_key_exists($param, $_GET)) {
+        return false;
+    }
+
+    $candidate = (string)$_GET[$param];
+    if (!nibblyAccessVerifySecret($candidate, $hash)) {
+        return false;
+    }
+
+    $_SESSION['nibbly_maintenance_bypass'] = true;
+    return true;
+}
+
+function nibblyAccessMaintenanceIsActive(array $maintenance): bool {
+    if (empty($maintenance['enabled'])) {
+        return false;
+    }
+    $until = trim((string)($maintenance['until'] ?? ''));
+    if ($until === '') {
+        return true;
+    }
+    $timestamp = strtotime($until);
+    return $timestamp === false || $timestamp > time();
+}
+
+function nibblyAccessRenderStandalonePage(array $options): void {
+    $status = (int)($options['status'] ?? 503);
+    http_response_code($status);
+    if ($status === 503 && !empty($options['retryAfter'])) {
+        header('Retry-After: ' . (int)$options['retryAfter']);
+    }
+    header('Content-Type: text/html; charset=utf-8');
+    header('X-Robots-Tag: noindex, nofollow', false);
+
+    $title = htmlspecialchars((string)($options['title'] ?? 'Temporarily unavailable'), ENT_QUOTES, 'UTF-8');
+    $text = nl2br(htmlspecialchars((string)($options['text'] ?? ''), ENT_QUOTES, 'UTF-8'));
+    $mode = htmlspecialchars((string)($options['mode'] ?? 'maintenance'), ENT_QUOTES, 'UTF-8');
+    $until = htmlspecialchars((string)($options['until'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $showCountdown = !empty($options['showCountdown']) && $until !== '';
+    ?>
+<!doctype html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title><?php echo $title; ?></title>
+    <script>
+    (function() {
+        try {
+            var theme = localStorage.getItem('site-theme');
+            if (theme === 'system') {
+                theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            if (theme !== 'dark' && theme !== 'light') {
+                theme = 'light';
+            }
+            document.documentElement.setAttribute('data-theme', theme);
+            document.documentElement.style.colorScheme = theme;
+        } catch (e) {
+            document.documentElement.setAttribute('data-theme', 'light');
+            document.documentElement.style.colorScheme = 'light';
+        }
+    })();
+    </script>
+    <style>
+        :root { color-scheme: light; --nb-bg: #f7f7f4; --nb-fg: #141414; --nb-muted: #646464; --nb-border: rgba(20,20,20,.14); --nb-error: #b42318; }
+        :root[data-theme="dark"] { color-scheme: dark; --nb-bg: #101010; --nb-fg: #f4f4ef; --nb-muted: #b3b3aa; --nb-border: rgba(255,255,255,.18); --nb-error: #ff8a80; }
+        :root[data-theme="light"] { color-scheme: light; --nb-bg: #f7f7f4; --nb-fg: #141414; --nb-muted: #646464; --nb-border: rgba(20,20,20,.14); --nb-error: #b42318; }
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--nb-bg); color: var(--nb-fg); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+        main { width: min(680px, calc(100vw - 40px)); padding: 56px 0; }
+        .nb-lock-label { display: inline-flex; margin-bottom: 24px; padding: 6px 10px; border: 1px solid var(--nb-border); border-radius: 999px; color: var(--nb-muted); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
+        h1 { margin: 0 0 18px; font-size: clamp(34px, 6vw, 68px); line-height: .95; letter-spacing: 0; }
+        p { margin: 0; color: var(--nb-muted); font-size: clamp(17px, 2vw, 21px); line-height: 1.55; }
+        .nb-countdown { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 32px; }
+        .nb-countdown span { min-width: 82px; padding: 14px 16px; border: 1px solid var(--nb-border); border-radius: 8px; text-align: center; font-size: 24px; font-weight: 700; }
+        .nb-countdown small { display: block; margin-top: 4px; color: var(--nb-muted); font-size: 11px; font-weight: 500; text-transform: uppercase; }
+        form { margin-top: 28px; display: grid; gap: 12px; }
+        input { width: 100%; min-height: 46px; padding: 0 14px; border: 1px solid var(--nb-border); border-radius: 6px; background: transparent; color: inherit; font: inherit; }
+        button { min-height: 46px; border: 0; border-radius: 6px; background: var(--nb-fg); color: var(--nb-bg); font: inherit; font-weight: 700; cursor: pointer; }
+        .nb-error { margin-top: 12px; color: var(--nb-error); font-size: 14px; }
+    </style>
+</head>
+<body data-nibbly-lock="<?php echo $mode; ?>">
+    <main>
+        <div class="nb-lock-label"><?php echo $mode === 'launch' ? 'Launch' : ($mode === 'private' ? 'Privat' : 'Wartung'); ?></div>
+        <h1><?php echo $title; ?></h1>
+        <?php if ($text): ?><p><?php echo $text; ?></p><?php endif; ?>
+        <?php if (!empty($options['form'])): ?>
+        <form method="post">
+            <input type="password" name="nibbly_page_password" placeholder="Passwort" autocomplete="current-password" required>
+            <button type="submit">Freischalten</button>
+        </form>
+        <?php if (!empty($options['error'])): ?><div class="nb-error"><?php echo htmlspecialchars((string)$options['error'], ENT_QUOTES, 'UTF-8'); ?></div><?php endif; ?>
+        <?php endif; ?>
+        <?php if ($showCountdown): ?>
+        <div class="nb-countdown" data-countdown-until="<?php echo $until; ?>" aria-live="polite"></div>
+        <script>
+        (function(){var el=document.querySelector('[data-countdown-until]');if(!el)return;var target=new Date(el.dataset.countdownUntil).getTime();function tick(){var d=Math.max(0,target-Date.now());var s=Math.floor(d/1000),days=Math.floor(s/86400);s-=days*86400;var h=Math.floor(s/3600);s-=h*3600;var m=Math.floor(s/60);s-=m*60;el.innerHTML='<span>'+days+'<small>Tage</small></span><span>'+h+'<small>Std</small></span><span>'+m+'<small>Min</small></span><span>'+s+'<small>Sek</small></span>';if(d>0)setTimeout(tick,1000);}tick();})();
+        </script>
+        <?php endif; ?>
+    </main>
+</body>
+</html>
+    <?php
+    exit;
+}
+
+function nibblyAccessEnforceMaintenance(): void {
+    $path = nibblyAccessCurrentPath();
+    if (nibblyAccessIsBackendOrAssetPath($path)) {
+        return;
+    }
+
+    if (nibblyAccessIsLoggedIn()) {
+        return;
+    }
+
+    $settings = nibblyAccessSettings();
+    $maintenance = $settings['access']['maintenance'] ?? [];
+    if (!is_array($maintenance) || !nibblyAccessMaintenanceIsActive($maintenance)) {
+        return;
+    }
+    if (nibblyAccessCheckMaintenanceBypass($maintenance)) {
+        return;
+    }
+
+    $until = trim((string)($maintenance['until'] ?? ''));
+    $retryAfter = 0;
+    if ($until !== '') {
+        $untilTs = strtotime($until);
+        if ($untilTs !== false && $untilTs > time()) {
+            $retryAfter = min(86400, max(60, $untilTs - time()));
+        }
+    }
+
+    nibblyAccessRenderStandalonePage([
+        'status' => 503,
+        'mode' => $maintenance['mode'] ?? 'maintenance',
+        'title' => $maintenance['title'] ?? 'Wartungsarbeiten',
+        'text' => $maintenance['text'] ?? 'Wir sind in Kürze wieder online.',
+        'until' => $until,
+        'showCountdown' => !empty($maintenance['showCountdown']),
+        'retryAfter' => $retryAfter,
+    ]);
+}
+
+function nibblyAccessPageIsPrivate(array $pageData): bool {
+    $visibility = $pageData['visibility'] ?? [];
+    return is_array($visibility) && (($visibility['status'] ?? 'public') === 'private');
+}
+
+function nibblyAccessEnforcePage(string $contentPage, array $pageData): void {
+    if (!nibblyAccessPageIsPrivate($pageData) || nibblyAccessIsLoggedIn()) {
+        return;
+    }
+
+    nibblyAccessStartSession();
+    $sessionKey = 'nibbly_private_page_' . hash('sha256', $contentPage);
+    if (!empty($_SESSION[$sessionKey])) {
+        return;
+    }
+
+    $visibility = $pageData['visibility'];
+    $error = '';
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['nibbly_page_password'])) {
+        $password = (string)$_POST['nibbly_page_password'];
+        $hash = (string)($visibility['passwordHash'] ?? '');
+        if ($hash !== '' && password_verify($password, $hash)) {
+            $_SESSION[$sessionKey] = true;
+            header('Location: ' . ($_SERVER['REQUEST_URI'] ?? '/'));
+            exit;
+        }
+        $error = 'Das Passwort ist nicht korrekt.';
+    }
+
+    nibblyAccessRenderStandalonePage([
+        'status' => 403,
+        'mode' => 'private',
+        'title' => $visibility['title'] ?? 'Geschützte Seite',
+        'text' => $visibility['text'] ?? 'Bitte gib das Passwort ein, um diese Seite zu öffnen.',
+        'form' => true,
+        'error' => $error,
+    ]);
+}
+
+function nibblyAccessEnforceCurrentTemplatePage(?string $contentPage): void {
+    if (!$contentPage || !preg_match('/^[a-z]{2}_[a-z0-9]+(?:-[a-z0-9]+)*$/', $contentPage)) {
+        return;
+    }
+    $path = nibblyAccessSiteRoot() . '/content/pages/' . $contentPage . '.json';
+    if (!is_file($path)) {
+        return;
+    }
+    $data = json_decode((string)file_get_contents($path), true);
+    if (!is_array($data)) {
+        return;
+    }
+    nibblyAccessEnforcePage($contentPage, $data);
+}

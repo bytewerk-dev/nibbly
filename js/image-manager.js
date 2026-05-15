@@ -40,6 +40,7 @@
     };
 
     var replaceTarget = null;
+    var previousFocus = null;
     var mediaTypes = {
         image: {
             labelKey: 'media.type_images',
@@ -164,29 +165,29 @@
         modal.id = 'nb-imgmgr-modal';
         modal.className = 'nb-imgmgr-modal';
         modal.innerHTML =
-            '<div class="nb-imgmgr-backdrop"></div>' +
-            '<div class="nb-imgmgr-dialog">' +
+            '<div class="nb-imgmgr-backdrop" aria-hidden="true"></div>' +
+            '<div class="nb-imgmgr-dialog" role="dialog" aria-modal="true" aria-labelledby="nb-imgmgr-title">' +
                 '<div class="nb-imgmgr-header">' +
-                    '<h3>' + escapeHtml(t('media_manager')) + '</h3>' +
+                    '<h3 id="nb-imgmgr-title">' + escapeHtml(t('media_manager')) + '</h3>' +
                     '<button type="button" class="nb-imgmgr-close" aria-label="Close">&times;</button>' +
                 '</div>' +
                 '<div class="nb-imgmgr-toolbar">' +
                     '<span class="nb-imgmgr-formats">' + escapeHtml(t('image.formats_hint')) + '</span>' +
                     '<div class="nb-imgmgr-type-toggle"></div>' +
                     '<div class="nb-imgmgr-mode-toggle">' +
-                        '<button type="button" class="nb-imgmgr-mode-btn nb-imgmgr-mode-btn--active" data-mode="library">' + escapeHtml(t('image.library')) + '</button>' +
-                        '<button type="button" class="nb-imgmgr-mode-btn" data-mode="trash">' + escapeHtml(t('image.trash')) + '</button>' +
+                        '<button type="button" class="nb-imgmgr-mode-btn nb-imgmgr-mode-btn--active" data-mode="library" aria-pressed="true">' + escapeHtml(t('image.library')) + '</button>' +
+                        '<button type="button" class="nb-imgmgr-mode-btn" data-mode="trash" aria-pressed="false">' + escapeHtml(t('image.trash')) + '</button>' +
                     '</div>' +
                     '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--secondary nb-imgmgr-empty-trash-btn" data-action="empty-trash" hidden>' + escapeHtml(t('image.empty_trash')) + '</button>' +
                     '<span class="nb-imgmgr-spacer"></span>' +
-                    '<input type="text" class="nb-imgmgr-search" placeholder="' + escapeHtml(t('image.search')) + '">' +
+                    '<input type="text" class="nb-imgmgr-search" aria-label="' + escapeHtml(t('image.search')) + '" placeholder="' + escapeHtml(t('image.search')) + '">' +
                     '<div class="nb-imgmgr-view-toggle">' +
-                        '<button type="button" class="nb-imgmgr-view-btn nb-imgmgr-view-btn--active" data-view="grid" title="' + escapeHtml(t('image.grid_view')) + '">' + Icons.grid + '</button>' +
-                        '<button type="button" class="nb-imgmgr-view-btn" data-view="list" title="' + escapeHtml(t('image.list_view')) + '">' + Icons.list + '</button>' +
+                        '<button type="button" class="nb-imgmgr-view-btn nb-imgmgr-view-btn--active" data-view="grid" title="' + escapeHtml(t('image.grid_view')) + '" aria-label="' + escapeHtml(t('image.grid_view')) + '" aria-pressed="true">' + Icons.grid + '</button>' +
+                        '<button type="button" class="nb-imgmgr-view-btn" data-view="list" title="' + escapeHtml(t('image.list_view')) + '" aria-label="' + escapeHtml(t('image.list_view')) + '" aria-pressed="false">' + Icons.list + '</button>' +
                     '</div>' +
                 '</div>' +
                 '<div class="nb-imgmgr-body">' +
-                    '<div class="nb-imgmgr-grid"></div>' +
+                    '<div class="nb-imgmgr-grid" role="list"></div>' +
                     '<div class="nb-imgmgr-list">' +
                         '<div class="nb-imgmgr-list-header">' +
                             '<div class="nb-imgmgr-list-header-col"></div>' +
@@ -329,6 +330,11 @@
 
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
+        previousFocus = document.activeElement;
+        setTimeout(function () {
+            var search = modal.querySelector('.nb-imgmgr-search');
+            if (search) search.focus();
+        }, 0);
     }
 
     function normalizeImagePath(path) {
@@ -346,6 +352,8 @@
         if (modal) modal.classList.remove('active');
         document.body.style.overflow = '';
         state.callback = null;
+        if (previousFocus && document.contains(previousFocus)) previousFocus.focus();
+        previousFocus = null;
     }
 
     function confirmSelection() {
@@ -530,22 +538,24 @@
             var isSelected = state.isPicker && state.selectedPath === image.path;
             item.className = 'nb-imgmgr-item' + (isSelected ? ' selected' : '');
             item.dataset.path = image.path;
+            item.setAttribute('role', 'listitem');
+            item.setAttribute('aria-label', image.name || image.path || t('media.file'));
             item.innerHTML = state.mode === 'trash'
                 ? mediaThumbHtml(image, 'nb-imgmgr-thumb', false) +
                 '<div class="nb-imgmgr-name" title="' + escapeHtml(image.name) + '">' + escapeHtml(image.name) + '</div>' +
                 '<div class="nb-imgmgr-actions">' +
-                    '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
-                    '<button type="button" class="nb-imgmgr-action-btn" data-action="restore" title="' + escapeHtml(t('image.restore')) + '">' + Icons.restore + '</button>' +
-                    '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete-permanent" title="' + escapeHtml(t('image.delete_permanently')) + '">' + Icons.delete + '</button>' +
+                    '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '" aria-label="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
+                    '<button type="button" class="nb-imgmgr-action-btn" data-action="restore" title="' + escapeHtml(t('image.restore')) + '" aria-label="' + escapeHtml(t('image.restore')) + '">' + Icons.restore + '</button>' +
+                    '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete-permanent" title="' + escapeHtml(t('image.delete_permanently')) + '" aria-label="' + escapeHtml(t('image.delete_permanently')) + '">' + Icons.delete + '</button>' +
                 '</div>'
                 :
                 mediaThumbHtml(image, 'nb-imgmgr-thumb', false) +
                 '<div class="nb-imgmgr-name" title="' + escapeHtml(image.name) + '">' + escapeHtml(image.name) + '</div>' +
                 '<div class="nb-imgmgr-actions">' +
-                    '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
-                    '<button type="button" class="nb-imgmgr-action-btn" data-action="copy" title="' + escapeHtml(t('image.copy_path')) + '">' + Icons.copy + '</button>' +
-                    (isImage(image) ? '<button type="button" class="nb-imgmgr-action-btn" data-action="replace" title="' + escapeHtml(t('image.replace')) + '">' + Icons.replace + '</button>' : '') +
-                    '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete" title="' + escapeHtml(t('delete')) + '">' + Icons.delete + '</button>' +
+                    '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '" aria-label="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
+                    '<button type="button" class="nb-imgmgr-action-btn" data-action="copy" title="' + escapeHtml(t('image.copy_path')) + '" aria-label="' + escapeHtml(t('image.copy_path')) + '">' + Icons.copy + '</button>' +
+                    (isImage(image) ? '<button type="button" class="nb-imgmgr-action-btn" data-action="replace" title="' + escapeHtml(t('image.replace')) + '" aria-label="' + escapeHtml(t('image.replace')) + '">' + Icons.replace + '</button>' : '') +
+                    '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete" title="' + escapeHtml(t('delete')) + '" aria-label="' + escapeHtml(t('delete')) + '">' + Icons.delete + '</button>' +
                 '</div>';
             if (state.mode !== 'trash' && state.isPicker) {
                 item.insertAdjacentHTML('afterbegin', '<div class="nb-imgmgr-check' + (isSelected ? ' checked' : '') + '"></div>');
@@ -573,6 +583,7 @@
             var isSelected = state.isPicker && state.selectedPath === image.path;
             row.className = 'nb-imgmgr-row' + (isSelected ? ' selected' : '');
             row.dataset.path = image.path;
+            row.setAttribute('aria-label', image.name || image.path || t('media.file'));
             row.innerHTML = state.mode === 'trash'
                 ? '<div></div>' +
                 mediaThumbHtml(image, 'nb-imgmgr-list-thumb', true) +
@@ -580,9 +591,9 @@
                 '<div class="nb-imgmgr-list-size">' + escapeHtml(image.size || '-') + '</div>' +
                 '<div class="nb-imgmgr-list-date">' + escapeHtml(image.dateFormatted || '-') + '</div>' +
                 '<div class="nb-imgmgr-list-actions">' +
-                    '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
-                    '<button type="button" class="nb-imgmgr-action-btn" data-action="restore" title="' + escapeHtml(t('image.restore')) + '">' + Icons.restore + '</button>' +
-                    '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete-permanent" title="' + escapeHtml(t('image.delete_permanently')) + '">' + Icons.delete + '</button>' +
+                    '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '" aria-label="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
+                    '<button type="button" class="nb-imgmgr-action-btn" data-action="restore" title="' + escapeHtml(t('image.restore')) + '" aria-label="' + escapeHtml(t('image.restore')) + '">' + Icons.restore + '</button>' +
+                    '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete-permanent" title="' + escapeHtml(t('image.delete_permanently')) + '" aria-label="' + escapeHtml(t('image.delete_permanently')) + '">' + Icons.delete + '</button>' +
                 '</div>'
                 :
                 '<div></div>' +
@@ -591,10 +602,10 @@
                 '<div class="nb-imgmgr-list-size">' + escapeHtml(image.size || '-') + '</div>' +
                 '<div class="nb-imgmgr-list-date">' + escapeHtml(image.dateFormatted || '-') + '</div>' +
                 '<div class="nb-imgmgr-list-actions">' +
-                    '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
-                    '<button type="button" class="nb-imgmgr-action-btn" data-action="copy" title="' + escapeHtml(t('image.copy_path')) + '">' + Icons.copy + '</button>' +
-                    (isImage(image) ? '<button type="button" class="nb-imgmgr-action-btn" data-action="replace" title="' + escapeHtml(t('image.replace')) + '">' + Icons.replace + '</button>' : '') +
-                    '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete" title="' + escapeHtml(t('delete')) + '">' + Icons.delete + '</button>' +
+                    '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '" aria-label="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
+                    '<button type="button" class="nb-imgmgr-action-btn" data-action="copy" title="' + escapeHtml(t('image.copy_path')) + '" aria-label="' + escapeHtml(t('image.copy_path')) + '">' + Icons.copy + '</button>' +
+                    (isImage(image) ? '<button type="button" class="nb-imgmgr-action-btn" data-action="replace" title="' + escapeHtml(t('image.replace')) + '" aria-label="' + escapeHtml(t('image.replace')) + '">' + Icons.replace + '</button>' : '') +
+                    '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete" title="' + escapeHtml(t('delete')) + '" aria-label="' + escapeHtml(t('delete')) + '">' + Icons.delete + '</button>' +
                 '</div>';
             if (state.mode !== 'trash' && state.isPicker) {
                 row.querySelector('div:first-child').outerHTML = '<div class="nb-imgmgr-check nb-imgmgr-check--list' + (isSelected ? ' checked' : '') + '"></div>';
@@ -685,6 +696,7 @@
 
         modal.querySelectorAll('.nb-imgmgr-mode-btn').forEach(function (btn) {
             btn.classList.toggle('nb-imgmgr-mode-btn--active', btn.dataset.mode === state.mode);
+            btn.setAttribute('aria-pressed', btn.dataset.mode === state.mode ? 'true' : 'false');
         });
 
         var dropzone = modal.querySelector('.nb-imgmgr-dropzone');
@@ -719,6 +731,7 @@
         var modal = document.getElementById('nb-imgmgr-modal');
         modal.querySelectorAll('.nb-imgmgr-view-btn').forEach(function (btn) {
             btn.classList.toggle('nb-imgmgr-view-btn--active', btn.dataset.view === view);
+            btn.setAttribute('aria-pressed', btn.dataset.view === view ? 'true' : 'false');
         });
         var gridEl = modal.querySelector('.nb-imgmgr-grid');
         var listEl = modal.querySelector('.nb-imgmgr-list');
