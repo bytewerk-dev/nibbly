@@ -14,7 +14,7 @@ return [
         'label'    => t('block.text'),
         'category' => 'content',
         'icon'     => 'text',
-        'defaults' => ['title' => '', 'content' => '<p></p>', 'titleTag' => 'h2'],
+        'defaults' => ['title' => 'New text block', 'content' => '<p>Lorem ipsum dolor sit amet.</p>', 'titleTag' => 'h2'],
         'fields'   => [
             ['key' => 'title',    'type' => 'input',    'label' => t('field.title')],
             ['key' => 'titleTag', 'type' => 'select',   'label' => t('field.heading_level'), 'options' => [
@@ -37,7 +37,7 @@ return [
         'label'    => t('block.youtube'),
         'category' => 'media',
         'icon'     => 'video',
-        'defaults' => ['title' => '', 'videoId' => ''],
+        'defaults' => ['title' => 'Video', 'videoId' => ''],
         'fields'   => [
             ['key' => 'title',   'type' => 'input', 'label' => t('field.title')],
             ['key' => 'videoId', 'type' => 'input', 'label' => t('field.video_id'), 'hint' => t('field.video_id_hint'), 'preview' => 'youtube'],
@@ -48,7 +48,7 @@ return [
         'label'    => t('block.soundcloud'),
         'category' => 'media',
         'icon'     => 'audio',
-        'defaults' => ['title' => '', 'trackId' => ''],
+        'defaults' => ['title' => 'Audio', 'trackId' => ''],
         'fields'   => [
             ['key' => 'title',   'type' => 'input', 'label' => t('field.title')],
             ['key' => 'trackId', 'type' => 'input', 'label' => t('field.track_id'), 'hint' => t('field.track_id_hint'), 'preview' => 'soundcloud'],
@@ -59,7 +59,7 @@ return [
         'label'    => t('block.audio'),
         'category' => 'media',
         'icon'     => 'audio',
-        'defaults' => ['title' => '', 'src' => ''],
+        'defaults' => ['title' => 'Audio', 'src' => ''],
         'fields'   => [
             ['key' => 'title', 'type' => 'input', 'label' => t('field.title')],
             ['key' => 'src',   'type' => 'audio', 'label' => t('field.audio_file')],
@@ -70,7 +70,7 @@ return [
         'label'    => t('block.card'),
         'category' => 'cards',
         'icon'     => 'card',
-        'defaults' => ['title' => '', 'content' => '', 'image' => ''],
+        'defaults' => ['title' => 'New card', 'content' => 'Lorem ipsum dolor sit amet.', 'image' => ''],
         'fields'   => [
             ['key' => 'title',   'type' => 'input',    'label' => t('field.title')],
             ['key' => 'content', 'type' => 'textarea', 'label' => t('field.description')],
@@ -82,7 +82,7 @@ return [
         'label'    => t('block.heading'),
         'category' => 'content',
         'icon'     => 'heading',
-        'defaults' => ['text' => '', 'level' => 'h2', 'subtitle' => ''],
+        'defaults' => ['text' => 'New heading', 'level' => 'h2', 'subtitle' => ''],
         'fields'   => [
             ['key' => 'text',     'type' => 'input',  'label' => t('field.heading_text')],
             ['key' => 'level',    'type' => 'select', 'label' => t('field.level'), 'options' => [
@@ -101,7 +101,7 @@ return [
         'label'    => t('block.quote'),
         'category' => 'content',
         'icon'     => 'quote',
-        'defaults' => ['text' => '', 'attribution' => '', 'style' => 'default'],
+        'defaults' => ['text' => 'Lorem ipsum dolor sit amet.', 'attribution' => '', 'style' => 'default'],
         'fields'   => [
             ['key' => 'text',        'type' => 'textarea', 'label' => t('field.quote_text')],
             ['key' => 'attribution', 'type' => 'input',    'label' => t('field.attribution')],
@@ -116,7 +116,7 @@ return [
         'label'    => t('block.image'),
         'category' => 'media',
         'icon'     => 'image',
-        'defaults' => ['src' => '', 'alt' => '', 'caption' => '', 'width' => 'full'],
+        'defaults' => ['src' => '', 'alt' => 'Image', 'caption' => 'Image caption', 'width' => 'full'],
         'fields'   => [
             ['key' => 'src',     'type' => 'image',    'label' => t('block.image')],
             ['key' => 'alt',     'type' => 'input',    'label' => t('field.alt_text')],
@@ -133,7 +133,7 @@ return [
         'label'    => t('block.list'),
         'category' => 'content',
         'icon'     => 'list',
-        'defaults' => ['title' => '', 'style' => 'bullet', 'content' => '<ul><li></li></ul>'],
+        'defaults' => ['title' => 'New list', 'style' => 'bullet', 'content' => '<ul><li>Lorem ipsum dolor sit amet.</li></ul>'],
         'fields'   => [
             ['key' => 'title',   'type' => 'input',   'label' => t('field.title_optional')],
             ['key' => 'style',   'type' => 'select',  'label' => t('field.style'), 'options' => [

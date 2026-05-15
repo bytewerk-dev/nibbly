@@ -45,6 +45,11 @@
         return d.innerHTML;
     }
 
+    function tFallback(key, fallback, params) {
+        const value = t(key, params);
+        return value && value !== key ? value : fallback;
+    }
+
     // ============================================================
     // CONFIGURATION
     // ============================================================
@@ -523,6 +528,7 @@
         loadPromises.push(loadEvents());
 
         Promise.all(loadPromises).then(async () => {
+            attachEditorChromeHoverStates();
             createEditorUI();
             createGroupEditorUI();
             createEventEditorUI();
@@ -560,6 +566,31 @@
                 enterEditMode();
             }
         });
+    }
+
+    function attachEditorChromeHoverStates() {
+        if (document.documentElement.dataset.editorHoverReady === 'true') return;
+        document.documentElement.dataset.editorHoverReady = 'true';
+
+        const selector = [
+            '#admin-bar .admin-bar-btn',
+            '.section-add-btn-toggle',
+            '.nibbly-editor-control-btn',
+            '.nibbly-editor-drag-handle'
+        ].join(',');
+
+        document.addEventListener('pointerover', (e) => {
+            const el = e.target.closest(selector);
+            if (!el || el.disabled) return;
+            el.classList.add('is-hover');
+        }, true);
+
+        document.addEventListener('pointerout', (e) => {
+            const el = e.target.closest(selector);
+            if (!el) return;
+            if (e.relatedTarget && el.contains(e.relatedTarget)) return;
+            el.classList.remove('is-hover');
+        }, true);
     }
 
     // ============================================================
@@ -728,6 +759,17 @@
         if (link.classList.contains('editable-footer-field')) return;
         // Don't block editable links (handled by link editor)
         if (link.hasAttribute('data-editable-link')) return;
+        // Editable fields inside ordinary links must enter the editor before
+        // the navigation guard can turn the click into a leave-page prompt.
+        if (e.target.closest('.editable-field, .editable-field-wrapper, [data-editable-image]')) return;
+
+        const groupedLink = link.closest('[data-editable-group]');
+        if (groupedLink && !link.hasAttribute('data-editable-link')) {
+            e.preventDefault();
+            e.stopPropagation();
+            openGroupEditor(groupedLink);
+            return;
+        }
 
         e.preventDefault();
         e.stopPropagation();
@@ -1282,6 +1324,18 @@
     function normalizeGroupField(field) {
         const normalized = { ...field };
         normalized.type = normalized.type || 'text';
+        if (!field.type && normalized.key) {
+            const key = String(normalized.key).toLowerCase();
+            if (/^(image|imagesrc|src|photo|portrait|logo|avatar|cover|thumbnail)$/.test(key)) {
+                normalized.type = 'image';
+            } else if (/^(link|href|url|cta|button|buttonlink)$/.test(key)) {
+                normalized.type = 'link';
+            } else if (/^(text|description|desc|intro|body|content|copy|summary)$/.test(key)) {
+                normalized.type = 'textarea';
+            } else if (/^(icon|iconid|symbol)$/.test(key)) {
+                normalized.type = 'icon';
+            }
+        }
         if (normalized.type === 'text') normalized.type = 'input';
         if (normalized.type === 'html' || normalized.type === 'richtext') normalized.type = 'wysiwyg';
         return normalized;
@@ -1406,11 +1460,20 @@
                 const textId = groupFieldIds(index, 'text').id;
                 const hrefId = groupFieldIds(index, 'href').id;
                 const targetId = groupFieldIds(index, 'target').id;
-                return `<div class="editor-field group-editor-field" id="${fieldId}" data-group-field-index="${index}">
-                    <label>${label}</label>
-                    <input type="text" id="${textId}" placeholder="Link text">
-                    <div class="group-link-target">
-                        ${buildPagePickerHtml(groupFieldIds(index, 'page').id, hrefId)}
+                return `<div class="editor-field group-editor-field group-editor-special group-editor-link" id="${fieldId}" data-group-field-index="${index}">
+                    <div class="group-special-header">
+                        <span class="group-special-icon">${Icons.link}</span>
+                        <label>${label}</label>
+                    </div>
+                    <div class="group-link-grid">
+                        <label class="group-special-control">
+                            <span>Text</span>
+                            <input type="text" id="${textId}" placeholder="Link text">
+                        </label>
+                        <label class="group-special-control group-special-control--target">
+                            <span>Target</span>
+                            ${buildPagePickerHtml(groupFieldIds(index, 'page').id, hrefId)}
+                        </label>
                     </div>
                     <label class="link-editor-option group-link-option">
                         <input type="checkbox" id="${targetId}">
@@ -1423,16 +1486,23 @@
             case 'image': {
                 const srcId = groupFieldIds(index, 'src').id;
                 const altId = groupFieldIds(index, 'alt').id;
-                return `<div class="editor-field group-editor-field" id="${fieldId}" data-group-field-index="${index}">
-                    <label>${label}</label>
-                    <div class="editor-image-row">
-                        <input type="text" id="${srcId}" placeholder="Path to image..." readonly>
-                        <button type="button" class="editor-btn editor-btn-secondary" data-group-image-pick="${index}">
-                            ${Icons.folder} ${t('image_manager')}
-                        </button>
+                return `<div class="editor-field group-editor-field group-editor-special group-editor-image" id="${fieldId}" data-group-field-index="${index}">
+                    <div class="group-special-header">
+                        <span class="group-special-icon">${Icons.image}</span>
+                        <label>${label}</label>
                     </div>
-                    <input type="text" id="${altId}" placeholder="Alt text" class="group-image-alt">
-                    <div id="group-editor-image-preview-${index}" class="editor-image-preview"></div>
+                    <div class="group-image-grid">
+                        <div id="group-editor-image-preview-${index}" class="editor-image-preview group-image-preview"></div>
+                        <div class="group-image-controls">
+                            <div class="editor-image-row group-image-path-row">
+                                <input type="text" id="${srcId}" placeholder="Path to image..." readonly>
+                                <button type="button" class="editor-btn editor-btn-secondary" data-group-image-pick="${index}">
+                                    ${Icons.folder} ${t('image_manager')}
+                                </button>
+                            </div>
+                            <input type="text" id="${altId}" placeholder="Alt text" class="group-image-alt">
+                        </div>
+                    </div>
                     ${hint}
                 </div>`;
             }
@@ -1543,7 +1613,7 @@
             if (!group.hasAttribute('data-list-index')) {
                 const overlay = document.createElement('button');
                 overlay.type = 'button';
-                overlay.className = 'editable-group-overlay';
+                overlay.className = 'editable-group-overlay nibbly-editor-group-overlay';
                 overlay.innerHTML = `${Icons.edit}<span>${t('edit')}</span>`;
                 overlay.title = t('edit');
                 overlay.addEventListener('click', (e) => {
@@ -1645,7 +1715,7 @@
         const value = getNestedValue(pageData, path);
 
         if (normalized.type === 'link') {
-            const linkValue = value && typeof value === 'object' ? value : {};
+            const linkValue = value && typeof value === 'object' ? value : { text: '', href: (typeof value === 'string' ? value : '') };
             const textInput = document.getElementById(groupFieldIds(index, 'text').id);
             const hrefInput = document.getElementById(groupFieldIds(index, 'href').id);
             const targetInput = document.getElementById(groupFieldIds(index, 'target').id);
@@ -1922,7 +1992,7 @@
 
             // New overlay with edit and delete buttons
             const overlay = document.createElement('div');
-            overlay.className = 'editable-overlay editable-overlay-buttons';
+            overlay.className = 'editable-overlay editable-overlay-buttons nibbly-editor-section-overlay';
             // Check if section is hidden
             const sectionIdx = parseInt(wrapper.dataset.sectionIndex, 10);
             const pageData = EditorConfig.contentData[contentPage];
@@ -1932,10 +2002,10 @@
             const hideTitle = isHidden ? t('show') : t('hide');
 
             overlay.innerHTML = `
-                <button type="button" class="overlay-btn overlay-btn-edit" title="${t('edit')}" data-action="edit">${Icons.edit}</button>
-                <button type="button" class="overlay-btn overlay-btn-hide" title="${hideTitle}" data-action="hide">${hideIcon}</button>
-                <button type="button" class="overlay-btn overlay-btn-delete" title="${t('delete')}" data-action="delete">${Icons.delete}</button>
-                <span class="overlay-drag-handle" title="${t('drag_reorder')}">${Icons.drag}</span>
+                <button type="button" class="overlay-btn overlay-btn-edit nibbly-editor-control-btn" data-editor-tooltip="${escHtml(t('edit'))}" aria-label="${escHtml(t('edit'))}" data-action="edit">${Icons.edit}</button>
+                <button type="button" class="overlay-btn overlay-btn-hide nibbly-editor-control-btn" data-editor-tooltip="${escHtml(hideTitle)}" aria-label="${escHtml(hideTitle)}" data-action="hide">${hideIcon}</button>
+                <button type="button" class="overlay-btn overlay-btn-delete nibbly-editor-control-btn" data-editor-tooltip="${escHtml(t('delete'))}" aria-label="${escHtml(t('delete'))}" data-action="delete">${Icons.delete}</button>
+                <span class="overlay-drag-handle nibbly-editor-drag-handle" data-editor-tooltip="${escHtml(t('drag_reorder'))}" aria-label="${escHtml(t('drag_reorder'))}">${Icons.drag}</span>
             `;
             wrapper.appendChild(overlay);
             keepOverlayOpenWhileCrossing(wrapper, overlay);
@@ -1945,8 +2015,9 @@
                 wrapper.dataset.hidden = 'true';
             }
 
-            // Drag & Drop aktivieren
-            wrapper.setAttribute('draggable', 'true');
+            // Drag starts only from the handle so text clicks/selection inside
+            // sections are not hijacked by HTML5 drag.
+            wrapper.setAttribute('draggable', 'false');
             wrapper.dataset.contentPage = contentPage;
 
             // Find all iframes in wrapper and disable pointer-events on start
@@ -1966,9 +2037,17 @@
             // Drag handle as additional trigger
             const dragHandle = overlay.querySelector('.overlay-drag-handle');
             if (dragHandle) {
-                dragHandle.addEventListener('mousedown', () => {
+                const armDrag = () => {
+                    wrapper.dataset.dragArmed = 'true';
                     wrapper.setAttribute('draggable', 'true');
-                });
+                };
+                const disarmDrag = () => {
+                    delete wrapper.dataset.dragArmed;
+                    wrapper.setAttribute('draggable', 'false');
+                };
+                dragHandle.addEventListener('pointerdown', armDrag);
+                dragHandle.addEventListener('mousedown', armDrag);
+                dragHandle.addEventListener('pointerup', () => setTimeout(disarmDrag, 0));
             }
 
             // Click handler for buttons — read index dynamically (survives reorder)
@@ -2012,9 +2091,10 @@
 
         const addBtn = document.createElement('button');
         addBtn.type = 'button';
-        addBtn.className = 'section-add-btn-toggle';
-        addBtn.title = t('add_section') || 'Add section';
-        addBtn.setAttribute('aria-label', addBtn.title);
+        addBtn.className = 'section-add-btn-toggle nibbly-editor-add-button';
+        const addLabel = tFallback('add_block', 'Add block');
+        addBtn.dataset.editorTooltip = addLabel;
+        addBtn.setAttribute('aria-label', addLabel);
         addBtn.setAttribute('aria-expanded', 'false');
         addBtn.innerHTML = Icons.plus;
 
@@ -2152,6 +2232,10 @@
         if (!EditorConfig.editMode) { e.preventDefault(); return; }
         const wrapper = e.target.closest('.editable-section');
         if (!wrapper) return;
+        if (wrapper.dataset.dragArmed !== 'true') {
+            e.preventDefault();
+            return;
+        }
 
         EditorConfig.draggedElement = wrapper;
         EditorConfig.draggedIndex = parseInt(wrapper.dataset.sectionIndex, 10);
@@ -2187,6 +2271,8 @@
         EditorConfig.draggedElement = null;
         EditorConfig.draggedIndex = null;
         EditorConfig.draggedContentPage = null;
+        delete wrapper.dataset.dragArmed;
+        wrapper.setAttribute('draggable', 'false');
     }
 
     function handleDragOver(e) {
@@ -2384,7 +2470,7 @@
 
             if (result.data && result.data.sectionsHtml) {
                 replaceContentArea(result.data.sectionsHtml, contentPage, index);
-                showToast(t('toast.section_added') || 'Section added', 'success');
+                showToast(tFallback('toast.section_added', 'Section added'), 'success');
                 EditorConfig.dirtyPages.delete(contentPage);
             } else {
                 // Server did not return HTML (shouldn't happen) — fall back to reload.
@@ -2728,12 +2814,12 @@
         const toolbar = document.createElement('div');
         toolbar.className = 'floating-toolbar';
         toolbar.innerHTML = `
-            <button type="button" data-command="bold" title="${t('bold')} (Ctrl+B)"><b>B</b></button>
-            <button type="button" data-command="italic" title="${t('italic')} (Ctrl+I)"><i>I</i></button>
-            <button type="button" data-action="link" title="${t('insert_link')}"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg></button>
-            <button type="button" data-command="removeFormat" title="${t('clean_formatting')}">${Icons.eraser}</button>
+            <button type="button" data-command="bold" data-editor-tooltip="${escHtml(t('bold'))} (Ctrl+B)" aria-label="${escHtml(t('bold'))} (Ctrl+B)"><b>B</b></button>
+            <button type="button" data-command="italic" data-editor-tooltip="${escHtml(t('italic'))} (Ctrl+I)" aria-label="${escHtml(t('italic'))} (Ctrl+I)"><i>I</i></button>
+            <button type="button" data-action="link" data-editor-tooltip="${escHtml(t('insert_link'))}" aria-label="${escHtml(t('insert_link'))}"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg></button>
+            <button type="button" data-command="removeFormat" data-editor-tooltip="${escHtml(t('clean_formatting'))}" aria-label="${escHtml(t('clean_formatting'))}">${Icons.eraser}</button>
             <span class="floating-toolbar-separator"></span>
-            <button type="button" data-action="html-source" title="HTML">&lt;/&gt;</button>
+            <button type="button" data-action="html-source" data-editor-tooltip="HTML" aria-label="HTML">&lt;/&gt;</button>
         `;
 
         // Prevent blur on toolbar button clicks
@@ -3407,6 +3493,24 @@
             const eventId = card.dataset.eventId;
             if (!eventId) return;
 
+            card.querySelectorAll('.event-edit-btn, .event-hide-btn, .event-delete-btn').forEach(btn => {
+                if (btn.dataset.eventButtonReady === 'true') return;
+                btn.dataset.eventButtonReady = 'true';
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (btn.classList.contains('event-edit-btn')) {
+                        openEventEditor(eventId);
+                    } else if (btn.classList.contains('event-hide-btn')) {
+                        toggleEventVisibility(eventId);
+                    } else if (btn.classList.contains('event-delete-btn')) {
+                        deleteEvent(eventId);
+                    }
+                });
+            });
+
+            if (card.dataset.eventCardReady === 'true') return;
+            card.dataset.eventCardReady = 'true';
             card.addEventListener('click', (e) => {
                 if (!EditorConfig.editMode) return;
                 if (e.target.closest('a')) return;
@@ -3571,6 +3675,7 @@
             if (field.dataset.editorReady === 'true') return;
             field.dataset.editorReady = 'true';
             field.classList.add('editable-field-active');
+            applyBlockHitboxHint(field);
 
             // Add hide toggle button
             addFieldHideButton(field);
@@ -3578,6 +3683,7 @@
             if (field.classList.contains('editable-field-html')) {
                 field.addEventListener('click', (e) => {
                     if (!EditorConfig.editMode) return;
+                    e.preventDefault();
                     e.stopPropagation();
                     if (field.isContentEditable) return;
                     startInlineHtmlEdit(field);
@@ -3588,6 +3694,7 @@
             // Plain text fields: inline editing with contentEditable
             field.addEventListener('click', (e) => {
                 if (!EditorConfig.editMode) return;
+                e.preventDefault();
                 e.stopPropagation();
                 if (field.isContentEditable) return;
                 startInlineEdit(field);
@@ -3595,11 +3702,32 @@
         });
     }
 
+    function applyBlockHitboxHint(field) {
+        if (!field.closest('[data-editable-group], [data-list-index]')) return;
+        const parentTag = (field.parentElement && field.parentElement.tagName || '').toLowerCase();
+        const fieldTag = (field.tagName || '').toLowerCase();
+        const text = (field.textContent || '').trim();
+        if (
+            field.classList.contains('editable-field-html') ||
+            fieldTag === 'p' ||
+            /^(p|li|blockquote|figcaption|h[1-6])$/.test(parentTag) ||
+            text.length > 38
+        ) {
+            field.classList.add('editable-field-block-hitbox');
+        }
+    }
+
     function addFieldHideButton(field) {
         // Skip fields inside comparison table (rows handle hiding at row level)
         if (field.closest('.comparison-table')) return;
 
         const isHidden = field.dataset.hidden === 'true';
+        // Field-level hiding is intentionally quiet by default. It created too
+        // much chrome on every heading and text span, while the common editorial
+        // use case is hiding whole sections or list items. Keep an escape hatch
+        // for already-hidden fields so editors can make legacy content visible.
+        if (!isHidden && field.dataset.allowFieldHide !== 'true') return;
+
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'field-hide-btn';
@@ -3895,6 +4023,9 @@
             if (link.dataset.editorReady === 'true') return;
             link.dataset.editorReady = 'true';
             link.classList.add('editable-field-active');
+            if (link.closest('[data-editable-group], [data-list-index]')) {
+                link.classList.add('editable-field-block-hitbox');
+            }
 
             // Add hide toggle button
             addFieldHideButton(link);
@@ -4337,12 +4468,12 @@
                 // Create overlay with drag handle + hide + delete buttons
                 const overlay = document.createElement('div');
                 const hasGroupEditor = item.hasAttribute('data-editable-group');
-                overlay.className = 'editable-list-overlay';
+                overlay.className = 'editable-list-overlay nibbly-editor-list-overlay';
                 overlay.innerHTML = `
-                    ${hasGroupEditor ? `<button type="button" class="overlay-btn overlay-btn-edit list-edit-btn" title="${t('edit')}" data-action="edit">${Icons.edit}</button>` : ''}
-                    <button type="button" class="overlay-btn overlay-btn-hide list-hide-btn" title="${isItemHidden ? t('show') : t('hide')}" data-action="hide">${isItemHidden ? Icons.eyeClosed : Icons.eyeOpen}</button>
-                    <button type="button" class="overlay-btn overlay-btn-delete list-delete-btn" title="${t('delete')}" data-action="delete">${Icons.delete}</button>
-                    <span class="list-drag-handle" title="${t('drag_reorder')}">${Icons.drag}</span>
+                    ${hasGroupEditor ? `<button type="button" class="overlay-btn overlay-btn-edit list-edit-btn nibbly-editor-control-btn" data-editor-tooltip="${escHtml(t('edit'))}" aria-label="${escHtml(t('edit'))}" data-action="edit">${Icons.edit}</button>` : ''}
+                    <button type="button" class="overlay-btn overlay-btn-hide list-hide-btn nibbly-editor-control-btn" data-editor-tooltip="${escHtml(isItemHidden ? t('show') : t('hide'))}" aria-label="${escHtml(isItemHidden ? t('show') : t('hide'))}" data-action="hide">${isItemHidden ? Icons.eyeClosed : Icons.eyeOpen}</button>
+                    <button type="button" class="overlay-btn overlay-btn-delete list-delete-btn nibbly-editor-control-btn" data-editor-tooltip="${escHtml(t('delete'))}" aria-label="${escHtml(t('delete'))}" data-action="delete">${Icons.delete}</button>
+                    <span class="list-drag-handle nibbly-editor-drag-handle" data-editor-tooltip="${escHtml(t('drag_reorder'))}" aria-label="${escHtml(t('drag_reorder'))}">${Icons.drag}</span>
                 `;
                 item.style.position = 'relative';
                 item.appendChild(overlay);
@@ -4353,8 +4484,9 @@
                     item.dataset.hidden = 'true';
                 }
 
-                // Make draggable
-                item.setAttribute('draggable', 'true');
+                // Drag starts only from the handle; inline editing and text
+                // selection inside list cards remain normal clicks.
+                item.setAttribute('draggable', 'false');
 
                 if (hasGroupEditor) {
                     overlay.querySelector('.list-edit-btn').addEventListener('click', (e) => {
@@ -4364,9 +4496,25 @@
                     });
                 }
 
+                const dragHandle = overlay.querySelector('.list-drag-handle');
+                if (dragHandle) {
+                    const armDrag = () => {
+                        item.dataset.dragArmed = 'true';
+                        item.setAttribute('draggable', 'true');
+                    };
+                    const disarmDrag = () => {
+                        delete item.dataset.dragArmed;
+                        item.setAttribute('draggable', 'false');
+                    };
+                    dragHandle.addEventListener('pointerdown', armDrag);
+                    dragHandle.addEventListener('mousedown', armDrag);
+                    dragHandle.addEventListener('pointerup', () => setTimeout(disarmDrag, 0));
+                }
+
                 // Drag events — use dynamic index from dataset (survives reorder)
                 item.addEventListener('dragstart', (e) => {
                     if (!EditorConfig.editMode) { e.preventDefault(); return; }
+                    if (item.dataset.dragArmed !== 'true') { e.preventDefault(); return; }
                     const currentIndex = parseInt(item.dataset.listIndex, 10);
                     listDragState = { element: item, index: currentIndex, page, listKey };
                     item.classList.add('dragging');
@@ -4382,6 +4530,8 @@
                     });
                     listDragState = { element: null, index: null, page: null, listKey: null };
                     document.querySelectorAll('iframe').forEach(f => f.style.pointerEvents = '');
+                    delete item.dataset.dragArmed;
+                    item.setAttribute('draggable', 'false');
                 });
 
                 item.addEventListener('dragover', (e) => {

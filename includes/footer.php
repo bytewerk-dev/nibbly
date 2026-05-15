@@ -212,9 +212,16 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
         // ============================================================
         // SMOOTH SCROLL FOR ANCHOR LINKS
         // ============================================================
-        document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
+        document.querySelectorAll('a[href^="#"], a[data-nav-hash]').forEach(function(anchor) {
             anchor.addEventListener('click', function(e) {
-                const targetId = this.getAttribute('href');
+                var targetId = this.getAttribute('href');
+                if (this.dataset.navHash) {
+                    try {
+                        var url = new URL(this.href, window.location.href);
+                        if (url.pathname !== window.location.pathname) return;
+                        targetId = '#' + this.dataset.navHash;
+                    } catch(e) {}
+                }
                 if (targetId === '#') return;
 
                 const targetElement = document.querySelector(targetId);
@@ -230,6 +237,56 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
                 }
             });
         });
+
+        // One-page menu active state: hash links become active only while
+        // their target section is actually visible on the current page.
+        (function initOnePageNavActiveState() {
+            var links = Array.prototype.slice.call(document.querySelectorAll('a[data-nav-hash]'));
+            if (!links.length || !('IntersectionObserver' in window)) return;
+
+            var sectionMap = new Map();
+            links.forEach(function(link) {
+                var id = link.dataset.navHash;
+                if (!id || sectionMap.has(id)) return;
+                var section = document.getElementById(id);
+                if (section) sectionMap.set(id, section);
+            });
+            if (!sectionMap.size) return;
+
+            function setActive(id) {
+                links.forEach(function(link) {
+                    link.classList.toggle('active', link.dataset.navHash === id);
+                });
+            }
+
+            var visible = new Map();
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    var id = entry.target.id;
+                    if (entry.isIntersecting) {
+                        visible.set(id, entry.intersectionRatio);
+                    } else {
+                        visible.delete(id);
+                    }
+                });
+                var best = null;
+                var bestRatio = 0;
+                visible.forEach(function(ratio, id) {
+                    if (ratio > bestRatio) {
+                        best = id;
+                        bestRatio = ratio;
+                    }
+                });
+                if (best) setActive(best);
+            }, {
+                rootMargin: '-25% 0px -55% 0px',
+                threshold: [0.1, 0.25, 0.5, 0.75]
+            });
+
+            sectionMap.forEach(function(section) {
+                observer.observe(section);
+            });
+        })();
 
         // ============================================================
         // SCROLL REVEAL ANIMATIONS

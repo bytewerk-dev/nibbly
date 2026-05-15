@@ -547,6 +547,10 @@ function editableIcon($page, $fieldKey, $default = '', $class = '') {
 function editableGroupAttrs($page, $groupKey, $schema = []) {
     if (!isAdminLoggedIn()) return '';
 
+    if (!nibblyGroupSchemaNeedsModal($schema)) {
+        return '';
+    }
+
     $schemaJson = json_encode($schema, JSON_UNESCAPED_UNICODE);
     if ($schemaJson === false) $schemaJson = '{}';
 
@@ -554,6 +558,36 @@ function editableGroupAttrs($page, $groupKey, $schema = []) {
         . ' data-page="' . htmlspecialchars($page) . '"'
         . ' data-group="' . htmlspecialchars($groupKey) . '"'
         . ' data-group-schema="' . htmlspecialchars($schemaJson, ENT_QUOTES, 'UTF-8') . '"';
+}
+
+/**
+ * Keep one-field plain-text groups inline-only. A group modal is worthwhile
+ * for multiple related fields or any field with a specialized editor.
+ */
+function nibblyGroupSchemaNeedsModal($schema): bool {
+    if (!is_array($schema)) return false;
+
+    $fields = $schema['fields'] ?? [];
+    if (!is_array($fields) || empty($fields)) return false;
+
+    $fieldCount = 0;
+    $hasSpecial = false;
+    foreach ($fields as $field) {
+        if (!is_array($field)) continue;
+        $key = strtolower((string)($field['key'] ?? $field['path'] ?? ''));
+        if ($key === '' || $key === 'hidden') continue;
+
+        $fieldCount++;
+        $type = strtolower((string)($field['type'] ?? 'text'));
+        if (in_array($type, ['image', 'link', 'icon', 'date', 'datetime', 'select', 'checkbox', 'number'], true)) {
+            $hasSpecial = true;
+        }
+        if (preg_match('/^(image|imagesrc|src|photo|portrait|logo|avatar|cover|thumbnail|link|href|url|cta|button|buttonlink|icon|iconid|symbol)$/', $key)) {
+            $hasSpecial = true;
+        }
+    }
+
+    return $fieldCount > 1 || $hasSpecial;
 }
 
 /**
@@ -574,6 +608,87 @@ function editableGroupEnd() {
     if (!isAdminLoggedIn()) return '';
     echo '</div>';
     return '';
+}
+
+/**
+ * Infer a structured group-editor schema from a list item/default item shape.
+ * This is intentionally conservative: simple one-field text items stay inline
+ * only, while cards with multiple fields or media/link/icon/date fields get a
+ * modal editor that keeps related fields together.
+ */
+function nibblyInferGroupSchemaFromDefaults($defaults, $label = 'Item') {
+    if (!is_array($defaults)) return [];
+
+    $fields = [];
+    foreach ($defaults as $key => $value) {
+        if (!is_string($key) || $key === '' || $key === 'hidden') continue;
+
+        $lower = strtolower($key);
+        $type = 'text';
+
+        if (preg_match('/^(image|imagesrc|src|photo|portrait|logo|avatar|cover|thumbnail)$/', $lower)) {
+            $type = 'image';
+        } elseif (preg_match('/^(link|href|url|cta|button|buttonlink)$/', $lower)) {
+            $type = 'link';
+        } elseif (preg_match('/^(text|description|desc|intro|body|content|copy|summary)$/', $lower)) {
+            $type = 'textarea';
+        } elseif (preg_match('/^(icon|iconid|symbol)$/', $lower)) {
+            $type = 'icon';
+        } elseif (preg_match('/^(date|startdate|enddate|time|datetime)$/', $lower)) {
+            $type = 'text';
+        }
+
+        if (is_array($value)) {
+            if (array_key_exists('src', $value) || array_key_exists('alt', $value)) {
+                $type = 'image';
+            } elseif (array_key_exists('href', $value) || array_key_exists('text', $value)) {
+                $type = 'link';
+            }
+        }
+
+        $fields[] = [
+            'key' => $key,
+            'type' => $type,
+            'label' => ucwords(str_replace(['_', '-'], ' ', $key)),
+        ];
+    }
+
+    $hasSpecialField = false;
+    foreach ($fields as $field) {
+        if (in_array($field['type'], ['image', 'link', 'icon'], true)) {
+            $hasSpecialField = true;
+            break;
+        }
+    }
+
+    if (count($fields) < 2 && !$hasSpecialField) {
+        return [];
+    }
+
+    return [
+        'label' => $label,
+        'fields' => $fields,
+    ];
+}
+
+/**
+ * Return list-item attributes plus a structured group-editor schema when the
+ * item shape warrants a modal. Use this for card-like repeaters so editors get
+ * both list controls and one modal for related item fields.
+ */
+function editableListGroupItemAttrs($page, $listKey, $index, $schema = [], $defaults = [], $label = 'Item') {
+    if (!isAdminLoggedIn()) return '';
+
+    if (empty($schema) && !empty($defaults)) {
+        $schema = nibblyInferGroupSchemaFromDefaults($defaults, $label);
+    }
+
+    $attrs = editableListItemAttrs($page, $listKey, $index);
+    if (!empty($schema)) {
+        $attrs .= editableGroupAttrs($page, $listKey . '.' . (int)$index, $schema);
+    }
+
+    return $attrs;
 }
 
 // ============================================================
@@ -1111,9 +1226,10 @@ function renderFaqAccordion($page) {
         return '<p>No FAQ items available.</p>';
     }
 
-    $html = '<div class="faq-accordion"' . editableListAttrs($page, 'faq.entries', ['question' => 'New question', 'answer' => 'Answer']) . '>';
+    $defaults = ['question' => 'New question', 'answer' => 'Answer'];
+    $html = '<div class="faq-accordion"' . editableListAttrs($page, 'faq.entries', $defaults) . '>';
     foreach ($entries as $i => $item) {
-        $html .= '<div class="faq-item" data-faq-index="' . $i . '"' . editableListItemAttrs($page, 'faq.entries', $i) . '>';
+        $html .= '<div class="faq-item" data-faq-index="' . $i . '"' . editableListGroupItemAttrs($page, 'faq.entries', $i, [], $defaults, 'FAQ item') . '>';
         $html .= '<button class="faq-item__question" type="button" aria-expanded="false">';
         $html .= '<span class="faq-item__question-text">' . editableText($page, "faq.entries.$i.question", 'Question') . '</span>';
         $html .= '<span class="faq-item__icon" aria-hidden="true">';
@@ -1150,11 +1266,12 @@ function renderPricingTable($page) {
         return '<p>No pricing data available.</p>';
     }
 
-    $html = '<div class="pricing-grid stagger-reveal"' . editableListAttrs($page, 'pricing.plans', ['name' => 'Plan', 'price' => '$0', 'period' => '/mo', 'features' => 'Feature 1\nFeature 2', 'cta' => 'Get Started']) . '>';
+    $defaults = ['name' => 'Plan', 'price' => '$0', 'period' => '/mo', 'desc' => '', 'features' => "Feature 1\nFeature 2", 'cta' => ['text' => 'Get Started', 'href' => '#']];
+    $html = '<div class="pricing-grid stagger-reveal"' . editableListAttrs($page, 'pricing.plans', $defaults) . '>';
     foreach ($plans as $i => $plan) {
         $highlighted = !empty($plan['highlight']);
         $cardClass = 'pricing-card' . ($highlighted ? ' pricing-card--highlight' : '');
-        $html .= '<div class="' . $cardClass . '"' . editableListItemAttrs($page, 'pricing.plans', $i) . '>';
+        $html .= '<div class="' . $cardClass . '"' . editableListGroupItemAttrs($page, 'pricing.plans', $i, [], $defaults, 'Plan') . '>';
 
         if ($highlighted) {
             $html .= '<span class="pricing-card__badge">' . editableText($page, "pricing.plans.$i.badge", 'Popular') . '</span>';
@@ -1211,9 +1328,10 @@ function renderTestimonials($page) {
         return '<p>No testimonials available.</p>';
     }
 
-    $html = '<div class="testimonials-grid stagger-reveal"' . editableListAttrs($page, 'testimonials.items', ['quote' => 'Quote', 'author' => 'Name', 'role' => 'Role']) . '>';
+    $defaults = ['quote' => 'Quote', 'author' => 'Name', 'role' => 'Role'];
+    $html = '<div class="testimonials-grid stagger-reveal"' . editableListAttrs($page, 'testimonials.items', $defaults) . '>';
     foreach ($items as $i => $item) {
-        $html .= '<blockquote class="testimonial-card"' . editableListItemAttrs($page, 'testimonials.items', $i) . '>';
+        $html .= '<blockquote class="testimonial-card"' . editableListGroupItemAttrs($page, 'testimonials.items', $i, [], $defaults, 'Testimonial') . '>';
         $html .= '<svg class="testimonial-card__quote-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.3 2.6c-4.2 2.3-7 6.2-7 10.6 0 3.5 2.1 5.8 4.7 5.8 2.2 0 4-1.7 4-4 0-2.2-1.6-3.8-3.6-4-.4 0-.8 0-1.2.2.4-2.7 2.8-5.4 5.2-6.6l-2.1-2zm10.3 0c-4.2 2.3-7 6.2-7 10.6 0 3.5 2.1 5.8 4.7 5.8 2.2 0 4-1.7 4-4 0-2.2-1.6-3.8-3.6-4-.4 0-.8 0-1.2.2.4-2.7 2.8-5.4 5.2-6.6l-2.1-2z"/></svg>';
         $html .= '<p class="testimonial-card__text">' . editableText($page, "testimonials.items.$i.quote", 'Quote') . '</p>';
         $html .= '<footer class="testimonial-card__footer">';
@@ -1245,9 +1363,10 @@ function renderTeamGrid($page) {
         return '<p>No team members listed.</p>';
     }
 
-    $html = '<div class="team-grid stagger-reveal"' . editableListAttrs($page, 'team.members', ['name' => 'Name', 'role' => 'Role', 'bio' => 'Bio']) . '>';
+    $defaults = ['image' => ['src' => 'https://placehold.co/200x200', 'alt' => 'Team member'], 'name' => 'Name', 'role' => 'Role', 'bio' => 'Bio'];
+    $html = '<div class="team-grid stagger-reveal"' . editableListAttrs($page, 'team.members', $defaults) . '>';
     foreach ($members as $i => $member) {
-        $html .= '<div class="team-card"' . editableListItemAttrs($page, 'team.members', $i) . '>';
+        $html .= '<div class="team-card"' . editableListGroupItemAttrs($page, 'team.members', $i, [], $defaults, 'Team member') . '>';
         $html .= '<div class="team-card__avatar">';
         $html .= editableImage($page, "team.members.$i.image", 'https://placehold.co/200x200', 'Team member', 'team-card__img');
         $html .= '</div>';
@@ -1279,10 +1398,11 @@ function renderFeatureGrid($page) {
         return '<p>No features listed.</p>';
     }
 
-    $html = '<div class="feature-grid stagger-reveal"' . editableListAttrs($page, 'features.items', ['icon' => 'star', 'title' => 'Feature', 'desc' => 'Description']) . '>';
+    $defaults = ['icon' => 'star', 'title' => 'Feature', 'desc' => 'Description'];
+    $html = '<div class="feature-grid stagger-reveal"' . editableListAttrs($page, 'features.items', $defaults) . '>';
     foreach ($items as $i => $item) {
         $iconId = $item['icon'] ?? 'default';
-        $html .= '<div class="feature-card"' . editableListItemAttrs($page, 'features.items', $i) . '>';
+        $html .= '<div class="feature-card"' . editableListGroupItemAttrs($page, 'features.items', $i, [], $defaults, 'Feature') . '>';
         $html .= '<div class="feature-card__icon">' . renderIconSvg($iconId) . '</div>';
         $html .= '<h3 class="feature-card__title">' . editableText($page, "features.items.$i.title", 'Feature') . '</h3>';
         $html .= '<p class="feature-card__desc">' . editableText($page, "features.items.$i.desc", 'Description') . '</p>';
@@ -1311,10 +1431,11 @@ function renderTimeline($page) {
         return '<p>No timeline entries.</p>';
     }
 
-    $html = '<div class="timeline"' . editableListAttrs($page, 'timeline.entries', ['date' => '2026-01', 'version' => 'v1.0', 'title' => 'Release', 'desc' => 'Description', 'status' => 'released']) . '>';
+    $defaults = ['date' => '2026-01', 'version' => 'v1.0', 'title' => 'Release', 'desc' => 'Description', 'status' => 'released'];
+    $html = '<div class="timeline"' . editableListAttrs($page, 'timeline.entries', $defaults) . '>';
     foreach ($entries as $i => $entry) {
         $status = $entry['status'] ?? 'released';
-        $html .= '<div class="timeline-item timeline-item--' . htmlspecialchars($status) . '"' . editableListItemAttrs($page, 'timeline.entries', $i) . '>';
+        $html .= '<div class="timeline-item timeline-item--' . htmlspecialchars($status) . '"' . editableListGroupItemAttrs($page, 'timeline.entries', $i, [], $defaults, 'Timeline entry') . '>';
         $html .= '<div class="timeline-item__marker"></div>';
         $html .= '<div class="timeline-item__content">';
         $html .= '<div class="timeline-item__meta">';
@@ -1352,9 +1473,10 @@ function renderStats($page) {
         return '<p>No stats available.</p>';
     }
 
-    $html = '<div class="stats-grid stagger-reveal"' . editableListAttrs($page, 'stats.items', ['value' => '0', 'label' => 'Label', 'desc' => 'Description']) . '>';
+    $defaults = ['value' => '0', 'label' => 'Label', 'desc' => 'Description'];
+    $html = '<div class="stats-grid stagger-reveal"' . editableListAttrs($page, 'stats.items', $defaults) . '>';
     foreach ($items as $i => $item) {
-        $html .= '<div class="stats-card"' . editableListItemAttrs($page, 'stats.items', $i) . '>';
+        $html .= '<div class="stats-card"' . editableListGroupItemAttrs($page, 'stats.items', $i, [], $defaults, 'Stat') . '>';
         $html .= '<span class="stats-card__value">' . editableText($page, "stats.items.$i.value", '0') . '</span>';
         $html .= '<span class="stats-card__label">' . editableText($page, "stats.items.$i.label", 'Label') . '</span>';
         $html .= '<p class="stats-card__desc">' . editableText($page, "stats.items.$i.desc", '') . '</p>';
@@ -1383,12 +1505,13 @@ function renderGallery($page) {
         return '<p>No images available.</p>';
     }
 
-    $html = '<div class="gallery-grid stagger-reveal"' . editableListAttrs($page, 'gallery.images', ['src' => 'https://placehold.co/600x400', 'alt' => 'Image', 'caption' => 'Caption']) . '>';
+    $defaults = ['src' => 'https://placehold.co/600x400', 'alt' => 'Image', 'caption' => 'Caption'];
+    $html = '<div class="gallery-grid stagger-reveal"' . editableListAttrs($page, 'gallery.images', $defaults) . '>';
     foreach ($images as $i => $img) {
         $src = $img['src'] ?? '';
         $alt = $img['alt'] ?? '';
         $caption = $img['caption'] ?? '';
-        $html .= '<figure class="gallery-item"' . editableListItemAttrs($page, 'gallery.images', $i) . '>';
+        $html .= '<figure class="gallery-item"' . editableListGroupItemAttrs($page, 'gallery.images', $i, [], $defaults, 'Image') . '>';
         $html .= '<a href="' . htmlspecialchars($src) . '" class="gallery-item__link" data-gallery>';
         $html .= editableImage($page, "gallery.images.$i", $src, $alt, 'gallery-item__img');
         $html .= '</a>';
@@ -1710,7 +1833,6 @@ function renderEvent($event, $lang = 'de', $showImage = true, $editable = false)
     $endDate = $event['end-date'] ?? '';
     $endTime = $event['end-time'] ?? '';
     $eventIdHtml = htmlspecialchars($event['id']);
-    $eventIdJs = json_encode($event['id'], JSON_UNESCAPED_UNICODE);
     $url = $event['url'] ?? '';
 
     $isMultiDay = !empty($endDate) && $endDate !== $startDate;
@@ -1721,13 +1843,13 @@ function renderEvent($event, $lang = 'de', $showImage = true, $editable = false)
 
     if ($editable) {
         $html .= '<div class="event-edit-buttons">';
-        $html .= '<button type="button" class="event-edit-btn" onclick="InlineEditor.openEventEditor(' . $eventIdJs . ')" title="Edit">&#9998;</button>';
-        $html .= '<button type="button" class="event-hide-btn" onclick="InlineEditor.toggleEventVisibility(' . $eventIdJs . ')" title="' . ($isEventHidden ? 'Show' : 'Hide') . '" data-hidden="' . ($isEventHidden ? 'true' : 'false') . '">'
+        $html .= '<button type="button" class="event-edit-btn" title="Edit">&#9998;</button>';
+        $html .= '<button type="button" class="event-hide-btn" title="' . ($isEventHidden ? 'Show' : 'Hide') . '" data-hidden="' . ($isEventHidden ? 'true' : 'false') . '">'
             . ($isEventHidden
                 ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>'
                 : '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>')
             . '</button>';
-        $html .= '<button type="button" class="event-delete-btn" onclick="InlineEditor.deleteEvent(' . $eventIdJs . ')" title="Delete"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>';
+        $html .= '<button type="button" class="event-delete-btn" title="Delete"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>';
         $html .= '</div>';
     }
 

@@ -224,6 +224,7 @@ The pattern is always the same:
 | `data-list-key` | list containers/items | Dot path to items object |
 | `data-list-index` | list items | Numeric index (0, 1, 2...) |
 | `data-hidden` | any | Hides element from visitors when `"true"` |
+| `data-allow-field-hide` | text/link fields | Opts a specific field into field-level hide controls |
 
 ## JSON Is the Source of Truth
 
@@ -355,6 +356,18 @@ Available group field types: `text`/`input`, `textarea`, `html`/`wysiwyg`,
 are relative to the group key unless a field defines an absolute `path`.
 For `icon` fields, all icons from the icon set are selectable by default. Add an
 `icons` array to the field schema to restrict a picker to a contextual subset.
+Nibbly suppresses group modals for single plain-text fields; those list items
+stay inline-only. A group modal appears for multiple related fields or special
+fields such as `image`, `link`, `icon`, `select`, or `checkbox`.
+
+Use field types deliberately. Image-like keys (`image`, `imageSrc`, `src`,
+`photo`, `portrait`, `logo`, `avatar`, `cover`, `thumbnail`) should use
+`type: image` so the Media Manager is available. Link-like keys (`link`, `href`,
+`url`, `cta`, `button`) should use `type: link` so editors get page selection,
+manual URL entry, target, and download controls. Short labels such as `title`,
+`heading`, `meta`, and `label` are usually `type: text`; longer fields such as
+`text`, `description`, `intro`, `body`, and `content` are usually `type:
+textarea`.
 
 For templates where adding attributes to the existing wrapper is awkward, use
 the admin-only wrapper helpers:
@@ -386,6 +399,12 @@ editableListItemAttrs($page, $listKey, $index)
 // Returns data-list-page + data-list-key + data-list-index attributes.
 // Add to each item: <div <?php echo editableListItemAttrs(...); ?>>
 
+editableListGroupItemAttrs($page, $listKey, $index, $schema = [], $defaults = [], $label = 'Item')
+// Returns list-item attributes plus data-editable-group when the schema/defaults
+// describe a structured card-like item. If $schema is empty, Nibbly infers one
+// from $defaults only for multi-field or special-field items. Single-field text
+// lists remain inline-only.
+
 editableListItems($page, $listKey)
 // Returns array of items from JSON. Filters hidden items for visitors.
 
@@ -400,10 +419,28 @@ editableTextList($page, $listKey, $defaults = ['content' => ''])
 ```php
 <div class="feature-grid" <?php echo editableListAttrs($_p, 'features.items', ['title' => 'New', 'desc' => '']); ?>>
     <?php foreach (editableListItems($_p, 'features.items') as $i => $item): ?>
-        <div class="feature-card" <?php echo editableListItemAttrs($_p, 'features.items', $i); ?>>
+        <div class="feature-card" <?php echo editableListGroupItemAttrs($_p, 'features.items', $i, [
+            'label' => 'Feature',
+            'fields' => [
+                ['key' => 'title', 'type' => 'text', 'label' => 'Title'],
+                ['key' => 'desc', 'type' => 'textarea', 'label' => 'Description'],
+            ],
+        ]); ?>>
             <h3><?php echo editableText($_p, "features.items.$i.title", 'Feature'); ?></h3>
             <p><?php echo editableText($_p, "features.items.$i.desc", 'Description'); ?></p>
         </div>
+    <?php endforeach; ?>
+</div>
+```
+
+For a simple one-field list, keep the item inline-only:
+
+```php
+<div class="notes" <?php echo editableListAttrs($_p, 'notes.items', ['text' => '']); ?>>
+    <?php foreach (editableListItems($_p, 'notes.items') as $i => $item): ?>
+        <p <?php echo editableListItemAttrs($_p, 'notes.items', $i); ?>>
+            <?php echo editableText($_p, "notes.items.$i.text", 'Note'); ?>
+        </p>
     <?php endforeach; ?>
 </div>
 ```
@@ -633,7 +670,7 @@ Defines available menus with multilingual labels and sort order:
 ```json
 {
   "menus": {
-    "header": { "label": { "en": "Header", "de": "Kopfzeile" }, "weight": 0 },
+    "header": { "label": { "en": "Header", "de": "Kopfzeile" }, "type": "standard", "weight": 0 },
     "footer-pages": { "label": { "en": "Pages", "de": "Seiten" }, "weight": 10 },
     "footer-legal": { "label": { "en": "Info", "de": "Rechtliches" }, "weight": 20 }
   }
@@ -663,6 +700,35 @@ $NAV_ITEMS = [
 - Mobile: children are rendered inline, indented
 - If any child is the active page, the parent also gets the `.active` class
 - Manual items support an optional `'nav'` key (defaults to `['header', 'footer']`)
+
+### One-Page Menus
+
+Set a menu registry entry to `"type": "one-page"` when header links point to
+sections on the homepage:
+
+```json
+{ "menus": { "header": { "label": { "en": "Header" }, "type": "one-page", "weight": 0 } } }
+```
+
+Manual `$NAV_ITEMS` may then use hash-only links such as `'#services'`. On the
+homepage Nibbly keeps the link as `#services`; on subpages it normalizes the link
+to the current language homepage plus hash, e.g. `./#services` or `de/#services`.
+Hash items do not receive server-side `.active`. The frontend marks them active
+only while the target section is visible.
+
+### Local Dev Login
+
+Nibbly supports a guarded development login for local work:
+
+```php
+define('NIBBLY_DEV_LOGIN', true);
+```
+
+When enabled, existing admin users can log in with password `dev` only if both
+the request host and remote address are loopback (`localhost`, `127.0.0.1`, or
+`::1`). The bypass is ignored on non-local hosts even if the flag is accidentally
+left enabled. Set `NIBBLY_DEV_LOGIN` to `false` to disable it locally too. Older
+local configs without the constant use the same loopback-only behavior.
 
 ### Breadcrumbs
 

@@ -55,6 +55,18 @@ function getMenuLabel(string $menuId, string $lang): string {
 }
 
 /**
+ * Get the behavior type for a menu. Supported values:
+ * - standard: regular page navigation
+ * - one-page: hash links are normalized to the current language homepage and
+ *   active state is handled client-side by visible sections.
+ */
+function getMenuType(string $menuId): string {
+    $menus = getMenuRegistry()['menus'] ?? [];
+    $type = $menus[$menuId]['type'] ?? 'standard';
+    return in_array($type, ['standard', 'one-page'], true) ? $type : 'standard';
+}
+
+/**
  * Get nav locations from a page's JSON data.
  * Returns the "nav" array if set, otherwise defaults to ['header'].
  *

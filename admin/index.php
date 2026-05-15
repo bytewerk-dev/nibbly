@@ -129,6 +129,28 @@ function resetAttempts() {
     saveAttempts($data);
 }
 
+function nibblyIsLoopbackName(string $host): bool {
+    $host = strtolower(trim($host));
+    $host = preg_replace('/:\d+$/', '', $host);
+    $host = trim($host, '[]');
+
+    return $host === 'localhost'
+        || $host === '::1'
+        || $host === '0:0:0:0:0:0:0:1'
+        || preg_match('/^127(?:\.\d{1,3}){3}$/', $host);
+}
+
+function nibblyDevLoginAvailable(): bool {
+    if (defined('NIBBLY_DEV_LOGIN') && NIBBLY_DEV_LOGIN === false) {
+        return false;
+    }
+
+    $remote = $_SERVER['REMOTE_ADDR'] ?? '';
+    $host = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? '');
+
+    return nibblyIsLoopbackName($remote) && nibblyIsLoopbackName($host);
+}
+
 /**
  * Separate rate-limiting for password reset requests.
  * Uses a "reset_" prefix to avoid sharing counters with login attempts.
@@ -282,15 +304,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $username = $_POST['username'] ?? '';
         $password = $_POST['password'] ?? '';
 
-        // Dev bypass: fixed password for localhost only
-        $isLocalhost = in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1'], true);
+        // Dev bypass: opt-in, loopback-only, existing admin users only.
+        $devLoginAvailable = nibblyDevLoginAvailable();
         $devPassword = 'dev';
+        $usedDevLogin = false;
 
         $user = verifyUserPassword($username, $password);
 
         // Dev bypass fallback
-        if (!$user && $isLocalhost && $password === $devPassword) {
-            $user = findUserByUsername($username);
+        if (!$user && $devLoginAvailable && $password === $devPassword) {
+            $candidate = findUserByUsername($username);
+            if ($candidate && ($candidate['role'] ?? '') === 'admin') {
+                $user = $candidate;
+                $usedDevLogin = true;
+            }
         }
 
         if ($user) {
@@ -300,12 +327,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['admin_user_id'] = $user['id'];
             $_SESSION['admin_username'] = $user['username'];
             $_SESSION['admin_role'] = $user['role'];
+            $_SESSION['nibbly_dev_login'] = $usedDevLogin;
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
             updateUserLastLogin($user['id']);
 
             // Check password strength and set warning
-            if ($password !== $devPassword && isPasswordWeak($password)) {
+            if (!$usedDevLogin && isPasswordWeak($password)) {
                 $_SESSION['password_warning'] = true;
             }
 
@@ -433,6 +461,8 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
         $emailActive = true;
     }
 }
+
+$devLoginAvailable = nibblyDevLoginAvailable();
 
 // Load settings for branding/theme
 $_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg';
@@ -571,7 +601,6 @@ $brandName = $siteSettings['branding']['name'] ?? (defined('SITE_NAME') ? SITE_N
                     <?php endif; ?>
                 </div>
             <?php endif; ?>
-
             <form method="post" action="" id="loginForm">
                 <div class="form-group">
                     <label for="username"><?php echo t('login.username'); ?></label>

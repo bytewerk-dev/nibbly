@@ -93,6 +93,28 @@ require_once __DIR__ . '/version.php';
 
 $_allNavItems = $NAV_ITEMS[$currentLang] ?? $NAV_ITEMS[$defaultLang] ?? [];
 $navItems = getMenuItems('header', $currentLang, $basePath ?? '', $_allNavItems);
+$_headerMenuType = getMenuType('header');
+$_homeHref = ($currentLang === $defaultLang) ? '.' : $currentLang . '/';
+$_buildNavHref = function (array $item) use ($basePath, $isHomepage, $_headerMenuType, $_homeHref) {
+    $href = (string)($item['href'] ?? '#');
+    if ($_headerMenuType === 'one-page' && str_starts_with($href, '#') && $href !== '#') {
+        return ($isHomepage ? '' : $basePath . $_homeHref) . $href;
+    }
+    return $basePath . $href;
+};
+$_navLinkAttrs = function (array $item, bool $isActive) use ($_headerMenuType) {
+    $href = (string)($item['href'] ?? '');
+    $classes = [];
+    if ($isActive) $classes[] = 'active';
+    $attrs = '';
+    if ($_headerMenuType === 'one-page' && str_starts_with($href, '#') && $href !== '#') {
+        $attrs .= ' data-nav-hash="' . htmlspecialchars(substr($href, 1), ENT_QUOTES, 'UTF-8') . '"';
+    }
+    if ($classes) {
+        $attrs .= ' class="' . htmlspecialchars(implode(' ', $classes), ENT_QUOTES, 'UTF-8') . '"';
+    }
+    return $attrs;
+};
 
 // Load site settings (used for favicon, theme colors, editor button style)
 $_settingsPath = __DIR__ . '/../content/settings.json';
@@ -186,7 +208,7 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
     (function(){try{var t=localStorage.getItem('site-theme');if(t==='system')t='dark';document.documentElement.setAttribute('data-theme',t||'light');}catch(e){}})();
     </script>
 </head>
-<body class="<?php echo $isHomepage ? 'page-home' : 'page-subpage'; ?><?php echo isset($pageClass) ? ' ' . $pageClass : ''; ?>">
+<body class="<?php echo $isHomepage ? 'page-home' : 'page-subpage'; ?><?php echo isset($pageClass) ? ' ' . $pageClass : ''; ?><?php echo !empty($_SESSION['nibbly_dev_login']) ? ' has-dev-login' : ''; ?>"<?php echo !empty($_SESSION['nibbly_dev_login']) ? ' data-dev-login="true"' : ''; ?>>
 
     <!-- Fixed Header -->
     <header class="site-header" id="siteHeader">
@@ -228,24 +250,29 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
                 <ul class="nav-list">
                     <?php foreach ($navItems as $item):
                         $hasChildren = !empty($item['children']);
-                        $isActive = ($currentPage ?? '') === ($item['page'] ?? '');
+                        $isHashItem = $_headerMenuType === 'one-page' && str_starts_with((string)($item['href'] ?? ''), '#');
+                        $isActive = !$isHashItem && (($currentPage ?? '') === ($item['page'] ?? ''));
                         // Parent is active if any child matches
                         if ($hasChildren && !$isActive) {
                             foreach ($item['children'] as $_child) {
-                                if (($currentPage ?? '') === ($_child['page'] ?? '')) { $isActive = true; break; }
+                                $_childHash = $_headerMenuType === 'one-page' && str_starts_with((string)($_child['href'] ?? ''), '#');
+                                if (!$_childHash && ($currentPage ?? '') === ($_child['page'] ?? '')) { $isActive = true; break; }
                             }
                         }
                     ?>
                     <li<?php echo $hasChildren ? ' class="nav-item--has-children"' : ''; ?>>
-                        <a href="<?php echo $basePath . $item['href']; ?>"<?php echo $isActive ? ' class="active"' : ''; ?>>
+                        <a href="<?php echo htmlspecialchars($_buildNavHref($item)); ?>"<?php echo $_navLinkAttrs($item, $isActive); ?>>
                             <?php echo htmlspecialchars($item['label']); ?>
                             <?php if ($hasChildren): ?><svg class="nav-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg><?php endif; ?>
                         </a>
                         <?php if ($hasChildren): ?>
                         <ul class="nav-dropdown">
-                            <?php foreach ($item['children'] as $child): ?>
+                            <?php foreach ($item['children'] as $child):
+                                $_childHash = $_headerMenuType === 'one-page' && str_starts_with((string)($child['href'] ?? ''), '#');
+                                $_childActive = !$_childHash && (($currentPage ?? '') === ($child['page'] ?? ''));
+                            ?>
                             <li>
-                                <a href="<?php echo $basePath . $child['href']; ?>"<?php echo ($currentPage ?? '') === ($child['page'] ?? '') ? ' class="active"' : ''; ?>>
+                                <a href="<?php echo htmlspecialchars($_buildNavHref($child)); ?>"<?php echo $_navLinkAttrs($child, $_childActive); ?>>
                                     <?php echo htmlspecialchars($child['label']); ?>
                                 </a>
                             </li>
@@ -289,22 +316,27 @@ $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme'][
             <ul class="mobile-nav-list">
                 <?php foreach ($navItems as $item):
                     $hasChildren = !empty($item['children']);
-                    $isActive = ($currentPage ?? '') === ($item['page'] ?? '');
+                    $isHashItem = $_headerMenuType === 'one-page' && str_starts_with((string)($item['href'] ?? ''), '#');
+                    $isActive = !$isHashItem && (($currentPage ?? '') === ($item['page'] ?? ''));
                     if ($hasChildren && !$isActive) {
                         foreach ($item['children'] as $_child) {
-                            if (($currentPage ?? '') === ($_child['page'] ?? '')) { $isActive = true; break; }
+                            $_childHash = $_headerMenuType === 'one-page' && str_starts_with((string)($_child['href'] ?? ''), '#');
+                            if (!$_childHash && ($currentPage ?? '') === ($_child['page'] ?? '')) { $isActive = true; break; }
                         }
                     }
                 ?>
                 <li<?php echo $hasChildren ? ' class="mobile-nav-item--parent"' : ''; ?>>
-                    <a href="<?php echo $basePath . $item['href']; ?>"<?php echo $isActive ? ' class="active"' : ''; ?>>
+                    <a href="<?php echo htmlspecialchars($_buildNavHref($item)); ?>"<?php echo $_navLinkAttrs($item, $isActive); ?>>
                         <?php echo htmlspecialchars($item['label']); ?>
                     </a>
                     <?php if ($hasChildren): ?>
                     <ul class="mobile-nav-children">
-                        <?php foreach ($item['children'] as $child): ?>
+                        <?php foreach ($item['children'] as $child):
+                            $_childHash = $_headerMenuType === 'one-page' && str_starts_with((string)($child['href'] ?? ''), '#');
+                            $_childActive = !$_childHash && (($currentPage ?? '') === ($child['page'] ?? ''));
+                        ?>
                         <li>
-                            <a href="<?php echo $basePath . $child['href']; ?>"<?php echo ($currentPage ?? '') === ($child['page'] ?? '') ? ' class="active"' : ''; ?>>
+                            <a href="<?php echo htmlspecialchars($_buildNavHref($child)); ?>"<?php echo $_navLinkAttrs($child, $_childActive); ?>>
                                 <?php echo htmlspecialchars($child['label']); ?>
                             </a>
                         </li>

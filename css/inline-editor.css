@@ -21,7 +21,8 @@
  * gradient-text effects break because background-clip doesn't inherit.
  * This rule makes the child span inherit the gradient text properties.
  */
-.editable-field {
+body.has-admin-bar .editable-field,
+body.edit-mode-active .editable-field {
     background: inherit;
     -webkit-background-clip: inherit;
     -webkit-text-fill-color: inherit;
@@ -213,10 +214,11 @@ body.edit-mode-active .editable-overlay:hover {
 .editable-overlay-buttons {
     display: flex;
     align-items: center;
-    gap: 2px;
-    padding: 2px;
+    gap: 1px;
+    padding: 4px;
     background: rgba(35, 40, 45, 0.95);
-    border-radius: 4px;
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
 .overlay-btn {
@@ -310,6 +312,7 @@ body.edit-mode-active .section-add-buttons:has(.section-add-btn-toggle[aria-expa
 /* Single "add section" toggle (replaces the row of type-specific buttons).
    Inverted (dark) to match other editor chrome like .editable-overlay-buttons. */
 .section-add-btn-toggle {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -332,10 +335,13 @@ body.edit-mode-active .section-add-buttons:has(.section-add-btn-toggle[aria-expa
 }
 
 .section-add-btn-toggle:hover,
+.section-add-btn-toggle.is-hover,
 .section-add-btn-toggle[aria-expanded="true"] {
-    background: var(--editor-bar-hover, #32373c);
-    color: #fff;
-    border-color: rgba(255, 255, 255, 0.18);
+    background: var(--editor-primary, #2563eb) !important;
+    color: #fff !important;
+    border-color: rgba(255, 255, 255, 0.35) !important;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28), 0 0 0 2px color-mix(in srgb, var(--editor-primary, #2563eb) 34%, transparent) !important;
+    transform: scale(1.12) !important;
 }
 
 .section-add-btn-toggle:focus-visible {
@@ -870,6 +876,7 @@ body.edit-mode-active .editable-section:hover .video-container::after {
 }
 
 .floating-toolbar button {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -889,6 +896,47 @@ body.edit-mode-active .editable-section:hover .video-container::after {
 .floating-toolbar button:hover {
     background: rgba(255, 255, 255, 0.15);
     color: #fff;
+}
+
+.floating-toolbar button[data-editor-tooltip]::after,
+.nibbly-editor-control-btn[data-editor-tooltip]::after,
+.nibbly-editor-drag-handle[data-editor-tooltip]::after,
+.section-add-btn-toggle[data-editor-tooltip]::after {
+    content: attr(data-editor-tooltip);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    transform: translateX(-50%) translateY(2px);
+    z-index: 10002;
+    display: block;
+    width: max-content;
+    max-width: 180px;
+    padding: 5px 7px;
+    border-radius: 4px;
+    background: rgba(17, 24, 39, 0.96);
+    color: #fff;
+    font: 600 11px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    letter-spacing: 0;
+    text-transform: none;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.floating-toolbar button[data-editor-tooltip]:hover::after,
+.floating-toolbar button[data-editor-tooltip]:focus-visible::after,
+.nibbly-editor-control-btn[data-editor-tooltip]:hover::after,
+.nibbly-editor-control-btn[data-editor-tooltip].is-hover::after,
+.nibbly-editor-control-btn[data-editor-tooltip]:focus-visible::after,
+.nibbly-editor-drag-handle[data-editor-tooltip]:hover::after,
+.nibbly-editor-drag-handle[data-editor-tooltip].is-hover::after,
+.nibbly-editor-drag-handle[data-editor-tooltip]:focus-visible::after,
+.section-add-btn-toggle[data-editor-tooltip]:hover::after,
+.section-add-btn-toggle[data-editor-tooltip].is-hover::after,
+.section-add-btn-toggle[data-editor-tooltip]:focus-visible::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
 }
 
 .floating-toolbar button:active {
@@ -1241,7 +1289,7 @@ textarea.editor-html {
    ADMIN BAR BUTTON
    ============================================================ */
 
-.admin-bar-btn {
+#admin-bar .admin-bar-btn {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -1252,44 +1300,54 @@ textarea.editor-html {
     border-radius: var(--editor-btn-radius, 6px);
     font-size: 13px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.15s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.admin-bar-btn:hover {
-    background: var(--editor-bar-hover, #32373c);
-    border-color: rgba(255, 255, 255, 0.5);
-    color: #60c8cd;
+#admin-bar .admin-bar-btn:hover,
+#admin-bar .admin-bar-btn.is-hover,
+#admin-bar .admin-bar-btn:focus-visible {
+    background: rgba(255, 255, 255, 0.18) !important;
+    border-color: rgba(255, 255, 255, 0.85) !important;
+    color: #fff !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 8px 22px rgba(0, 0, 0, 0.28) !important;
+    transform: translateY(-2px) !important;
+    outline: none;
 }
 
-.admin-bar-btn svg {
+#admin-bar .admin-bar-btn svg {
     width: 16px;
     height: 16px;
     fill: currentColor;
 }
 
-.admin-bar-btn:disabled {
+#admin-bar .admin-bar-btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
 }
 
-.admin-bar-btn:disabled:hover {
-    background: transparent;
-    color: #fff;
+#admin-bar .admin-bar-btn:disabled:hover {
+    background: transparent !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    color: #fff !important;
+    box-shadow: none !important;
+    transform: none !important;
 }
 
-.admin-bar-btn-edit {
+#admin-bar .admin-bar-btn-edit {
     background: var(--editor-btn-bg, radial-gradient(ellipse at 50% 0%, #4580ed 0%, #2563eb 70%));
     border-color: var(--editor-primary, #2563eb);
     font-weight: 600;
 }
 
-.admin-bar-btn-edit:hover {
-    background: var(--editor-btn-bg-hover, radial-gradient(ellipse at 50% 0%, #5d94ef 0%, #2563eb 70%));
-    border-color: var(--editor-primary-hover, #1d4ed8);
-    color: #fff;
+#admin-bar .admin-bar-btn-edit:hover,
+#admin-bar .admin-bar-btn-edit.is-hover,
+#admin-bar .admin-bar-btn-edit:focus-visible {
+    background: var(--editor-btn-bg-hover, radial-gradient(ellipse at 50% 0%, #5d94ef 0%, #2563eb 70%)) !important;
+    border-color: var(--editor-primary-hover, #1d4ed8) !important;
+    color: #fff !important;
 }
 
-.admin-bar-btn-content-editor {
+#admin-bar .admin-bar-btn-content-editor {
     text-decoration: none;
     display: inline-flex;
     align-items: center;
@@ -1297,30 +1355,34 @@ textarea.editor-html {
     box-sizing: border-box;
 }
 
-.admin-bar-btn-content-editor:hover {
-    background: rgba(255, 255, 255, 0.15);
-    color: #fff;
+#admin-bar .admin-bar-btn-content-editor:hover,
+#admin-bar .admin-bar-btn-content-editor.is-hover,
+#admin-bar .admin-bar-btn-content-editor:focus-visible {
+    background: rgba(255, 255, 255, 0.15) !important;
+    color: #fff !important;
 }
 
-.admin-bar-btn-save {
+#admin-bar .admin-bar-btn-save {
     background: var(--editor-btn-bg, radial-gradient(ellipse at 50% 0%, #4580ed 0%, #2563eb 70%));
     border-color: var(--editor-primary, #2563eb);
     font-weight: 600;
 }
 
-.admin-bar-btn-save:hover {
-    background: var(--editor-btn-bg-hover, radial-gradient(ellipse at 50% 0%, #5d94ef 0%, #2563eb 70%));
-    border-color: var(--editor-primary-hover, #1d4ed8);
-    color: #fff;
+#admin-bar .admin-bar-btn-save:hover,
+#admin-bar .admin-bar-btn-save.is-hover,
+#admin-bar .admin-bar-btn-save:focus-visible {
+    background: var(--editor-btn-bg-hover, radial-gradient(ellipse at 50% 0%, #5d94ef 0%, #2563eb 70%)) !important;
+    border-color: var(--editor-primary-hover, #1d4ed8) !important;
+    color: #fff !important;
 }
 
 
-.admin-bar-btn-cancel {
+#admin-bar .admin-bar-btn-cancel {
     border-color: rgba(255, 255, 255, 0.5);
 }
 
-.admin-bar-btn-undo,
-.admin-bar-btn-redo {
+#admin-bar .admin-bar-btn-undo,
+#admin-bar .admin-bar-btn-redo {
     padding: 4px 8px;
 }
 
@@ -1638,7 +1700,7 @@ body.edit-mode-active .editable-footer-active:hover::after {
 
 .editable-field-active {
     position: relative;
-    display: inline-block; /* Outline around entire element, not per line */
+    display: inline;
 }
 
 body.edit-mode-active .editable-field-active {
@@ -1652,10 +1714,32 @@ body.edit-mode-active .editable-field-active:hover {
     outline-color: var(--editor-primary, #2563eb);
 }
 
+body.edit-mode-active .editable-field-active::selection,
+body.edit-mode-active .editable-field-active *::selection {
+    background: color-mix(in srgb, var(--editor-primary, #2563eb) 26%, transparent) !important;
+    color: inherit !important;
+}
+
+body.edit-mode-active .editable-field-active.editable-field-block-hitbox {
+    display: inline-block;
+    min-width: min(100%, 5rem);
+    padding: 0.04em 0.12em;
+    margin: -0.04em -0.12em;
+    border-radius: 4px;
+}
+
+body.edit-mode-active .editable-field-active.editable-field-block-hitbox:hover {
+    background: color-mix(in srgb, var(--editor-primary, #2563eb) 8%, transparent);
+}
+
+body.edit-mode-active .editable-field-active.editable-field-editing,
+body.edit-mode-active .editable-field-html.editable-field-active {
+    display: block;
+}
+
 /* HTML fields keep pointer cursor (open modal) */
 body.edit-mode-active .editable-field-html.editable-field-active {
     cursor: pointer;
-    display: block;
 }
 
 /* Composite groups for custom templates */
@@ -1820,6 +1904,113 @@ body.edit-mode-active .editable-group-overlay:focus {
 
 .group-image-alt {
     margin-top: 8px;
+}
+
+.group-editor-special {
+    padding: 12px;
+    border: 1px solid var(--editor-border, #e5e7eb);
+    border-radius: 8px;
+    background: var(--editor-bg-soft, #f8fafc);
+}
+
+.group-special-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.group-special-header label {
+    margin: 0;
+}
+
+.group-special-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    color: var(--editor-primary, #2563eb);
+}
+
+.group-special-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.group-link-grid {
+    display: grid;
+    grid-template-columns: minmax(160px, 0.8fr) minmax(220px, 1.2fr);
+    gap: 10px;
+    align-items: start;
+}
+
+.group-special-control {
+    display: grid;
+    gap: 5px;
+    margin: 0;
+}
+
+.group-special-control > span {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--editor-text-muted, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.group-special-control--target .link-page-select,
+.group-special-control--target input {
+    margin-top: 0 !important;
+}
+
+.group-image-grid {
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+}
+
+.group-image-preview {
+    width: 84px;
+    min-height: 84px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.group-image-preview:empty::before {
+    content: '';
+    width: 100%;
+    aspect-ratio: 1;
+    border: 1px dashed var(--editor-border, #cbd5e1);
+    border-radius: 6px;
+    background: #fff;
+}
+
+.group-image-preview img {
+    width: 84px;
+    height: 84px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+.group-image-controls {
+    min-width: 0;
+}
+
+.group-image-path-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+}
+
+@media (max-width: 640px) {
+    .group-link-grid,
+    .group-image-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Reset gradient-text when admin is logged in (editable-field spans
@@ -2034,6 +2225,126 @@ body.edit-mode-active .editable-list-overlay:hover {
 
 .editable-list-overlay .list-drag-handle:hover {
     color: #fff;
+}
+
+/* Harden editor chrome against broad site CSS such as .card span, .button,
+   article:hover, text-transform, inherited fonts, and clipped card controls. */
+body.edit-mode-active .nibbly-editor-section-overlay,
+body.edit-mode-active .nibbly-editor-list-overlay,
+body.edit-mode-active .nibbly-editor-group-overlay {
+    box-sizing: border-box !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    text-decoration: none !important;
+    gap: 1px !important;
+    padding: 4px !important;
+    border-radius: 6px !important;
+}
+
+body.edit-mode-active .nibbly-editor-section-overlay,
+body.edit-mode-active .nibbly-editor-group-overlay {
+    pointer-events: auto !important;
+}
+
+body.edit-mode-active .nibbly-editor-list-overlay {
+    position: absolute !important;
+    display: flex !important;
+    overflow: visible !important;
+    width: auto !important;
+    height: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    color: #fff !important;
+    background: rgba(35, 40, 45, 0.95) !important;
+    border: 0 !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22) !important;
+    pointer-events: none !important;
+}
+
+body.edit-mode-active .editable-list-item:hover .nibbly-editor-list-overlay,
+body.edit-mode-active .editable-list-item.is-overlay-active .nibbly-editor-list-overlay,
+body.edit-mode-active .nibbly-editor-list-overlay:hover {
+    pointer-events: auto !important;
+}
+
+body.edit-mode-active .nibbly-editor-control-btn,
+body.edit-mode-active .nibbly-editor-drag-handle,
+body.edit-mode-active .nibbly-editor-group-overlay {
+    appearance: none !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    font: 600 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    text-decoration: none !important;
+    transform: none !important;
+}
+
+body.edit-mode-active .nibbly-editor-control-btn {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 30px !important;
+    height: 28px !important;
+    min-width: 30px !important;
+    min-height: 28px !important;
+    max-width: 30px !important;
+    max-height: 28px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 3px !important;
+    color: #fff !important;
+    background: transparent !important;
+    cursor: pointer !important;
+}
+
+body.edit-mode-active .nibbly-editor-control-btn svg,
+body.edit-mode-active .nibbly-editor-drag-handle svg,
+body.edit-mode-active .nibbly-editor-group-overlay svg {
+    display: block !important;
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+    min-height: 16px !important;
+    fill: currentColor !important;
+    stroke: none;
+}
+
+body.edit-mode-active .nibbly-editor-drag-handle {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 30px !important;
+    height: 28px !important;
+    min-width: 30px !important;
+    min-height: 28px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    color: rgba(255, 255, 255, 0.65) !important;
+    background: transparent !important;
+    cursor: grab !important;
+}
+
+body.edit-mode-active .nibbly-editor-drag-handle:active {
+    cursor: grabbing !important;
+}
+
+body.edit-mode-active .nibbly-editor-control-btn:hover,
+body.edit-mode-active .nibbly-editor-control-btn.is-hover,
+body.edit-mode-active .nibbly-editor-control-btn:focus-visible {
+    background: rgba(255, 255, 255, 0.22) !important;
+    color: #fff !important;
+}
+
+body.edit-mode-active .nibbly-editor-drag-handle:hover,
+body.edit-mode-active .nibbly-editor-drag-handle.is-hover,
+body.edit-mode-active .nibbly-editor-drag-handle:focus-visible {
+    color: #fff !important;
 }
 
 /* Drag & Drop visual feedback */
@@ -2368,27 +2679,30 @@ label.editor-btn-inline {
 /* "New Event" Button */
 .event-add-wrapper {
     margin-bottom: 20px;
+    text-align: center;
 }
 
 .event-add-btn {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 12px 24px;
-    background: linear-gradient(135deg, rgba(13, 156, 144, 0.2) 0%, rgba(13, 156, 144, 0.1) 100%);
-    border: 2px dashed rgba(13, 156, 144, 0.5);
-    border-radius: 12px;
-    color: var(--editor-primary, #2563eb);
-    font-size: 15px;
-    font-weight: 500;
+    justify-content: center;
+    min-height: 36px;
+    padding: 0 14px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 6px;
+    background: var(--editor-panel, #22272b);
+    color: var(--editor-text, #f8fafc);
+    font: 600 13px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     cursor: pointer;
-    transition: all 0.3s ease;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 
 .event-add-btn:hover {
-    background: linear-gradient(135deg, rgba(13, 156, 144, 0.3) 0%, rgba(13, 156, 144, 0.2) 100%);
-    border-color: var(--editor-primary, #2563eb);
-    transform: translateY(-2px);
+    background: var(--editor-panel-hover, #30363d);
+    border-color: rgba(255, 255, 255, 0.32);
+    color: #fff;
+    transform: translateY(-1px);
 }
 
 /* Event card in edit mode */
@@ -2724,7 +3038,10 @@ body.edit-mode-active [data-hidden="true"]:hover {
     fill: currentColor;
 }
 
-body.edit-mode-active .editable-field-wrapper:hover .field-hide-btn,
+body.edit-mode-active .editable-field-wrapper:hover .field-hide-btn {
+    display: flex;
+}
+
 /* Placeholder for empty/broken images in edit mode */
 body.edit-mode-active .editable-image-empty {
     min-width: 200px;

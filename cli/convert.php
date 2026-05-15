@@ -865,7 +865,17 @@ class HtmlToNibbly
 
         $this->templateLines[] = "$indent<$containerTag$containerAttrs <?php echo editableListAttrs(\$_p, '$listKey', $defaultsJson); ?>>";
         $this->templateLines[] = "$indent2<?php foreach (editableListItems(\$_p, '$listKey') as \$i => \$item): ?>";
-        $this->templateLines[] = "$indent2<$itemTag$itemClassAttr <?php echo editableListItemAttrs(\$_p, '$listKey', \$i); ?>>";
+        $hasStructuredFields = count($fields) > 1;
+        foreach ($fields as $f) {
+            if (in_array($f['role'], ['image', 'link', 'icon'], true)) {
+                $hasStructuredFields = true;
+                break;
+            }
+        }
+        $itemAttrsHelper = $hasStructuredFields
+            ? "editableListGroupItemAttrs(\$_p, '$listKey', \$i, [], $defaultsJson, 'Item')"
+            : "editableListItemAttrs(\$_p, '$listKey', \$i)";
+        $this->templateLines[] = "$indent2<$itemTag$itemClassAttr <?php echo $itemAttrsHelper; ?>>";
 
         // Generate field templates
         foreach ($fields as $f) {

@@ -9,7 +9,7 @@
 // VERSION
 // ============================================================
 
-define('NIBBLY_VERSION', '1.2.3');
+define('NIBBLY_VERSION', '1.2.4');
 
 // Default favicon path used as fallback by the admin UI before settings.json
 // values are applied. Override in settings.json -> "favicon".
@@ -23,6 +23,11 @@ define('SITE_NAME', 'My Website');
 // Optional stable identifier for backup filenames and remote folders.
 // If omitted, Nibbly derives it from the request host or hosting path.
 // define('NIBBLY_SITE_DOMAIN', 'example.com');
+
+// Development login. Existing admin users can log in with password "dev" only
+// from loopback hosts (localhost, 127.0.0.1, ::1). This is ignored on non-local
+// hosts even if accidentally left enabled. Set false to disable it locally too.
+define('NIBBLY_DEV_LOGIN', true);
 
 // ============================================================
 // LANGUAGES
