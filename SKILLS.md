@@ -75,13 +75,15 @@ Every piece of content that should be editable needs to be wrapped in an editabl
    <?php echo editableImage($_p, 'hero.image', 'assets/images/hero.jpg', 'Hero image', 'hero__img'); ?>
    ```
 
-5. **For repeating content** (cards, features, team members), use the editable list system:
+5. **For repeating content** (cards, features, team members), use the editable list system. For card-like items with multiple fields or image/link/icon fields, use `editableListGroupItemAttrs()` so editors get one structured modal for the whole item. For a single text-only item, keep `editableListItemAttrs()` and inline editing only:
    ```php
-   <div class="cards" <?php echo editableListAttrs($_p, 'features.items', ['title' => 'New', 'desc' => '']); ?>>
+   <?php $featureDefaults = ['title' => 'New', 'desc' => '', 'link' => ['text' => 'Learn more', 'href' => '#']]; ?>
+   <div class="cards" <?php echo editableListAttrs($_p, 'features.items', $featureDefaults); ?>>
        <?php foreach (editableListItems($_p, 'features.items') as $i => $item): ?>
-           <div class="card" <?php echo editableListItemAttrs($_p, 'features.items', $i); ?>>
+           <div class="card" <?php echo editableListGroupItemAttrs($_p, 'features.items', $i, [], $featureDefaults, 'Feature'); ?>>
                <h3><?php echo editableText($_p, "features.items.$i.title", 'Feature'); ?></h3>
                <p><?php echo editableText($_p, "features.items.$i.desc", 'Description'); ?></p>
+               <?php echo editableLink($_p, "features.items.$i.link", 'Learn more', '#', 'card__link'); ?>
            </div>
        <?php endforeach; ?>
    </div>

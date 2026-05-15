@@ -998,25 +998,25 @@ function getComponentsContent($lang, $t) {
             'desc' => $t['comp_team_desc'],
             'members' => [
                 [
-                    'image' => ['src' => 'https://thispersondoesnotexist.com/#1', 'alt' => $t['comp_team_1_name']],
+                    'image' => ['src' => 'https://i.pravatar.cc/200?img=32', 'alt' => $t['comp_team_1_name']],
                     'name' => $t['comp_team_1_name'],
                     'role' => $t['comp_team_1_role'],
                     'bio' => $t['comp_team_1_bio'],
                 ],
                 [
-                    'image' => ['src' => 'https://thispersondoesnotexist.com/#2', 'alt' => $t['comp_team_2_name']],
+                    'image' => ['src' => 'https://i.pravatar.cc/200?img=47', 'alt' => $t['comp_team_2_name']],
                     'name' => $t['comp_team_2_name'],
                     'role' => $t['comp_team_2_role'],
                     'bio' => $t['comp_team_2_bio'],
                 ],
                 [
-                    'image' => ['src' => 'https://thispersondoesnotexist.com/#3', 'alt' => $t['comp_team_3_name']],
+                    'image' => ['src' => 'https://i.pravatar.cc/200?img=56', 'alt' => $t['comp_team_3_name']],
                     'name' => $t['comp_team_3_name'],
                     'role' => $t['comp_team_3_role'],
                     'bio' => $t['comp_team_3_bio'],
                 ],
                 [
-                    'image' => ['src' => 'https://thispersondoesnotexist.com/#4', 'alt' => $t['comp_team_4_name']],
+                    'image' => ['src' => 'https://i.pravatar.cc/200?img=68', 'alt' => $t['comp_team_4_name']],
                     'name' => $t['comp_team_4_name'],
                     'role' => $t['comp_team_4_role'],
                     'bio' => $t['comp_team_4_bio'],

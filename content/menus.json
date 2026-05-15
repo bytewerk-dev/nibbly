@@ -2,6 +2,7 @@
     "menus": {
         "header": {
             "label": { "en": "Header", "de": "Kopfzeile", "es": "Encabezado" },
+            "type": "standard",
             "weight": 0
         },
         "footer-pages": {

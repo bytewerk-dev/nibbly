@@ -181,16 +181,26 @@ PHPTPL;
         'copyright' => '&copy; [id="adminAccess"]' . date('Y') . '[/id] ' . htmlspecialchars($siteName),
     ];
     foreach ($languages as $lang) {
-        $footerData['tagline'][$lang] = '';
-        $footerData['services'][$lang] = '';
-        $footerData['claim'][$lang] = '';
+        if ($lang === 'de') {
+            $footerData['tagline'][$lang] = 'Ein leichtes Flat-File-CMS für editierbare Websites.';
+            $footerData['services'][$lang] = 'Inhalte inline bearbeiten, Seiten als JSON verwalten und individuelle Layouts sauber pflegen.';
+            $footerData['claim'][$lang] = 'Keine Datenbank. Kein schwerer Stack. Nur Inhalte, die Kunden selbst aktualisieren können.';
+        } elseif ($lang === 'es') {
+            $footerData['tagline'][$lang] = 'Un CMS ligero de archivos planos para sitios web editables.';
+            $footerData['services'][$lang] = 'Edita contenido en línea, gestiona páginas como JSON y mantén diseños personalizados.';
+            $footerData['claim'][$lang] = 'Sin base de datos. Sin stack pesado. Solo contenido que tus clientes pueden actualizar.';
+        } else {
+            $footerData['tagline'][$lang] = 'A lightweight flat-file CMS for editable websites.';
+            $footerData['services'][$lang] = 'Edit content inline, manage pages as JSON, and keep custom layouts maintainable.';
+            $footerData['claim'][$lang] = 'No database. No heavy stack. Just content your clients can update.';
+        }
         $footerData['contactHeading'][$lang] = $lang === 'de' ? 'Kontakt' : ($lang === 'es' ? 'Contacto' : 'Contact');
     }
     file_put_contents($root . '/content/pages/footer.json', json_encode($footerData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
     // 4b. Create menus.json (menu registry)
     $menusData = ['menus' => [
-        'header' => ['label' => [], 'weight' => 0],
+        'header' => ['label' => [], 'type' => 'standard', 'weight' => 0],
         'footer-pages' => ['label' => [], 'weight' => 10],
         'footer-legal' => ['label' => [], 'weight' => 20],
     ]];
@@ -316,7 +326,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // VERSION
 // ============================================================
 
-define('NIBBLY_VERSION', '1.2.3');
+define('NIBBLY_VERSION', '1.2.4');
 
 // Default favicon path used as fallback by the admin UI before settings.json
 // values are applied. Override in settings.json -> "favicon".
@@ -327,6 +337,11 @@ define('NIBBLY_DEFAULT_FAVICON', '/assets/images/favicon.svg');
 // ============================================================
 
 define('SITE_NAME', '{$escapedSiteName}');
+
+// Development login. Existing admin users can log in with password "dev" only
+// from loopback hosts (localhost, 127.0.0.1, ::1). This is ignored on non-local
+// hosts even if accidentally left enabled. Set false to disable it locally too.
+define('NIBBLY_DEV_LOGIN', true);
 
 // ============================================================
 // LANGUAGES
