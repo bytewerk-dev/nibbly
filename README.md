@@ -2,7 +2,7 @@
 
 A flat-file CMS built on PHP with no database. Content lives in JSON files, pages are PHP templates, and an inline editor lets you edit everything directly on the page. Zero dependencies, zero build steps.
 
-**Version 1.2.5** — Examples and full documentation at [nibbly.dev](https://nibbly.dev/).
+**Version 1.3.0** — Examples and full documentation at [nibbly.dev](https://nibbly.dev/).
 
 ## Features
 
@@ -15,6 +15,7 @@ A flat-file CMS built on PHP with no database. Content lives in JSON files, page
 - **Accessibility foundations** -- skip links, landmarks, reduced-motion support, labelled controls, and SEO health checks for missing image alt text
 - **Access controls** -- maintenance mode with preview bypass and password-protected private pages
 - **SEO/AEO tools** -- per-page metadata, Open Graph image fallback, sitemap/robots, and health indicators
+- **AI tools** -- server-side AI gateway for assistant chat, SEO/text generation, image generation, image-to-image, usage limits, audit logs, and provider-specific API keys
 - **Custom layouts** -- full PHP template control with editable field API
 - **Automatic backups** -- per-page JSON history with restore via admin panel
 - **Site backup & restore** -- download full site as ZIP, restore from backup
@@ -73,6 +74,8 @@ content/
   news/             Blog post JSON files
   events.json       Events
   settings.json     Site-wide settings
+  ai-settings.json  AI provider settings, feature flags, and limits
+  ai-usage.json     AI usage counters
 css/
   style.css         Core styles + CSS custom properties (do not edit)
   components.css    Core render component styles (do not edit)
@@ -86,6 +89,7 @@ includes/
   block-renderers/  Per-block-type renderers
   nav-config.php    Navigation configuration
   access-guard.php  Maintenance mode and private page enforcement
+  ai/               AI provider gateway, usage limits, audit, and generated images
   menu-helpers.php  Menu registry
   page.php          Front controller for JSON-only pages
 js/                 Client-side scripts

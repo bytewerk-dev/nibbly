@@ -37,7 +37,7 @@ $isAdminUser = ($userRole === 'admin');
 
 // Load settings for theme
 $_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg';
-$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => ['adminTheme' => 'light', 'primaryColor' => '#2563eb', 'accentColor' => '#60a5fa', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'buttonGlow' => true, 'buttonRadius' => 6]];
+$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => ['adminTheme' => 'dark', 'primaryColor' => '#2563eb', 'accentColor' => '#60a5fa', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'buttonGlow' => true, 'buttonRadius' => 6], 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'messages' => true, 'iconManager' => true]];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     $loadedSettings = json_decode(file_get_contents(SETTINGS_PATH), true);
     if (is_array($loadedSettings)) {
@@ -51,12 +51,22 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
         if (!empty($loadedSettings['favicon_png'])) $siteSettings['favicon_png'] = $loadedSettings['favicon_png'];
     }
 }
-$adminTheme = $siteSettings['theme']['adminTheme'] ?? 'light';
+$adminTheme = $siteSettings['theme']['adminTheme'] ?? 'dark';
+$dashboardModules = array_replace(['news' => true, 'events' => true, 'messages' => true, 'iconManager' => true, 'ai' => true], is_array($siteSettings['modules'] ?? null) ? $siteSettings['modules'] : []);
+$aiFeaturesEnabled = !empty($dashboardModules['ai']);
+$validDashboardTabs = ['home', 'content', 'settings'];
+if (!empty($dashboardModules['news'])) $validDashboardTabs[] = 'news';
+if (!empty($dashboardModules['events'])) $validDashboardTabs[] = 'events';
+if (!empty($dashboardModules['messages'])) $validDashboardTabs[] = 'mails';
+if ($isAdminUser) $validDashboardTabs[] = 'media';
+if ($isAdminUser && !empty($dashboardModules['iconManager'])) $validDashboardTabs[] = 'icons';
+if ($isAdminUser) $validDashboardTabs[] = 'backup';
 
 // SVG icon helper — keeps inline SVG paths in one place
 function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): string {
     static $paths = [
         'hamburger' => '<path d="M3 12h18M3 6h18M3 18h18"/>',
+        'home'      => '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/>',
         'edit'      => '<path d="M12 20h9M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4L16.5 3.5z"/>',
         'eye'       => '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
         'mail'      => '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/>',
@@ -73,6 +83,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         'download'  => '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
         'upload'    => '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
         'alert'     => '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+        'ai'        => '<path d="M12 2l1.6 5.2L19 9l-5.4 1.8L12 16l-1.6-5.2L5 9l5.4-1.8L12 2z"/><path d="M19 14l.8 2.7L22 17.5l-2.2.8L19 21l-.8-2.7-2.2-.8 2.2-.8L19 14z"/><path d="M5 13l.7 2.1L8 16l-2.3.9L5 19l-.7-2.1L2 16l2.3-.9L5 13z"/>',
     ];
     $p = $paths[$name] ?? '';
     return "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"{$strokeWidth}\" stroke-linecap=\"round\" stroke-linejoin=\"round\" width=\"{$size}\" height=\"{$size}\">{$p}</svg>";
@@ -110,12 +121,12 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     $_acLight = htmlspecialchars($_t['accentColor']);
     $_sbLight = !empty($_t['sidebarBg'])
         ? htmlspecialchars($_t['sidebarBg'])
-        : "color-mix(in srgb, {$_pcLight} 8%, white)";
+        : "color-mix(in srgb, {$_pcLight} 12%, white)";
     $_pcDark = !empty($_t['darkPrimaryColor']) ? htmlspecialchars($_t['darkPrimaryColor']) : $_pcLight;
     $_acDark = !empty($_t['darkAccentColor']) ? htmlspecialchars($_t['darkAccentColor']) : $_acLight;
     $_sbDark = !empty($_t['darkSidebarBg'])
         ? htmlspecialchars($_t['darkSidebarBg'])
-        : "color-mix(in srgb, {$_pcDark} 8%, #050505)";
+        : "color-mix(in srgb, {$_pcDark} 10%, #0b0d12)";
     ?>
     <style>
     :root,
@@ -129,6 +140,12 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         --nb-brand: <?php echo $_acLight; ?>;
         --nb-brand-dark: color-mix(in srgb, <?php echo $_acLight; ?> 80%, black);
         --nb-sidebar-bg: <?php echo $_sbLight; ?>;
+        --nb-bg: color-mix(in srgb, <?php echo $_sbLight; ?> 55%, white);
+        --nb-bg-elevated: color-mix(in srgb, <?php echo $_sbLight; ?> 18%, white);
+        --nb-bg-sunken: color-mix(in srgb, <?php echo $_sbLight; ?> 82%, white);
+        --nb-bg-hover: color-mix(in srgb, <?php echo $_sbLight; ?> 68%, white);
+        --nb-border: color-mix(in srgb, <?php echo $_sbLight; ?> 55%, #9ca3af);
+        --nb-border-strong: color-mix(in srgb, <?php echo $_sbLight; ?> 48%, #7b8492);
     }
     [data-site-theme="dark"] {
         --nb-primary: <?php echo $_pcDark; ?>;
@@ -140,6 +157,12 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         --nb-brand: <?php echo $_acDark; ?>;
         --nb-brand-dark: color-mix(in srgb, <?php echo $_acDark; ?> 80%, black);
         --nb-sidebar-bg: <?php echo $_sbDark; ?>;
+        --nb-bg: color-mix(in srgb, <?php echo $_sbDark; ?> 78%, #202428);
+        --nb-bg-elevated: color-mix(in srgb, <?php echo $_sbDark; ?> 58%, #2a2d31);
+        --nb-bg-sunken: color-mix(in srgb, <?php echo $_sbDark; ?> 88%, #030405);
+        --nb-bg-hover: color-mix(in srgb, <?php echo $_sbDark; ?> 42%, #34383e);
+        --nb-border: color-mix(in srgb, <?php echo $_sbDark; ?> 55%, #5a6472);
+        --nb-border-strong: color-mix(in srgb, <?php echo $_sbDark; ?> 44%, #717b88);
     }
     </style>
 </head>
@@ -184,32 +207,44 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     <aside class="admin-sidebar" id="adminSidebar" aria-label="Admin navigation">
         <div class="sidebar-top">
             <nav class="sidebar-nav">
-                <button class="sidebar-nav-item active" onclick="switchTab('content')" data-tab="content">
+                <button class="sidebar-nav-item active" onclick="switchTab('home')" data-tab="home">
+                    <?php echo nbIcon('home'); ?>
+                    <span><?php echo t('dashboard_home.title'); ?></span>
+                </button>
+                <button class="sidebar-nav-item" onclick="switchTab('content')" data-tab="content">
                     <?php echo nbIcon('edit'); ?>
                     <span><?php echo t('nav.pages'); ?></span>
                 </button>
+                <?php if (!empty($dashboardModules['news'])): ?>
                 <button class="sidebar-nav-item" onclick="switchTab('news')" data-tab="news">
                     <?php echo nbIcon('news'); ?>
                     <span><?php echo t('nav.news'); ?></span>
                 </button>
+                <?php endif; ?>
+                <?php if (!empty($dashboardModules['events'])): ?>
                 <button class="sidebar-nav-item" onclick="switchTab('events')" data-tab="events">
                     <?php echo nbIcon('calendar'); ?>
                     <span><?php echo t('nav.events'); ?></span>
                 </button>
+                <?php endif; ?>
+                <?php if (!empty($dashboardModules['messages'])): ?>
                 <button class="sidebar-nav-item" onclick="switchTab('mails')" data-tab="mails">
                     <?php echo nbIcon('mail'); ?>
                     <span><?php echo t('nav.messages'); ?></span>
                     <span class="mail-badge mail-badge--hidden" id="mailBadge">0</span>
                 </button>
+                <?php endif; ?>
                 <?php if ($isAdminUser): ?>
-                <button class="sidebar-nav-item" onclick="openImageManager()" type="button">
+                <button class="sidebar-nav-item" onclick="switchTab('media')" data-tab="media" type="button">
                     <?php echo nbIcon('image'); ?>
                     <span><?php echo t('nav.media_library'); ?></span>
                 </button>
+                <?php if (!empty($dashboardModules['iconManager'])): ?>
                 <button class="sidebar-nav-item" onclick="switchTab('icons')" data-tab="icons">
                     <?php echo nbIcon('icons'); ?>
                     <span><?php echo t('nav.icon_manager'); ?></span>
                 </button>
+                <?php endif; ?>
                 <?php endif; ?>
             </nav>
         </div>
@@ -285,7 +320,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     <?php endif; ?>
 
     <!-- Content Tab -->
-    <div class="admin-container" id="contentTab">
+    <div class="admin-container" id="contentTab" style="display: none;">
         <!-- Mobile Page Selector (hidden on desktop) -->
         <div class="mobile-selectors" id="mobileSelectors">
             <select id="langSelectMobile" class="topbar-select" onchange="syncSelect('langSelect', this.value)">
@@ -550,11 +585,12 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         <div class="page-list-container" id="mailsListView">
             <div class="info-banner info-banner--warning mail-config-banner" id="mailConfigBanner" hidden>
                 <div class="info-banner__inner">
-                    <strong class="info-banner__title"><?php echo nbIcon('alert'); ?> <span id="mailConfigBannerTitle"></span></strong>
-                    <span class="info-banner__body">
-                        <span id="mailConfigBannerText"></span>
-                        <button type="button" class="info-banner__cta info-banner__cta-button" onclick="openEmailSettings()"><?php echo t('mails.open_email_settings'); ?> &rarr;</button>
+                    <span class="info-banner__icon"><?php echo nbIcon('alert'); ?></span>
+                    <span class="info-banner__content">
+                        <strong class="info-banner__title"><span id="mailConfigBannerTitle"></span></strong>
+                        <span class="info-banner__body" id="mailConfigBannerText"></span>
                     </span>
+                    <button type="button" class="info-banner__cta info-banner__cta-button" onclick="openEmailSettings()"><?php echo t('mails.open_email_settings'); ?> &rarr;</button>
                 </div>
             </div>
             <div class="page-list-header">
@@ -611,6 +647,290 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     </div>
 
     <?php if ($isAdminUser): ?>
+    <!-- Media Library Tab -->
+    <div class="admin-container" id="mediaTab" style="display: none;">
+        <div class="page-list-container media-library-page">
+            <div class="page-list-header">
+                <div class="page-list-header-left">
+                    <h2><?php echo t('nav.media_library'); ?></h2>
+                </div>
+            </div>
+            <div id="mediaLibraryMount" class="media-library-mount"></div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- Dashboard Home Tab -->
+    <div class="admin-container" id="homeTab">
+        <div class="dashboard-home">
+            <div class="page-list-header">
+                <div class="page-list-header-left">
+                    <h2><?php echo t('dashboard_home.title'); ?></h2>
+                </div>
+            </div>
+
+            <div class="dashboard-status-strip" id="dashboardStatusStrip" aria-label="<?php echo htmlspecialchars(t('dashboard_home.site_status'), ENT_QUOTES, 'UTF-8'); ?>"></div>
+
+            <section class="dashboard-section dashboard-section--ai"<?php echo $aiFeaturesEnabled ? '' : ' hidden'; ?>>
+                <div class="dashboard-section-header">
+                    <div>
+                        <h3><?php echo t('dashboard_home.ai_tools'); ?></h3>
+                        <p id="dashboardAiStatus" class="dashboard-status-text"></p>
+                    </div>
+                    <div class="dashboard-section-actions">
+                        <span class="ai-usage-summary" id="aiUsageSummary"<?php echo $aiFeaturesEnabled ? '' : ' hidden'; ?>></span>
+                        <?php if ($isAdminUser): ?>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="switchTab('settings', {settingsTab: 'ai'});"><?php echo t('ai.open_settings'); ?></button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div class="info-banner info-banner--warning info-banner--contained" id="aiUnavailableBanner">
+                    <div class="info-banner__inner">
+                        <strong class="info-banner__title"><?php echo nbIcon('alert'); ?> <?php echo t('ai.not_configured_title'); ?></strong>
+                        <span class="info-banner__body">
+                            <?php echo t('ai.not_configured_text'); ?>
+                            <?php if ($isAdminUser): ?>
+                            <button type="button" class="info-banner__cta info-banner__cta-button" onclick="switchTab('settings', {settingsTab: 'ai'});"><?php echo t('ai.open_settings'); ?> &rarr;</button>
+                            <?php endif; ?>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="ai-grid">
+                    <section class="ai-card ai-card--assistant">
+                        <h3><?php echo t('ai.assistant'); ?></h3>
+                        <div class="ai-chat-log" id="aiChatLog" aria-live="polite"></div>
+                        <form id="aiChatForm" class="ai-form">
+                            <textarea id="aiChatPrompt" rows="4" placeholder="<?php echo htmlspecialchars(t('ai.assistant_placeholder'), ENT_QUOTES, 'UTF-8'); ?>" disabled></textarea>
+                            <div class="ai-chat-actions">
+                                <span class="ai-chat-shortcut-hint" data-mac-text="<?php echo htmlspecialchars(t('ai.chat_shortcuts_mac'), ENT_QUOTES, 'UTF-8'); ?>" data-other-text="<?php echo htmlspecialchars(t('ai.chat_shortcuts_ctrl'), ENT_QUOTES, 'UTF-8'); ?>"><?php echo t('ai.chat_shortcuts'); ?></span>
+                                <span class="ai-running-indicator" id="aiChatIndicator" hidden><?php echo t('ai.answering'); ?></span>
+                                <button type="submit" class="btn btn-primary" onclick="if(document.getElementById('aiChatPrompt')?.value.trim())document.getElementById('aiChatIndicator').hidden=false;" disabled><?php echo t('ai.send'); ?></button>
+                            </div>
+                        </form>
+                    </section>
+
+                    <section class="ai-card ai-card--tools">
+                        <div class="ai-tool-tabs" role="tablist" aria-label="<?php echo htmlspecialchars(t('dashboard_home.ai_tools'), ENT_QUOTES, 'UTF-8'); ?>">
+                            <button type="button" class="ai-tool-tab active" data-ai-tool-tab="image" onclick="switchAiToolTab('image')" role="tab" aria-selected="true"><?php echo t('ai.image_generator'); ?></button>
+                            <button type="button" class="ai-tool-tab" data-ai-tool-tab="text" onclick="switchAiToolTab('text')" role="tab" aria-selected="false"><?php echo t('ai.text_generator'); ?></button>
+                        </div>
+
+                        <div class="ai-tool-panel" id="aiTextToolPanel" data-ai-tool-panel="text" role="tabpanel" hidden>
+                            <form id="aiTextForm" class="ai-form">
+                                <textarea id="aiTextPrompt" rows="6" placeholder="<?php echo htmlspecialchars(t('ai.text_placeholder'), ENT_QUOTES, 'UTF-8'); ?>" disabled></textarea>
+                                <div class="form-row-inline">
+                                    <div class="form-group">
+                                        <label for="aiTextMaxTokens"><?php echo t('ai.max_output_tokens'); ?></label>
+                                        <input type="number" id="aiTextMaxTokens" min="64" max="32000" value="700" disabled>
+                                    </div>
+                                    <div class="form-group ai-form-action">
+                                        <button type="submit" class="btn btn-primary" disabled><?php echo t('ai.generate_text'); ?></button>
+                                    </div>
+                                </div>
+                            </form>
+                            <textarea id="aiTextResult" class="ai-result" rows="8" readonly></textarea>
+                        </div>
+
+                        <div class="ai-tool-panel active" id="aiImageToolPanel" data-ai-tool-panel="image" role="tabpanel">
+                            <form id="aiImageForm" class="ai-form">
+                                <textarea id="aiImagePrompt" rows="4" placeholder="<?php echo htmlspecialchars(t('ai.image_placeholder'), ENT_QUOTES, 'UTF-8'); ?>" disabled></textarea>
+	                                <div class="ai-image-command-row">
+	                                    <div class="ai-reference-control">
+	                                        <input type="file" id="aiImageReference" accept="image/png,image/jpeg,image/webp" multiple hidden disabled>
+	                                        <button type="button" class="btn btn-secondary btn-sm" id="aiImageReferenceUpload" disabled><?php echo t('ai.image_reference_upload'); ?></button>
+	                                        <button type="button" class="btn btn-secondary btn-sm" id="aiImageReferenceLibrary" disabled><?php echo t('ai.image_reference_library'); ?></button>
+	                                        <span class="ai-reference-name" id="aiImageReferenceName"><?php echo t('ai.image_reference_none'); ?></span>
+	                                        <button type="button" class="btn btn-secondary btn-sm ai-reference-clear" id="aiImageReferenceClear" hidden><?php echo t('btn.clear'); ?></button>
+	                                    </div>
+	                                    <button type="button" class="btn btn-secondary btn-sm" id="aiImproveImagePrompt" disabled><?php echo t('ai.improve_prompt'); ?></button>
+	                                </div>
+	                                <div class="ai-reference-list" id="aiImageReferenceList" hidden></div>
+                                <div class="ai-image-model-row">
+                                    <div class="form-group">
+                                        <label for="aiImageModelPicker"><?php echo t('ai.image_model'); ?></label>
+                                        <select id="aiImageModelPicker" class="topbar-select" disabled></select>
+                                    </div>
+                                </div>
+                                <div class="ai-image-options-grid">
+                                    <div class="form-group">
+                                        <label for="aiImageSize"><?php echo t('ai.image_size'); ?></label>
+                                        <div class="ai-ratio-select ai-size-picker" id="aiImageSizePicker">
+                                            <input type="hidden" id="aiImageSize" value="auto" disabled>
+                                            <input type="hidden" id="aiImageRatio" value="auto" disabled>
+                                            <button type="button" class="ai-size-trigger" id="aiImageSizeTrigger" disabled aria-haspopup="listbox" aria-expanded="false">
+                                                <span class="ai-ratio-icon" id="aiImageRatioIcon" aria-hidden="true"></span>
+                                                <span class="ai-size-trigger-label" id="aiImageSizeLabel"><?php echo t('ai.image_size_auto'); ?></span>
+                                            </button>
+                                            <div class="ai-size-menu" id="aiImageSizeMenu" role="listbox" hidden></div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="aiImageScale"><?php echo t('ai.image_scale'); ?></label>
+                                        <select id="aiImageScale" class="topbar-select" disabled>
+                                            <option value="1024">1K</option>
+                                            <option value="2048" selected>2K</option>
+                                            <option value="3072">3K</option>
+                                            <option value="3840">4K</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="aiImageFormat"><?php echo t('ai.image_format'); ?></label>
+                                        <select id="aiImageFormat" class="topbar-select" disabled>
+                                            <option value="png">PNG</option>
+                                            <option value="jpeg">JPEG</option>
+                                            <option value="webp" selected>WebP</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <p class="ai-image-size-note" id="aiImageSizeNote"></p>
+                                <div class="ai-image-options-grid ai-image-options-grid--secondary">
+                                    <div class="form-group">
+                                        <label for="aiImageQuality"><?php echo t('ai.image_quality'); ?></label>
+                                        <select id="aiImageQuality" class="topbar-select" disabled>
+                                            <option value="auto"><?php echo t('ai.image_auto'); ?></option>
+                                            <option value="low"><?php echo t('ai.image_quality_low'); ?></option>
+                                            <option value="medium"><?php echo t('ai.image_quality_medium'); ?></option>
+                                            <option value="high"><?php echo t('ai.image_quality_high'); ?></option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="aiImageModeration"><?php echo t('ai.image_moderation'); ?></label>
+                                        <select id="aiImageModeration" class="topbar-select" disabled>
+                                            <option value="auto"><?php echo t('ai.image_moderation_standard'); ?></option>
+                                            <option value="low"><?php echo t('ai.image_moderation_low'); ?></option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="aiImageCompression"><?php echo t('ai.image_compression'); ?></label>
+                                        <input type="number" id="aiImageCompression" min="0" max="100" value="100" disabled>
+                                    </div>
+                                </div>
+                                <div class="ai-form-actions ai-image-generate-row">
+                                    <div class="ai-image-count-control">
+                                        <label for="aiImageCount"><?php echo t('ai.image_count'); ?></label>
+                                        <div class="ai-count-stepper">
+                                            <input type="number" id="aiImageCount" min="1" max="10" value="1" disabled>
+                                            <div class="ai-count-stepper-buttons">
+                                                <button type="button" class="ai-count-step" id="aiImageCountUp" aria-label="<?php echo htmlspecialchars(t('ai.image_count_increase'), ENT_QUOTES, 'UTF-8'); ?>" disabled>+</button>
+                                                <button type="button" class="ai-count-step" id="aiImageCountDown" aria-label="<?php echo htmlspecialchars(t('ai.image_count_decrease'), ENT_QUOTES, 'UTF-8'); ?>" disabled>-</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary" id="aiGenerateImageButton" disabled><?php echo t('ai.generate_image'); ?></button>
+                                </div>
+                                <p class="ai-image-model-note" id="aiImageModelNote" hidden><?php echo t('ai.image_model_missing_note'); ?></p>
+                            </form>
+                            <div class="ai-image-result" id="aiImageResult"></div>
+                            <section class="ai-image-history" id="aiImageHistory" hidden>
+                                <div class="ai-image-history__header">
+                                    <div>
+                                        <h4><?php echo t('ai.image_history_title'); ?></h4>
+                                        <p><?php echo t('ai.image_history_hint'); ?></p>
+                                    </div>
+                                    <button type="button" class="btn btn-secondary btn-sm" id="aiImageHistoryClear"><?php echo t('ai.image_history_clear'); ?></button>
+                                </div>
+                                <div class="ai-image-history-list" id="aiImageHistoryList"></div>
+                                <button type="button" class="btn btn-secondary btn-sm ai-image-history-more" id="aiImageHistoryLoadMore" hidden><?php echo t('ai.image_history_load_more'); ?></button>
+                            </section>
+                        </div>
+                    </section>
+                </div>
+            </section>
+
+            <section class="dashboard-section dashboard-section--analytics">
+                <div class="dashboard-section-header">
+                    <div>
+                        <h3><?php echo t('dashboard_home.analytics'); ?></h3>
+                        <p class="dashboard-status-text"><?php echo t('dashboard_home.analytics_hint'); ?></p>
+                    </div>
+                    <div class="dashboard-section-actions dashboard-section-actions--stacked">
+                        <div class="dashboard-range-tabs" role="tablist" aria-label="<?php echo htmlspecialchars(t('dashboard_home.analytics_range'), ENT_QUOTES, 'UTF-8'); ?>">
+                            <button type="button" class="dashboard-range-tab active" data-analytics-period="days" data-analytics-count="30" onclick="setDashboardAnalyticsRange('days', 30)"><?php echo t('dashboard_home.range_days'); ?></button>
+                            <button type="button" class="dashboard-range-tab" data-analytics-period="months" data-analytics-count="12" onclick="setDashboardAnalyticsRange('months', 12)"><?php echo t('dashboard_home.range_months'); ?></button>
+                            <button type="button" class="dashboard-range-tab" data-analytics-period="years" data-analytics-count="0" onclick="setDashboardAnalyticsRange('years', 0)"><?php echo t('dashboard_home.range_years'); ?></button>
+                        </div>
+                        <div class="dashboard-content-pills" aria-label="<?php echo htmlspecialchars(t('dashboard_home.content_overview'), ENT_QUOTES, 'UTF-8'); ?>">
+                            <span><?php echo t('dashboard_home.pages'); ?> <strong id="dashboardPageCount">0</strong></span>
+                            <?php if (!empty($dashboardModules['news'])): ?>
+                            <span><?php echo t('dashboard_home.news'); ?> <strong id="dashboardNewsCount">0</strong></span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-stat-grid dashboard-stat-grid--analytics">
+                    <section class="dashboard-stat-card">
+                        <span><?php echo t('dashboard_home.page_views_today'); ?></span>
+                        <strong id="dashboardViewsToday">0</strong>
+                    </section>
+                    <section class="dashboard-stat-card">
+                        <span id="dashboardViewsPeriodLabel"><?php echo t('dashboard_home.page_views_30d'); ?></span>
+                        <strong id="dashboardViewsPeriod">0</strong>
+                    </section>
+                    <section class="dashboard-stat-card">
+                        <span id="dashboardVisitorsPeriodLabel"><?php echo t('dashboard_home.visitors_30d'); ?></span>
+                        <strong id="dashboardVisitorsPeriod">0</strong>
+                    </section>
+                    <section class="dashboard-stat-card">
+                        <span id="dashboardVisitsPeriodLabel"><?php echo t('dashboard_home.visits_30d'); ?></span>
+                        <strong id="dashboardVisitsPeriod">0</strong>
+                    </section>
+                    <section class="dashboard-stat-card">
+                        <span><?php echo t('dashboard_home.bots_filtered'); ?></span>
+                        <strong id="dashboardBotCount">0</strong>
+                    </section>
+                </div>
+
+                <section class="dashboard-panel dashboard-chart-panel">
+                    <div class="dashboard-panel-header">
+                        <h3><?php echo t('dashboard_home.traffic_curve'); ?></h3>
+                        <span id="dashboardChartRangeLabel"><?php echo t('dashboard_home.page_views_30d'); ?></span>
+                    </div>
+                    <div class="dashboard-chart" id="dashboardTrafficChart" aria-label="<?php echo htmlspecialchars(t('dashboard_home.traffic_curve'), ENT_QUOTES, 'UTF-8'); ?>"></div>
+                </section>
+
+                <section class="dashboard-panel dashboard-hour-panel">
+                    <div class="dashboard-panel-header">
+                        <h3><?php echo t('dashboard_home.hourly_distribution'); ?></h3>
+                        <span><?php echo t('dashboard_home.today'); ?></span>
+                    </div>
+                    <div class="dashboard-hour-chart" id="dashboardHourlyChart" aria-label="<?php echo htmlspecialchars(t('dashboard_home.hourly_distribution'), ENT_QUOTES, 'UTF-8'); ?>"></div>
+                </section>
+
+                <div class="dashboard-home-grid dashboard-home-grid--analytics">
+                    <section class="dashboard-panel">
+                        <h3><?php echo t('dashboard_home.top_pages'); ?></h3>
+                        <div class="dashboard-top-pages" id="dashboardTopPages"></div>
+                    </section>
+                    <section class="dashboard-panel">
+                        <h3><?php echo t('dashboard_home.referrers'); ?></h3>
+                        <div class="dashboard-top-pages" id="dashboardReferrers"></div>
+                    </section>
+                </div>
+
+                <details class="dashboard-details">
+                    <summary><?php echo t('dashboard_home.analytics_details'); ?></summary>
+                    <div class="dashboard-home-grid dashboard-home-grid--details">
+                        <section class="dashboard-panel">
+                            <h3><?php echo t('dashboard_home.devices'); ?></h3>
+                            <div class="dashboard-top-pages" id="dashboardDevices"></div>
+                        </section>
+                        <section class="dashboard-panel">
+                            <h3><?php echo t('dashboard_home.browsers_os'); ?></h3>
+                            <div class="dashboard-split-lists">
+                                <div id="dashboardBrowsers"></div>
+                                <div id="dashboardOs"></div>
+                            </div>
+                        </section>
+                    </div>
+                </details>
+            </section>
+        </div>
+    </div>
+
+    <?php if ($isAdminUser): ?>
     <!-- Icon Manager Tab -->
     <div class="admin-container" id="iconsTab" style="display: none;">
         <div class="page-list-container">
@@ -645,22 +965,44 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     <!-- Settings Tab -->
     <div class="admin-container" id="settingsTab" style="display: none;">
-        <div class="settings-tabs">
+        <div class="settings-layout">
+        <nav class="settings-tabs" aria-label="<?php echo htmlspecialchars(t('settings.title'), ENT_QUOTES, 'UTF-8'); ?>">
             <?php if ($isAdminUser): ?>
-            <button class="settings-tab-btn active" data-settings-tab="branding"><?php echo t('settings.branding'); ?></button>
-            <button class="settings-tab-btn" data-settings-tab="theme"><?php echo t('settings.theme'); ?></button>
-            <button class="settings-tab-btn" data-settings-tab="language"><?php echo t('settings.language'); ?></button>
-            <button class="settings-tab-btn" data-settings-tab="login"><?php echo t('settings.login'); ?></button>
-            <button class="settings-tab-btn" data-settings-tab="access"><?php echo t('settings.access'); ?></button>
-            <button class="settings-tab-btn" data-settings-tab="email"><?php echo t('settings.email'); ?></button>
-            <button class="settings-tab-btn" data-settings-tab="menus"><?php echo t('settings.menus'); ?></button>
-            <button class="settings-tab-btn" data-settings-tab="users"><?php echo t('settings.users'); ?></button>
+            <section class="settings-nav-group">
+                <h3><?php echo t('settings.group_site'); ?></h3>
+                <button class="settings-tab-btn active" data-settings-tab="branding"><?php echo t('settings.branding'); ?></button>
+                <button class="settings-tab-btn" data-settings-tab="theme"><?php echo t('settings.admin_theme'); ?></button>
+                <button class="settings-tab-btn" data-settings-tab="menus"><?php echo t('settings.menus'); ?></button>
+                <button class="settings-tab-btn" data-settings-tab="modules"><?php echo t('settings.modules_nav'); ?></button>
+                <button class="settings-tab-btn" data-settings-tab="language"><?php echo t('settings.language'); ?></button>
+            </section>
+            <section class="settings-nav-group">
+                <h3><?php echo t('settings.group_features'); ?></h3>
+                <button class="settings-tab-btn" data-settings-tab="access"><?php echo t('settings.access'); ?></button>
+                <button class="settings-tab-btn" data-settings-tab="email"><?php echo t('settings.email'); ?></button>
+                <button class="settings-tab-btn" data-settings-tab="privacy"><?php echo t('settings.privacy'); ?></button>
+                <?php if ($aiFeaturesEnabled): ?>
+                <button class="settings-tab-btn" data-settings-tab="ai"><?php echo t('ai.settings'); ?></button>
+                <?php endif; ?>
+            </section>
+            <section class="settings-nav-group">
+                <h3><?php echo t('settings.group_users'); ?></h3>
+                <button class="settings-tab-btn" data-settings-tab="users"><?php echo t('settings.users'); ?></button>
+                <button class="settings-tab-btn" data-settings-tab="my-account"><?php echo t('settings.my_account'); ?></button>
+                <button class="settings-tab-btn" data-settings-tab="login"><?php echo t('settings.login'); ?></button>
+            </section>
+            <section class="settings-nav-group">
+                <h3><?php echo t('settings.group_system'); ?></h3>
+                <button class="settings-tab-btn" type="button" data-settings-action="backup"><?php echo t('settings.backup'); ?></button>
+                <button class="settings-tab-btn settings-tab-btn--danger" data-settings-tab="danger"><?php echo t('settings.danger_zone'); ?></button>
+            </section>
+            <?php else: ?>
+            <section class="settings-nav-group">
+                <h3><?php echo t('settings.group_users'); ?></h3>
+                <button class="settings-tab-btn active" data-settings-tab="my-account"><?php echo t('settings.my_account'); ?></button>
+            </section>
             <?php endif; ?>
-            <button class="settings-tab-btn<?php echo !$isAdminUser ? ' active' : ''; ?>" data-settings-tab="my-account"><?php echo t('settings.my_account'); ?></button>
-            <?php if ($isAdminUser): ?>
-            <button class="settings-tab-btn settings-tab-btn--danger" data-settings-tab="danger"><?php echo t('settings.danger_zone'); ?></button>
-            <?php endif; ?>
-        </div>
+        </nav>
         <div class="settings-panels">
 
             <?php if ($isAdminUser): ?>
@@ -1057,6 +1399,15 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             </div>
                         </div>
                     </fieldset>
+                    <button type="submit" class="btn btn-primary" id="saveAccessBtn"><?php echo t('settings.save_access'); ?></button>
+                </form>
+            </div>
+
+            <!-- Privacy Panel -->
+            <div class="settings-panel" id="settingsPanel-privacy">
+                <h2><?php echo t('settings.privacy'); ?></h2>
+                <p class="settings-description"><?php echo t('settings.privacy_desc'); ?></p>
+                <form id="privacyForm" class="settings-form">
                     <fieldset class="settings-section settings-section--compact">
                         <legend><?php echo t('settings.privacy'); ?></legend>
                         <div class="form-group access-toggle-row">
@@ -1069,8 +1420,18 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             </label>
                             <small class="form-hint"><?php echo t('settings.email_obfuscation_hint'); ?></small>
                         </div>
+                        <div class="form-group access-toggle-row">
+                            <label class="toggle-label">
+                                <span><?php echo t('settings.remember_public_theme'); ?></span>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="rememberPublicTheme" checked>
+                                    <span class="toggle-slider"></span>
+                                </div>
+                            </label>
+                            <small class="form-hint"><?php echo t('settings.remember_public_theme_hint'); ?></small>
+                        </div>
                     </fieldset>
-                    <button type="submit" class="btn btn-primary" id="saveAccessBtn"><?php echo t('settings.save_access'); ?></button>
+                    <button type="submit" class="btn btn-primary" id="savePrivacyBtn"><?php echo t('settings.save_privacy'); ?></button>
                 </form>
             </div>
 
@@ -1161,6 +1522,118 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 </form>
             </div>
 
+            <!-- AI Settings Panel -->
+            <?php if ($aiFeaturesEnabled): ?>
+            <div class="settings-panel" id="settingsPanel-ai">
+                <h2><?php echo t('ai.settings'); ?></h2>
+                <p class="settings-description"><?php echo t('ai.settings_desc'); ?></p>
+                <form id="aiSettingsForm" class="settings-form">
+                    <div class="ai-status-box" id="aiProviderStatus"></div>
+
+                    <fieldset class="settings-section">
+                        <legend><?php echo t('ai.provider'); ?></legend>
+                        <div class="ai-settings-compact">
+                        <div class="form-group ai-enable-row">
+                            <label class="toggle-label">
+                                <span><?php echo t('ai.enable_ai'); ?></span>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="aiEnabled">
+                                    <span class="toggle-slider"></span>
+                                </div>
+                            </label>
+                        </div>
+                            <div class="form-group">
+                                <label for="aiProvider"><?php echo t('ai.provider'); ?></label>
+                                <select id="aiProvider" class="topbar-select">
+                                    <option value="openai-compatible"><?php echo t('ai.openai_compatible'); ?></option>
+                                    <option value="openrouter"><?php echo t('ai.openrouter'); ?></option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="aiBaseUrl"><?php echo t('ai.base_url'); ?></label>
+                                <input type="url" id="aiBaseUrl" placeholder="https://api.openai.com/v1">
+                            </div>
+                            <div class="form-group">
+                                <label for="aiApiKey"><?php echo t('ai.api_key'); ?></label>
+                                <input type="password" id="aiApiKey" autocomplete="new-password">
+                                <small class="form-hint" id="aiApiKeyHint"></small>
+                                <label class="checkbox-label"><input type="checkbox" id="aiClearApiKey"> <?php echo t('ai.clear_api_key'); ?></label>
+                            </div>
+                            <div class="form-group">
+                                <label for="aiOrganization"><?php echo t('ai.organization'); ?></label>
+                                <input type="text" id="aiOrganization" maxlength="120">
+                            </div>
+                        </div>
+                        <div class="form-group ai-local-toggle">
+                            <label class="toggle-label">
+                                <span><?php echo t('ai.allow_local_provider'); ?></span>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="aiAllowLocalProvider">
+                                    <span class="toggle-slider"></span>
+                                </div>
+                            </label>
+                            <small class="form-hint"><?php echo t('ai.allow_local_provider_hint'); ?></small>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="settings-section">
+                        <legend><?php echo t('ai.models'); ?></legend>
+                        <p class="form-hint ai-section-hint"><?php echo t('ai.models_hint'); ?></p>
+                        <div class="form-row-inline">
+                            <div class="form-group">
+                                <label for="aiChatModel"><?php echo t('ai.chat_model'); ?></label>
+                                <input type="text" id="aiChatModel" placeholder="gpt-4.1-mini">
+                            </div>
+                            <div class="form-group">
+                                <label for="aiTextModel"><?php echo t('ai.text_model'); ?></label>
+                                <input type="text" id="aiTextModel" placeholder="gpt-4.1-mini">
+                            </div>
+                            <input type="hidden" id="aiImageModel" value="gpt-image-2">
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="settings-section">
+                        <legend><?php echo t('ai.features'); ?></legend>
+                        <div class="form-group access-toggle-row">
+                            <label class="toggle-label"><span><?php echo t('ai.feature_assistant'); ?></span><div class="toggle-switch"><input type="checkbox" id="aiFeatureAssistant"><span class="toggle-slider"></span></div></label>
+                            <label class="toggle-label"><span><?php echo t('ai.feature_seo'); ?></span><div class="toggle-switch"><input type="checkbox" id="aiFeatureSeo"><span class="toggle-slider"></span></div></label>
+                            <label class="toggle-label"><span><?php echo t('ai.feature_images'); ?></span><div class="toggle-switch"><input type="checkbox" id="aiFeatureImages"><span class="toggle-slider"></span></div></label>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="settings-section">
+                        <legend><?php echo t('ai.limits'); ?></legend>
+                        <div class="form-row-inline">
+                            <div class="form-group"><label for="aiMonthlyBudget"><?php echo t('ai.monthly_budget'); ?></label><input type="number" id="aiMonthlyBudget" min="0" value="1000"></div>
+                            <div class="form-group"><label for="aiDailyRequests"><?php echo t('ai.daily_requests'); ?></label><input type="number" id="aiDailyRequests" min="0" value="100"></div>
+                            <div class="form-group"><label for="aiDailyTextRequests"><?php echo t('ai.daily_text_requests'); ?></label><input type="number" id="aiDailyTextRequests" min="0" value="80"></div>
+                            <div class="form-group"><label for="aiDailyImageRequests"><?php echo t('ai.daily_image_requests'); ?></label><input type="number" id="aiDailyImageRequests" min="0" value="10"></div>
+                        </div>
+                        <div class="form-row-inline">
+                            <div class="form-group"><label for="aiMaxInputTokens"><?php echo t('ai.max_input_tokens'); ?></label><input type="number" id="aiMaxInputTokens" min="100" value="6000"></div>
+                            <div class="form-group"><label for="aiMaxOutputTokens"><?php echo t('ai.max_output_tokens'); ?></label><input type="number" id="aiMaxOutputTokens" min="16" value="1200"></div>
+                            <div class="form-group"><label for="aiRequestTimeout"><?php echo t('ai.request_timeout'); ?></label><input type="number" id="aiRequestTimeout" min="5" max="600" value="120"></div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="settings-section">
+                        <legend><?php echo t('ai.pricing'); ?></legend>
+                        <div class="form-row-inline">
+                            <div class="form-group"><label for="aiInputPrice"><?php echo t('ai.input_price'); ?></label><input type="number" id="aiInputPrice" min="0" value="15"></div>
+                            <div class="form-group"><label for="aiOutputPrice"><?php echo t('ai.output_price'); ?></label><input type="number" id="aiOutputPrice" min="0" value="60"></div>
+                            <div class="form-group"><label for="aiImagePrice"><?php echo t('ai.image_price'); ?></label><input type="number" id="aiImagePrice" min="0" value="5"></div>
+                        </div>
+                    </fieldset>
+
+                    <div class="settings-actions-row">
+                        <button type="submit" class="btn btn-primary" id="saveAiSettingsBtn"><?php echo t('ai.save_settings'); ?></button>
+                        <button type="button" class="btn btn-secondary" id="testAiBtn"><?php echo t('ai.test_connection'); ?></button>
+                    </div>
+                    <div id="aiSettingsResult" class="settings-test-result" style="display: none;"></div>
+                </form>
+            </div>
+            <?php endif; ?>
+
             <!-- Users Panel -->
             <div class="settings-panel" id="settingsPanel-users">
                 <h2><?php echo t('settings.users'); ?></h2>
@@ -1212,6 +1685,67 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 <div class="form-actions" style="margin-top: 1.5rem;">
                     <button type="button" class="btn btn-primary" id="saveMenuOrderBtn" disabled><?php echo t('settings.save_menus'); ?></button>
                 </div>
+
+            </div>
+
+            <!-- Dashboard Modules Panel -->
+            <div class="settings-panel" id="settingsPanel-modules">
+                <h2><?php echo t('settings.modules'); ?></h2>
+                <p class="settings-description"><?php echo t('settings.modules_desc'); ?></p>
+                <form id="moduleForm" class="settings-form">
+                    <fieldset class="settings-section settings-section--compact">
+                        <legend><?php echo t('settings.modules'); ?></legend>
+                        <div class="settings-toggle-grid settings-toggle-grid--modules">
+                            <div class="form-group access-toggle-row access-toggle-row--module">
+                                <label class="toggle-label">
+                                    <span><?php echo t('settings.module_news'); ?></span>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" id="moduleNews" checked>
+                                        <span class="toggle-slider"></span>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="form-group access-toggle-row access-toggle-row--module">
+                                <label class="toggle-label">
+                                    <span><?php echo t('settings.module_events'); ?></span>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" id="moduleEvents" checked>
+                                        <span class="toggle-slider"></span>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="form-group access-toggle-row access-toggle-row--module">
+                                <label class="toggle-label">
+                                    <span><?php echo t('settings.module_messages'); ?></span>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" id="moduleMessages" checked>
+                                        <span class="toggle-slider"></span>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="form-group access-toggle-row access-toggle-row--module">
+                                <label class="toggle-label">
+                                    <span><?php echo t('settings.module_icon_manager'); ?></span>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" id="moduleIconManager" checked>
+                                        <span class="toggle-slider"></span>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="form-group access-toggle-row access-toggle-row--module">
+                                <label class="toggle-label">
+                                    <span><?php echo t('settings.module_ai'); ?></span>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" id="moduleAi" checked>
+                                        <span class="toggle-slider"></span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        <small class="form-hint"><?php echo t('settings.modules_hint'); ?></small>
+                    </fieldset>
+                    <button type="submit" class="btn btn-primary" id="saveModulesBtn"><?php echo t('settings.save_modules'); ?></button>
+                </form>
             </div>
             <?php endif; ?>
 
@@ -1270,6 +1804,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <?php endif; ?>
 
         </div><!-- /.settings-panels -->
+        </div><!-- /.settings-layout -->
     </div>
 
     <!-- Backup Tab -->
@@ -1700,10 +2235,19 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     const NB_LANG = <?php echo json_encode(array_merge(tEditorAll(), tAll()), JSON_UNESCAPED_UNICODE); ?>;
     // Menu registry for Page Settings nav checkboxes
     window.NB_MENUS = <?php echo json_encode(getMenuRegistry()['menus'] ?? [], JSON_UNESCAPED_UNICODE); ?>;
+    const DASHBOARD_MODULES = <?php echo json_encode($dashboardModules, JSON_UNESCAPED_UNICODE); ?>;
+    const AI_FEATURES_ENABLED = DASHBOARD_MODULES.ai !== false;
     function t(key, params) {
         let s = NB_LANG[key] || key;
         if (params) { for (const [k, v] of Object.entries(params)) { s = s.replace('{' + k + '}', v); } }
         return s;
+    }
+
+    function isDashboardModuleEnabled(tab) {
+        const keyByTab = { news: 'news', events: 'events', mails: 'messages', icons: 'iconManager', ai: 'ai' };
+        const key = keyByTab[tab];
+        if (!key) return true;
+        return DASHBOARD_MODULES[key] !== false;
     }
 
     // SVG icon paths (viewBox 0 0 24 24)
@@ -1714,6 +2258,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         trash:     '<path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/>',
         'eye-off': '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>',
         back:      '<path d="M19 12H5M12 19l-7-7 7-7"/>',
+        ai:        '<path d="M12 2l1.6 5.2L19 9l-5.4 1.8L12 16l-1.6-5.2L5 9l5.4-1.8L12 2z"/><path d="M19 14l.8 2.7 2.2.8-2.2.8L19 21l-.8-2.7-2.2-.8 2.2-.8L19 14z"/>',
     };
 
     function icon(name, size = 16, strokeWidth = '1.5') {
@@ -2569,23 +3114,28 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         const seoWrap = document.createElement('div');
         seoWrap.className = 'ce-seo-grid';
         seoWrap.innerHTML = `
-            <label class="ce-form-tile ce-form-tile--wide"><span>${t('editor.seo_title')}</span><input type="text" class="ce-input" id="seoTitle" value="${escapeHtml(seo.title || '')}"></label>
-            <label class="ce-form-tile ce-form-tile--wide"><span>${t('editor.seo_description')}</span><textarea class="ce-textarea" id="seoDescription" rows="2">${escapeHtml(seo.description || '')}</textarea></label>
-            <label class="ce-form-tile ce-form-tile--wide"><span>${t('editor.seo_answer_summary')}</span><textarea class="ce-textarea" id="seoAnswerSummary" rows="2">${escapeHtml(seo.answerSummary || '')}</textarea></label>
+            ${AI_FEATURES_ENABLED ? `<div class="ce-ai-seo-actions ce-form-tile--wide">
+                <button type="button" class="btn btn-secondary btn-sm ce-ai-fill-all" onclick="generateSeoFields('all')">${icon('ai', 14)} ${t('editor.ai_fill_seo')}</button>
+                <span class="ce-ai-status" id="seoAiStatus"></span>
+            </div>` : ''}
+            <label class="ce-form-tile ce-form-tile--wide"><span class="ce-label-with-action">${t('editor.seo_title')}${AI_FEATURES_ENABLED ? `<button type="button" class="ce-ai-field-btn" onclick="generateSeoFields('title')" title="${escapeHtml(t('editor.ai_fill_field'))}" aria-label="${escapeHtml(t('editor.ai_fill_field'))}">${icon('ai', 13)}</button>` : ''}</span><input type="text" class="ce-input" id="seoTitle" value="${escapeHtml(seo.title || '')}"></label>
+            <label class="ce-form-tile ce-form-tile--wide ce-form-tile--resizable"><span class="ce-label-with-action">${t('editor.seo_description')}${AI_FEATURES_ENABLED ? `<button type="button" class="ce-ai-field-btn" onclick="generateSeoFields('description')" title="${escapeHtml(t('editor.ai_fill_field'))}" aria-label="${escapeHtml(t('editor.ai_fill_field'))}">${icon('ai', 13)}</button>` : ''}</span><textarea class="ce-textarea ce-textarea--manual-resize" id="seoDescription" rows="2">${escapeHtml(seo.description || '')}</textarea><span class="ce-textarea-resize-handle" aria-hidden="true"></span></label>
+            <label class="ce-form-tile ce-form-tile--wide ce-form-tile--resizable"><span class="ce-label-with-action">${t('editor.seo_answer_summary')}${AI_FEATURES_ENABLED ? `<button type="button" class="ce-ai-field-btn" onclick="generateSeoFields('answerSummary')" title="${escapeHtml(t('editor.ai_fill_field'))}" aria-label="${escapeHtml(t('editor.ai_fill_field'))}">${icon('ai', 13)}</button>` : ''}</span><textarea class="ce-textarea ce-textarea--manual-resize" id="seoAnswerSummary" rows="2">${escapeHtml(seo.answerSummary || '')}</textarea><span class="ce-textarea-resize-handle" aria-hidden="true"></span></label>
             <label class="ce-form-tile"><span>${t('editor.seo_canonical')}</span><input type="url" class="ce-input" id="seoCanonical" value="${escapeHtml(seo.canonical || '')}"></label>
             <label class="ce-form-tile"><span>Robots</span><select class="ce-input" id="seoRobots">
                     <option value="index, follow">${t('editor.seo_robots_index')}</option>
                     <option value="noindex, follow">${t('editor.seo_robots_noindex')}</option>
                     <option value="noindex, nofollow">${t('editor.seo_robots_private')}</option>
                 </select></label>
-            <label class="ce-form-tile"><span>${t('editor.seo_og_title')}</span><input type="text" class="ce-input" id="seoOgTitle" value="${escapeHtml(seo.ogTitle || '')}"></label>
-            <label class="ce-form-tile"><span>${t('editor.seo_og_description')}</span><textarea class="ce-textarea" id="seoOgDescription" rows="2">${escapeHtml(seo.ogDescription || '')}</textarea></label>
+            <label class="ce-form-tile"><span class="ce-label-with-action">${t('editor.seo_og_title')}${AI_FEATURES_ENABLED ? `<button type="button" class="ce-ai-field-btn" onclick="generateSeoFields('ogTitle')" title="${escapeHtml(t('editor.ai_fill_field'))}" aria-label="${escapeHtml(t('editor.ai_fill_field'))}">${icon('ai', 13)}</button>` : ''}</span><input type="text" class="ce-input" id="seoOgTitle" value="${escapeHtml(seo.ogTitle || '')}"></label>
+            <label class="ce-form-tile ce-form-tile--resizable"><span class="ce-label-with-action">${t('editor.seo_og_description')}${AI_FEATURES_ENABLED ? `<button type="button" class="ce-ai-field-btn" onclick="generateSeoFields('ogDescription')" title="${escapeHtml(t('editor.ai_fill_field'))}" aria-label="${escapeHtml(t('editor.ai_fill_field'))}">${icon('ai', 13)}</button>` : ''}</span><textarea class="ce-textarea ce-textarea--manual-resize" id="seoOgDescription" rows="2">${escapeHtml(seo.ogDescription || '')}</textarea><span class="ce-textarea-resize-handle" aria-hidden="true"></span></label>
             <div class="ce-form-tile ce-form-tile--wide">
                 <span>Open Graph image</span>
                 <div class="ce-image-input-row">
                     <input type="text" class="ce-input" id="seoOgImage" placeholder="/assets/images/og-image.jpg" value="${escapeHtml(seo.ogImage || '')}">
                     <button type="button" class="btn btn-secondary btn-sm" onclick="browseSeoOgImage()">${t('btn.browse')}</button>
                 </div>
+                ${AI_FEATURES_ENABLED ? `<p class="ai-field-hint">${t('ai.image_field_hint')} <button type="button" class="btn btn-secondary btn-sm" onclick="openAiImageGenerator(getSeoOgImagePrompt(), '16:9')">${t('ai.open_image_generator')}</button></p>` : ''}
             </div>
             <label class="ce-nav-check ce-nav-check--standalone"><input type="checkbox" id="seoSitemap"> ${t('editor.seo_sitemap')}</label>
         `;
@@ -2595,6 +3145,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         seoWrap.querySelectorAll('input[type="checkbox"]').forEach(inp => inp.addEventListener('change', () => markDirty()));
         seoField.appendChild(seoWrap);
         seoBody.appendChild(seoField);
+        refreshSeoAiButtons();
+        if (!currentAiSettings) loadAiSettings().then(refreshSeoAiButtons).catch(refreshSeoAiButtons);
 
         // Nav locations
         const navField = document.createElement('div');
@@ -2689,6 +3241,111 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         visField.appendChild(visWrap);
         accessBody.appendChild(visField);
 
+    }
+
+    function seoAiIsUsable() {
+        var settings = currentAiSettings || {};
+        return !!settings.enabled && !!(settings.features && settings.features.seoTextGeneration) && aiProviderIsConfigured(settings);
+    }
+
+    function refreshSeoAiButtons() {
+        var usable = seoAiIsUsable();
+        document.querySelectorAll('.ce-ai-fill-all, .ce-ai-field-btn').forEach(function(btn) {
+            btn.disabled = !usable;
+            btn.title = usable ? t('editor.ai_fill_field') : t('ai.not_configured_text');
+        });
+        var status = document.getElementById('seoAiStatus');
+        if (status) status.textContent = usable ? '' : t('editor.ai_unavailable');
+    }
+
+    function collectSeoAiContext() {
+        collectPageSettings();
+        var selectedLang = document.getElementById('langSelect')?.value || currentContent.lang || '';
+        var selectedSlug = document.getElementById('pageSelect')?.value || currentPage || '';
+        return {
+            lang: selectedLang,
+            slug: selectedSlug,
+            title: currentContent.title || '',
+            description: currentContent.description || '',
+            seo: currentContent.seo || {},
+            contentText: extractContentText(currentContent).slice(0, 9000)
+        };
+    }
+
+    function extractContentText(value) {
+        var chunks = [];
+        var seen = new WeakSet();
+        function walk(node, key) {
+            if (node == null) return;
+            if (typeof node === 'string') {
+                var clean = node.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+                if (clean && !/^(src|href|url|image|icon|id|slug|class|style)$/i.test(String(key || ''))) {
+                    chunks.push(clean);
+                }
+                return;
+            }
+            if (typeof node === 'number' || typeof node === 'boolean') return;
+            if (typeof node !== 'object' || seen.has(node)) return;
+            seen.add(node);
+            if (Array.isArray(node)) {
+                node.forEach(function(item) { walk(item, key); });
+                return;
+            }
+            Object.keys(node).forEach(function(childKey) {
+                if (['seo', 'nav', 'breadcrumb', 'visibility', 'lastModified'].includes(childKey)) return;
+                walk(node[childKey], childKey);
+            });
+        }
+        walk(value, '');
+        return chunks.join('\n').slice(0, 12000);
+    }
+
+    async function generateSeoFields(field) {
+        if (!seoAiIsUsable()) {
+            showToast(t('ai.not_configured_text'), 'error');
+            refreshSeoAiButtons();
+            return;
+        }
+        var buttons = Array.from(document.querySelectorAll('.ce-ai-fill-all, .ce-ai-field-btn'));
+        var status = document.getElementById('seoAiStatus');
+        buttons.forEach(function(btn) { btn.disabled = true; });
+        if (status) status.textContent = t('editor.ai_generating');
+        try {
+            var formData = new FormData();
+            formData.append('action', 'ai-generate-seo');
+            formData.append('field', field || 'all');
+            formData.append('context', JSON.stringify(collectSeoAiContext()));
+            formData.append('csrf_token', CSRF_TOKEN);
+            var response = await fetch('api.php', { method: 'POST', body: formData });
+            var result = await response.json();
+            if (!result.success) throw new Error(result.message || t('toast.error'));
+            applySeoAiFields(result.data && result.data.fields ? result.data.fields : {});
+            updateAiUsage(result.data ? result.data.limits : null);
+            markDirty();
+            if (status) status.textContent = t('editor.ai_done');
+        } catch (error) {
+            if (status) status.textContent = '';
+            showToast(error.message, 'error');
+        } finally {
+            refreshSeoAiButtons();
+        }
+    }
+
+    function applySeoAiFields(fields) {
+        var map = {
+            title: 'seoTitle',
+            description: 'seoDescription',
+            answerSummary: 'seoAnswerSummary',
+            ogTitle: 'seoOgTitle',
+            ogDescription: 'seoOgDescription'
+        };
+        Object.keys(map).forEach(function(key) {
+            if (typeof fields[key] !== 'string') return;
+            var el = document.getElementById(map[key]);
+            if (!el) return;
+            el.value = fields[key];
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+        });
     }
 
     function createNavCustomRow(value) {
@@ -2840,7 +3497,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 navList.appendChild(link);
             });
         } else {
-            legacyContainer.innerHTML = `<p class="ce-empty-state">${t('editor.add_section')}</p>`;
+            navList.innerHTML = `<p class="ce-section-nav__empty">${t('editor.no_sections')}</p>`;
+            legacyContainer.hidden = true;
         }
 
         const addBtns = document.createElement('div');
@@ -2900,7 +3558,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         }
 
         // Auto-resize all textareas
-        container.querySelectorAll('textarea.ce-textarea').forEach(autoResizeTextarea);
+        container.querySelectorAll('textarea.ce-textarea:not(.ce-textarea--manual-resize)').forEach(autoResizeTextarea);
+        initManualTextareaResize(container);
     }
 
     // Save/restore open state of groups across re-renders
@@ -3214,6 +3873,38 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         ta.style.height = Math.max(60, ta.scrollHeight + 2) + 'px';
     }
 
+    function initManualTextareaResize(container) {
+        container.querySelectorAll('.ce-form-tile--resizable').forEach(tile => {
+            const textarea = tile.querySelector('textarea.ce-textarea--manual-resize');
+            const handle = tile.querySelector('.ce-textarea-resize-handle');
+            if (!textarea || !handle || handle.dataset.resizeReady === '1') return;
+            handle.dataset.resizeReady = '1';
+            handle.addEventListener('pointerdown', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const startY = e.clientY;
+                const startHeight = textarea.getBoundingClientRect().height;
+                const minHeight = 72;
+                const maxHeight = Math.max(260, Math.round(window.innerHeight * 0.55));
+
+                function move(ev) {
+                    const nextHeight = Math.max(minHeight, Math.min(maxHeight, startHeight + ev.clientY - startY));
+                    textarea.style.height = nextHeight + 'px';
+                }
+
+                function stop() {
+                    document.removeEventListener('pointermove', move);
+                    document.removeEventListener('pointerup', stop);
+                    document.body.classList.remove('ce-resizing-textarea');
+                }
+
+                document.body.classList.add('ce-resizing-textarea');
+                document.addEventListener('pointermove', move);
+                document.addEventListener('pointerup', stop);
+            });
+        });
+    }
+
     // ============================================================
     // IMAGE MANAGER — thin wrappers around NbImageManager (js/image-manager.js)
     // ============================================================
@@ -3221,18 +3912,29 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     // Initialize the shared image manager component with dashboard dependencies.
     // (Deferred to end of script where CSRF_TOKEN and t() are defined.)
     window.addEventListener('DOMContentLoaded', function() {
+        initDashboardImageManager();
+    });
+
+    function initDashboardImageManager() {
+        if (!window.NbImageManager) return;
         NbImageManager.init({
             apiUrl: 'api.php',
             csrfToken: CSRF_TOKEN,
             t: function(key, params) {
-                return typeof t === 'function' ? t(key, params) : key;
+                let s = NB_LANG[key] || key;
+                if (params) {
+                    for (const [k, v] of Object.entries(params)) {
+                        s = s.replace('{' + k + '}', v);
+                    }
+                }
+                return s;
             },
             showToast: function(msg, type) {
                 if (typeof showToast === 'function') showToast(msg, type);
             },
             showConfirm: null
         });
-    });
+    }
 
     function browseImageForField(inputEl, previewEl) {
         NbImageManager.open(function(path) {
@@ -3862,23 +4564,28 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     });
 
     const DASHBOARD_PATH = window.location.pathname.replace(/\/dashboard\.php$/, '/dashboard');
-    const VALID_DASHBOARD_TABS = <?php echo json_encode($isAdminUser ? ['content', 'news', 'events', 'mails', 'icons', 'settings', 'backup'] : ['content', 'news', 'events', 'mails', 'settings']); ?>;
-    const DASHBOARD_HASH_ALIASES = { pages: 'content', messages: 'mails' };
+    const VALID_DASHBOARD_TABS = <?php echo json_encode($validDashboardTabs, JSON_UNESCAPED_UNICODE); ?>;
+    const DASHBOARD_HASH_ALIASES = { dashboard: 'home', ai: 'home', pages: 'content', messages: 'mails' };
     let dashboardRouteApplying = false;
+    let settingsLoaded = false;
+    let currentSettings = null;
+    let currentAiSettings = null;
+    let aiChatMessages = [];
+    let currentDashboardAnalyticsRange = { period: 'days', count: 30 };
 
     function dashboardHashFor(tab, subtab) {
-        const publicTab = tab === 'content' ? 'pages' : (tab === 'mails' ? 'messages' : tab);
+        const publicTab = tab === 'home' ? 'dashboard' : (tab === 'content' ? 'pages' : (tab === 'mails' ? 'messages' : tab));
         return '#' + publicTab + (subtab ? '/' + subtab : '');
     }
 
     function parseDashboardHash() {
         const raw = (window.location.hash || '').replace(/^#/, '');
-        if (!raw) return { tab: 'content', subtab: '' };
+        if (!raw) return { tab: 'home', subtab: '' };
         const parts = raw.split('/').filter(Boolean);
-        const first = parts[0] || 'content';
+        const first = parts[0] || 'home';
         const tab = DASHBOARD_HASH_ALIASES[first] || first;
         return {
-            tab: VALID_DASHBOARD_TABS.indexOf(tab) !== -1 ? tab : 'content',
+            tab: VALID_DASHBOARD_TABS.indexOf(tab) !== -1 ? tab : 'home',
             subtab: parts[1] || ''
         };
     }
@@ -3892,24 +4599,30 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     async function applyDashboardRoute(replace) {
         dashboardRouteApplying = true;
-        // Load page list first so dropdowns are populated
-        try {
-            const response = await fetch('api.php?action=list-pages&_=' + Date.now());
-            const result = await response.json();
-            if (result.success) {
-                applyPageList(result.data);
-            }
-        } catch (e) {
-            console.error('Error loading page list:', e);
-        }
-
         const params = new URLSearchParams(window.location.search);
         const pageParam = params.get('page');
         const tabParam = params.get('tab');
         const postParam = params.get('post');
         const route = parseDashboardHash();
         const hashParts = (window.location.hash || '').replace(/^#/, '').split('/').filter(Boolean);
-        let canonicalTab = route.tab || 'content';
+        const needsPageList = hashParts[0] === 'page'
+            || !!pageParam
+            || tabParam === 'news'
+            || route.tab === 'content';
+
+        if (needsPageList) {
+            try {
+                const response = await fetch('api.php?action=list-pages&_=' + Date.now());
+                const result = await response.json();
+                if (result.success) {
+                    applyPageList(result.data);
+                }
+            } catch (e) {
+                console.error('Error loading page list:', e);
+            }
+        }
+
+        let canonicalTab = route.tab || 'home';
         let canonicalSubtab = route.subtab || '';
         let canonicalUrl = null;
 
@@ -3917,6 +4630,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             const page = hashParts[1];
             const lang = page.substring(0, page.indexOf('_'));
             const slug = page.substring(page.indexOf('_') + 1);
+            switchTab('content', { replace: true });
+            canonicalTab = 'content';
+            canonicalSubtab = '';
             const langSelect = document.getElementById('langSelect');
             if (langSelect) {
                 langSelect.value = lang;
@@ -3928,11 +4644,11 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 }
             }
             canonicalUrl = DASHBOARD_PATH + '#page/' + page;
-        } else if (route.tab !== 'content' || route.subtab) {
+        } else if (route.tab !== 'home' || route.subtab) {
             switchTab(route.tab, { settingsTab: route.subtab, replace: !!replace });
             canonicalTab = route.tab;
             canonicalSubtab = route.subtab;
-        } else if (tabParam === 'news') {
+        } else if (tabParam === 'news' && isDashboardModuleEnabled('news')) {
             switchTab('news');
             canonicalTab = 'news';
             canonicalSubtab = '';
@@ -3945,6 +4661,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         } else if (pageParam && pageParam.includes('_')) {
             const lang = pageParam.substring(0, pageParam.indexOf('_'));
             const slug = pageParam.substring(pageParam.indexOf('_') + 1);
+            switchTab('content', { replace: true });
+            canonicalTab = 'content';
+            canonicalSubtab = '';
             const langSelect = document.getElementById('langSelect');
             if (langSelect) {
                 langSelect.value = lang;
@@ -3957,9 +4676,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             }
             canonicalUrl = DASHBOARD_PATH + '#page/' + pageParam;
         } else {
-            // No page specified — show page list
-            showPageList(false);
-            canonicalTab = 'content';
+            switchTab('home', { replace: !!replace });
+            canonicalTab = 'home';
             canonicalSubtab = '';
         }
         dashboardRouteApplying = false;
@@ -4009,14 +4727,21 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     function switchTab(tab, options) {
         options = options || {};
+        if (!isDashboardModuleEnabled(tab)) {
+            tab = 'home';
+            options = Object.assign({}, options, { replace: true });
+        }
         if (tab !== 'content') {
             dismissFrontendEditBanner();
         }
 
+        document.getElementById('homeTab').style.display = tab === 'home' ? 'block' : 'none';
         document.getElementById('contentTab').style.display = tab === 'content' ? 'block' : 'none';
         document.getElementById('newsTab').style.display = tab === 'news' ? 'block' : 'none';
         document.getElementById('eventsTab').style.display = tab === 'events' ? 'block' : 'none';
         document.getElementById('mailsTab').style.display = tab === 'mails' ? 'block' : 'none';
+        const mediaTab = document.getElementById('mediaTab');
+        if (mediaTab) mediaTab.style.display = tab === 'media' ? 'block' : 'none';
         const iconsTab = document.getElementById('iconsTab');
         if (iconsTab) iconsTab.style.display = tab === 'icons' ? 'block' : 'none';
         document.getElementById('settingsTab').style.display = tab === 'settings' ? 'block' : 'none';
@@ -4043,7 +4768,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         if (activeNavItem) activeNavItem.classList.add('active');
 
         // Update topbar title
-        const titles = { content: currentPage ? t('editor.title') : t('pages.title'), news: t('news.title'), mails: t('mails.title'), events: t('events.title'), icons: t('icons.title'), settings: t('settings.title'), backup: t('settings.backup') };
+        const titles = { home: t('dashboard_home.title'), content: currentPage ? t('editor.title') : t('pages.title'), news: t('news.title'), mails: t('mails.title'), events: t('events.title'), media: t('nav.media_library'), icons: t('icons.title'), settings: t('settings.title'), backup: t('settings.backup') };
         const topbarTitle = document.getElementById('topbarTitle');
         if (topbarTitle) topbarTitle.textContent = titles[tab] || 'Dashboard';
 
@@ -4057,6 +4782,16 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             if (mailsList) mailsList.style.display = '';
             if (mailDetail) mailDetail.style.display = 'none';
             loadMails();
+        }
+        if (tab === 'media' && window.NbImageManager) {
+            initDashboardImageManager();
+            const mount = document.getElementById('mediaLibraryMount');
+            if (mount) {
+                NbImageManager.mount(mount, { types: ['image', 'audio', 'video', 'document'] });
+            }
+        }
+        if (tab === 'home') {
+            loadDashboardOverview();
         }
         if (tab === 'news') {
             showNewsList();
@@ -4813,6 +5548,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     function updateMailBadge() {
         const unreadCount = mailsData.filter(m => !m.read).length;
         const badge = document.getElementById('mailBadge');
+        if (!badge) return;
 
         if (unreadCount > 0) {
             badge.textContent = unreadCount;
@@ -4873,13 +5609,14 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
             if (result.success) {
                 const badge = document.getElementById('mailBadge');
+                if (!badge) return;
                 if (result.data.count > 0) {
                     badge.textContent = result.data.count;
                     badge.classList.remove('mail-badge--hidden');
                 }
             }
         } catch (error) {
-            console.error('Error loading badge:', error);
+            // Badge is non-critical; ignore transient fetch aborts during navigation/tests.
         }
     }
 
@@ -5299,12 +6036,12 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         const container = document.getElementById('newsEditorForm');
         container.innerHTML = `
             <div class="news-editor">
-                <div class="editor-form-grid">
-                    <div class="editor-form-row">
+                <div class="editor-form-grid editor-form-grid--news">
+                    <div class="editor-form-row editor-form-row--span-2">
                         <label for="newsTitle">${t('news.post_title')}</label>
                         <input type="text" id="newsTitle" class="editor-input" value="${escapeHtml(post.title)}" placeholder="${t('news.post_title')}">
                     </div>
-                    <div class="editor-form-row-half">
+                    <div class="editor-form-row-half editor-form-row--span-2">
                         <div class="editor-form-row">
                             <label for="newsSlug">${t('news.post_slug')}</label>
                             <input type="text" id="newsSlug" class="editor-input" value="${escapeHtml(post.slug)}" placeholder="my-post-slug">
@@ -5314,7 +6051,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             <input type="date" id="newsDate" class="editor-input" value="${escapeHtml(post.date)}">
                         </div>
                     </div>
-                    <div class="editor-form-row-half">
+                    <div class="editor-form-row-half editor-form-row--span-2">
                         <div class="editor-form-row">
                             <label for="newsAuthor">${t('news.post_author')}</label>
                             <input type="text" id="newsAuthor" class="editor-input" value="${escapeHtml(post.author)}">
@@ -5324,21 +6061,22 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             <select id="newsLang" class="editor-input">${langOpts}</select>
                         </div>
                     </div>
-                    <div class="editor-form-row">
+                    <div class="editor-form-row editor-form-row--cover">
                         <label for="newsImage">${t('news.post_image')}</label>
                         <div class="ce-image-input-row">
                             <input type="text" id="newsImage" class="editor-input" value="${escapeHtml(post.image)}" placeholder="/assets/images/cover.jpg">
                             <button type="button" class="btn btn-secondary btn-sm" onclick="browseNewsImage()">${t('btn.browse')}</button>
                         </div>
+                        ${AI_FEATURES_ENABLED ? `<p class="ai-field-hint">${t('ai.image_field_hint')} <button type="button" class="btn btn-secondary btn-sm" onclick="openAiImageGenerator(getNewsImagePrompt(), '16:9')">${t('ai.open_image_generator')}</button></p>` : ''}
                         <div class="ce-image-preview" id="newsImagePreview">
                             <img src="${post.image ? (post.image.startsWith('/') ? '..' + escapeHtml(post.image) : escapeHtml(post.image)) : ''}" alt="" style="${post.image ? '' : 'display:none;'}">
                         </div>
                     </div>
-                    <div class="editor-form-row">
+                    <div class="editor-form-row editor-form-row--full">
                         <label for="newsExcerpt">${t('news.post_excerpt')}</label>
                         <textarea id="newsExcerpt" class="editor-textarea" rows="3">${escapeHtml(post.excerpt)}</textarea>
                     </div>
-                    <div class="editor-form-row">
+                    <div class="editor-form-row editor-form-row--full">
                         <label>${t('news.post_content')}</label>
                         <div class="news-wysiwyg-toolbar">
                             <button type="button" onclick="newsExecCmd('bold')" title="Bold"><b>B</b></button>
@@ -5634,8 +6372,696 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     // SETTINGS MANAGEMENT
     // ============================================================
 
-    let settingsLoaded = false;
-    let currentSettings = null;
+    function formatAiCents(cents) {
+        return ((parseInt(cents || 0, 10) / 100).toFixed(2)) + ' EUR';
+    }
+
+    function updateAiUsage(usage) {
+        var el = document.getElementById('aiUsageSummary');
+        if (!AI_FEATURES_ENABLED) {
+            if (el) el.hidden = true;
+            return;
+        }
+        if (!el || !usage) return;
+        el.hidden = false;
+        var today = usage.today || {};
+        var month = usage.month || {};
+        el.textContent = t('ai.usage_summary', {
+            today: today.requests || 0,
+            cost: formatAiCents(month.estimatedCostCents || 0)
+        });
+    }
+
+    function switchAiToolTab(tool) {
+        var activeTool = tool === 'image' ? 'image' : 'text';
+        document.querySelectorAll('.ai-tool-tab').forEach(function(tab) {
+            var isActive = tab.dataset.aiToolTab === activeTool;
+            tab.classList.toggle('active', isActive);
+            tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+        document.querySelectorAll('.ai-tool-panel').forEach(function(panel) {
+            panel.hidden = panel.dataset.aiToolPanel !== activeTool;
+            panel.classList.toggle('active', panel.dataset.aiToolPanel === activeTool);
+        });
+    }
+
+    function openAiImageGenerator(promptText, aspectRatio) {
+        switchTab('home');
+        switchAiToolTab('image');
+        var prompt = document.getElementById('aiImagePrompt');
+        if (prompt && promptText) {
+            prompt.value = promptText;
+        }
+        if (aspectRatio) {
+            setAiImageRatio(aspectRatio);
+        }
+        if (prompt) {
+            prompt.focus();
+        }
+    }
+
+    function setAiImageRatio(aspectRatio) {
+        var ratioInput = document.getElementById('aiImageRatio');
+        if (ratioInput) ratioInput.value = aspectRatio || 'auto';
+        if (typeof updateAiImageRatioIcon === 'function') {
+            updateAiImageRatioIcon();
+        }
+    }
+
+    function getNewsImagePrompt() {
+        var title = document.getElementById('newsTitle')?.value.trim() || '';
+        var excerpt = document.getElementById('newsExcerpt')?.value.trim() || '';
+        var content = document.getElementById('newsContentWysiwyg')?.innerText.trim() || '';
+        var language = document.getElementById('newsLang')?.value.trim() || '';
+        var parts = [title, excerpt, content].filter(Boolean).join('\n\n').slice(0, 900);
+        return [
+            'Create a 16:9 editorial cover image for a website news post.',
+            title ? 'Article title: ' + title : '',
+            language ? 'Content language: ' + language : '',
+            parts ? 'Context:\n' + parts : '',
+            'Use the article context to choose a fitting subject, mood, and setting.',
+            'No text, no logo, no UI, no watermark. Natural composition with a clear subject and enough negative space for cropping.'
+        ].filter(Boolean).join('\n\n');
+    }
+
+    function getSeoOgImagePrompt() {
+        var title = document.getElementById('seoOgTitle')?.value.trim()
+            || document.getElementById('seoTitle')?.value.trim()
+            || currentContent?.title
+            || currentPage
+            || '';
+        var description = document.getElementById('seoOgDescription')?.value.trim()
+            || document.getElementById('seoDescription')?.value.trim()
+            || currentContent?.description
+            || '';
+        var pageText = extractContentText(currentContent || {}).slice(0, 700);
+        return [
+            'Create a 16:9 landscape Open Graph/social sharing image for this page. It should work well when cropped to a 1200x630 preview.',
+            title ? 'Page title: ' + title : '',
+            description ? 'Description: ' + description : '',
+            pageText ? 'Page context: ' + pageText : '',
+            'No embedded text, no logos unless explicitly part of the brand, no UI mockup. Clean social-sharing composition with a strong visual focal point.'
+        ].filter(Boolean).join('\n\n');
+    }
+
+    function dashboardAnalyticsRangeLabel(period, count) {
+        if (period === 'months') return t('dashboard_home.range_label_months', {count: count || 12});
+        if (period === 'years') return t('dashboard_home.range_label_years');
+        return t('dashboard_home.range_label_days', {count: count || 30});
+    }
+
+    function updateDashboardAnalyticsRangeUi(period, count) {
+        var label = dashboardAnalyticsRangeLabel(period, count);
+        var labelMap = {
+            dashboardViewsPeriodLabel: t('dashboard_home.views_period', {period: label}),
+            dashboardVisitorsPeriodLabel: t('dashboard_home.visitors_period', {period: label}),
+            dashboardVisitsPeriodLabel: t('dashboard_home.visits_period', {period: label}),
+            dashboardChartRangeLabel: t('dashboard_home.views_period', {period: label})
+        };
+        Object.keys(labelMap).forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.textContent = labelMap[id];
+        });
+        document.querySelectorAll('.dashboard-range-tab').forEach(function(tab) {
+            var active = tab.dataset.analyticsPeriod === period && parseInt(tab.dataset.analyticsCount || '0', 10) === count;
+            tab.classList.toggle('active', active);
+        });
+    }
+
+    function setDashboardAnalyticsRange(period, count) {
+        currentDashboardAnalyticsRange = {
+            period: ['days', 'months', 'years'].includes(period) ? period : 'days',
+            count: parseInt(count || '0', 10)
+        };
+        updateDashboardAnalyticsRangeUi(currentDashboardAnalyticsRange.period, currentDashboardAnalyticsRange.count);
+        loadDashboardOverview();
+    }
+
+    function formatDashboardDate(value) {
+        if (!value) return '—';
+        var date = typeof value === 'number' ? new Date(value * 1000) : new Date(value);
+        if (isNaN(date.getTime())) return '—';
+        return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    async function openDashboardRecentEdit(item) {
+        if (!item) return;
+        if (item.type === 'news') {
+            switchTab('news');
+            if (!newsLoaded) {
+                newsLoaded = true;
+                await loadNews();
+            }
+            editPost(item.id);
+            return;
+        }
+        if (item.type === 'page' && item.id) {
+            window.location.href = '#page/' + item.id;
+            applyDashboardRoute(true);
+        }
+    }
+
+    function renderDashboardStatus(status) {
+        var target = document.getElementById('dashboardStatusStrip');
+        if (!target || !status) return;
+
+        var recent = (status.recentEdits || [])[0] || null;
+        window.dashboardRecentStatusItems = status.recentEdits || [];
+        var backup = status.backup || {};
+        var users = status.users || {};
+        var currentUser = users.current || {};
+        var chips = [];
+
+        if (isDashboardModuleEnabled('mails')) {
+            chips.push('<button type="button" class="dashboard-status-chip" onclick="switchTab(&quot;mails&quot;)"><span>' + escapeHtml(t('dashboard_home.unread_messages')) + '</span><strong>' + (status.messages?.unread || 0) + '</strong></button>');
+        }
+
+        var backupText = backup.newest ? formatDashboardDate(backup.newest) : t('dashboard_home.no_backup');
+        if (VALID_DASHBOARD_TABS.indexOf('backup') !== -1) {
+            chips.push('<button type="button" class="dashboard-status-chip" onclick="switchTab(&quot;backup&quot;)"><span>' + escapeHtml(t('dashboard_home.backup_status')) + '</span><strong>' + escapeHtml(backupText) + '</strong></button>');
+
+            chips.push('<button type="button" class="dashboard-status-chip" onclick="switchTab(&quot;backup&quot;)"><span>' + escapeHtml(t('dashboard_home.auto_backup')) + '</span><strong>' + escapeHtml(backup.enabled ? t('dashboard_home.active') : t('dashboard_home.inactive')) + '</strong></button>');
+        }
+
+        if (recent) {
+            chips.push('<button type="button" class="dashboard-status-chip dashboard-status-chip--wide" onclick="openDashboardRecentEdit(window.dashboardRecentStatusItems[0])"><span>' + escapeHtml(t('dashboard_home.recent_edit')) + '</span><strong>' + escapeHtml(recent.title || recent.id || '') + '</strong></button>');
+        }
+
+        if (currentUser.username) {
+            chips.push('<button type="button" class="dashboard-status-chip" onclick="switchTab(&quot;settings&quot;, {settingsTab: &quot;users&quot;});"><span>' + escapeHtml(t('dashboard_home.current_user')) + '</span><strong>' + escapeHtml(currentUser.username) + '</strong></button>');
+        }
+
+        target.innerHTML = chips.join('');
+    }
+
+    async function loadDashboardOverview() {
+        try {
+            updateDashboardAnalyticsRangeUi(currentDashboardAnalyticsRange.period, currentDashboardAnalyticsRange.count);
+            var params = new URLSearchParams({
+                action: 'dashboard-overview',
+                analytics_period: currentDashboardAnalyticsRange.period,
+                analytics_count: String(currentDashboardAnalyticsRange.count),
+                _: String(Date.now())
+            });
+            var response = await fetch('api.php?' + params.toString());
+            var result = await response.json();
+            if (!result.success) throw new Error(result.message || 'Could not load dashboard overview');
+            var data = result.data || {};
+            var analytics = data.analytics || {};
+
+            var viewsToday = document.getElementById('dashboardViewsToday');
+            var viewsPeriod = document.getElementById('dashboardViewsPeriod');
+            var visitorsPeriod = document.getElementById('dashboardVisitorsPeriod');
+            var visitsPeriod = document.getElementById('dashboardVisitsPeriod');
+            var botCount = document.getElementById('dashboardBotCount');
+            var pageCount = document.getElementById('dashboardPageCount');
+            var newsCount = document.getElementById('dashboardNewsCount');
+            if (viewsToday) viewsToday.textContent = analytics.todayViews || 0;
+            if (viewsPeriod) viewsPeriod.textContent = analytics.periodViews || 0;
+            if (visitorsPeriod) visitorsPeriod.textContent = analytics.periodVisitors || 0;
+            if (visitsPeriod) visitsPeriod.textContent = analytics.periodVisits || 0;
+            if (botCount) botCount.textContent = analytics.botRequests || 0;
+            if (pageCount) pageCount.textContent = data.pages || 0;
+            if (newsCount) newsCount.textContent = data.news || 0;
+            renderDashboardStatus(data.status || {});
+
+            renderDashboardTopPages(analytics.topPages || []);
+            renderDashboardBreakdown('dashboardReferrers', analytics.referrers || []);
+            renderDashboardBreakdown('dashboardDevices', analytics.devices || []);
+            renderDashboardBreakdown('dashboardBrowsers', analytics.browsers || []);
+            renderDashboardBreakdown('dashboardOs', analytics.os || []);
+            renderDashboardTrafficChart(analytics.series || []);
+            renderDashboardHourlyChart(analytics.hourlyToday || []);
+
+            currentAiSettings = (data.ai && data.ai.settings) || {};
+            populateAiSettings(currentAiSettings);
+            updateAiUsage(data.ai ? data.ai.usage : null);
+            updateDashboardAiStatus(currentAiSettings);
+        } catch (error) {
+            var target = document.getElementById('dashboardTopPages');
+            if (target) target.textContent = error.message;
+        }
+    }
+
+    function renderDashboardTopPages(pages) {
+        var target = document.getElementById('dashboardTopPages');
+        if (!target) return;
+        if (!pages.length) {
+            target.innerHTML = '<p class="dashboard-empty">' + t('dashboard_home.no_views') + '</p>';
+            return;
+        }
+        target.innerHTML = pages.map(function(page) {
+            var visitors = page.visitors || 0;
+            var visits = page.visits || 0;
+            return '<div class="dashboard-top-page">' +
+                '<span><strong>' + escapeHtml(page.title || page.key || '') + '</strong><small>' + t('dashboard_home.views_detail', { views: page.views || 0, visitors: visitors, visits: visits }) + '</small></span>' +
+                '<strong>' + (page.views || 0) + '</strong>' +
+                '</div>';
+        }).join('');
+    }
+
+    function renderDashboardTrafficChart(series) {
+        var target = document.getElementById('dashboardTrafficChart');
+        if (!target) return;
+        if (!series.length) {
+            target.innerHTML = '<p class="dashboard-empty">' + t('dashboard_home.no_views') + '</p>';
+            return;
+        }
+
+        var width = 720;
+        var height = 220;
+        var pad = { top: 16, right: 18, bottom: 34, left: 42 };
+        var chartWidth = width - pad.left - pad.right;
+        var chartHeight = height - pad.top - pad.bottom;
+        var values = series.map(function(item) { return Math.max(0, parseInt(item.views || 0, 10)); });
+        var maxValue = Math.max.apply(null, values.concat([1]));
+        var yMax = Math.max(1, Math.ceil(maxValue * 1.2));
+        var stepX = series.length > 1 ? chartWidth / (series.length - 1) : chartWidth;
+
+        function x(index) {
+            return pad.left + index * stepX;
+        }
+        function y(value) {
+            return pad.top + chartHeight - (value / yMax) * chartHeight;
+        }
+        function point(index, value) {
+            return x(index).toFixed(2) + ',' + y(value).toFixed(2);
+        }
+
+        var line = values.map(function(value, index) {
+            return (index === 0 ? 'M ' : 'L ') + point(index, value);
+        }).join(' ');
+        var area = line + ' L ' + x(values.length - 1).toFixed(2) + ',' + (pad.top + chartHeight).toFixed(2) +
+            ' L ' + pad.left + ',' + (pad.top + chartHeight).toFixed(2) + ' Z';
+        var grid = [0, 0.25, 0.5, 0.75, 1].map(function(factor) {
+            var yy = pad.top + chartHeight - chartHeight * factor;
+            var label = Math.round(yMax * factor);
+            return '<g><line x1="' + pad.left + '" y1="' + yy.toFixed(2) + '" x2="' + (width - pad.right) + '" y2="' + yy.toFixed(2) + '"></line>' +
+                '<text x="' + (pad.left - 10) + '" y="' + (yy + 4).toFixed(2) + '">' + label + '</text></g>';
+        }).join('');
+        var labelIndexes = [0, Math.floor((series.length - 1) / 2), series.length - 1].filter(function(value, index, arr) {
+            return arr.indexOf(value) === index;
+        });
+        var xLabels = labelIndexes.map(function(index) {
+            var label = series[index].label || '';
+            if (!label) {
+                var date = new Date((series[index].date || '') + 'T00:00:00');
+                label = isNaN(date.getTime()) ? (series[index].date || '') : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            }
+            return '<text x="' + x(index).toFixed(2) + '" y="' + (height - 8) + '" text-anchor="middle">' + escapeHtml(label) + '</text>';
+        }).join('');
+        var points = values.map(function(value, index) {
+            var date = new Date((series[index].date || '') + 'T00:00:00');
+            var label = series[index].label || (isNaN(date.getTime()) ? (series[index].date || '') : date.toLocaleDateString());
+            return '<circle cx="' + x(index).toFixed(2) + '" cy="' + y(value).toFixed(2) + '" r="3"><title>' +
+                escapeHtml(label + ': ' + value + ' ' + t('dashboard_home.views_label')) + '</title></circle>';
+        }).join('');
+
+        target.innerHTML = '<svg class="dashboard-traffic-svg" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="' + escapeHtml(t('dashboard_home.traffic_curve')) + '">' +
+            '<g class="dashboard-chart-grid">' + grid + '</g>' +
+            '<path class="dashboard-chart-area" d="' + area + '"></path>' +
+            '<path class="dashboard-chart-line" d="' + line + '"></path>' +
+            '<g class="dashboard-chart-points">' + points + '</g>' +
+            '<g class="dashboard-chart-xlabels">' + xLabels + '</g>' +
+            '</svg>';
+    }
+
+    function renderDashboardHourlyChart(hours) {
+        var target = document.getElementById('dashboardHourlyChart');
+        if (!target) return;
+        if (!hours.length) {
+            target.innerHTML = '<p class="dashboard-empty">' + t('dashboard_home.no_views') + '</p>';
+            return;
+        }
+        var maxValue = Math.max.apply(null, hours.map(function(item) { return Math.max(0, parseInt(item.views || 0, 10)); }).concat([1]));
+        target.innerHTML = hours.map(function(item, index) {
+            var views = Math.max(0, parseInt(item.views || 0, 10));
+            var height = Math.max(3, Math.round((views / maxValue) * 100));
+            var label = item.label || String(index).padStart(2, '0') + ':00';
+            var showLabel = index % 3 === 0;
+            return '<div class="dashboard-hour-bar" title="' + escapeHtml(label + ': ' + views + ' ' + t('dashboard_home.views_label')) + '">' +
+                '<span class="dashboard-hour-bar__track"><span class="dashboard-hour-bar__fill" style="height:' + height + '%"></span></span>' +
+                '<span class="dashboard-hour-bar__label">' + (showLabel ? escapeHtml(String(index).padStart(2, '0')) : '') + '</span>' +
+                '</div>';
+        }).join('');
+    }
+
+    function renderDashboardBreakdown(targetId, items) {
+        var target = document.getElementById(targetId);
+        if (!target) return;
+        if (!items.length) {
+            target.innerHTML = '<p class="dashboard-empty">' + t('dashboard_home.no_data') + '</p>';
+            return;
+        }
+        target.innerHTML = items.slice(0, 8).map(function(item) {
+            return '<div class="dashboard-breakdown-row">' +
+                '<span>' + escapeHtml(item.label || item.key || '') + '</span>' +
+                '<strong>' + (item.views || item.count || 0) + '</strong>' +
+                '</div>';
+        }).join('');
+    }
+
+    function updateDashboardAiStatus(settings) {
+        var target = document.getElementById('dashboardAiStatus');
+        if (!target) return;
+        if (!AI_FEATURES_ENABLED) {
+            target.textContent = '';
+            return;
+        }
+        var configured = aiProviderIsConfigured(settings);
+        if (!configured) {
+            target.textContent = t('ai.not_configured_text');
+        } else if (!settings.enabled) {
+            target.textContent = t('ai.disabled_status');
+        } else {
+            target.textContent = t('ai.configured_status');
+        }
+    }
+
+    function aiIsLocalProviderUrl(baseUrl) {
+        try {
+            var host = new URL(baseUrl || '').hostname.toLowerCase();
+            return host === 'localhost' || host === '127.0.0.1' || host === '::1' || host.startsWith('192.168.') || host.startsWith('10.') || /^172\\.(1[6-9]|2\\d|3[0-1])\\./.test(host);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function aiProviderIsConfigured(settings) {
+        settings = settings || currentAiSettings || {};
+        var provider = document.getElementById('aiProvider')?.value || settings.provider || 'openai-compatible';
+        var credentials = aiProviderCredentials(settings, provider);
+        var activeProvider = settings.provider || 'openai-compatible';
+        var hasKey = !!document.getElementById('aiApiKey')?.value.trim()
+            || (provider === activeProvider ? !!settings.hasApiKey : false)
+            || !!credentials.hasApiKey;
+        var baseUrl = document.getElementById('aiBaseUrl')?.value || credentials.baseUrl || settings.baseUrl || '';
+        var allowLocal = !!settings.allowLocalProvider || !!document.getElementById('aiAllowLocalProvider')?.checked;
+        return hasKey || (allowLocal && aiIsLocalProviderUrl(baseUrl));
+    }
+
+    function aiProviderCredentials(settings, provider) {
+        settings = settings || currentAiSettings || {};
+        provider = provider || settings.provider || document.getElementById('aiProvider')?.value || 'openai-compatible';
+        var defaults = {
+            'openai-compatible': { baseUrl: 'https://api.openai.com/v1', organization: '', hasApiKey: false },
+            openrouter: { baseUrl: 'https://openrouter.ai/api/v1', organization: '', hasApiKey: false }
+        };
+        var credentials = settings.providerCredentials && settings.providerCredentials[provider]
+            ? settings.providerCredentials[provider]
+            : {};
+        return Object.assign({}, defaults[provider] || defaults['openai-compatible'], credentials);
+    }
+
+    function aiUsesOpenRouter(settings) {
+        settings = settings || currentAiSettings || {};
+        var provider = String(document.getElementById('aiProvider')?.value || settings.provider || '').trim();
+        var credentials = aiProviderCredentials(settings, provider);
+        var baseUrl = String(document.getElementById('aiBaseUrl')?.value || credentials.baseUrl || settings.baseUrl || '').trim();
+        return provider === 'openrouter' || baseUrl.indexOf('openrouter.ai') !== -1;
+    }
+
+    var AI_IMAGE_MODEL_OPTIONS = {
+        'openai-compatible': [
+            { value: 'gpt-image-2', label: t('ai.openai_image_gpt') }
+        ],
+        openrouter: [
+            { value: 'openai/gpt-5.4-image-2', label: t('ai.openrouter_image_gpt') },
+            { value: 'google/gemini-3.1-flash-image-preview', label: t('ai.openrouter_image_gemini_flash') },
+            { value: 'google/gemini-3-pro-image-preview', label: t('ai.openrouter_image_gemini_pro') }
+        ]
+    };
+
+    function normalizeOpenRouterImageModel(model) {
+        model = String(model || '').trim();
+        var aliases = {
+            'gpt-image-2': 'openai/gpt-5.4-image-2',
+            'gpt-5.4': 'openai/gpt-5.4-image-2',
+            'openai/gpt-5.4': 'openai/gpt-5.4-image-2',
+            'gpt-5.4-2026-03-05': 'openai/gpt-5.4-image-2',
+            'openai/gpt-5.4-2026-03-05': 'openai/gpt-5.4-image-2',
+            'gemini-3.1-flash-image-preview': 'google/gemini-3.1-flash-image-preview',
+            'gemini-3-pro-image-preview': 'google/gemini-3-pro-image-preview'
+        };
+        var valid = AI_IMAGE_MODEL_OPTIONS.openrouter.map(function(option) {
+            return option.value;
+        });
+        if (valid.indexOf(model) !== -1) {
+            return model;
+        }
+        return aliases[model] || 'openai/gpt-5.4-image-2';
+    }
+
+    function normalizeOpenAiImageModel(model) {
+        model = String(model || '').trim();
+        return model === 'gpt-image-2' ? model : 'gpt-image-2';
+    }
+
+    function currentAiProviderKey(settings) {
+        settings = settings || currentAiSettings || {};
+        var provider = document.getElementById('aiProvider')?.value || settings.provider || 'openai-compatible';
+        return provider === 'openrouter' || aiUsesOpenRouter(settings) ? 'openrouter' : 'openai-compatible';
+    }
+
+    function updateAiImageModelControl(settings) {
+        settings = settings || currentAiSettings || {};
+        var providerKey = currentAiProviderKey(settings);
+        var input = document.getElementById('aiImageModel');
+        var picker = document.getElementById('aiImageModelPicker');
+        if (!input) return;
+        var options = AI_IMAGE_MODEL_OPTIONS[providerKey] || AI_IMAGE_MODEL_OPTIONS['openai-compatible'];
+        var selected = providerKey === 'openrouter'
+            ? normalizeOpenRouterImageModel(settings.imageModel || input.value || '')
+            : normalizeOpenAiImageModel(settings.imageModel || input.value || '');
+        if (picker) {
+            picker.innerHTML = options.map(function(option) {
+                return '<option value="' + escapeHtml(option.value) + '">' + escapeHtml(option.label) + '</option>';
+            }).join('');
+            if (!options.some(function(option) { return option.value === selected; })) {
+                selected = options[0] ? options[0].value : '';
+            }
+            picker.value = selected;
+        }
+        input.value = selected;
+    }
+
+    function updateAiAvailability(settings) {
+        settings = settings || currentAiSettings || {};
+        if (!AI_FEATURES_ENABLED) return;
+        updateAiImageModelControl(settings);
+        var configured = aiProviderIsConfigured(settings);
+        var enabled = !!settings.enabled;
+        var usable = configured && enabled;
+        var status = document.getElementById('aiProviderStatus');
+        if (status) {
+            status.className = 'ai-status-box ' + (usable ? 'ai-status-box--ok' : 'ai-status-box--warning');
+            status.textContent = usable
+                ? t('ai.configured_status')
+                : (configured ? t('ai.disabled_status') : t('ai.not_configured_text'));
+        }
+
+        var banner = document.getElementById('aiUnavailableBanner');
+        if (banner) banner.hidden = usable;
+
+        document.querySelectorAll('#aiChatForm textarea, #aiChatForm button, #aiTextForm textarea, #aiTextForm input, #aiTextForm button, #aiImageForm textarea, #aiImageForm select, #aiImageForm input, #aiImageForm button').forEach(function(el) {
+            el.disabled = !usable;
+        });
+
+        var imageModel = String(document.getElementById('aiImageModelPicker')?.value || settings.imageModel || document.getElementById('aiImageModel')?.value || '').trim();
+        var imageModelMissing = usable && !imageModel;
+        var imageModelNote = document.getElementById('aiImageModelNote');
+        var imageButton = document.getElementById('aiGenerateImageButton');
+        if (imageButton && imageModelMissing) {
+            imageButton.disabled = true;
+        }
+        if (imageModelNote) {
+            imageModelNote.textContent = aiUsesOpenRouter(settings) ? t('ai.image_openrouter_note') : t('ai.image_model_missing_note');
+            imageModelNote.hidden = !imageModelMissing && !aiUsesOpenRouter(settings);
+        }
+
+        document.querySelectorAll('#aiFeatureAssistant, #aiFeatureSeo, #aiFeatureImages').forEach(function(el) {
+            el.disabled = !configured;
+        });
+        refreshSeoAiButtons();
+    }
+
+    async function loadAiSettings() {
+        try {
+            var response = await fetch('api.php?action=load-ai-settings');
+            var result = await response.json();
+            if (!result.success) throw new Error(result.message || 'Could not load AI settings');
+            currentAiSettings = result.data.settings || {};
+            populateAiSettings(currentAiSettings);
+            updateAiUsage(result.data.usage);
+        } catch (error) {
+            var usage = document.getElementById('aiUsageSummary');
+            if (usage) usage.textContent = error.message;
+        }
+    }
+
+    function populateAiSettings(settings) {
+        settings = settings || {};
+        var provider = settings.provider || 'openai-compatible';
+        var providerCredentials = aiProviderCredentials(settings, provider);
+        var fields = {
+            aiEnabled: !!settings.enabled,
+            aiAllowLocalProvider: !!settings.allowLocalProvider,
+            aiFeatureAssistant: !!(settings.features && settings.features.backendAssistant),
+            aiFeatureSeo: !!(settings.features && settings.features.seoTextGeneration),
+            aiFeatureImages: !!(settings.features && settings.features.imageGeneration)
+        };
+        Object.keys(fields).forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.checked = fields[id];
+        });
+        var values = {
+            aiProvider: provider,
+            aiBaseUrl: Object.prototype.hasOwnProperty.call(providerCredentials, 'baseUrl') ? (providerCredentials.baseUrl || '') : (settings.baseUrl || ''),
+            aiOrganization: Object.prototype.hasOwnProperty.call(providerCredentials, 'organization') ? (providerCredentials.organization || '') : (settings.organization || ''),
+            aiChatModel: settings.chatModel || 'gpt-4.1-mini',
+            aiTextModel: settings.textModel || settings.chatModel || 'gpt-4.1-mini',
+            aiImageModel: Object.prototype.hasOwnProperty.call(settings, 'imageModel') ? (settings.imageModel || '') : 'gpt-image-2',
+            aiMonthlyBudget: settings.limits?.monthlyBudgetCents ?? 1000,
+            aiDailyRequests: settings.limits?.dailyRequests ?? 100,
+            aiDailyTextRequests: settings.limits?.dailyTextRequests ?? 80,
+            aiDailyImageRequests: settings.limits?.dailyImageRequests ?? 10,
+            aiMaxInputTokens: settings.limits?.maxInputTokens ?? 6000,
+            aiMaxOutputTokens: settings.limits?.maxOutputTokens ?? 1200,
+            aiRequestTimeout: settings.limits?.requestTimeoutSeconds ?? 120,
+            aiInputPrice: settings.pricing?.inputCentsPerMillion ?? 15,
+            aiOutputPrice: settings.pricing?.outputCentsPerMillion ?? 60,
+            aiImagePrice: settings.pricing?.imageCentsPerRequest ?? 5
+        };
+        Object.keys(values).forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.value = values[id];
+        });
+        updateAiImageModelControl(settings);
+        var keyInput = document.getElementById('aiApiKey');
+        if (keyInput) keyInput.value = '';
+        var clearKey = document.getElementById('aiClearApiKey');
+        if (clearKey) clearKey.checked = false;
+        updateAiApiKeyHint(provider);
+        updateAiAvailability(settings);
+    }
+
+    function updateAiApiKeyHint(provider) {
+        var keyHint = document.getElementById('aiApiKeyHint');
+        if (!keyHint) return;
+        var credentials = aiProviderCredentials(currentAiSettings || {}, provider || document.getElementById('aiProvider')?.value || 'openai-compatible');
+        keyHint.textContent = credentials.hasApiKey ? t('ai.api_key_saved') : t('ai.api_key_missing');
+    }
+
+    function collectAiSettingsForm() {
+        var provider = document.getElementById('aiProvider').value;
+        var imagePicker = document.getElementById('aiImageModelPicker');
+        if (imagePicker) {
+            document.getElementById('aiImageModel').value = imagePicker.value;
+        }
+        return {
+            enabled: document.getElementById('aiEnabled').checked,
+            provider: provider,
+            baseUrl: document.getElementById('aiBaseUrl').value.trim(),
+            apiKey: document.getElementById('aiApiKey').value.trim(),
+            clearApiKey: document.getElementById('aiClearApiKey').checked,
+            organization: document.getElementById('aiOrganization').value.trim(),
+            allowLocalProvider: document.getElementById('aiAllowLocalProvider').checked,
+            chatModel: document.getElementById('aiChatModel').value.trim(),
+            textModel: document.getElementById('aiTextModel').value.trim(),
+            imageModel: document.getElementById('aiImageModel').value.trim(),
+            features: {
+                backendAssistant: document.getElementById('aiFeatureAssistant').checked,
+                seoTextGeneration: document.getElementById('aiFeatureSeo').checked,
+                imageGeneration: document.getElementById('aiFeatureImages').checked
+            },
+            limits: {
+                monthlyBudgetCents: parseInt(document.getElementById('aiMonthlyBudget').value || '0', 10),
+                dailyRequests: parseInt(document.getElementById('aiDailyRequests').value || '0', 10),
+                dailyTextRequests: parseInt(document.getElementById('aiDailyTextRequests').value || '0', 10),
+                dailyImageRequests: parseInt(document.getElementById('aiDailyImageRequests').value || '0', 10),
+                maxInputTokens: parseInt(document.getElementById('aiMaxInputTokens').value || '0', 10),
+                maxOutputTokens: parseInt(document.getElementById('aiMaxOutputTokens').value || '0', 10),
+                requestTimeoutSeconds: parseInt(document.getElementById('aiRequestTimeout').value || '0', 10)
+            },
+            pricing: {
+                inputCentsPerMillion: parseInt(document.getElementById('aiInputPrice').value || '0', 10),
+                outputCentsPerMillion: parseInt(document.getElementById('aiOutputPrice').value || '0', 10),
+                imageCentsPerRequest: parseInt(document.getElementById('aiImagePrice').value || '0', 10)
+            }
+        };
+    }
+
+    document.getElementById('aiProvider')?.addEventListener('change', function() {
+        var baseUrl = document.getElementById('aiBaseUrl');
+        var credentials = aiProviderCredentials(currentAiSettings || {}, this.value);
+        if (baseUrl) baseUrl.value = credentials.baseUrl || '';
+        var organization = document.getElementById('aiOrganization');
+        if (organization) organization.value = credentials.organization || '';
+        var keyInput = document.getElementById('aiApiKey');
+        if (keyInput) keyInput.value = '';
+        var clearKey = document.getElementById('aiClearApiKey');
+        if (clearKey) clearKey.checked = false;
+        updateAiApiKeyHint(this.value);
+        updateAiImageModelControl({
+            provider: this.value,
+            baseUrl: baseUrl ? baseUrl.value : '',
+            imageModel: document.getElementById('aiImageModel')?.value || ''
+        });
+        var draft = Object.assign({}, currentAiSettings || {}, collectAiSettingsForm());
+        draft.hasApiKey = !!(currentAiSettings && currentAiSettings.hasApiKey) || !!document.getElementById('aiApiKey').value.trim();
+        updateAiAvailability(draft);
+    });
+
+    document.getElementById('aiImageModelPicker')?.addEventListener('change', function() {
+        var imageInput = document.getElementById('aiImageModel');
+        if (imageInput) imageInput.value = this.value;
+        var draft = Object.assign({}, currentAiSettings || {}, collectAiSettingsForm());
+        draft.hasApiKey = !!(currentAiSettings && currentAiSettings.hasApiKey) || !!document.getElementById('aiApiKey').value.trim();
+        updateAiAvailability(draft);
+    });
+
+    ['aiApiKey', 'aiBaseUrl', 'aiAllowLocalProvider', 'aiEnabled', 'aiImageModel', 'aiImageModelPicker'].forEach(function(id) {
+        document.addEventListener('input', function(e) {
+            if (e.target && e.target.id === id) {
+                var draft = Object.assign({}, currentAiSettings || {}, collectAiSettingsForm());
+                draft.hasApiKey = !!(currentAiSettings && currentAiSettings.hasApiKey) || !!document.getElementById('aiApiKey').value.trim();
+                updateAiAvailability(draft);
+            }
+        });
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.id === id) {
+                var draft = Object.assign({}, currentAiSettings || {}, collectAiSettingsForm());
+                draft.hasApiKey = !!(currentAiSettings && currentAiSettings.hasApiKey) || !!document.getElementById('aiApiKey').value.trim();
+                updateAiAvailability(draft);
+            }
+        });
+    });
+
+    function appendAiChat(role, text) {
+        var log = document.getElementById('aiChatLog');
+        if (!log) return;
+        var item = document.createElement('div');
+        item.className = 'ai-chat-message ai-chat-message--' + role;
+        if (role === 'assistant') {
+            item.innerHTML = window.renderSimpleMarkup(text);
+        } else {
+            item.textContent = text;
+        }
+        log.appendChild(item);
+        log.scrollTop = log.scrollHeight;
+    }
+
+    window.renderSimpleMarkup = function(text) {
+        var escaped = escapeHtml(String(text || ''));
+        return escaped
+            .replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+|mailto:[^)\s]+)\)/g, function(match, label, url) {
+                var safeUrl = url.replace(/&amp;/g, '&');
+                return '<a href="' + safeUrl + '" target="_blank" rel="noopener noreferrer">' + label + '</a>';
+            })
+            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+            .replace(/(^|[^*])\*([^*\\n]+)\*/g, '$1<em>$2</em>')
+            .replace(/`([^`]+)`/g, '<code>$1</code>');
+    };
 
     // Settings sub-tabs
     function getActiveSettingsTab() {
@@ -5651,6 +7077,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         if (tab === 'menus' && typeof loadMenuOrder === 'function' && typeof _menuOrderLoaded !== 'undefined' && !_menuOrderLoaded) {
             _menuOrderLoaded = true;
             loadMenuOrder();
+        }
+        if (tab === 'ai' && typeof loadAiSettings === 'function') {
+            loadAiSettings();
         }
     }
 
@@ -5669,7 +7098,13 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     document.querySelectorAll('.settings-tab-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
+            var action = this.getAttribute('data-settings-action');
+            if (action === 'backup') {
+                switchTab('backup');
+                return;
+            }
             var tab = this.getAttribute('data-settings-tab');
+            if (!tab) return;
             activateSettingsTab(tab);
         });
     });
@@ -5739,7 +7174,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         }
 
         // Theme
-        document.getElementById('settingsAdminTheme').value = settings.theme.adminTheme || 'light';
+        document.getElementById('settingsAdminTheme').value = settings.theme.adminTheme || 'dark';
         document.querySelectorAll('.theme-option').forEach(function(btn) {
             btn.classList.toggle('selected', btn.dataset.theme === settings.theme.adminTheme);
         });
@@ -5806,8 +7241,21 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         if (bypassKeyEl) bypassKeyEl.value = '';
         var bypassHintEl = document.getElementById('maintenanceBypassHint');
         if (bypassHintEl) bypassHintEl.textContent = maintenance.hasBypassKey ? t('settings.access_bypass_key_set') : t('settings.access_bypass_key_hint');
+        var modules = settings.modules || {};
+        var moduleAiEl = document.getElementById('moduleAi');
+        if (moduleAiEl) moduleAiEl.checked = modules.ai !== false;
+        var moduleNewsEl = document.getElementById('moduleNews');
+        if (moduleNewsEl) moduleNewsEl.checked = modules.news !== false;
+        var moduleEventsEl = document.getElementById('moduleEvents');
+        if (moduleEventsEl) moduleEventsEl.checked = modules.events !== false;
+        var moduleMessagesEl = document.getElementById('moduleMessages');
+        if (moduleMessagesEl) moduleMessagesEl.checked = modules.messages !== false;
+        var moduleIconManagerEl = document.getElementById('moduleIconManager');
+        if (moduleIconManagerEl) moduleIconManagerEl.checked = modules.iconManager !== false;
         var obfuscationEl = document.getElementById('emailObfuscation');
         if (obfuscationEl) obfuscationEl.checked = !!(settings.privacy && settings.privacy.emailObfuscation);
+        var rememberThemeEl = document.getElementById('rememberPublicTheme');
+        if (rememberThemeEl) rememberThemeEl.checked = !(settings.privacy && settings.privacy.rememberPublicTheme === false);
 
         updateColorPreview(primary, accent);
         updateBtnStylePreview();
@@ -5916,7 +7364,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     // Defaults — kept in sync with server-side ($defaults in api.php load-settings)
     var THEME_DEFAULTS = {
-        adminTheme: 'light',
+        adminTheme: 'dark',
         primaryColor: '#2563eb',
         accentColor: '#60a5fa',
         sidebarBg: '',
@@ -5942,10 +7390,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     // Sidebar bg derivations — match the CSS color-mix() on first paint
     function deriveSidebarLight(primary) {
-        return mixColors(primary, '#ffffff', 0.08);
+        return mixColors(primary, '#ffffff', 0.12);
     }
     function deriveSidebarDark(primary) {
-        return mixColors(primary, '#050505', 0.08);
+        return mixColors(primary, '#0b0d12', 0.10);
     }
 
     // Mix two hex colors (sRGB approximation of CSS color-mix(in srgb, a X%, b))
@@ -6438,6 +7886,12 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             var subtleAlpha = isDark ? 0.12 : 0.08;
             var mutedAlpha = isDark ? 0.22 : 0.15;
             var mediumAlpha = isDark ? 0.38 : 0.30;
+            var bg = isDark ? adjustColor(c.sidebar, 8) : adjustColor(c.sidebar, 8);
+            var bgElevated = isDark ? adjustColor(c.sidebar, 18) : adjustColor(c.sidebar, 18);
+            var bgSunken = isDark ? adjustColor(c.sidebar, -2) : adjustColor(c.sidebar, -6);
+            var bgHover = isDark ? adjustColor(c.sidebar, 28) : adjustColor(c.sidebar, 4);
+            var border = isDark ? adjustColor(c.sidebar, 42) : adjustColor(c.sidebar, -20);
+            var borderStrong = isDark ? adjustColor(c.sidebar, 58) : adjustColor(c.sidebar, -34);
             return selector + ' {' +
                 '--nb-primary: ' + c.primary + ';' +
                 '--nb-primary-hover: ' + adjustColor(c.primary, -15) + ';' +
@@ -6451,6 +7905,12 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 '--nb-brand-light: ' + adjustColor(c.accent, 20) + ';' +
                 '--nb-brand-dark: ' + adjustColor(c.accent, -20) + ';' +
                 '--nb-sidebar-bg: ' + c.sidebar + ';' +
+                '--nb-bg: ' + bg + ';' +
+                '--nb-bg-elevated: ' + bgElevated + ';' +
+                '--nb-bg-sunken: ' + bgSunken + ';' +
+                '--nb-bg-hover: ' + bgHover + ';' +
+                '--nb-border: ' + border + ';' +
+                '--nb-border-strong: ' + borderStrong + ';' +
             '}';
         }
 
@@ -6462,7 +7922,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     // Apply theme live
     function applyTheme(theme) {
-        var themeValue = theme.adminTheme || 'light';
+        var themeValue = theme.adminTheme || 'dark';
         if (themeValue === 'system') {
             themeValue = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         }
@@ -6502,6 +7962,690 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     // Apply saved theme immediately on page load (server-rendered)
     applyTheme(<?php echo json_encode($siteSettings['theme'] ?? []); ?>);
+
+    var aiSettingsForm = document.getElementById('aiSettingsForm');
+    if (aiSettingsForm) {
+        aiSettingsForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var btn = document.getElementById('saveAiSettingsBtn');
+            btn.disabled = true;
+            btn.textContent = t('btn.saving');
+            try {
+                var formData = new FormData();
+                formData.append('action', 'save-ai-settings');
+                formData.append('settings', JSON.stringify(collectAiSettingsForm()));
+                formData.append('csrf_token', CSRF_TOKEN);
+                var response = await fetch('api.php', { method: 'POST', body: formData });
+                var result = await response.json();
+                if (!result.success) throw new Error(result.message);
+                currentAiSettings = result.data.settings;
+                populateAiSettings(currentAiSettings);
+                updateAiUsage(result.data.usage);
+                showToast(t('ai.settings_saved'), 'success');
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = t('ai.save_settings');
+            }
+        });
+    }
+
+    var testAiBtn = document.getElementById('testAiBtn');
+    if (testAiBtn) {
+        testAiBtn.addEventListener('click', async function() {
+            testAiBtn.disabled = true;
+            testAiBtn.textContent = t('ai.testing');
+            try {
+                var formData = new FormData();
+                formData.append('action', 'ai-test');
+                formData.append('csrf_token', CSRF_TOKEN);
+                var response = await fetch('api.php', { method: 'POST', body: formData });
+                var result = await response.json();
+                if (!result.success) throw new Error(result.message);
+                showToast(t('ai.connection_ok'), 'success');
+                updateAiUsage(result.data.limits);
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                testAiBtn.disabled = false;
+                testAiBtn.textContent = t('ai.test_connection');
+            }
+        });
+    }
+
+    var aiChatForm = document.getElementById('aiChatForm');
+    if (aiChatForm) {
+        var aiChatShortcutHint = document.querySelector('.ai-chat-shortcut-hint');
+        if (aiChatShortcutHint) {
+            var nav = window.navigator || {};
+            var platform = (nav.userAgentData && nav.userAgentData.platform ? nav.userAgentData.platform : nav.platform || '').toLowerCase();
+            var isMac = platform.indexOf('mac') !== -1 || platform.indexOf('iphone') !== -1 || platform.indexOf('ipad') !== -1;
+            aiChatShortcutHint.textContent = isMac ? aiChatShortcutHint.dataset.macText : aiChatShortcutHint.dataset.otherText;
+        }
+        var aiChatPrompt = document.getElementById('aiChatPrompt');
+        if (aiChatPrompt) {
+            aiChatPrompt.addEventListener('keydown', function(e) {
+                if (e.key !== 'Enter') return;
+                e.preventDefault();
+                if (e.metaKey || e.ctrlKey) {
+                    var start = aiChatPrompt.selectionStart || 0;
+                    var end = aiChatPrompt.selectionEnd || 0;
+                    var value = aiChatPrompt.value;
+                    aiChatPrompt.value = value.slice(0, start) + '\n' + value.slice(end);
+                    aiChatPrompt.selectionStart = aiChatPrompt.selectionEnd = start + 1;
+                    return;
+                }
+                if (aiChatPrompt.value.trim()) {
+                    aiChatForm.requestSubmit();
+                }
+            });
+        }
+        aiChatForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var input = document.getElementById('aiChatPrompt');
+            var prompt = input.value.trim();
+            if (!prompt) return;
+            input.value = '';
+            aiChatMessages.push({ role: 'user', content: prompt });
+            appendAiChat('user', prompt);
+            var btn = aiChatForm.querySelector('button[type="submit"]');
+            var indicator = document.getElementById('aiChatIndicator');
+            btn.disabled = true;
+            if (indicator) indicator.hidden = false;
+            try {
+                var formData = new FormData();
+                formData.append('action', 'ai-chat');
+                formData.append('messages', JSON.stringify(aiChatMessages.slice(-10)));
+                formData.append('csrf_token', CSRF_TOKEN);
+                var response = await fetch('api.php', { method: 'POST', body: formData });
+                var result = await response.json();
+                if (!result.success) throw new Error(result.message);
+                aiChatMessages.push({ role: 'assistant', content: result.data.text });
+                appendAiChat('assistant', result.data.text);
+                updateAiUsage(result.data.limits);
+            } catch (error) {
+                appendAiChat('error', error.message);
+            } finally {
+                btn.disabled = false;
+                if (indicator) indicator.hidden = true;
+            }
+        });
+    }
+
+    var aiTextForm = document.getElementById('aiTextForm');
+    if (aiTextForm) {
+        aiTextForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var resultBox = document.getElementById('aiTextResult');
+            var prompt = document.getElementById('aiTextPrompt').value.trim();
+            if (!prompt) return;
+            var btn = aiTextForm.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            resultBox.value = t('ai.generating');
+            try {
+                var formData = new FormData();
+                formData.append('action', 'ai-generate-text');
+                formData.append('prompt', prompt);
+                formData.append('maxOutputTokens', document.getElementById('aiTextMaxTokens').value);
+                formData.append('csrf_token', CSRF_TOKEN);
+                var response = await fetch('api.php', { method: 'POST', body: formData });
+                var result = await response.json();
+                if (!result.success) throw new Error(result.message);
+                resultBox.value = result.data.text;
+                updateAiUsage(result.data.limits);
+            } catch (error) {
+                resultBox.value = error.message;
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    }
+
+	    var aiImageForm = document.getElementById('aiImageForm');
+	    var aiImageBusy = false;
+	    var AI_IMAGE_REFERENCE_LIMIT = 16;
+	    var aiImageReferences = [];
+	    var aiImageHistoryOffset = 0;
+	    var AI_IMAGE_HISTORY_LIMIT = 12;
+    function setAiImageBusy(isBusy, activeButton, loadingTextKey) {
+        aiImageBusy = isBusy;
+        var buttons = [
+            document.querySelector('#aiImageForm button[type="submit"]'),
+            document.getElementById('aiImproveImagePrompt')
+        ];
+        buttons.forEach(function(button) {
+            if (!button) return;
+            button.disabled = isBusy || !aiEnabled;
+            if (button === activeButton) {
+                if (isBusy) {
+                    button.dataset.originalHtml = button.dataset.originalHtml || button.innerHTML;
+                    button.classList.add('is-loading');
+                    button.setAttribute('aria-busy', 'true');
+                    button.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span><span>' + escapeHtml(t(loadingTextKey || 'ai.generating')) + '</span>';
+                } else {
+                    button.classList.remove('is-loading');
+                    button.setAttribute('aria-busy', 'false');
+                    if (button.dataset.originalHtml) {
+                        button.innerHTML = button.dataset.originalHtml;
+                        delete button.dataset.originalHtml;
+                    }
+                }
+            }
+        });
+    }
+
+    if (aiImageForm) {
+        aiImageForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var prompt = document.getElementById('aiImagePrompt').value.trim();
+            if (!prompt || aiImageBusy) return;
+            var target = document.getElementById('aiImageResult');
+            var btn = aiImageForm.querySelector('button[type="submit"]');
+            setAiImageBusy(true, btn, 'ai.generating');
+            target.textContent = t('ai.generating');
+            try {
+                var formData = new FormData();
+                formData.append('action', 'ai-generate-image');
+                formData.append('prompt', prompt);
+                formData.append('model', document.getElementById('aiImageModelPicker')?.value || document.getElementById('aiImageModel')?.value || '');
+                formData.append('size', document.getElementById('aiImageSize').value);
+                formData.append('aspectRatio', document.getElementById('aiImageRatio')?.value || 'auto');
+                formData.append('imageScale', document.getElementById('aiImageScale')?.value || '2048');
+                formData.append('count', document.getElementById('aiImageCount').value);
+                formData.append('outputFormat', document.getElementById('aiImageFormat').value);
+                formData.append('quality', document.getElementById('aiImageQuality').value);
+                formData.append('moderation', document.getElementById('aiImageModeration').value);
+                formData.append('outputCompression', document.getElementById('aiImageCompression').value);
+	                aiImageReferences.slice(0, AI_IMAGE_REFERENCE_LIMIT).forEach(function(reference) {
+	                    if (reference.type === 'file' && reference.file) {
+	                        formData.append('referenceImages[]', reference.file, reference.name || reference.file.name || 'reference-image');
+	                    } else if (reference.type === 'media' && reference.path) {
+	                        formData.append('referenceMediaPaths[]', reference.path);
+	                    }
+	                });
+                formData.append('filenameHint', prompt.substring(0, 60));
+                formData.append('csrf_token', CSRF_TOKEN);
+                var response = await fetch('api.php', { method: 'POST', body: formData });
+                var result = await response.json();
+                if (!result.success) throw new Error(result.message);
+                var paths = Array.isArray(result.data.paths) ? result.data.paths : [result.data.path];
+                target.innerHTML = '<div class="ai-image-gallery">' + paths.map(function(path) {
+                    var filename = (path || '').split('/').pop();
+                    return '<figure class="ai-image-figure"><button type="button" class="ai-image-preview-btn" data-ai-preview="' + escapeHtml(path) + '" data-ai-preview-name="' + escapeHtml(filename) + '"><img src="' + escapeHtml(path) + '" alt=""></button><figcaption><button type="button" class="btn btn-secondary btn-sm" onclick="switchTab(&quot;media&quot;)">' + escapeHtml(t('nav.media_library')) + '</button></figcaption></figure>';
+                }).join('') + '</div>';
+                updateAiUsage(result.data.limits);
+                loadAiImageHistory(true);
+            } catch (error) {
+                target.innerHTML = '<div class="ai-image-message ai-image-message--error" role="alert"><strong>Error</strong><span>' + escapeHtml(error.message) + '</span></div>';
+            } finally {
+                setAiImageBusy(false, btn);
+            }
+        });
+    }
+
+    var aiImageResult = document.getElementById('aiImageResult');
+    if (aiImageResult) {
+        aiImageResult.addEventListener('click', function(e) {
+            var trigger = e.target.closest('[data-ai-preview]');
+            if (!trigger || !aiImageResult.contains(trigger)) return;
+            if (window.NbImageManager && typeof NbImageManager.preview === 'function') {
+                NbImageManager.preview(trigger.dataset.aiPreview, trigger.dataset.aiPreviewName || '');
+            } else {
+                window.open(trigger.dataset.aiPreview, '_blank', 'noopener');
+            }
+        });
+    }
+
+    function formatAiHistoryDate(value) {
+        if (!value) return '';
+        var date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value;
+        return date.toLocaleString();
+    }
+
+    function renderAiImageHistory(items, append, hasMore) {
+        var container = document.getElementById('aiImageHistory');
+        var list = document.getElementById('aiImageHistoryList');
+        var more = document.getElementById('aiImageHistoryLoadMore');
+        if (!container || !list) return;
+        var safeItems = Array.isArray(items) ? items : [];
+        if (!append) {
+            list.innerHTML = '';
+        }
+        if (!append && !safeItems.length) {
+            list.innerHTML = '<p class="ai-image-history-empty">' + escapeHtml(t('ai.image_history_empty')) + '</p>';
+        } else {
+            safeItems.forEach(function(item) {
+                var outputs = Array.isArray(item.outputs) ? item.outputs : [];
+                var firstOutput = outputs[0] || '';
+                var prompt = item.prompt || '';
+                var status = item.status === 'error' ? 'error' : 'success';
+                var statusLabel = status === 'error' ? t('ai.image_history_status_error') : t('ai.image_history_status_success');
+                var thumb = firstOutput
+                    ? '<button type="button" class="ai-image-history-card__thumb" data-ai-preview="' + escapeHtml(firstOutput) + '" data-ai-preview-name="' + escapeHtml(firstOutput.split('/').pop()) + '"><img src="' + escapeHtml(firstOutput) + '" alt=""></button>'
+                    : '<div class="ai-image-history-card__thumb ai-image-history-card__thumb--empty">' + escapeHtml(t('ai.image_history_error')) + '</div>';
+                var ratioMeta = item.aspectRatio && item.aspectRatio !== 'auto' ? item.aspectRatio : '';
+                var meta = [item.model, ratioMeta, item.size, item.format, item.quality].filter(Boolean).join(' · ');
+                var html =
+                    '<article class="ai-image-history-card ai-image-history-card--' + status + '">' +
+                        thumb +
+                        '<div class="ai-image-history-card__body">' +
+                            '<div class="ai-image-history-card__top">' +
+                                '<span class="ai-image-history-status">' + escapeHtml(statusLabel) + '</span>' +
+                                '<time>' + escapeHtml(formatAiHistoryDate(item.createdAt)) + '</time>' +
+                            '</div>' +
+                            '<p class="ai-image-history-prompt">' + escapeHtml(prompt || (item.error || '')) + '</p>' +
+                            '<p class="ai-image-history-meta">' + escapeHtml(meta) + '</p>' +
+                            '<div class="ai-image-history-actions">' +
+                                '<button type="button" class="btn btn-secondary btn-sm" data-ai-history-prompt="' + escapeHtml(prompt) + '">' + escapeHtml(t('ai.image_history_use_prompt')) + '</button>' +
+                                (firstOutput ? '<button type="button" class="btn btn-secondary btn-sm" onclick="switchTab(&quot;media&quot;)">' + escapeHtml(t('nav.media_library')) + '</button>' : '') +
+                            '</div>' +
+                        '</div>' +
+                    '</article>';
+                list.insertAdjacentHTML('beforeend', html);
+            });
+        }
+        container.hidden = false;
+        if (more) {
+            more.hidden = !hasMore;
+        }
+    }
+
+    async function loadAiImageHistory(reset) {
+        if (!document.getElementById('aiImageHistoryList')) return;
+        var offset = reset ? 0 : aiImageHistoryOffset;
+        try {
+            var params = new URLSearchParams({
+                action: 'ai-image-history',
+                offset: String(offset),
+                limit: String(AI_IMAGE_HISTORY_LIMIT),
+                csrf_token: CSRF_TOKEN
+            });
+            var response = await fetch('api.php?' + params.toString());
+            var result = await response.json();
+            if (!result.success) throw new Error(result.message || 'Error');
+            aiImageHistoryOffset = (result.data.offset || 0) + (Array.isArray(result.data.items) ? result.data.items.length : 0);
+            renderAiImageHistory(result.data.items || [], !reset, !!result.data.hasMore);
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    }
+
+    var aiImageHistoryList = document.getElementById('aiImageHistoryList');
+    if (aiImageHistoryList) {
+        aiImageHistoryList.addEventListener('click', function(e) {
+            var preview = e.target.closest('[data-ai-preview]');
+            if (preview && aiImageHistoryList.contains(preview)) {
+                if (window.NbImageManager && typeof NbImageManager.preview === 'function') {
+                    NbImageManager.preview(preview.dataset.aiPreview, preview.dataset.aiPreviewName || '');
+                } else {
+                    window.open(preview.dataset.aiPreview, '_blank', 'noopener');
+                }
+                return;
+            }
+            var promptButton = e.target.closest('[data-ai-history-prompt]');
+            if (promptButton && aiImageHistoryList.contains(promptButton)) {
+                var promptField = document.getElementById('aiImagePrompt');
+                if (promptField) {
+                    promptField.value = promptButton.dataset.aiHistoryPrompt || '';
+                    promptField.focus();
+                }
+            }
+        });
+    }
+
+    var aiImageHistoryLoadMore = document.getElementById('aiImageHistoryLoadMore');
+    if (aiImageHistoryLoadMore) {
+        aiImageHistoryLoadMore.addEventListener('click', function() {
+            loadAiImageHistory(false);
+        });
+    }
+
+    var aiImageHistoryClear = document.getElementById('aiImageHistoryClear');
+    if (aiImageHistoryClear) {
+        aiImageHistoryClear.addEventListener('click', async function() {
+            if (!window.confirm(t('ai.image_history_clear_confirm'))) return;
+            try {
+                var formData = new FormData();
+                formData.append('action', 'clear-ai-image-history');
+                formData.append('csrf_token', CSRF_TOKEN);
+                var response = await fetch('api.php', { method: 'POST', body: formData });
+                var result = await response.json();
+                if (!result.success) throw new Error(result.message || 'Error');
+                aiImageHistoryOffset = 0;
+                renderAiImageHistory([], false, false);
+                showToast(t('ai.image_history_cleared'), 'success');
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        });
+    }
+
+    if (document.getElementById('aiImageHistoryList')) {
+        loadAiImageHistory(true);
+    }
+
+	    var aiImageReference = document.getElementById('aiImageReference');
+	    var aiImageReferenceUpload = document.getElementById('aiImageReferenceUpload');
+	    var aiImageReferenceLibrary = document.getElementById('aiImageReferenceLibrary');
+	    var aiImageReferenceClear = document.getElementById('aiImageReferenceClear');
+	    if (aiImageReferenceUpload && aiImageReference) {
+	        aiImageReferenceUpload.addEventListener('click', function() {
+	            aiImageReference.click();
+	        });
+	        aiImageReference.addEventListener('change', function() {
+	            addAiImageReferenceFiles(Array.from(aiImageReference.files || []));
+	            aiImageReference.value = '';
+	        });
+	    }
+	    if (aiImageReferenceLibrary) {
+	        aiImageReferenceLibrary.addEventListener('click', function() {
+	            if (!window.NbImageManager) return;
+	            NbImageManager.open(function(paths) {
+	                if (aiImageReference) aiImageReference.value = '';
+	                addAiImageReferenceMedia(Array.isArray(paths) ? paths : [paths]);
+	            }, aiImageReferences.filter(function(item) {
+	                return item.type === 'media';
+	            }).map(function(item) {
+	                return item.path;
+	            }), { types: ['image'], type: 'image', multiple: true });
+	        });
+	    }
+	    if (aiImageReferenceClear) {
+	        aiImageReferenceClear.addEventListener('click', function() {
+	            if (aiImageReference) aiImageReference.value = '';
+	            aiImageReferences = [];
+	            updateAiImageReferences();
+	        });
+	    }
+
+	    function addAiImageReferenceFiles(files) {
+	        files.forEach(function(file) {
+	            if (!file || aiImageReferences.length >= AI_IMAGE_REFERENCE_LIMIT) return;
+	            aiImageReferences.push({
+	                type: 'file',
+	                file: file,
+	                name: file.name || t('ai.image_reference_file')
+	            });
+	        });
+	        updateAiImageReferences();
+	    }
+
+	    function addAiImageReferenceMedia(paths) {
+	        paths.forEach(function(path) {
+	            if (!path || aiImageReferences.length >= AI_IMAGE_REFERENCE_LIMIT) return;
+	            path = String(path);
+	            var duplicate = aiImageReferences.some(function(item) {
+	                return item.type === 'media' && item.path === path;
+	            });
+	            if (duplicate) return;
+	            aiImageReferences.push({
+	                type: 'media',
+	                path: path,
+	                name: path.split('/').pop() || path
+	            });
+	        });
+	        updateAiImageReferences();
+	    }
+
+	    function removeAiImageReference(index) {
+	        aiImageReferences.splice(index, 1);
+	        updateAiImageReferences();
+	    }
+
+	    function updateAiImageReferences() {
+	        var label = document.getElementById('aiImageReferenceName');
+	        var clear = document.getElementById('aiImageReferenceClear');
+	        var list = document.getElementById('aiImageReferenceList');
+	        var count = aiImageReferences.length;
+	        if (label) {
+	            label.textContent = count
+	                ? t('ai.image_reference_count', { count: count, max: AI_IMAGE_REFERENCE_LIMIT })
+	                : t('ai.image_reference_none');
+	        }
+	        if (clear) clear.hidden = count === 0;
+	        if (!list) return;
+	        list.hidden = count === 0;
+	        list.innerHTML = aiImageReferences.map(function(reference, index) {
+	            var preview = '';
+	            if (reference.type === 'file' && reference.file) {
+	                preview = URL.createObjectURL(reference.file);
+	            } else if (reference.type === 'media') {
+	                preview = reference.path;
+	            }
+	            return '<span class="ai-reference-chip">' +
+	                (preview ? '<span class="ai-reference-chip__thumb" style="background-image:url(&quot;' + escapeHtml(preview) + '&quot;)"></span>' : '') +
+	                '<span class="ai-reference-chip__name">' + escapeHtml(reference.name || t('ai.image_reference_file')) + '</span>' +
+	                '<button type="button" class="ai-reference-chip__remove" data-reference-index="' + index + '" aria-label="' + escapeHtml(t('ai.image_reference_remove')) + '">&times;</button>' +
+	            '</span>';
+	        }).join('');
+	    }
+
+	    document.getElementById('aiImageReferenceList')?.addEventListener('click', function(e) {
+	        var button = e.target.closest('[data-reference-index]');
+	        if (!button) return;
+	        removeAiImageReference(parseInt(button.dataset.referenceIndex, 10));
+	    });
+
+	    updateAiImageReferences();
+
+    initAiImageSizePicker();
+    document.getElementById('aiImageSize')?.addEventListener('change', updateAiImageRatioIcon);
+    updateAiImageRatioIcon();
+
+    function initAiImageSizePicker() {
+        var select = document.getElementById('aiImageSize');
+        var ratioInput = document.getElementById('aiImageRatio');
+        var trigger = document.getElementById('aiImageSizeTrigger');
+        var menu = document.getElementById('aiImageSizeMenu');
+        if (!select || !trigger || !menu) return;
+        var options = [
+            { group: t('ai.image_group_auto'), value: 'auto', ratio: 'auto', name: t('ai.image_size_auto') },
+            { group: t('ai.image_group_square'), value: '1:1', ratio: '1:1', name: 'Square' },
+            { group: t('ai.image_group_landscape'), value: '5:4', ratio: '5:4', name: 'Classic' },
+            { group: t('ai.image_group_landscape'), value: '4:3', ratio: '4:3', name: 'Classic' },
+            { group: t('ai.image_group_landscape'), value: '3:2', ratio: '3:2', name: 'Standard' },
+            { group: t('ai.image_group_landscape'), value: '16:9', ratio: '16:9', name: 'Widescreen' },
+            { group: t('ai.image_group_landscape'), value: '21:9', ratio: '21:9', name: 'Ultrawide' },
+            { group: t('ai.image_group_portrait'), value: '4:5', ratio: '4:5', name: 'Classic' },
+            { group: t('ai.image_group_portrait'), value: '3:4', ratio: '3:4', name: 'Traditional' },
+            { group: t('ai.image_group_portrait'), value: '2:3', ratio: '2:3', name: 'Portrait' },
+            { group: t('ai.image_group_portrait'), value: '9:16', ratio: '9:16', name: 'Social story' }
+        ];
+        var currentGroup = '';
+        menu.innerHTML = options.map(function(option) {
+            var groupHtml = '';
+            if (option.group !== currentGroup) {
+                currentGroup = option.group;
+                groupHtml = '<div class="ai-size-group">' + escapeHtml(option.group) + '</div>';
+            }
+            return groupHtml + '<button type="button" class="ai-size-option" role="option" data-ratio="' + escapeHtml(option.value) + '">' +
+                '<span class="ai-size-option-icon" data-ratio="' + escapeHtml(option.value) + '" aria-hidden="true"></span>' +
+                '<span class="ai-size-option-ratio">' + escapeHtml(option.ratio) + '</span>' +
+                '<span class="ai-size-option-name">' + escapeHtml(option.name) + '</span>' +
+            '</button>';
+        }).join('');
+        menu.querySelectorAll('.ai-size-option-icon').forEach(function(iconEl) {
+            applyAiRatioIcon(iconEl, iconEl.dataset.ratio || 'auto');
+        });
+        trigger.addEventListener('click', function() {
+            if (trigger.disabled) return;
+            var isOpen = !menu.hidden;
+            menu.hidden = isOpen;
+            trigger.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+        });
+        menu.addEventListener('click', function(e) {
+            var option = e.target.closest('.ai-size-option');
+            if (!option) return;
+            if (ratioInput) ratioInput.value = option.dataset.ratio || 'auto';
+            menu.hidden = true;
+            trigger.setAttribute('aria-expanded', 'false');
+            updateAiImageRatioIcon();
+        });
+        document.addEventListener('click', function(e) {
+            if (!menu.hidden && !document.getElementById('aiImageSizePicker')?.contains(e.target)) {
+                menu.hidden = true;
+                trigger.setAttribute('aria-expanded', 'false');
+            }
+        });
+        updateAiImageRatioIcon();
+    }
+
+    function updateAiImageRatioIcon() {
+        var select = document.getElementById('aiImageSize');
+        var ratioInput = document.getElementById('aiImageRatio');
+        var icon = document.getElementById('aiImageRatioIcon');
+        var label = document.getElementById('aiImageSizeLabel');
+        var menu = document.getElementById('aiImageSizeMenu');
+        var scale = document.getElementById('aiImageScale');
+        var note = document.getElementById('aiImageSizeNote');
+        if (!select || !icon) return;
+        var ratioValue = ratioInput ? ratioInput.value : 'auto';
+        var computedSize = computeAiImageSize(ratioValue, scale ? scale.value : '2048');
+        select.value = computedSize.size;
+        if (label) {
+            var selected = null;
+            if (menu) {
+                menu.querySelectorAll('.ai-size-option').forEach(function(option) {
+                    if (option.dataset.ratio === ratioValue) selected = option;
+                });
+            }
+            if (selected) {
+                var ratioText = selected.querySelector('.ai-size-option-ratio')?.textContent || '';
+                var nameText = selected.querySelector('.ai-size-option-name')?.textContent || '';
+                label.innerHTML = ratioText === 'auto'
+                    ? '<span>' + escapeHtml(nameText) + '</span>'
+                    : '<span>' + escapeHtml(ratioText) + '</span><span>' + escapeHtml(nameText) + '</span>';
+            } else {
+                label.textContent = t('ai.image_size_auto');
+            }
+        }
+        if (menu) {
+            menu.querySelectorAll('.ai-size-option').forEach(function(option) {
+                option.setAttribute('aria-selected', option.dataset.ratio === ratioValue ? 'true' : 'false');
+            });
+        }
+        if (note) {
+            note.textContent = computedSize.size === 'auto'
+                ? t('ai.image_size_note_auto')
+                : t('ai.image_size_note').replace('{size}', computedSize.size.replace('x', ' × '));
+        }
+        applyAiRatioIcon(icon, computedSize.size === 'auto' ? ratioValue : computedSize.size);
+    }
+
+    function applyAiRatioIcon(icon, value) {
+        var match = String(value || '').match(/^(\d+)x(\d+)$/);
+        if (!match) {
+            match = String(value || '').match(/^(\d+):(\d+)$/);
+        }
+        if (!match) {
+            icon.style.setProperty('--ratio-w', '1');
+            icon.style.setProperty('--ratio-h', '1');
+            icon.classList.add('ai-ratio-icon--auto');
+            return;
+        }
+        icon.classList.remove('ai-ratio-icon--auto');
+        var w = parseInt(match[1], 10);
+        var h = parseInt(match[2], 10);
+        var ratio = w / h;
+        icon.style.setProperty('--ratio-w', ratio >= 1 ? Math.min(2.4, ratio) : 1);
+        icon.style.setProperty('--ratio-h', ratio >= 1 ? 1 : Math.min(2.4, 1 / ratio));
+    }
+
+    function computeAiImageSize(ratioValue, scaleValue) {
+        if (!ratioValue || ratioValue === 'auto') {
+            return { size: 'auto' };
+        }
+        var parts = ratioValue.split(':').map(function(part) { return parseInt(part, 10); });
+        if (parts.length !== 2 || !parts[0] || !parts[1]) {
+            return { size: 'auto' };
+        }
+        var rw = parts[0];
+        var rh = parts[1];
+        var targetLong = parseInt(scaleValue, 10) || 2048;
+        var ratio = Math.max(rw, rh) / Math.min(rw, rh);
+        var minPixels = 655360;
+        var maxPixels = 8294400;
+        var longEdge = Math.min(3840, Math.max(16, targetLong));
+        var minLongForPixels = Math.ceil(Math.sqrt(minPixels * ratio) / 16) * 16;
+        longEdge = Math.max(longEdge, minLongForPixels);
+        var shortEdge = Math.round((longEdge / ratio) / 16) * 16;
+        if (shortEdge < 16) shortEdge = 16;
+        while (longEdge * shortEdge > maxPixels && longEdge > 16) {
+            longEdge -= 16;
+            shortEdge = Math.round((longEdge / ratio) / 16) * 16;
+        }
+        while (longEdge * shortEdge < minPixels && longEdge < 3840) {
+            longEdge += 16;
+            shortEdge = Math.round((longEdge / ratio) / 16) * 16;
+        }
+        var width = rw >= rh ? longEdge : shortEdge;
+        var height = rw >= rh ? shortEdge : longEdge;
+        return { size: width + 'x' + height };
+    }
+
+    document.getElementById('aiImageScale')?.addEventListener('change', updateAiImageRatioIcon);
+
+    var aiImageCountInput = document.getElementById('aiImageCount');
+    var aiImageCountUp = document.getElementById('aiImageCountUp');
+    var aiImageCountDown = document.getElementById('aiImageCountDown');
+    if (aiImageCountInput) {
+        aiImageCountInput.addEventListener('change', function() {
+            updateAiImageCount(0);
+        });
+        aiImageCountInput.addEventListener('input', function() {
+            updateAiImageCount(0);
+        });
+        updateAiImageCount(0);
+    }
+    if (aiImageForm) {
+        aiImageForm.addEventListener('click', function(e) {
+            if (e.target.closest('#aiImageCountUp')) {
+                e.preventDefault();
+                updateAiImageCount(1);
+            } else if (e.target.closest('#aiImageCountDown')) {
+                e.preventDefault();
+                updateAiImageCount(-1);
+            }
+        });
+    }
+
+    function updateAiImageCount(delta) {
+        var input = document.getElementById('aiImageCount');
+        var button = document.getElementById('aiGenerateImageButton');
+        if (!input) return;
+        var value = parseInt(input.value, 10) || 1;
+        value = Math.max(1, Math.min(10, value + delta));
+        input.value = String(value);
+        if (button && !button.dataset.originalHtml) {
+            button.textContent = value === 1 ? t('ai.generate_image') : t('ai.generate_images');
+        }
+    }
+
+    document.getElementById('aiImproveImagePrompt')?.addEventListener('click', async function() {
+        var promptEl = document.getElementById('aiImagePrompt');
+        var prompt = promptEl.value.trim();
+        if (!prompt || aiImageBusy) return;
+        var btn = this;
+        setAiImageBusy(true, btn, 'ai.improving_prompt');
+        try {
+            var formData = new FormData();
+            formData.append('action', 'ai-generate-text');
+            formData.append('prompt', 'Improve this image generation prompt. Return only the improved prompt, no intro, no markdown. Keep the user intent and make it specific, visual, and concise:\\n\\n' + prompt);
+            formData.append('maxOutputTokens', '350');
+            formData.append('csrf_token', CSRF_TOKEN);
+            var response = await fetch('api.php', { method: 'POST', body: formData });
+            var result = await response.json();
+            if (!result.success) throw new Error(result.message);
+            promptEl.value = String(result.data.text || '').trim();
+            updateAiUsage(result.data.limits);
+        } catch (error) {
+            showToast(error.message, 'error');
+        } finally {
+            setAiImageBusy(false, btn);
+        }
+    });
 
     // ============================================================
     // SAVE LANGUAGE
@@ -6584,7 +8728,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     }
 
     // ============================================================
-    // ACCESS / PRIVACY SETTINGS
+    // ACCESS SETTINGS
     // ============================================================
 
     var accessForm = document.getElementById('accessForm');
@@ -6608,8 +8752,6 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     bypassParam: document.getElementById('maintenanceBypassParam').value.trim() || 'preview',
                     bypassKey: document.getElementById('maintenanceBypassKey').value
                 };
-                settings.privacy = settings.privacy || {};
-                settings.privacy.emailObfuscation = document.getElementById('emailObfuscation').checked;
 
                 var formData = new FormData();
                 formData.append('action', 'save-settings');
@@ -6631,6 +8773,89 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             } finally {
                 btn.disabled = false;
                 btn.textContent = t('settings.save_access');
+            }
+        });
+    }
+
+    var moduleForm = document.getElementById('moduleForm');
+    if (moduleForm) {
+        moduleForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var btn = document.getElementById('saveModulesBtn');
+            btn.disabled = true;
+            btn.textContent = t('btn.saving');
+
+            try {
+                var settings = Object.assign({}, currentSettings || {});
+                var previousModules = JSON.stringify(settings.modules || {});
+                settings.modules = settings.modules || {};
+                settings.modules.ai = document.getElementById('moduleAi').checked;
+                settings.modules.news = document.getElementById('moduleNews').checked;
+                settings.modules.events = document.getElementById('moduleEvents').checked;
+                settings.modules.messages = document.getElementById('moduleMessages').checked;
+                settings.modules.iconManager = document.getElementById('moduleIconManager').checked;
+
+                var formData = new FormData();
+                formData.append('action', 'save-settings');
+                formData.append('settings', JSON.stringify(settings));
+                formData.append('csrf_token', CSRF_TOKEN);
+
+                var response = await fetch('api.php', { method: 'POST', body: formData });
+                var result = await response.json();
+
+                if (result.success) {
+                    currentSettings = result.data;
+                    populateSettings(currentSettings);
+                    showToast(t('toast.modules_saved'), 'success');
+                    if (JSON.stringify(currentSettings.modules || {}) !== previousModules) {
+                        setTimeout(function() { location.reload(); }, 800);
+                    }
+                } else {
+                    showToast(result.message, 'error');
+                }
+            } catch (error) {
+                showToast(t('toast.error_generic', {message: error.message}), 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = t('settings.save_modules');
+            }
+        });
+    }
+
+    var privacyForm = document.getElementById('privacyForm');
+    if (privacyForm) {
+        privacyForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var btn = document.getElementById('savePrivacyBtn');
+            btn.disabled = true;
+            btn.textContent = t('btn.saving');
+
+            try {
+                var settings = Object.assign({}, currentSettings || {});
+                settings.privacy = settings.privacy || {};
+                settings.privacy.emailObfuscation = document.getElementById('emailObfuscation').checked;
+                settings.privacy.rememberPublicTheme = document.getElementById('rememberPublicTheme').checked;
+
+                var formData = new FormData();
+                formData.append('action', 'save-settings');
+                formData.append('settings', JSON.stringify(settings));
+                formData.append('csrf_token', CSRF_TOKEN);
+
+                var response = await fetch('api.php', { method: 'POST', body: formData });
+                var result = await response.json();
+
+                if (result.success) {
+                    currentSettings = result.data;
+                    populateSettings(currentSettings);
+                    showToast(t('toast.privacy_saved'), 'success');
+                } else {
+                    showToast(result.message, 'error');
+                }
+            } catch (error) {
+                showToast(t('toast.error_generic', {message: error.message}), 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = t('settings.save_privacy');
             }
         });
     }
@@ -8628,7 +10853,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     // Watch for settings tab switches to load data on demand
     document.querySelectorAll('.settings-tab-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
+            if (this.getAttribute('data-settings-action')) return;
             var tab = this.getAttribute('data-settings-tab');
+            if (!tab) return;
             loadSettingsTabData(tab);
         });
     });

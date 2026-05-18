@@ -16,11 +16,6 @@
  * $PAGE_MAPPING     - (optional) Array of page => [lang => path]
  */
 
-// Start session early (before HTML output for admin login)
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
 require_once __DIR__ . '/access-guard.php';
 nibblyAccessEnforceMaintenance();
 if (!empty($contentPage)) {
@@ -97,7 +92,9 @@ require_once __DIR__ . '/menu-helpers.php';
 require_once __DIR__ . '/asset-helpers.php';
 require_once __DIR__ . '/version.php';
 require_once __DIR__ . '/seo-helper.php';
+require_once __DIR__ . '/analytics-helper.php';
 
+$_nibblyDevLogin = session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['nibbly_dev_login']);
 $_allNavItems = $NAV_ITEMS[$currentLang] ?? $NAV_ITEMS[$defaultLang] ?? [];
 $navItems = getMenuItems('header', $currentLang, $basePath ?? '', $_allNavItems);
 $_headerMenuType = getMenuType('header');
@@ -133,6 +130,7 @@ if (file_exists($_settingsPath)) {
     if (!empty($_settings['favicon'])) $_favicon = ltrim($_settings['favicon'], '/');
     if (!empty($_settings['favicon_png'])) $_faviconPng = ltrim($_settings['favicon_png'], '/');
 }
+$_rememberPublicTheme = !isset($_settings['privacy']['rememberPublicTheme']) || !empty($_settings['privacy']['rememberPublicTheme']);
 $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme']['buttonGlow'];
 $_seoContext = nibblySeoContext([
     'contentPage' => $contentPage ?? null,
@@ -144,6 +142,7 @@ $_seoContext = nibblySeoContext([
 ]);
 $_seoHealth = nibblySeoHealth($_seoContext);
 $_seoJsonLd = nibblySeoJsonLd($_seoContext, $langLinks);
+nibblyAnalyticsTrack($contentPage ?? null, $currentLang, $currentPage ?? null);
 
 require_once __DIR__ . '/email-obfuscator.php';
 nibblyStartEmailObfuscation();
@@ -244,12 +243,12 @@ nibblyStartEmailObfuscation();
     }
     ?>
 
-    <!-- Prevent FOUC: apply stored theme before paint -->
+    <!-- Prevent FOUC: apply public theme preference before paint -->
     <script>
-    (function(){try{var t=localStorage.getItem('site-theme');if(t==='system')t='dark';document.documentElement.setAttribute('data-theme',t||'light');}catch(e){}})();
+    (function(){var remember=<?php echo $_rememberPublicTheme ? 'true' : 'false'; ?>;try{var t=remember?localStorage.getItem('site-theme'):null;if(t==='system')t=null;if(t!=='dark'&&t!=='light')t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','light');}})();
     </script>
 </head>
-<body class="<?php echo $isHomepage ? 'page-home' : 'page-subpage'; ?><?php echo isset($pageClass) ? ' ' . $pageClass : ''; ?><?php echo !empty($_SESSION['nibbly_dev_login']) ? ' has-dev-login' : ''; ?>"<?php echo !empty($_SESSION['nibbly_dev_login']) ? ' data-dev-login="true"' : ''; ?>>
+<body class="<?php echo $isHomepage ? 'page-home' : 'page-subpage'; ?><?php echo isset($pageClass) ? ' ' . $pageClass : ''; ?><?php echo $_nibblyDevLogin ? ' has-dev-login' : ''; ?>"<?php echo $_nibblyDevLogin ? ' data-dev-login="true"' : ''; ?>>
     <a class="skip-link" href="#main-content">Skip to main content</a>
 
     <!-- Fixed Header -->

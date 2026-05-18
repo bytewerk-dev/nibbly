@@ -9,6 +9,22 @@ function nibblyAccessStartSession(): void {
     }
 }
 
+function nibblyAccessHasSessionCookie(): bool {
+    $name = session_name();
+    return $name !== '' && !empty($_COOKIE[$name]);
+}
+
+function nibblyAccessStartExistingSession(): bool {
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        return true;
+    }
+    if (!nibblyAccessHasSessionCookie() || headers_sent()) {
+        return false;
+    }
+    session_start();
+    return session_status() === PHP_SESSION_ACTIVE;
+}
+
 function nibblyAccessSiteRoot(): string {
     return dirname(__DIR__);
 }
@@ -23,7 +39,9 @@ function nibblyAccessSettings(): array {
 }
 
 function nibblyAccessIsLoggedIn(): bool {
-    nibblyAccessStartSession();
+    if (!nibblyAccessStartExistingSession()) {
+        return false;
+    }
     if (empty($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
         return false;
     }
@@ -58,14 +76,22 @@ function nibblyAccessVerifySecret(string $secret, string $hash): bool {
 }
 
 function nibblyAccessCheckMaintenanceBypass(array $maintenance): bool {
-    nibblyAccessStartSession();
+    $param = trim((string)($maintenance['bypassParam'] ?? ''));
+    $hasParam = $param !== '' && array_key_exists($param, $_GET);
+
+    if (!$hasParam && !nibblyAccessStartExistingSession()) {
+        return false;
+    }
+    if ($hasParam) {
+        nibblyAccessStartSession();
+    }
+
     if (!empty($_SESSION['nibbly_maintenance_bypass'])) {
         return true;
     }
 
-    $param = trim((string)($maintenance['bypassParam'] ?? ''));
     $hash = trim((string)($maintenance['bypassKeyHash'] ?? ''));
-    if ($param === '' || !array_key_exists($param, $_GET)) {
+    if (!$hasParam) {
         return false;
     }
 
@@ -115,13 +141,7 @@ function nibblyAccessRenderStandalonePage(array $options): void {
     <script>
     (function() {
         try {
-            var theme = localStorage.getItem('site-theme');
-            if (theme === 'system') {
-                theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-            }
-            if (theme !== 'dark' && theme !== 'light') {
-                theme = 'light';
-            }
+            var theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
             document.documentElement.setAttribute('data-theme', theme);
             document.documentElement.style.colorScheme = theme;
         } catch (e) {

@@ -8,6 +8,8 @@ require_once 'config.php';
 require_once __DIR__ . '/users.php';
 require_once __DIR__ . '/../includes/content-loader.php';
 require_once __DIR__ . '/../includes/seo-helper.php';
+require_once __DIR__ . '/../includes/ai/ai-helper.php';
+require_once __DIR__ . '/../includes/analytics-helper.php';
 ensureUsersFile();
 
 // Prevent PHP HTML error output from corrupting JSON responses
@@ -76,6 +78,94 @@ function validatePageName($page) {
 // Validate backup filename
 function validateBackupName($backup) {
     return preg_match('/^([a-z]{2}_[a-z0-9]+(?:-[a-z0-9]+)*|sidebar|footer)_\d{4}-\d{2}-\d{2}_\d{6}\.json$/', $backup);
+}
+
+function dashboardReadJsonFile(string $path): array {
+    if (!is_file($path)) {
+        return [];
+    }
+    $data = json_decode((string)file_get_contents($path), true);
+    return is_array($data) ? $data : [];
+}
+
+function dashboardStatusOverview(string $pagesPath, string $newsPath): array {
+    $contentRoot = dirname($pagesPath);
+    $mails = dashboardReadJsonFile($contentRoot . '/mails.json');
+    $unreadMessages = count(array_filter($mails, fn($mail) => empty($mail['read'])));
+
+    $backup = ['enabled' => false, 'lastRun' => null, 'lastStatus' => '', 'newest' => null, 'count' => 0];
+    $backupHelper = __DIR__ . '/../includes/backup-helper.php';
+    if (is_file($backupHelper)) {
+        require_once $backupHelper;
+        if (function_exists('backupStatus')) {
+            $status = backupStatus();
+            $backup = [
+                'enabled' => (bool)($status['enabled'] ?? false),
+                'lastRun' => $status['last_run'] ?? null,
+                'lastStatus' => $status['last_status'] ?? '',
+                'newest' => $status['newest'] ?? null,
+                'count' => (int)($status['count'] ?? 0)
+            ];
+        }
+    }
+
+    $recent = [];
+    foreach (glob($pagesPath . '[a-z][a-z]_*.json') ?: [] as $file) {
+        $data = dashboardReadJsonFile($file);
+        $modified = strtotime((string)($data['lastModified'] ?? '')) ?: filemtime($file);
+        $pageId = pathinfo($file, PATHINFO_FILENAME);
+        $recent[] = [
+            'type' => 'page',
+            'id' => $pageId,
+            'title' => $data['title'] ?? $pageId,
+            'modified' => $modified,
+            'url' => '#page/' . $pageId
+        ];
+    }
+    foreach (glob($newsPath . '*.json') ?: [] as $file) {
+        $data = dashboardReadJsonFile($file);
+        $modified = strtotime((string)($data['lastModified'] ?? '')) ?: filemtime($file);
+        $recent[] = [
+            'type' => 'news',
+            'id' => $data['id'] ?? pathinfo($file, PATHINFO_FILENAME),
+            'title' => $data['title'] ?? ($data['slug'] ?? pathinfo($file, PATHINFO_FILENAME)),
+            'modified' => $modified,
+            'url' => '#news'
+        ];
+    }
+    usort($recent, fn($a, $b) => ($b['modified'] ?? 0) <=> ($a['modified'] ?? 0));
+    $recent = array_slice($recent, 0, 3);
+
+    $usersData = loadUsers();
+    $currentUserId = $_SESSION['admin_user_id'] ?? '';
+    $currentUser = $currentUserId ? findUserById($currentUserId) : null;
+    $lastLoginUser = null;
+    foreach (($usersData['users'] ?? []) as $user) {
+        if (empty($user['lastLogin'])) {
+            continue;
+        }
+        if (!$lastLoginUser || strtotime((string)$user['lastLogin']) > strtotime((string)$lastLoginUser['lastLogin'])) {
+            $lastLoginUser = $user;
+        }
+    }
+
+    return [
+        'messages' => ['unread' => $unreadMessages],
+        'backup' => $backup,
+        'recentEdits' => $recent,
+        'users' => [
+            'current' => $currentUser ? [
+                'id' => $currentUser['id'] ?? '',
+                'username' => $currentUser['username'] ?? '',
+                'role' => $currentUser['role'] ?? ''
+            ] : null,
+            'lastLogin' => $lastLoginUser ? [
+                'id' => $lastLoginUser['id'] ?? '',
+                'username' => $lastLoginUser['username'] ?? '',
+                'lastLogin' => $lastLoginUser['lastLogin'] ?? null
+            ] : null
+        ]
+    ];
 }
 
 // Cleanup old backups (keep max MAX_BACKUPS)
@@ -173,12 +263,74 @@ function normalizeMediaType(string $type): string {
 
 function validateMediaFilename(string $filename, string $type): bool {
     $config = getMediaConfig($type);
-    if (!$config || $filename === '' || strpos($filename, '/') !== false || strpos($filename, '\\') !== false || strpos($filename, '..') !== false) {
+    if (!$config || $filename === '' || strpos($filename, '\\') !== false || str_starts_with($filename, '/') || str_contains($filename, '..')) {
         return false;
+    }
+
+    $segments = explode('/', $filename);
+    if (count($segments) > 2) {
+        return false;
+    }
+
+    foreach ($segments as $segment) {
+        if ($segment === '' || $segment === '.' || $segment === '..') {
+            return false;
+        }
     }
 
     $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
     return in_array($ext, $config['extensions'], true);
+}
+
+function validateMediaFolderName(string $folder): bool {
+    return $folder !== ''
+        && strlen($folder) <= 64
+        && preg_match('/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/', $folder)
+        && !str_contains($folder, '..')
+        && !str_contains($folder, '/')
+        && !str_contains($folder, '\\');
+}
+
+function listMediaFolders(string $type, bool $trash = false): array {
+    $config = getMediaConfig($type);
+    if (!$config) {
+        return [];
+    }
+
+    $directory = $trash ? $config['trashPath'] : $config['path'];
+    if (!is_dir($directory)) {
+        return [];
+    }
+
+    $folders = [];
+    foreach (scandir($directory) ?: [] as $entry) {
+        if ($entry === '.' || $entry === '..' || !validateMediaFolderName($entry)) {
+            continue;
+        }
+        if (is_dir($directory . $entry) && !is_link($directory . $entry)) {
+            $folders[] = $entry;
+        }
+    }
+    natcasesort($folders);
+    return array_values($folders);
+}
+
+function uniqueMediaRelativePath(string $directory, string $relativePath): string {
+    $relativePath = ltrim(str_replace('\\', '/', $relativePath), '/');
+    $folder = trim(str_replace('\\', '/', dirname($relativePath)), '.');
+    $basename = basename($relativePath);
+    $name = pathinfo($basename, PATHINFO_FILENAME);
+    $ext = pathinfo($basename, PATHINFO_EXTENSION);
+    $prefix = $folder !== '' ? $folder . '/' : '';
+    $targetPath = $prefix . $basename;
+    $counter = 1;
+
+    while (file_exists($directory . $targetPath)) {
+        $targetPath = $prefix . $name . '-' . $counter . ($ext !== '' ? '.' . $ext : '');
+        $counter++;
+    }
+
+    return $targetPath;
 }
 
 function formatAssetSize(int $sizeBytes): string {
@@ -249,6 +401,21 @@ function sanitizePrivacySettings(array $settings): array {
     }
     return [
         'emailObfuscation' => !empty($privacy['emailObfuscation']),
+        'rememberPublicTheme' => !array_key_exists('rememberPublicTheme', $privacy) || !empty($privacy['rememberPublicTheme']),
+    ];
+}
+
+function sanitizeModuleSettings(array $settings): array {
+    $modules = $settings['modules'] ?? [];
+    if (!is_array($modules)) {
+        return [];
+    }
+    return [
+        'ai' => !array_key_exists('ai', $modules) || !empty($modules['ai']),
+        'news' => !array_key_exists('news', $modules) || !empty($modules['news']),
+        'events' => !array_key_exists('events', $modules) || !empty($modules['events']),
+        'messages' => !array_key_exists('messages', $modules) || !empty($modules['messages']),
+        'iconManager' => !array_key_exists('iconManager', $modules) || !empty($modules['iconManager']),
     ];
 }
 
@@ -369,29 +536,37 @@ function listMediaFiles(string $type, bool $trash = false): array {
     }
 
     $media = [];
-    foreach (scandir($directory) as $file) {
-        if ($file === '.' || $file === '..' || !validateMediaFilename($file, $type)) {
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($directory, FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::LEAVES_ONLY
+    );
+    foreach ($iterator as $fileInfo) {
+        if (!$fileInfo->isFile() || $fileInfo->isLink()) {
             continue;
         }
 
-        $path = $directory . $file;
-        if (!is_file($path)) {
+        $path = $fileInfo->getPathname();
+        $relativePath = ltrim(str_replace('\\', '/', substr($path, strlen($directory))), '/');
+        if (!validateMediaFilename($relativePath, $type)) {
             continue;
         }
 
         $sizeBytes = filesize($path);
         $modified = filemtime($path);
+        $folder = trim(str_replace('\\', '/', dirname($relativePath)), '.');
         $media[] = [
             'type' => $type,
-            'name' => $file,
+            'name' => $relativePath,
+            'basename' => basename($relativePath),
+            'folder' => $folder,
             'path' => $trash
-                ? 'api.php?action=media-trash-file&type=' . rawurlencode($type) . '&filename=' . rawurlencode($file)
-                : $config['publicPath'] . $file,
+                ? 'api.php?action=media-trash-file&type=' . rawurlencode($type) . '&filename=' . rawurlencode($relativePath)
+                : $config['publicPath'] . $relativePath,
             'sizeBytes' => $sizeBytes,
             'size' => formatAssetSize($sizeBytes),
             'modified' => $modified,
             'dateFormatted' => date('d.m.Y H:i', $modified),
-            'extension' => strtolower(pathinfo($file, PATHINFO_EXTENSION)),
+            'extension' => strtolower(pathinfo($relativePath, PATHINFO_EXTENSION)),
         ];
     }
 
@@ -881,6 +1056,35 @@ $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 switch ($action) {
 
+    case 'dashboard-overview':
+        $analyticsPeriod = $_GET['analytics_period'] ?? 'days';
+        $analyticsCount = isset($_GET['analytics_count']) ? (int)$_GET['analytics_count'] : 30;
+        if (!in_array($analyticsPeriod, ['days', 'months', 'years'], true)) {
+            $analyticsPeriod = 'days';
+        }
+        if ($analyticsPeriod === 'months' && $analyticsCount <= 0) {
+            $analyticsCount = 12;
+        } elseif ($analyticsPeriod === 'years' && $analyticsCount < 0) {
+            $analyticsCount = 0;
+        } elseif ($analyticsPeriod === 'days' && $analyticsCount <= 0) {
+            $analyticsCount = 30;
+        }
+        $pagesPath = defined('CONTENT_PATH') ? CONTENT_PATH : dirname(__DIR__) . '/content/pages/';
+        $newsPath = dirname(__DIR__) . '/content/news/';
+        $pageCount = count(glob($pagesPath . '[a-z][a-z]_*.json') ?: []);
+        $newsCount = is_dir($newsPath) ? count(glob($newsPath . '*.json') ?: []) : 0;
+        jsonResponse(true, [
+            'pages' => $pageCount,
+            'news' => $newsCount,
+            'status' => dashboardStatusOverview($pagesPath, $newsPath),
+            'analytics' => nibblyAnalyticsSummary($analyticsPeriod, $analyticsCount),
+            'ai' => [
+                'settings' => nibblyAiLoadSettings(true),
+                'usage' => nibblyAiUsageSummary()
+            ]
+        ]);
+        break;
+
     // ============================================================
     // CONTENT MANAGEMENT
     // ============================================================
@@ -894,6 +1098,261 @@ switch ($action) {
             jsonResponse(false, null, 'Forbidden');
         }
         jsonResponse(true, iconManagerListData());
+        break;
+
+    // ============================================================
+    // AI GATEWAY
+    // ============================================================
+
+    case 'load-ai-settings':
+        jsonResponse(true, [
+            'settings' => nibblyAiLoadSettings(true),
+            'usage' => nibblyAiUsageSummary()
+        ]);
+        break;
+
+    case 'ai-image-history':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        jsonResponse(true, nibblyAiLoadImageHistory((int)($_GET['offset'] ?? 0), (int)($_GET['limit'] ?? 12)));
+        break;
+
+    case 'clear-ai-image-history':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        nibblyAiClearImageHistory();
+        jsonResponse(true, nibblyAiLoadImageHistory(0, 12), 'AI image history cleared');
+        break;
+
+    case 'save-ai-settings':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        $settings = json_decode($_POST['settings'] ?? '{}', true);
+        if (!is_array($settings)) {
+            jsonResponse(false, null, 'Invalid AI settings JSON');
+        }
+        try {
+            $saved = nibblyAiSaveSettings($settings);
+            jsonResponse(true, [
+                'settings' => $saved,
+                'usage' => nibblyAiUsageSummary()
+            ], 'AI settings saved');
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-test':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        try {
+            $result = nibblyAiGenerateText('Reply with exactly: Nibbly AI connection OK', [
+                'feature' => '',
+                'maxOutputTokens' => 256,
+                'temperature' => 0
+            ]);
+            jsonResponse(true, $result, 'AI connection works');
+        } catch (Throwable $e) {
+            nibblyAiAudit('test', false, ['message' => $e->getMessage()]);
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-chat':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        $messages = json_decode($_POST['messages'] ?? '[]', true);
+        if (!is_array($messages)) {
+            jsonResponse(false, null, 'Invalid messages JSON');
+        }
+        try {
+            $settings = nibblyAiLoadSettings(false);
+            $system = $settings['systemPrompts']['assistant'] ?? nibblyAiDefaults()['systemPrompts']['assistant'];
+            array_unshift($messages, ['role' => 'system', 'content' => $system]);
+            $result = nibblyAiChat($messages, [
+                'feature' => 'backendAssistant',
+                'maxOutputTokens' => $_POST['maxOutputTokens'] ?? null
+            ]);
+            jsonResponse(true, $result);
+        } catch (Throwable $e) {
+            nibblyAiAudit('chat', false, ['message' => $e->getMessage()]);
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-generate-text':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        $prompt = trim((string)($_POST['prompt'] ?? ''));
+        if ($prompt === '') {
+            jsonResponse(false, null, 'Prompt is required');
+        }
+        try {
+            $result = nibblyAiGenerateText($prompt, [
+                'feature' => 'seoTextGeneration',
+                'maxOutputTokens' => $_POST['maxOutputTokens'] ?? null
+            ]);
+            jsonResponse(true, $result);
+        } catch (Throwable $e) {
+            nibblyAiAudit('text', false, ['message' => $e->getMessage()]);
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-generate-seo':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        $context = json_decode((string)($_POST['context'] ?? '{}'), true);
+        if (!is_array($context)) {
+            jsonResponse(false, null, 'Invalid page context JSON');
+        }
+        $field = trim((string)($_POST['field'] ?? 'all'));
+        $allowedFields = ['all', 'title', 'description', 'answerSummary', 'ogTitle', 'ogDescription'];
+        if (!in_array($field, $allowedFields, true)) {
+            jsonResponse(false, null, 'Invalid SEO field');
+        }
+        $context = [
+            'lang' => substr((string)($context['lang'] ?? ''), 0, 8),
+            'slug' => substr((string)($context['slug'] ?? ''), 0, 120),
+            'title' => substr((string)($context['title'] ?? ''), 0, 180),
+            'description' => substr((string)($context['description'] ?? ''), 0, 500),
+            'seo' => is_array($context['seo'] ?? null) ? array_intersect_key($context['seo'], array_flip(['title', 'description', 'answerSummary', 'ogTitle', 'ogDescription'])) : [],
+            'contentText' => substr((string)($context['contentText'] ?? ''), 0, 9000)
+        ];
+        $fieldInstruction = $field === 'all'
+            ? 'Fill every JSON field.'
+            : 'Fill only the JSON field "' . $field . '" and still return a JSON object with that single key.';
+        $prompt = "Create practical SEO/AEO metadata for this Nibbly CMS page.\n"
+            . "Return strict JSON only, no Markdown and no prose.\n"
+            . "Allowed keys: title, description, answerSummary, ogTitle, ogDescription.\n"
+            . "Constraints: title <= 70 characters; description <= 160 characters; answerSummary <= 320 characters; ogTitle <= 70 characters; ogDescription <= 180 characters.\n"
+            . "Use the page language if possible. Do not invent facts, names, offers, prices, certifications, or locations that are not implied by the content.\n"
+            . $fieldInstruction . "\n\n"
+            . "Page context:\n" . json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        try {
+            $result = nibblyAiGenerateText($prompt, [
+                'feature' => 'seoTextGeneration',
+                'maxOutputTokens' => 900,
+                'temperature' => 0.25,
+                'system' => 'You generate SEO and answer-engine metadata for a CMS. Return valid compact JSON only.'
+            ]);
+            $text = trim((string)($result['text'] ?? ''));
+            $json = $text;
+            if (preg_match('/```(?:json)?\s*(.*?)```/is', $text, $m)) {
+                $json = trim($m[1]);
+            } elseif (preg_match('/\{.*\}/s', $text, $m)) {
+                $json = $m[0];
+            }
+            $data = json_decode($json, true);
+            if (!is_array($data)) {
+                throw new RuntimeException('AI did not return valid SEO JSON.');
+            }
+            $clean = [];
+            $limits = [
+                'title' => 90,
+                'description' => 180,
+                'answerSummary' => 420,
+                'ogTitle' => 90,
+                'ogDescription' => 220
+            ];
+            foreach ($limits as $key => $limit) {
+                if (($field === 'all' || $field === $key) && isset($data[$key])) {
+                    $clean[$key] = substr(trim((string)$data[$key]), 0, $limit);
+                }
+            }
+            jsonResponse(true, ['fields' => $clean, 'limits' => $result['limits'] ?? null]);
+        } catch (Throwable $e) {
+            nibblyAiAudit('seo-generate', false, ['message' => $e->getMessage(), 'field' => $field]);
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-generate-image':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        $prompt = trim((string)($_POST['prompt'] ?? ''));
+        try {
+            $referenceImagePaths = [];
+            $referenceImageNames = [];
+            if (!empty($_FILES['referenceImages']['tmp_name']) && is_array($_FILES['referenceImages']['tmp_name'])) {
+                foreach ($_FILES['referenceImages']['tmp_name'] as $idx => $tmpName) {
+                    if (is_string($tmpName) && $tmpName !== '') {
+                        $referenceImagePaths[] = $tmpName;
+                        $referenceImageNames[] = (string)($_FILES['referenceImages']['name'][$idx] ?? 'reference-image');
+                    }
+                }
+            } elseif (!empty($_FILES['referenceImage']['tmp_name'])) {
+                $referenceImagePaths[] = (string)$_FILES['referenceImage']['tmp_name'];
+                $referenceImageNames[] = (string)($_FILES['referenceImage']['name'] ?? 'reference-image');
+            }
+            $referenceMediaPaths = $_POST['referenceMediaPaths'] ?? ($_POST['referenceMediaPath'] ?? []);
+            if (!is_array($referenceMediaPaths)) {
+                $referenceMediaPaths = [$referenceMediaPaths];
+            }
+            $imageOptions = [
+                'size' => $_POST['size'] ?? '1024x1024',
+                'aspectRatio' => $_POST['aspectRatio'] ?? 'auto',
+                'imageScale' => $_POST['imageScale'] ?? 2048,
+                'model' => $_POST['model'] ?? null,
+                'count' => $_POST['count'] ?? 1,
+                'outputFormat' => $_POST['outputFormat'] ?? 'webp',
+                'quality' => $_POST['quality'] ?? 'auto',
+                'moderation' => $_POST['moderation'] ?? 'auto',
+                'outputCompression' => $_POST['outputCompression'] ?? 100,
+                'referenceImagePaths' => $referenceImagePaths,
+                'referenceImageNames' => $referenceImageNames,
+                'referenceMediaPaths' => $referenceMediaPaths,
+                'filenameHint' => $_POST['filenameHint'] ?? 'ai-image'
+            ];
+            $result = nibblyAiGenerateImage($prompt, $imageOptions);
+            jsonResponse(true, $result);
+        } catch (Throwable $e) {
+            nibblyAiAudit('image', false, ['message' => $e->getMessage()]);
+            $settings = nibblyAiLoadSettings(false);
+            nibblyAiRecordImageHistory([
+                'status' => 'error',
+                'model' => (string)($_POST['model'] ?? $settings['imageModel'] ?? ''),
+                'prompt' => $prompt,
+                'size' => (string)($_POST['size'] ?? ''),
+                'aspectRatio' => (string)($_POST['aspectRatio'] ?? ''),
+                'quality' => (string)($_POST['quality'] ?? ''),
+                'format' => (string)($_POST['outputFormat'] ?? ''),
+                'moderation' => (string)($_POST['moderation'] ?? ''),
+                'compression' => (int)($_POST['outputCompression'] ?? 0),
+                'count' => (int)($_POST['count'] ?? 0),
+                'referenceImages' => nibblyAiPublicReferenceList([
+                    'referenceImageNames' => $referenceImageNames ?? [],
+                    'referenceMediaPaths' => $referenceMediaPaths ?? []
+                ]),
+                'outputs' => [],
+                'error' => $e->getMessage(),
+                'estimatedCostCents' => 0
+            ]);
+            jsonResponse(false, null, $e->getMessage());
+        }
         break;
 
     case 'iconify-search':
@@ -1893,12 +2352,20 @@ switch ($action) {
         foreach ($types as $type) {
             $items = array_merge($items, listMediaFiles($type, $trash));
         }
+        $folders = [];
+        foreach ($types as $type) {
+            $folders = array_merge($folders, listMediaFolders($type, $trash));
+        }
+        $folders = array_values(array_unique($folders));
+        natcasesort($folders);
+        $folders = array_values($folders);
         usort($items, function($a, $b) {
             return ($b['modified'] ?? 0) <=> ($a['modified'] ?? 0);
         });
 
         jsonResponse(true, [
             'items' => $items,
+            'folders' => $folders,
             'types' => array_values(array_map(function($config) {
                 return [
                     'type' => $config['type'],
@@ -1955,20 +2422,129 @@ switch ($action) {
             $safeName = $config['fallbackName'] . '-' . time();
         }
 
-        $filename = uniqueMediaFilename($config['path'], $safeName . '.' . $extension);
-        if (!is_dir($config['path'])) {
-            mkdir($config['path'], 0755, true);
+        $folder = trim((string)($_POST['folder'] ?? ''));
+        if ($folder !== '' && !validateMediaFolderName($folder)) {
+            jsonResponse(false, null, 'Invalid folder name');
+        }
+        $targetBase = $config['path'] . ($folder !== '' ? $folder . '/' : '');
+        $targetPublicBase = $config['publicPath'] . ($folder !== '' ? $folder . '/' : '');
+
+        $filename = uniqueMediaFilename($targetBase, $safeName . '.' . $extension);
+        if (!is_dir($targetBase)) {
+            mkdir($targetBase, 0755, true);
         }
 
-        if (move_uploaded_file($file['tmp_name'], $config['path'] . $filename)) {
+        if (move_uploaded_file($file['tmp_name'], $targetBase . $filename)) {
+            $relativeName = ($folder !== '' ? $folder . '/' : '') . $filename;
             jsonResponse(true, [
                 'type' => $type,
-                'name' => $filename,
-                'path' => $config['publicPath'] . $filename,
+                'name' => $relativeName,
+                'path' => $targetPublicBase . $filename,
             ], 'Media uploaded');
         }
 
         jsonResponse(false, null, 'Error saving');
+        break;
+
+    case 'create-media-folder':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $type = normalizeMediaType($_POST['type'] ?? 'image');
+        $folder = trim((string)($_POST['folder'] ?? ''));
+        $config = getMediaConfig($type);
+        if (!$config || !validateMediaFolderName($folder)) {
+            jsonResponse(false, null, 'Invalid folder name');
+        }
+
+        $path = $config['path'] . $folder;
+        if (is_dir($path)) {
+            jsonResponse(true, ['folder' => $folder], 'Folder exists');
+        }
+        if (file_exists($path)) {
+            jsonResponse(false, null, 'A file with this name already exists');
+        }
+        if (mkdir($path, 0755, true)) {
+            jsonResponse(true, ['folder' => $folder], 'Folder created');
+        }
+
+        jsonResponse(false, null, 'Error creating folder');
+        break;
+
+    case 'delete-media-folder':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $type = normalizeMediaType($_POST['type'] ?? 'image');
+        $folder = trim((string)($_POST['folder'] ?? ''));
+        $config = getMediaConfig($type);
+        if (!$config || !validateMediaFolderName($folder)) {
+            jsonResponse(false, null, 'Invalid folder name');
+        }
+
+        $path = $config['path'] . $folder;
+        if (!is_dir($path) || is_link($path)) {
+            jsonResponse(false, null, 'Folder not found');
+        }
+        $contents = array_values(array_diff(scandir($path) ?: [], ['.', '..']));
+        if (count($contents) > 0) {
+            jsonResponse(false, null, 'Folder must be empty before it can be deleted');
+        }
+        if (rmdir($path)) {
+            jsonResponse(true, ['folder' => $folder], 'Folder deleted');
+        }
+
+        jsonResponse(false, null, 'Error deleting folder');
+        break;
+
+    case 'move-media':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $type = normalizeMediaType($_POST['type'] ?? 'image');
+        $filename = $_POST['filename'] ?? '';
+        $targetFolder = trim((string)($_POST['folder'] ?? ''));
+        $config = getMediaConfig($type);
+        if (!$config || !validateMediaFilename($filename, $type)) {
+            jsonResponse(false, null, 'Invalid media file');
+        }
+        if ($targetFolder !== '' && !validateMediaFolderName($targetFolder)) {
+            jsonResponse(false, null, 'Invalid folder name');
+        }
+
+        $sourcePath = $config['path'] . $filename;
+        if (!is_file($sourcePath)) {
+            jsonResponse(false, null, 'File not found');
+        }
+
+        $basename = basename($filename);
+        $targetRelative = ($targetFolder !== '' ? $targetFolder . '/' : '') . $basename;
+        if ($targetRelative === $filename) {
+            jsonResponse(true, [
+                'type' => $type,
+                'name' => $filename,
+                'path' => $config['publicPath'] . $filename,
+            ], 'Media already in folder');
+        }
+
+        $targetDirectory = $config['path'] . ($targetFolder !== '' ? $targetFolder : '');
+        if (!is_dir($targetDirectory) && !mkdir($targetDirectory, 0755, true)) {
+            jsonResponse(false, null, 'Error creating target folder');
+        }
+
+        $targetRelative = uniqueMediaRelativePath($config['path'], $targetRelative);
+        if (rename($sourcePath, $config['path'] . $targetRelative)) {
+            jsonResponse(true, [
+                'type' => $type,
+                'name' => $targetRelative,
+                'path' => $config['publicPath'] . $targetRelative,
+            ], 'Media moved');
+        }
+
+        jsonResponse(false, null, 'Error moving media');
         break;
 
     case 'delete-media':
@@ -1992,7 +2568,11 @@ switch ($action) {
             mkdir($config['trashPath'], 0755, true);
         }
 
-        $targetFilename = uniqueMediaFilename($config['trashPath'], $filename);
+        $targetFilename = uniqueMediaRelativePath($config['trashPath'], $filename);
+        $targetDirectory = dirname($config['trashPath'] . $targetFilename);
+        if (!is_dir($targetDirectory)) {
+            mkdir($targetDirectory, 0755, true);
+        }
         if (rename($sourcePath, $config['trashPath'] . $targetFilename)) {
             jsonResponse(true, null, 'Media moved to trash');
         }
@@ -2017,11 +2597,11 @@ switch ($action) {
             jsonResponse(false, null, 'File not found');
         }
 
-        if (!is_dir($config['path'])) {
-            mkdir($config['path'], 0755, true);
+        $targetFilename = uniqueMediaRelativePath($config['path'], $filename);
+        $targetDirectory = dirname($config['path'] . $targetFilename);
+        if (!is_dir($targetDirectory)) {
+            mkdir($targetDirectory, 0755, true);
         }
-
-        $targetFilename = uniqueMediaFilename($config['path'], $filename);
         if (rename($sourcePath, $config['path'] . $targetFilename)) {
             jsonResponse(true, [
                 'type' => $type,
@@ -2171,31 +2751,26 @@ switch ($action) {
         $replaceMode = ($_POST['replace'] ?? '0') === '1';
 
         if (!empty($explicitFilename)) {
-            if (strpos($explicitFilename, '/') !== false || strpos($explicitFilename, '\\') !== false || strpos($explicitFilename, '..') !== false) {
-                jsonResponse(false, null, 'Invalid filename');
-            }
-
-            $extension = strtolower(pathinfo($explicitFilename, PATHINFO_EXTENSION));
-            $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
-            if (!in_array($extension, $allowedExtensions)) {
+            if (!validateMediaFilename($explicitFilename, 'image')) {
                 jsonResponse(false, null, 'Invalid file extension');
             }
 
+            $extension = strtolower(pathinfo($explicitFilename, PATHINFO_EXTENSION));
             $filename = $explicitFilename;
 
             if ($replaceMode && file_exists(IMAGES_PATH . $filename)) {
                 if (!is_dir(IMAGES_TRASH_PATH)) {
                     mkdir(IMAGES_TRASH_PATH, 0755, true);
                 }
-                $backupName = pathinfo($filename, PATHINFO_FILENAME) . '_' . date('Y-m-d_His') . '.' . $extension;
+                $folder = trim(str_replace('\\', '/', dirname($filename)), '.');
+                $backupName = ($folder !== '' ? $folder . '/' : '') . pathinfo($filename, PATHINFO_FILENAME) . '_' . date('Y-m-d_His') . '.' . $extension;
+                $backupDirectory = dirname(IMAGES_TRASH_PATH . $backupName);
+                if (!is_dir($backupDirectory)) {
+                    mkdir($backupDirectory, 0755, true);
+                }
                 rename(IMAGES_PATH . $filename, IMAGES_TRASH_PATH . $backupName);
             } elseif (!$replaceMode && file_exists(IMAGES_PATH . $filename)) {
-                $safeName = pathinfo($filename, PATHINFO_FILENAME);
-                $counter = 1;
-                while (file_exists(IMAGES_PATH . $filename)) {
-                    $filename = $safeName . '-' . $counter . '.' . $extension;
-                    $counter++;
-                }
+                $filename = uniqueMediaRelativePath(IMAGES_PATH, $filename);
             }
         } else {
             $originalName = pathinfo($file['name'], PATHINFO_FILENAME);
@@ -2217,8 +2792,9 @@ switch ($action) {
             }
         }
 
-        if (!is_dir(IMAGES_PATH)) {
-            mkdir(IMAGES_PATH, 0755, true);
+        $targetDirectory = dirname(IMAGES_PATH . $filename);
+        if (!is_dir($targetDirectory)) {
+            mkdir($targetDirectory, 0755, true);
         }
 
         if (move_uploaded_file($file['tmp_name'], IMAGES_PATH . $filename)) {
@@ -2942,7 +3518,7 @@ switch ($action) {
                 'logoSize' => 'medium'
             ],
             'theme' => [
-                'adminTheme' => 'light',
+                'adminTheme' => 'dark',
                 'primaryColor' => '#2563eb',
                 'accentColor' => '#60a5fa',
                 'sidebarBg' => '',
@@ -2964,7 +3540,15 @@ switch ($action) {
                 'smtpEncryption' => 'tls'
             ],
             'privacy' => [
-                'emailObfuscation' => false
+                'emailObfuscation' => false,
+                'rememberPublicTheme' => true
+            ],
+            'modules' => [
+                'ai' => true,
+                'news' => true,
+                'events' => true,
+                'messages' => true,
+                'iconManager' => true
             ],
             'access' => [
                 'maintenance' => [
@@ -3200,6 +3784,10 @@ switch ($action) {
         $privacyPatch = sanitizePrivacySettings($settings);
         if ($privacyPatch) {
             $sanitized['privacy'] = $privacyPatch;
+        }
+        $modulesPatch = sanitizeModuleSettings($settings);
+        if ($modulesPatch) {
+            $sanitized['modules'] = $modulesPatch;
         }
         $merged = array_replace_recursive($existing, $sanitized);
 

@@ -224,7 +224,7 @@ PHPTPL;
             'logoDisplay' => 'both',
         ],
         'theme' => [
-            'adminTheme' => 'light',
+            'adminTheme' => 'dark',
             'primaryColor' => '#2563eb',
             'accentColor' => '#60a5fa',
         ],
@@ -326,7 +326,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // VERSION
 // ============================================================
 
-define('NIBBLY_VERSION', '1.2.5');
+define('NIBBLY_VERSION', '1.3.0');
 
 // Default favicon path used as fallback by the admin UI before settings.json
 // values are applied. Override in settings.json -> "favicon".

@@ -131,8 +131,11 @@ function resetAttempts() {
 
 function nibblyIsLoopbackName(string $host): bool {
     $host = strtolower(trim($host));
-    $host = preg_replace('/:\d+$/', '', $host);
-    $host = trim($host, '[]');
+    if (preg_match('/^\[([^\]]+)\](?::\d+)?$/', $host, $m)) {
+        $host = $m[1];
+    } elseif (substr_count($host, ':') === 1) {
+        $host = preg_replace('/:\d+$/', '', $host);
+    }
 
     return $host === 'localhost'
         || $host === '::1'
@@ -290,7 +293,25 @@ if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true
 // ============================================================
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $bruteCheck = checkBruteForce();
+    $username = $_POST['username'] ?? '';
+    $password = $_POST['password'] ?? '';
+
+    // Dev bypass: opt-in, loopback-only, existing admin users only.
+    // It must be checked before rate limiting so a local test copy cannot lock
+    // Codex/Claude out of the standard admin/dev workflow after failed probes.
+    $devLoginAvailable = nibblyDevLoginAvailable();
+    $devPassword = 'dev';
+    $usedDevLogin = false;
+    $devLoginCandidate = null;
+    if ($devLoginAvailable && $password === $devPassword) {
+        $candidate = findUserByUsername($username);
+        if ($candidate && ($candidate['role'] ?? '') === 'admin') {
+            $devLoginCandidate = $candidate;
+            $usedDevLogin = true;
+        }
+    }
+
+    $bruteCheck = $devLoginCandidate ? ['allowed' => true] : checkBruteForce();
 
     if (!$bruteCheck['allowed']) {
         $lockoutWait = $bruteCheck['wait'];
@@ -301,24 +322,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = t('login.error_too_many');
         }
     } else {
-        $username = $_POST['username'] ?? '';
-        $password = $_POST['password'] ?? '';
-
-        // Dev bypass: opt-in, loopback-only, existing admin users only.
-        $devLoginAvailable = nibblyDevLoginAvailable();
-        $devPassword = 'dev';
-        $usedDevLogin = false;
-
-        $user = verifyUserPassword($username, $password);
-
-        // Dev bypass fallback
-        if (!$user && $devLoginAvailable && $password === $devPassword) {
-            $candidate = findUserByUsername($username);
-            if ($candidate && ($candidate['role'] ?? '') === 'admin') {
-                $user = $candidate;
-                $usedDevLogin = true;
-            }
-        }
+        $user = $devLoginCandidate ?: verifyUserPassword($username, $password);
 
         if ($user) {
             resetAttempts();
@@ -466,7 +470,7 @@ $devLoginAvailable = nibblyDevLoginAvailable();
 
 // Load settings for branding/theme
 $_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg';
-$siteSettings = ['favicon' => $_defaultFavicon, 'branding' => ['logo' => '', 'logoDark' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both'], 'theme' => ['adminTheme' => 'light', 'primaryColor' => '#2563eb', 'accentColor' => '#60a5fa']];
+$siteSettings = ['favicon' => $_defaultFavicon, 'branding' => ['logo' => '', 'logoDark' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both'], 'theme' => ['adminTheme' => 'dark', 'primaryColor' => '#2563eb', 'accentColor' => '#60a5fa']];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     $loadedSettings = json_decode(file_get_contents(SETTINGS_PATH), true);
     if (is_array($loadedSettings)) {
@@ -479,7 +483,7 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
         if (!empty($loadedSettings['favicon'])) $siteSettings['favicon'] = $loadedSettings['favicon'];
     }
 }
-$adminTheme = $siteSettings['theme']['adminTheme'] ?? 'light';
+$adminTheme = $siteSettings['theme']['adminTheme'] ?? 'dark';
 $showBranding = $siteSettings['branding']['showBranding'] ?? true;
 // Backend always uses the favicon (frontend logo is for the public site only).
 $brandLogo = $siteSettings['favicon'] ?? $_defaultFavicon;

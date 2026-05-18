@@ -4,11 +4,9 @@ $basePath = $basePath ?? '';
 $currentLang = $currentLang ?? (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en');
 
 // Check if admin is logged in
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-$isAdminLoggedIn = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
-$csrfToken = $_SESSION['csrf_token'] ?? '';
+require_once __DIR__ . '/access-guard.php';
+$isAdminLoggedIn = nibblyAccessIsLoggedIn();
+$csrfToken = $isAdminLoggedIn ? ($_SESSION['csrf_token'] ?? '') : '';
 
 // Load footer content from JSON
 $footerData = [];
@@ -387,13 +385,28 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
         // THEME TOGGLE (Dark / Light)
         // ============================================================
         (function initThemeToggle() {
+            var REMEMBER_PUBLIC_THEME = <?php echo (!isset($_settings['privacy']['rememberPublicTheme']) || !empty($_settings['privacy']['rememberPublicTheme'])) ? 'true' : 'false'; ?>;
             var STORAGE_KEY = 'site-theme';
             var CYCLE = ['dark', 'light'];
             var THEME_FAVICON_COLORS = { light: '#0a0a0a', dark: '#e5e5e5' };
             var faviconSvgCache = null;
 
-            function getStoredTheme() {
-                try { return localStorage.getItem(STORAGE_KEY); } catch(e) { return null; }
+            function getSystemTheme() {
+                return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+
+            function getInitialTheme() {
+                if (!REMEMBER_PUBLIC_THEME) {
+                    return getSystemTheme();
+                }
+                try {
+                    var stored = localStorage.getItem(STORAGE_KEY);
+                    if (stored === 'system') stored = null;
+                    if (CYCLE.indexOf(stored) !== -1) {
+                        return stored;
+                    }
+                } catch(e) {}
+                return getSystemTheme();
             }
 
             function updateBrowserFavicon(theme) {
@@ -429,7 +442,9 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
 
             function setTheme(theme) {
                 document.documentElement.setAttribute('data-theme', theme);
-                try { localStorage.setItem(STORAGE_KEY, theme); } catch(e) {}
+                if (REMEMBER_PUBLIC_THEME) {
+                    try { localStorage.setItem(STORAGE_KEY, theme); } catch(e) {}
+                }
                 updateMobileButtons(theme);
                 updateBrowserFavicon(theme);
             }
@@ -440,12 +455,7 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
                 });
             }
 
-            // Apply stored theme (migrate 'system' to 'dark')
-            var stored = getStoredTheme();
-            if (stored === 'system') stored = 'dark';
-            if (stored && CYCLE.indexOf(stored) !== -1) {
-                setTheme(stored);
-            }
+            setTheme(getInitialTheme());
 
             // Desktop toggle: cycles dark → light → dark
             var desktopToggle = document.getElementById('themeToggle');

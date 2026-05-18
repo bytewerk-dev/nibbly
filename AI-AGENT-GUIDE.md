@@ -34,6 +34,10 @@ This is the canonical, tool-neutral guide for AI coding agents. `AGENTS.md` and 
 | Email config | `content/settings.json` → `email` section |
 | SMTP mailer | `api/SmtpMailer.php` |
 | Contact form API | `api/contact.php` |
+| AI gateway | `includes/ai/ai-helper.php` |
+| AI settings | `content/ai-settings.json` |
+| AI usage/audit | `content/ai-usage.json`, `content/ai-audit/*.jsonl` |
+| AI image history | `content/ai-image-history.json` |
 | Deploy script | `deploy.example.sh` (copy to `deploy.sh` and configure) |
 | Backup CLI | `cli/backup.php` (cron-friendly site backup runner) |
 | Backup helper | `includes/backup-helper.php` |
@@ -78,6 +82,39 @@ echo nibblyLazyFormPlaceholder('contact', [
 The lazy endpoint (`api/form.php`) only renders whitelisted core forms. Add new
 custom forms there deliberately; never include arbitrary PHP paths from request
 parameters.
+
+## AI Gateway
+
+Nibbly core AI features must use `includes/ai/ai-helper.php` instead of calling
+LLM or image-generation vendors directly. The gateway stores provider settings in
+`content/ai-settings.json`, supports OpenAI-compatible providers, keeps API keys
+server-side, enforces feature flags, daily/monthly limits, token caps, rough cost
+estimates, and writes audit events to `content/ai-audit/*.jsonl`.
+
+Use the existing admin API actions (`ai-chat`, `ai-generate-text`,
+`ai-generate-image`, `ai-image-history`, `clear-ai-image-history`,
+`load-ai-settings`, `save-ai-settings`, `ai-test`) for dashboard features. API
+keys are never exposed by `load-ai-settings`; it only returns `hasApiKey` and
+provider metadata. Do not add direct browser-to-provider calls.
+
+Provider credentials are stored per provider, so admins can switch between
+OpenAI, OpenRouter, Ollama, LM Studio, or another OpenAI-compatible endpoint
+without replacing keys. Local/private URLs (`localhost`, private IP ranges, or
+self-hosted gateways) must only be accepted when the explicit local-provider
+setting is enabled.
+
+Generated images are validated and saved under `assets/images/generated/`, are
+visible in the Media Library, and are indexed in `content/ai-image-history.json`
+with prompt, model, options, response status, and local media paths. OpenAI image
+edits use multipart image uploads; OpenRouter-compatible image generation uses
+the configured model id and may have provider-specific option support. Preserve
+the gateway's cautious curl retry behavior: retry transient TLS/read errors only
+when no response bytes were received, so paid image requests are not duplicated.
+
+Dashboard AI UI should honor both global module visibility and AI feature flags.
+If AI features are disabled, hide AI buttons and tools throughout the admin UI.
+If AI is enabled but a capability lacks a model or key, show a clear disabled
+state instead of a failing action.
 
 ## Accessibility Best Practices
 

@@ -4,6 +4,7 @@
  */
 
 require_once __DIR__ . '/../admin/lang/i18n.php';
+require_once __DIR__ . '/access-guard.php';
 
 if (!defined('CONTENT_BASE_PATH')) {
     define('CONTENT_BASE_PATH', __DIR__ . '/../content/pages/');
@@ -31,10 +32,7 @@ function sanitizeHtml($html) {
  * Check if admin is logged in
  */
 function isAdminLoggedIn() {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
-    return isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
+    return nibblyAccessIsLoggedIn();
 }
 
 /**
