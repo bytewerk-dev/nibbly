@@ -31,6 +31,7 @@ includes/
   footer.php     Footer + scripts + inline editor bootstrap
   access-guard.php  Maintenance mode, preview bypass, and private page enforcement
   content-loader.php  Template API (editable fields, render components)
+  ai/               AI provider gateway, limits, usage, audit, generated images
   block-types.php     Block type registry
   block-renderers/    One PHP file per block type
   nav-config.php      Navigation items + page mapping
@@ -213,6 +214,33 @@ The `theme.adminTheme` value can be `"light"`, `"dark"`, or `"system"`. `primary
 `access.maintenance` controls the public maintenance lock. `mode` is one of `maintenance`, `offline`, or `launch`; `until` is an optional local datetime string; `showCountdown` enables countdown rendering for visitors; and `bypassParam` plus `bypassKeyHash` define a session-based preview bypass such as `/?preview=secret`. The plaintext bypass key is never stored by the settings API.
 
 `access.privacy.obfuscateEmails` enables JavaScript-decoded email address placeholders on public pages. The original email remains available to visitors with JavaScript enabled but is not emitted as a simple raw address in the initial HTML.
+
+### AI Settings (`content/ai-settings.json`)
+
+AI configuration is intentionally separate from general site settings because it
+contains provider credentials, budgets, model names, feature flags, and local
+provider controls. The gateway in `includes/ai/ai-helper.php` supports
+OpenAI-compatible providers, including OpenAI, OpenRouter, Ollama, LM Studio, or
+self-hosted compatible endpoints.
+
+Provider credentials are stored per provider. This allows an installation to keep
+separate API keys and base URLs for OpenAI and OpenRouter while switching the
+active provider in the admin UI. `load-ai-settings` never returns raw API keys;
+it only exposes `hasApiKey` and non-secret provider metadata.
+
+Usage counters live in `content/ai-usage.json`; request audit lines live in
+`content/ai-audit/YYYY-MM-DD.jsonl`; generated image metadata lives in
+`content/ai-image-history.json`; generated image files are written to
+`assets/images/generated/` and surfaced through the Media Library. Admin UI and
+future core features should use the AI gateway functions or `admin/api.php` AI
+actions so limits, audit logging, key handling, and generated-file storage stay
+centralized.
+
+The dashboard uses the gateway for assistant chat, text generation, SEO/AEO field
+prefill, image generation, and image-to-image workflows. Local/private provider
+URLs require the explicit local-provider setting. AI controls are hidden when the
+AI module is disabled and rendered disabled when a configured capability lacks
+the required key or model.
 
 ### Page Visibility (`content/pages/{lang}_{slug}.json`)
 

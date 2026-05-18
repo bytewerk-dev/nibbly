@@ -29,6 +29,8 @@
         data: [],
         filtered: [],
         selectedPath: null,
+        selectedPaths: [],
+        multiplePicker: false,
         callback: null,
         isPicker: false,
         allowedTypes: ['image'],
@@ -37,9 +39,14 @@
         mode: 'library',
         sort: { field: 'date', dir: 'desc' },
         search: '',
+        folders: [],
+        folderFilter: 'all',
+        expandedFolders: {},
+        lightboxItem: null,
     };
 
     var replaceTarget = null;
+    var moveTarget = null;
     var previousFocus = null;
     var mediaTypes = {
         image: {
@@ -88,6 +95,11 @@
         delete: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
         copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
         restore: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>',
+        folder: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2.5h6.5A2.5 2.5 0 0 1 21 9v8.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/></svg>',
+        folderPlus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2.5h6.5A2.5 2.5 0 0 1 21 9v8.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M12 11v6M9 14h6"/></svg>',
+        move: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h5l2 2h11v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M13 12h5M16 9l3 3-3 3"/></svg>',
+        chevronRight: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>',
+        chevronLeft: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>',
     };
 
     // ============================================================
@@ -141,6 +153,18 @@
     function isVideo(item) { return item.type === 'video'; }
     function isDocument(item) { return item.type === 'document'; }
 
+    function mediaDisplayName(item) {
+        return item.basename || item.name || item.path || t('media.file');
+    }
+
+    function mediaNameHtml(item, className) {
+        var folder = item.folder || '';
+        return '<div class="' + className + '" title="' + escapeHtml(item.name || item.path || '') + '">' +
+            '<span class="nb-imgmgr-file-name">' + escapeHtml(mediaDisplayName(item)) + '</span>' +
+            (folder ? '<span class="nb-imgmgr-folder-name">' + escapeHtml(folder) + '</span>' : '') +
+        '</div>';
+    }
+
     function mediaIcon(item) {
         if (isAudio(item)) return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.5A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>';
         if (isVideo(item)) return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h12a2 2 0 0 1 2 2v1.2l4-2.2v12l-4-2.2V17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg>';
@@ -149,10 +173,11 @@
 
     function mediaThumbHtml(item, className, previewAction) {
         var actionAttr = previewAction ? ' data-action="preview"' : '';
+        var previewAttr = ' data-preview-path="' + escapeHtml(item.path || '') + '" data-preview-name="' + escapeHtml(mediaDisplayName(item)) + '" onclick="window.NbImageManager && NbImageManager.preview(this.dataset.previewPath, this.dataset.previewName); return false;"';
         if (isImage(item)) {
-            return '<div class="' + className + '" style="background-image:url(\'' + escapeHtml(item.path) + '\')"' + actionAttr + '></div>';
+            return '<button type="button" class="' + className + ' nb-imgmgr-thumb-btn" style="background-image:url(\'' + escapeHtml(item.path) + '\')"' + actionAttr + previewAttr + ' aria-label="' + escapeHtml(t('image_preview')) + '"></button>';
         }
-        return '<div class="' + className + ' nb-imgmgr-media-icon nb-imgmgr-media-icon--' + escapeHtml(item.type || 'document') + '"' + actionAttr + '>' + mediaIcon(item) + '</div>';
+        return '<button type="button" class="' + className + ' nb-imgmgr-thumb-btn nb-imgmgr-media-icon nb-imgmgr-media-icon--' + escapeHtml(item.type || 'document') + '"' + actionAttr + previewAttr + ' aria-label="' + escapeHtml(t('image_preview')) + '">' + mediaIcon(item) + '</button>';
     }
 
     // ============================================================
@@ -177,6 +202,11 @@
                     '<div class="nb-imgmgr-mode-toggle">' +
                         '<button type="button" class="nb-imgmgr-mode-btn nb-imgmgr-mode-btn--active" data-mode="library" aria-pressed="true">' + escapeHtml(t('image.library')) + '</button>' +
                         '<button type="button" class="nb-imgmgr-mode-btn" data-mode="trash" aria-pressed="false">' + escapeHtml(t('image.trash')) + '</button>' +
+                    '</div>' +
+                    '<div class="nb-imgmgr-folder-tools">' +
+                        '<select class="nb-imgmgr-folder-filter" aria-label="' + escapeHtml(t('media.folder')) + '"></select>' +
+                        '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-folder-create" data-action="create-folder" title="' + escapeHtml(t('media.folder_create')) + '" aria-label="' + escapeHtml(t('media.folder_create')) + '">' + Icons.folderPlus + '</button>' +
+                        '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-folder-delete" data-action="delete-folder" title="' + escapeHtml(t('media.folder_delete')) + '" aria-label="' + escapeHtml(t('media.folder_delete')) + '">' + Icons.delete + '</button>' +
                     '</div>' +
                     '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--secondary nb-imgmgr-empty-trash-btn" data-action="empty-trash" hidden>' + escapeHtml(t('image.empty_trash')) + '</button>' +
                     '<span class="nb-imgmgr-spacer"></span>' +
@@ -228,6 +258,24 @@
         modal.querySelector('[data-action="empty-trash"]').addEventListener('click', emptyImageTrash);
 
         modal.querySelector('.nb-imgmgr-upload-input').addEventListener('change', handleUpload);
+        modal.addEventListener('click', function (e) {
+            var thumb = e.target.closest && e.target.closest('.nb-imgmgr-thumb-btn');
+            if (!thumb || !modal.contains(thumb)) return;
+            var itemEl = thumb.closest('.nb-imgmgr-item, .nb-imgmgr-row');
+            var path = itemEl ? itemEl.dataset.path : '';
+            var image = state.data.find(function (entry) { return entry.path === path; });
+            if (!image) return;
+            e.preventDefault();
+            e.stopPropagation();
+            openLightbox(image);
+        }, true);
+        modal.querySelector('.nb-imgmgr-folder-create').addEventListener('click', createMediaFolder);
+        modal.querySelector('.nb-imgmgr-folder-delete').addEventListener('click', deleteCurrentMediaFolder);
+        modal.querySelector('.nb-imgmgr-folder-filter').addEventListener('change', function(e) {
+            state.folderFilter = e.target.value || 'all';
+            filterAndRender();
+            updateFolderUI();
+        });
 
         var dropzone = modal.querySelector('.nb-imgmgr-dropzone');
         ['dragenter', 'dragover'].forEach(function (evt) {
@@ -283,11 +331,16 @@
         document.addEventListener('keydown', function (e) {
             if (e.key !== 'Escape') return;
             var replaceDialog = document.getElementById('nb-imgmgr-replace');
+            var moveDialog = document.getElementById('nb-imgmgr-move');
             var lightbox = document.getElementById('nb-imgmgr-lightbox');
             if (replaceDialog && replaceDialog.classList.contains('active')) {
                 e.stopPropagation();
                 e.preventDefault();
                 closeReplaceDialog();
+            } else if (moveDialog && moveDialog.classList.contains('active')) {
+                e.stopPropagation();
+                e.preventDefault();
+                closeMoveDialog();
             } else if (lightbox && lightbox.classList.contains('active')) {
                 e.stopPropagation();
                 e.preventDefault();
@@ -301,6 +354,7 @@
 
         createLightbox();
         createReplaceDialog();
+        createMoveDialog();
     }
 
     // ============================================================
@@ -309,17 +363,26 @@
     function open(callback, currentPath, options) {
         options = options || {};
         createModal();
+        var modal = document.getElementById('nb-imgmgr-modal');
+        if (modal.parentElement !== document.body) {
+            document.body.appendChild(modal);
+        }
+        modal.classList.remove('nb-imgmgr-modal--embedded');
         state.callback = typeof callback === 'function' ? callback : null;
         state.isPicker = typeof callback === 'function';
+        state.multiplePicker = !!options.multiple;
         state.allowedTypes = normalizeTypes(options.types || (state.isPicker ? ['image'] : ['image', 'audio', 'video', 'document']));
         state.activeType = options.type && state.allowedTypes.indexOf(options.type) !== -1
             ? options.type
             : (state.allowedTypes.length > 1 && !state.isPicker ? 'all' : state.allowedTypes[0]);
-        state.selectedPath = normalizeImagePath(currentPath);
+        state.selectedPaths = state.multiplePicker && Array.isArray(currentPath)
+            ? currentPath.map(normalizeImagePath).filter(Boolean)
+            : [];
+        state.selectedPath = state.multiplePicker ? null : normalizeImagePath(currentPath);
         state.search = '';
         state.mode = 'library';
+        state.folderFilter = 'all';
 
-        var modal = document.getElementById('nb-imgmgr-modal');
         modal.querySelector('.nb-imgmgr-search').value = '';
         renderTypeControls();
         updateModeUI();
@@ -335,6 +398,39 @@
             var search = modal.querySelector('.nb-imgmgr-search');
             if (search) search.focus();
         }, 0);
+    }
+
+    function mount(container, options) {
+        if (!container) return;
+        options = options || {};
+        createModal();
+        var modal = document.getElementById('nb-imgmgr-modal');
+        if (modal.parentElement !== container) {
+            container.appendChild(modal);
+        }
+        modal.classList.add('nb-imgmgr-modal--embedded');
+
+        state.callback = null;
+        state.multiplePicker = false;
+        state.isPicker = false;
+        state.allowedTypes = normalizeTypes(options.types || ['image', 'audio', 'video', 'document']);
+        state.activeType = options.type && state.allowedTypes.indexOf(options.type) !== -1
+            ? options.type
+            : (state.allowedTypes.length > 1 ? 'all' : state.allowedTypes[0]);
+        state.selectedPath = null;
+        state.search = '';
+        state.mode = 'library';
+        state.folderFilter = 'all';
+
+        modal.querySelector('.nb-imgmgr-search').value = '';
+        renderTypeControls();
+        updateModeUI();
+        updateTypeUI();
+
+        loadImages();
+        updateSelectionUI();
+
+        modal.classList.add('active');
     }
 
     function normalizeImagePath(path) {
@@ -357,8 +453,12 @@
     }
 
     function confirmSelection() {
-        if (state.selectedPath && typeof state.callback === 'function') {
-            state.callback(state.selectedPath);
+        if (typeof state.callback === 'function') {
+            if (state.multiplePicker && state.selectedPaths.length) {
+                state.callback(state.selectedPaths.slice());
+            } else if (state.selectedPath) {
+                state.callback(state.selectedPath);
+            }
         }
         close();
     }
@@ -433,6 +533,34 @@
         formats.textContent = t(typeConfig.formatsKey);
         var title = modal.querySelector('.nb-imgmgr-header h3');
         if (title) title.textContent = t(isImageOnlyPicker() ? 'image_manager' : 'media_manager');
+        updateFolderUI();
+    }
+
+    function updateFolderUI() {
+        var modal = document.getElementById('nb-imgmgr-modal');
+        if (!modal) return;
+        var tools = modal.querySelector('.nb-imgmgr-folder-tools');
+        var select = modal.querySelector('.nb-imgmgr-folder-filter');
+        var deleteBtn = modal.querySelector('.nb-imgmgr-folder-delete');
+        if (!tools || !select || !deleteBtn) return;
+
+        var isLibrary = state.mode === 'library';
+        tools.hidden = !isLibrary;
+        if (!isLibrary) return;
+
+        var current = state.folderFilter || 'all';
+        select.innerHTML =
+            '<option value="all">' + escapeHtml(t('media.folder_all')) + '</option>' +
+            '<option value="">' + escapeHtml(t('media.folder_root')) + '</option>' +
+            state.folders.map(function(folder) {
+                return '<option value="' + escapeHtml(folder) + '">' + escapeHtml(folder) + '</option>';
+            }).join('');
+        if (current !== 'all' && current !== '' && state.folders.indexOf(current) === -1) {
+            current = 'all';
+            state.folderFilter = current;
+        }
+        select.value = current;
+        deleteBtn.disabled = current === 'all' || current === '';
     }
 
     // ============================================================
@@ -454,10 +582,14 @@
                 var items = result.success && result.data
                     ? (Array.isArray(result.data) ? result.data : (result.data.items || []))
                     : [];
+                state.folders = result.success && result.data && Array.isArray(result.data.folders) ? result.data.folders : [];
+                updateFolderUI();
                 if (items.length > 0) {
                     state.data = items.map(function (img) {
                         return Object.assign({}, img, {
                             type: img.type || 'image',
+                            folder: img.folder || '',
+                            basename: img.basename || img.name || '',
                             path: img.path.indexOf('api.php?') === 0 ? img.path : img.path.replace(/^\.\.\//, '/')
                         });
                     });
@@ -505,13 +637,12 @@
     }
 
     function filterAndRender() {
-        if (state.search) {
-            state.filtered = state.data.filter(function (img) {
-                return (img.name || '').toLowerCase().indexOf(state.search) !== -1;
-            });
-        } else {
-            state.filtered = state.data.slice();
-        }
+        state.filtered = state.data.filter(function (img) {
+            var folder = img.folder || '';
+            var matchesFolder = state.folderFilter === 'all' || folder === state.folderFilter;
+            var matchesSearch = !state.search || ((img.name || '') + ' ' + (img.basename || '') + ' ' + folder).toLowerCase().indexOf(state.search) !== -1;
+            return matchesFolder && matchesSearch;
+        });
         render();
     }
 
@@ -535,25 +666,26 @@
         gridEl.innerHTML = '';
         state.filtered.forEach(function (image) {
             var item = document.createElement('div');
-            var isSelected = state.isPicker && state.selectedPath === image.path;
+            var isSelected = state.isPicker && isSelectedPath(image.path);
             item.className = 'nb-imgmgr-item' + (isSelected ? ' selected' : '');
             item.dataset.path = image.path;
             item.setAttribute('role', 'listitem');
             item.setAttribute('aria-label', image.name || image.path || t('media.file'));
             item.innerHTML = state.mode === 'trash'
-                ? mediaThumbHtml(image, 'nb-imgmgr-thumb', false) +
-                '<div class="nb-imgmgr-name" title="' + escapeHtml(image.name) + '">' + escapeHtml(image.name) + '</div>' +
+                ? mediaThumbHtml(image, 'nb-imgmgr-thumb', true) +
+                mediaNameHtml(image, 'nb-imgmgr-name') +
                 '<div class="nb-imgmgr-actions">' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '" aria-label="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="restore" title="' + escapeHtml(t('image.restore')) + '" aria-label="' + escapeHtml(t('image.restore')) + '">' + Icons.restore + '</button>' +
                     '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete-permanent" title="' + escapeHtml(t('image.delete_permanently')) + '" aria-label="' + escapeHtml(t('image.delete_permanently')) + '">' + Icons.delete + '</button>' +
                 '</div>'
                 :
-                mediaThumbHtml(image, 'nb-imgmgr-thumb', false) +
-                '<div class="nb-imgmgr-name" title="' + escapeHtml(image.name) + '">' + escapeHtml(image.name) + '</div>' +
+                mediaThumbHtml(image, 'nb-imgmgr-thumb', true) +
+                mediaNameHtml(image, 'nb-imgmgr-name') +
                 '<div class="nb-imgmgr-actions">' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '" aria-label="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="copy" title="' + escapeHtml(t('image.copy_path')) + '" aria-label="' + escapeHtml(t('image.copy_path')) + '">' + Icons.copy + '</button>' +
+                    '<button type="button" class="nb-imgmgr-action-btn" data-action="move" title="' + escapeHtml(t('media.move_file')) + '" aria-label="' + escapeHtml(t('media.move_file')) + '">' + Icons.move + '</button>' +
                     (isImage(image) ? '<button type="button" class="nb-imgmgr-action-btn" data-action="replace" title="' + escapeHtml(t('image.replace')) + '" aria-label="' + escapeHtml(t('image.replace')) + '">' + Icons.replace + '</button>' : '') +
                     '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete" title="' + escapeHtml(t('delete')) + '" aria-label="' + escapeHtml(t('delete')) + '">' + Icons.delete + '</button>' +
                 '</div>';
@@ -578,16 +710,27 @@
         }
 
         listBody.innerHTML = '';
+        if (state.mode !== 'trash' && state.folderFilter === 'all' && !state.search) {
+            renderListGrouped(listBody);
+            return;
+        }
+
         state.filtered.forEach(function (image) {
+            appendMediaRow(listBody, image);
+        });
+    }
+
+    function appendMediaRow(listBody, image) {
             var row = document.createElement('div');
-            var isSelected = state.isPicker && state.selectedPath === image.path;
+            var isSelected = state.isPicker && isSelectedPath(image.path);
             row.className = 'nb-imgmgr-row' + (isSelected ? ' selected' : '');
+            if (image.folder) row.classList.add('nb-imgmgr-row--child');
             row.dataset.path = image.path;
             row.setAttribute('aria-label', image.name || image.path || t('media.file'));
             row.innerHTML = state.mode === 'trash'
                 ? '<div></div>' +
                 mediaThumbHtml(image, 'nb-imgmgr-list-thumb', true) +
-                '<div class="nb-imgmgr-list-name" title="' + escapeHtml(image.name) + '">' + escapeHtml(image.name) + '</div>' +
+                mediaNameHtml(image, 'nb-imgmgr-list-name') +
                 '<div class="nb-imgmgr-list-size">' + escapeHtml(image.size || '-') + '</div>' +
                 '<div class="nb-imgmgr-list-date">' + escapeHtml(image.dateFormatted || '-') + '</div>' +
                 '<div class="nb-imgmgr-list-actions">' +
@@ -598,12 +741,13 @@
                 :
                 '<div></div>' +
                 mediaThumbHtml(image, 'nb-imgmgr-list-thumb', true) +
-                '<div class="nb-imgmgr-list-name" title="' + escapeHtml(image.name) + '">' + escapeHtml(image.name) + '</div>' +
+                mediaNameHtml(image, 'nb-imgmgr-list-name') +
                 '<div class="nb-imgmgr-list-size">' + escapeHtml(image.size || '-') + '</div>' +
                 '<div class="nb-imgmgr-list-date">' + escapeHtml(image.dateFormatted || '-') + '</div>' +
                 '<div class="nb-imgmgr-list-actions">' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '" aria-label="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="copy" title="' + escapeHtml(t('image.copy_path')) + '" aria-label="' + escapeHtml(t('image.copy_path')) + '">' + Icons.copy + '</button>' +
+                    '<button type="button" class="nb-imgmgr-action-btn" data-action="move" title="' + escapeHtml(t('media.move_file')) + '" aria-label="' + escapeHtml(t('media.move_file')) + '">' + Icons.move + '</button>' +
                     (isImage(image) ? '<button type="button" class="nb-imgmgr-action-btn" data-action="replace" title="' + escapeHtml(t('image.replace')) + '" aria-label="' + escapeHtml(t('image.replace')) + '">' + Icons.replace + '</button>' : '') +
                     '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete" title="' + escapeHtml(t('delete')) + '" aria-label="' + escapeHtml(t('delete')) + '">' + Icons.delete + '</button>' +
                 '</div>';
@@ -612,6 +756,39 @@
             }
             listBody.appendChild(row);
             attachItemEvents(row, image);
+    }
+
+    function renderListGrouped(listBody) {
+        var rootItems = state.filtered.filter(function(item) { return !(item.folder || ''); });
+        var folders = state.folders.slice();
+
+        rootItems.forEach(function(image) {
+            appendMediaRow(listBody, image);
+        });
+
+        folders.forEach(function(folder) {
+            var children = state.filtered.filter(function(item) { return (item.folder || '') === folder; });
+            var row = document.createElement('button');
+            var expanded = state.expandedFolders[folder] === true;
+            row.type = 'button';
+            row.className = 'nb-imgmgr-folder-row';
+            row.dataset.folder = folder;
+            row.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            row.innerHTML =
+                '<span class="nb-imgmgr-folder-disclosure">' + (expanded ? Icons.chevronRight : Icons.chevronRight) + '</span>' +
+                '<span class="nb-imgmgr-folder-icon">' + Icons.folder + '</span>' +
+                '<span class="nb-imgmgr-folder-label">' + escapeHtml(folder) + '</span>' +
+                '<span class="nb-imgmgr-folder-count">' + children.length + '</span>';
+            row.addEventListener('click', function() {
+                state.expandedFolders[folder] = !expanded;
+                renderList();
+            });
+            listBody.appendChild(row);
+            if (expanded) {
+                children.forEach(function(image) {
+                    appendMediaRow(listBody, image);
+                });
+            }
         });
     }
 
@@ -624,6 +801,14 @@
             });
         }
 
+        var previewThumb = element.querySelector('.nb-imgmgr-thumb-btn');
+        if (previewThumb) {
+            previewThumb.addEventListener('click', function (e) {
+                e.stopPropagation();
+                openLightbox(image);
+            });
+        }
+
         element.addEventListener('click', function (e) {
             var actionEl = e.target.closest('[data-action]');
             if (actionEl) {
@@ -631,6 +816,7 @@
                 var action = actionEl.dataset.action;
                 if (action === 'preview') openLightbox(image);
                 else if (action === 'copy') copyPath(image.path);
+                else if (action === 'move') openMoveDialog(image);
                 else if (action === 'replace') openReplaceDialog(image.name, image.path);
                 else if (action === 'delete') deleteMedia(image);
                 else if (action === 'restore') restoreMedia(image);
@@ -642,8 +828,23 @@
         });
     }
 
+    function isSelectedPath(path) {
+        return state.multiplePicker
+            ? state.selectedPaths.indexOf(path) !== -1
+            : state.selectedPath === path;
+    }
+
     function toggleSelection(path) {
-        state.selectedPath = state.selectedPath === path ? null : path;
+        if (state.multiplePicker) {
+            var idx = state.selectedPaths.indexOf(path);
+            if (idx === -1) {
+                state.selectedPaths.push(path);
+            } else {
+                state.selectedPaths.splice(idx, 1);
+            }
+        } else {
+            state.selectedPath = state.selectedPath === path ? null : path;
+        }
         updateSelectionUI();
     }
 
@@ -653,7 +854,7 @@
 
         modal.querySelectorAll('.nb-imgmgr-item, .nb-imgmgr-row').forEach(function (item) {
             var path = item.dataset.path;
-            var isSelected = path === state.selectedPath;
+            var isSelected = isSelectedPath(path);
             item.classList.toggle('selected', isSelected);
             var check = item.querySelector('.nb-imgmgr-check');
             if (check) check.classList.toggle('checked', isSelected);
@@ -679,8 +880,11 @@
         }
 
         confirmBtn.hidden = false;
-        if (state.selectedPath) {
-            info.textContent = state.selectedPath;
+        var selectedCount = state.multiplePicker ? state.selectedPaths.length : (state.selectedPath ? 1 : 0);
+        if (selectedCount) {
+            info.textContent = state.multiplePicker
+                ? t('media.selection_count', { count: selectedCount })
+                : state.selectedPath;
             info.classList.add('has-selection');
             confirmBtn.disabled = false;
         } else {
@@ -706,8 +910,10 @@
 
         if (state.mode === 'trash') {
             state.selectedPath = null;
+            state.folderFilter = 'all';
         }
 
+        updateFolderUI();
         updateSelectionUI();
     }
 
@@ -800,6 +1006,7 @@
                     if (state.selectedPath === item.path || (state.selectedPath && state.selectedPath.indexOf('/' + item.name) !== -1)) {
                         state.selectedPath = null;
                     }
+                    state.selectedPaths = state.selectedPaths.filter(function(path) { return path !== item.path; });
                     loadImages();
                 } else {
                     config.showToast(result.message || t('toast.error'), 'error');
@@ -862,6 +1069,96 @@
         );
     }
 
+    function createMediaFolder() {
+        if (state.mode !== 'library') return;
+        var name = window.prompt(t('media.folder_create_prompt'));
+        if (name == null) return;
+        name = name.trim();
+        if (!name) return;
+
+        var formData = new FormData();
+        formData.append('action', 'create-media-folder');
+        formData.append('type', getActiveUploadType());
+        formData.append('folder', name);
+        formData.append('csrf_token', config.csrfToken);
+
+        fetch(config.apiUrl, { method: 'POST', body: formData })
+            .then(function (r) { return r.json(); })
+            .then(function (result) {
+                if (result.success) {
+                    config.showToast(t('media.folder_created'), 'success');
+                    state.folderFilter = result.data && result.data.folder ? result.data.folder : name;
+                    state.expandedFolders[state.folderFilter] = true;
+                    loadImages();
+                } else {
+                    config.showToast(result.message || t('toast.error'), 'error');
+                }
+            })
+            .catch(function (err) {
+                config.showToast(err.message || t('toast.error'), 'error');
+            });
+    }
+
+    function deleteCurrentMediaFolder() {
+        if (state.mode !== 'library' || !state.folderFilter || state.folderFilter === 'all') return;
+        var folder = state.folderFilter;
+        confirmAction(
+            t('media.folder_delete'),
+            t('media.folder_delete_confirm', { folder: folder }),
+            function () {
+                var formData = new FormData();
+                formData.append('action', 'delete-media-folder');
+                formData.append('type', getActiveUploadType());
+                formData.append('folder', folder);
+                formData.append('csrf_token', config.csrfToken);
+
+                fetch(config.apiUrl, { method: 'POST', body: formData })
+                    .then(function (r) { return r.json(); })
+                    .then(function (result) {
+                        if (result.success) {
+                            config.showToast(t('media.folder_deleted'), 'success');
+                            delete state.expandedFolders[folder];
+                            state.folderFilter = 'all';
+                            loadImages();
+                        } else {
+                            config.showToast(result.message || t('toast.error'), 'error');
+                        }
+                    })
+                    .catch(function (err) {
+                        config.showToast(err.message || t('toast.error'), 'error');
+                    });
+            }
+        );
+    }
+
+    function moveMedia(item, target) {
+        if (!item || !item.name) return;
+        target = (target || '').trim();
+        if (target === (item.folder || '')) return;
+        var formData = new FormData();
+        formData.append('action', 'move-media');
+        formData.append('type', item.type || 'image');
+        formData.append('filename', item.name);
+        formData.append('folder', target);
+        formData.append('csrf_token', config.csrfToken);
+
+        fetch(config.apiUrl, { method: 'POST', body: formData })
+            .then(function (r) { return r.json(); })
+            .then(function (result) {
+                if (result.success) {
+                    config.showToast(t('media.file_moved'), 'success');
+                    closeMoveDialog();
+                    if (target) state.expandedFolders[target] = true;
+                    loadImages();
+                } else {
+                    config.showToast(result.message || t('toast.error'), 'error');
+                }
+            })
+            .catch(function (err) {
+                config.showToast(err.message || t('toast.error'), 'error');
+            });
+    }
+
     function emptyImageTrash() {
         if (!state.data.length) {
             config.showToast(t(isImageOnlyPicker() ? 'image.trash_empty' : 'media.trash_empty'), 'info');
@@ -919,6 +1216,9 @@
         formData.append('action', 'upload-media');
         formData.append('type', type);
         formData.append('file', file);
+        if (state.mode === 'library' && state.folderFilter && state.folderFilter !== 'all') {
+            formData.append('folder', state.folderFilter);
+        }
         formData.append('csrf_token', config.csrfToken);
 
         config.showToast(t('image.uploading'), 'info');
@@ -934,7 +1234,12 @@
                     }
                     loadImages();
                     if (result.data && result.data.path) {
-                        state.selectedPath = result.data.path.replace(/^\.\.\//, '/');
+                        var uploadedPath = result.data.path.replace(/^\.\.\//, '/');
+                        if (state.multiplePicker) {
+                            if (state.selectedPaths.indexOf(uploadedPath) === -1) state.selectedPaths.push(uploadedPath);
+                        } else {
+                            state.selectedPath = uploadedPath;
+                        }
                         setTimeout(updateSelectionUI, 300);
                     }
                 } else {
@@ -958,6 +1263,8 @@
         lb.innerHTML =
             '<div class="nb-imgmgr-lightbox-content">' +
                 '<button type="button" class="nb-imgmgr-lightbox-close" aria-label="Close">&times;</button>' +
+                '<button type="button" class="nb-imgmgr-lightbox-nav nb-imgmgr-lightbox-nav--prev" data-action="lightbox-prev" aria-label="' + escapeHtml(t('media.previous_image')) + '">' + Icons.chevronLeft + '</button>' +
+                '<button type="button" class="nb-imgmgr-lightbox-nav nb-imgmgr-lightbox-nav--next" data-action="lightbox-next" aria-label="' + escapeHtml(t('media.next_image')) + '">' + Icons.chevronRight + '</button>' +
                 '<div class="nb-imgmgr-lightbox-stage"></div>' +
                 '<div class="nb-imgmgr-lightbox-info"></div>' +
             '</div>';
@@ -967,9 +1274,25 @@
             if (e.target === lb) closeLightbox();
         });
         lb.querySelector('.nb-imgmgr-lightbox-close').addEventListener('click', closeLightbox);
+        lb.querySelector('[data-action="lightbox-prev"]').addEventListener('click', function(e) {
+            e.stopPropagation();
+            showAdjacentLightboxImage(-1);
+        });
+        lb.querySelector('[data-action="lightbox-next"]').addEventListener('click', function(e) {
+            e.stopPropagation();
+            showAdjacentLightboxImage(1);
+        });
 
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape' && lb.classList.contains('active')) closeLightbox();
+            if (lb.classList.contains('active') && e.key === 'ArrowLeft') {
+                e.preventDefault();
+                showAdjacentLightboxImage(-1);
+            }
+            if (lb.classList.contains('active') && e.key === 'ArrowRight') {
+                e.preventDefault();
+                showAdjacentLightboxImage(1);
+            }
         });
     }
 
@@ -977,10 +1300,11 @@
         var item = typeof itemOrPath === 'object'
             ? itemOrPath
             : { type: 'image', path: itemOrPath, name: name || '' };
+        state.lightboxItem = item;
         var lb = document.getElementById('nb-imgmgr-lightbox');
         if (!lb) { createLightbox(); lb = document.getElementById('nb-imgmgr-lightbox'); }
         var stage = lb.querySelector('.nb-imgmgr-lightbox-stage');
-        var label = item.name || '';
+        var label = mediaDisplayName(item);
         if (isImage(item)) {
             stage.innerHTML = '<img alt="" src="' + escapeHtml(item.path) + '">';
         } else if (isAudio(item)) {
@@ -997,7 +1321,32 @@
             '</div>';
         }
         lb.querySelector('.nb-imgmgr-lightbox-info').textContent = label;
+        updateLightboxNav();
         lb.classList.add('active');
+    }
+
+    function lightboxImages() {
+        var items = (state.filtered && state.filtered.length ? state.filtered : state.data).filter(isImage);
+        return items.length ? items : (state.lightboxItem && isImage(state.lightboxItem) ? [state.lightboxItem] : []);
+    }
+
+    function updateLightboxNav() {
+        var lb = document.getElementById('nb-imgmgr-lightbox');
+        if (!lb) return;
+        var items = lightboxImages();
+        var canNavigate = items.length > 1 && state.lightboxItem && isImage(state.lightboxItem);
+        lb.querySelectorAll('.nb-imgmgr-lightbox-nav').forEach(function(btn) {
+            btn.hidden = !canNavigate;
+        });
+    }
+
+    function showAdjacentLightboxImage(direction) {
+        var items = lightboxImages();
+        if (items.length <= 1 || !state.lightboxItem) return;
+        var index = items.findIndex(function(item) { return item.path === state.lightboxItem.path; });
+        if (index === -1) index = 0;
+        var nextIndex = (index + direction + items.length) % items.length;
+        openLightbox(items[nextIndex]);
     }
 
     function closeLightbox() {
@@ -1006,6 +1355,7 @@
             lb.querySelectorAll('audio, video').forEach(function (media) { media.pause(); });
             lb.classList.remove('active');
         }
+        state.lightboxItem = null;
     }
 
     // ============================================================
@@ -1167,6 +1517,64 @@
     }
 
     // ============================================================
+    // MOVE DIALOG
+    // ============================================================
+    function createMoveDialog() {
+        if (document.getElementById('nb-imgmgr-move')) return;
+
+        var dialog = document.createElement('div');
+        dialog.id = 'nb-imgmgr-move';
+        dialog.className = 'nb-imgmgr-move';
+        dialog.innerHTML =
+            '<div class="nb-imgmgr-move-backdrop"></div>' +
+            '<div class="nb-imgmgr-move-dialog">' +
+                '<div class="nb-imgmgr-move-header">' +
+                    '<h3>' + escapeHtml(t('media.move_file')) + '</h3>' +
+                    '<button type="button" class="nb-imgmgr-close" aria-label="Close">&times;</button>' +
+                '</div>' +
+                '<div class="nb-imgmgr-move-body">' +
+                    '<p class="nb-imgmgr-move-filename"></p>' +
+                    '<label>' + escapeHtml(t('media.folder')) + '</label>' +
+                    '<select class="nb-imgmgr-move-select"></select>' +
+                '</div>' +
+                '<div class="nb-imgmgr-move-footer">' +
+                    '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--secondary" data-action="cancel">' + escapeHtml(t('cancel')) + '</button>' +
+                    '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--primary" data-action="submit">' + escapeHtml(t('media.move_file')) + '</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(dialog);
+
+        dialog.querySelector('.nb-imgmgr-move-backdrop').addEventListener('click', closeMoveDialog);
+        dialog.querySelector('.nb-imgmgr-close').addEventListener('click', closeMoveDialog);
+        dialog.querySelector('[data-action="cancel"]').addEventListener('click', closeMoveDialog);
+        dialog.querySelector('[data-action="submit"]').addEventListener('click', function () {
+            var select = dialog.querySelector('.nb-imgmgr-move-select');
+            moveMedia(moveTarget, select ? select.value : '');
+        });
+    }
+
+    function openMoveDialog(item) {
+        moveTarget = item;
+        var dialog = document.getElementById('nb-imgmgr-move');
+        if (!dialog) { createMoveDialog(); dialog = document.getElementById('nb-imgmgr-move'); }
+        dialog.querySelector('.nb-imgmgr-move-filename').textContent = mediaDisplayName(item);
+        var select = dialog.querySelector('.nb-imgmgr-move-select');
+        select.innerHTML = '<option value="">' + escapeHtml(t('media.folder_root')) + '</option>' +
+            state.folders.map(function(folder) {
+                return '<option value="' + escapeHtml(folder) + '">' + escapeHtml(folder) + '</option>';
+            }).join('');
+        select.value = item.folder || '';
+        dialog.classList.add('active');
+        select.focus();
+    }
+
+    function closeMoveDialog() {
+        var dialog = document.getElementById('nb-imgmgr-move');
+        if (dialog) dialog.classList.remove('active');
+        moveTarget = null;
+    }
+
+    // ============================================================
     // PUBLIC API
     // ============================================================
     window.NbImageManager = {
@@ -1174,6 +1582,11 @@
             Object.assign(config, options || {});
         },
         open: open,
+        mount: mount,
+        preview: function (path, name) {
+            var item = state.data.find(function (entry) { return entry.path === path; });
+            openLightbox(item || path, name || path);
+        },
         close: close,
         confirmSelection: confirmSelection,
     };

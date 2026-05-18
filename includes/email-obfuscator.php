@@ -3,6 +3,8 @@
  * Output-buffer based email obfuscation for public frontend pages.
  */
 
+require_once __DIR__ . '/access-guard.php';
+
 function nibblyEmailObfuscationEnabled(): bool {
     $settingsPath = dirname(__DIR__) . '/content/settings.json';
     if (!is_file($settingsPath)) {
@@ -13,10 +15,7 @@ function nibblyEmailObfuscationEnabled(): bool {
 }
 
 function nibblyEmailObfuscatorIsAdmin(): bool {
-    if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
-        session_start();
-    }
-    return !empty($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
+    return nibblyAccessIsLoggedIn();
 }
 
 function nibblyEmailFallbackText(string $email): string {

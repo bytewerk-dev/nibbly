@@ -920,6 +920,8 @@
     }
 
     async function saveAllChanges() {
+        flushActiveInlineEdits();
+
         // For news posts, check if the news post data is dirty
         const hasNewsChanges = EditorConfig.isNewsPost && EditorConfig.dirtyPages.has('__news_post__');
         const hasPageChanges = Array.from(EditorConfig.dirtyPages).some(p => p !== '__news_post__');
@@ -1015,6 +1017,19 @@
                 saveBtn.innerHTML = Icons.save + ' ' + t('save');
             }
         }
+    }
+
+    function flushActiveInlineEdits() {
+        if (activeHtmlField && activeHtmlField.isContentEditable) {
+            finishInlineHtmlEdit(activeHtmlField, activeHtmlField._originalHtml || '', false);
+        }
+
+        document.querySelectorAll('.editable-field-editing').forEach(field => {
+            if (field === activeHtmlField || field.classList.contains('editable-field-html')) return;
+            if (!field.isContentEditable) return;
+
+            finishInlineEdit(field, field._originalText || '');
+        });
     }
 
     function exitEditModeClean() {
@@ -3871,6 +3886,7 @@
 
     function startInlineEdit(field) {
         const originalText = field.textContent;
+        field._originalText = originalText;
         field.contentEditable = 'true';
         field.classList.add('editable-field-editing');
         field.focus();
@@ -3932,6 +3948,7 @@
             field.removeEventListener('blur', field._inlineEditHandlers.blurHandler);
             delete field._inlineEditHandlers;
         }
+        delete field._originalText;
     }
 
     function openFieldHtmlEditor(field) {
