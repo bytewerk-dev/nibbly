@@ -345,6 +345,31 @@ function formatAssetSize(int $sizeBytes): string {
     return $sizeBytes . ' B';
 }
 
+function sanitizeVisualImageLayout(string $layout): string {
+    if ($layout === 'split') {
+        return 'left';
+    }
+    return in_array($layout, ['none', 'background', 'left', 'right'], true) ? $layout : 'none';
+}
+
+function sanitizeVisualOverlayColor(string $color): string {
+    $color = trim($color);
+    if ($color === '') {
+        return '';
+    }
+    if (!preg_match('/^#[0-9a-fA-F]{6}$/', $color)) {
+        jsonResponse(false, null, 'Invalid overlay color');
+    }
+    return $color;
+}
+
+function sanitizeVisualOverlayOpacity($opacity, int $default): int {
+    if ($opacity === null || $opacity === '') {
+        return $default;
+    }
+    return max(0, min(100, (int)$opacity));
+}
+
 function sanitizeAccessSettings(array $settings, array $existing): array {
     $access = $settings['access'] ?? [];
     if (!is_array($access)) {
@@ -380,6 +405,24 @@ function sanitizeAccessSettings(array $settings, array $existing): array {
         jsonResponse(false, null, 'Invalid maintenance date');
     }
 
+    $brandAsset = (string)($maintenance['brandAsset'] ?? 'none');
+    if (!in_array($brandAsset, ['none', 'favicon', 'logo'], true)) {
+        $brandAsset = 'none';
+    }
+
+    $imageLayout = sanitizeVisualImageLayout((string)($maintenance['imageLayout'] ?? 'none'));
+    $overlayColor = sanitizeVisualOverlayColor((string)($maintenance['overlayColor'] ?? ''));
+    $overlayOpacity = sanitizeVisualOverlayOpacity($maintenance['overlayOpacity'] ?? null, 88);
+
+    $image = trim((string)($maintenance['image'] ?? ''));
+    if ($image !== '' && (
+        strpos($image, '..') !== false ||
+        !str_starts_with($image, '/assets/images/') ||
+        preg_match('#[:\x00]#', $image)
+    )) {
+        jsonResponse(false, null, 'Invalid maintenance image path');
+    }
+
     return [
         'maintenance' => [
             'enabled' => !empty($maintenance['enabled']),
@@ -388,9 +431,56 @@ function sanitizeAccessSettings(array $settings, array $existing): array {
             'text' => substr(trim((string)($maintenance['text'] ?? '')), 0, 2000),
             'until' => $until,
             'showCountdown' => !empty($maintenance['showCountdown']),
+            'brandAsset' => $brandAsset,
+            'image' => $image,
+            'imageLayout' => $imageLayout,
+            'overlayColor' => $overlayColor,
+            'overlayOpacity' => $overlayOpacity,
             'bypassParam' => substr($param, 0, 40),
             'bypassKeyHash' => $hash,
         ],
+    ];
+}
+
+function sanitizeLoginVisualSettings(array $settings): array {
+    $login = $settings['login'] ?? [];
+    if (!is_array($login)) {
+        return [];
+    }
+
+    $brandAsset = (string)($login['brandAsset'] ?? 'favicon');
+    if (!in_array($brandAsset, ['none', 'favicon', 'logo'], true)) {
+        $brandAsset = 'favicon';
+    }
+
+    $imageLayout = sanitizeVisualImageLayout((string)($login['imageLayout'] ?? 'none'));
+    $overlayColor = sanitizeVisualOverlayColor((string)($login['overlayColor'] ?? ''));
+    $overlayOpacity = sanitizeVisualOverlayOpacity($login['overlayOpacity'] ?? null, 86);
+    $boxStyle = (string)($login['boxStyle'] ?? 'card');
+    if (!in_array($boxStyle, ['card', 'plain'], true)) {
+        $boxStyle = 'card';
+    }
+    $boxColor = sanitizeVisualOverlayColor((string)($login['boxColor'] ?? ''));
+    $boxTextColor = sanitizeVisualOverlayColor((string)($login['boxTextColor'] ?? ''));
+
+    $image = trim((string)($login['image'] ?? ''));
+    if ($image !== '' && (
+        strpos($image, '..') !== false ||
+        !str_starts_with($image, '/assets/images/') ||
+        preg_match('#[:\x00]#', $image)
+    )) {
+        jsonResponse(false, null, 'Invalid login image path');
+    }
+
+    return [
+        'brandAsset' => $brandAsset,
+        'image' => $image,
+        'imageLayout' => $imageLayout,
+        'overlayColor' => $overlayColor,
+        'overlayOpacity' => $overlayOpacity,
+        'boxStyle' => $boxStyle,
+        'boxColor' => $boxColor,
+        'boxTextColor' => $boxTextColor,
     ];
 }
 
@@ -3558,9 +3648,24 @@ switch ($action) {
                     'text' => t('settings.maintenance_default_text'),
                     'until' => '',
                     'showCountdown' => false,
+                    'brandAsset' => 'none',
+                    'image' => '',
+                    'imageLayout' => 'none',
+                    'overlayColor' => '',
+                    'overlayOpacity' => 88,
                     'bypassParam' => 'preview',
                     'bypassKeyHash' => ''
                 ]
+            ],
+            'login' => [
+                'brandAsset' => 'favicon',
+                'image' => '',
+                'imageLayout' => 'none',
+                'overlayColor' => '',
+                'overlayOpacity' => 86,
+                'boxStyle' => 'card',
+                'boxColor' => '',
+                'boxTextColor' => ''
             ],
             'seo' => [
                 'defaultOgImage' => ''
@@ -3780,6 +3885,10 @@ switch ($action) {
         $accessPatch = sanitizeAccessSettings($settings, $existing);
         if ($accessPatch) {
             $sanitized['access'] = $accessPatch;
+        }
+        $loginPatch = sanitizeLoginVisualSettings($settings);
+        if ($loginPatch) {
+            $sanitized['login'] = $loginPatch;
         }
         $privacyPatch = sanitizePrivacySettings($settings);
         if ($privacyPatch) {

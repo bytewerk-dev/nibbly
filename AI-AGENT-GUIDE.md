@@ -170,6 +170,11 @@ settings are stored under `access.maintenance` in `content/settings.json`:
       "text": "We will be back online shortly.",
       "until": "2026-05-20T12:00",
       "showCountdown": true,
+      "brandAsset": "logo",
+      "image": "/assets/images/maintenance.jpg",
+      "imageLayout": "left",
+      "overlayColor": "#ffffff",
+      "overlayOpacity": 88,
       "bypassParam": "preview",
       "bypassKeyHash": "$2y$..."
     }
@@ -182,6 +187,12 @@ public frontend pages with a standalone `503` response and sets `noindex` for th
 lock page. Static assets, admin routes, API routes, `robots.txt`, and
 `sitemap.xml` are excluded. Logged-in admins/editors bypass the lock
 automatically.
+
+Optional visual fields are `brandAsset` (`none`, `favicon`, or `logo`), `image`
+(an `/assets/images/...` path), `imageLayout` (`none`, `background`, `left`, or
+`right`), `overlayColor` (a hex color used only for background images), and
+`overlayOpacity` (0-100 percent alpha for that overlay).
+Legacy `split` values are treated as `left`.
 
 The preview bypass is session-based. If `bypassParam` is `preview`, a visitor can
 open `/?preview=<secret>` once; the secret is checked against `bypassKeyHash` and

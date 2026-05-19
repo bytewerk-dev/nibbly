@@ -2,7 +2,7 @@
 
 A flat-file CMS built on PHP with no database. Content lives in JSON files, pages are PHP templates, and an inline editor lets you edit everything directly on the page. Zero dependencies, zero build steps.
 
-**Version 1.3.0** — Examples and full documentation at [nibbly.dev](https://nibbly.dev/).
+**Version 1.3.1** — Examples and full documentation at [nibbly.dev](https://nibbly.dev/).
 
 ## Features
 
@@ -14,6 +14,7 @@ A flat-file CMS built on PHP with no database. Content lives in JSON files, page
 - **Dark/light theme** -- toggle with localStorage persistence
 - **Accessibility foundations** -- skip links, landmarks, reduced-motion support, labelled controls, and SEO health checks for missing image alt text
 - **Access controls** -- maintenance mode with preview bypass and password-protected private pages
+- **Customizable lock/login screens** -- logo/favicon, image layouts, overlays, and login box colors
 - **SEO/AEO tools** -- per-page metadata, Open Graph image fallback, sitemap/robots, and health indicators
 - **AI tools** -- server-side AI gateway for assistant chat, SEO/text generation, image generation, image-to-image, usage limits, audit logs, and provider-specific API keys
 - **Custom layouts** -- full PHP template control with editable field API

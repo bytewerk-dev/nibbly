@@ -211,7 +211,9 @@ The `theme.adminTheme` value can be `"light"`, `"dark"`, or `"system"`. `primary
 
 `general.frontendLoginRedirect` controls the post-login redirect. `"auto"` returns the user to the page from which they triggered the login (via the footer double-click); `"dashboard"` always lands in the dashboard. See _Hidden Admin Access_ above for details.
 
-`access.maintenance` controls the public maintenance lock. `mode` is one of `maintenance`, `offline`, or `launch`; `until` is an optional local datetime string; `showCountdown` enables countdown rendering for visitors; and `bypassParam` plus `bypassKeyHash` define a session-based preview bypass such as `/?preview=secret`. The plaintext bypass key is never stored by the settings API.
+`login` controls admin login page presentation. `brandAsset` is `none`, `favicon`, or `logo`; `image` is an optional `/assets/images/...` path; `imageLayout` is `none`, `background`, `left`, or `right`; `overlayColor` and `overlayOpacity` define the background-image overlay; and `boxStyle`/`boxColor`/`boxTextColor` control whether the login form is shown in a card plus its background and text colors.
+
+`access.maintenance` controls the public maintenance lock. `mode` is one of `maintenance`, `offline`, or `launch`; `until` is an optional local datetime string; `showCountdown` enables countdown rendering for visitors; `brandAsset`, `image`, `imageLayout`, `overlayColor`, and `overlayOpacity` mirror the login visual options; and `bypassParam` plus `bypassKeyHash` define a session-based preview bypass such as `/?preview=secret`. The plaintext bypass key is never stored by the settings API.
 
 `access.privacy.obfuscateEmails` enables JavaScript-decoded email address placeholders on public pages. The original email remains available to visitors with JavaScript enabled but is not emitted as a simple raw address in the initial HTML.
 

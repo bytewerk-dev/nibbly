@@ -468,9 +468,60 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
 
 $devLoginAvailable = nibblyDevLoginAvailable();
 
+function nibblyLoginAssetPath(string $path): string {
+    $path = trim($path);
+    if ($path === '' || preg_match('#^https?://#i', $path)) {
+        return '';
+    }
+    return '/' . ltrim($path, '/');
+}
+
+function nibblyLoginResolveBrandAsset(array $settings, string $asset): string {
+    if ($asset === 'favicon') {
+        return nibblyLoginAssetPath((string)($settings['favicon'] ?? '/assets/images/favicon.svg'));
+    }
+    if ($asset === 'logo') {
+        $branding = $settings['branding'] ?? [];
+        $logo = (string)($branding['adminLogo'] ?? '');
+        if ($logo === '') {
+            $logo = (string)($branding['logo'] ?? '');
+        }
+        return nibblyLoginAssetPath($logo !== '' ? $logo : (string)($settings['favicon'] ?? '/assets/images/favicon.svg'));
+    }
+    return '';
+}
+
+function nibblyLoginCssUrl(string $path): string {
+    return str_replace(["\\", "\"", "\n", "\r"], ["\\\\", "\\\"", "", ""], $path);
+}
+
+function nibblyLoginImageLayout(string $layout): string {
+    if ($layout === 'split') {
+        return 'left';
+    }
+    return in_array($layout, ['none', 'background', 'left', 'right'], true) ? $layout : 'none';
+}
+
+function nibblyLoginRgbaFromHex(string $hex, int $opacity): string {
+    if (!preg_match('/^#[0-9a-fA-F]{6}$/', $hex)) {
+        return '';
+    }
+    $opacity = max(0, min(100, $opacity));
+    $red = hexdec(substr($hex, 1, 2));
+    $green = hexdec(substr($hex, 3, 2));
+    $blue = hexdec(substr($hex, 5, 2));
+    $alpha = rtrim(rtrim(sprintf('%.2F', $opacity / 100), '0'), '.');
+    return "rgba($red, $green, $blue, $alpha)";
+}
+
 // Load settings for branding/theme
 $_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg';
-$siteSettings = ['favicon' => $_defaultFavicon, 'branding' => ['logo' => '', 'logoDark' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both'], 'theme' => ['adminTheme' => 'dark', 'primaryColor' => '#2563eb', 'accentColor' => '#60a5fa']];
+$siteSettings = [
+    'favicon' => $_defaultFavicon,
+    'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both'],
+    'theme' => ['adminTheme' => 'dark', 'primaryColor' => '#2563eb', 'accentColor' => '#60a5fa'],
+    'login' => ['brandAsset' => 'favicon', 'image' => '', 'imageLayout' => 'none', 'overlayColor' => '', 'overlayOpacity' => 86, 'boxStyle' => 'card', 'boxColor' => '', 'boxTextColor' => '']
+];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     $loadedSettings = json_decode(file_get_contents(SETTINGS_PATH), true);
     if (is_array($loadedSettings)) {
@@ -485,9 +536,44 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
 }
 $adminTheme = $siteSettings['theme']['adminTheme'] ?? 'dark';
 $showBranding = $siteSettings['branding']['showBranding'] ?? true;
-// Backend always uses the favicon (frontend logo is for the public site only).
-$brandLogo = $siteSettings['favicon'] ?? $_defaultFavicon;
+// Backend uses the configured login asset, with admin logo preferred for "logo".
+$loginSettings = $siteSettings['login'] ?? [];
+$loginBrandAsset = (string)($loginSettings['brandAsset'] ?? 'favicon');
+$brandLogo = nibblyLoginResolveBrandAsset($siteSettings, $loginBrandAsset);
 $brandName = $siteSettings['branding']['name'] ?? (defined('SITE_NAME') ? SITE_NAME : 'CMS');
+$loginImage = nibblyLoginAssetPath((string)($loginSettings['image'] ?? ''));
+$loginImageLayout = $loginImage !== '' ? nibblyLoginImageLayout((string)($loginSettings['imageLayout'] ?? 'none')) : 'none';
+$loginBodyClass = 'login-page';
+if ($loginImageLayout === 'background') {
+    $loginBodyClass .= ' login-page--background';
+} elseif ($loginImageLayout === 'left') {
+    $loginBodyClass .= ' login-page--split login-page--image-left';
+} elseif ($loginImageLayout === 'right') {
+    $loginBodyClass .= ' login-page--split login-page--image-right';
+}
+$loginCssImage = nibblyLoginCssUrl($loginImage);
+$loginOverlayColor = trim((string)($loginSettings['overlayColor'] ?? ''));
+$loginOverlayOpacity = (int)($loginSettings['overlayOpacity'] ?? 86);
+$loginOverlayRgba = nibblyLoginRgbaFromHex($loginOverlayColor, $loginOverlayOpacity);
+$loginOverlayStyle = $loginOverlayColor !== '' && preg_match('/^#[0-9a-fA-F]{6}$/', $loginOverlayColor)
+    ? '; --login-overlay-color: ' . htmlspecialchars($loginOverlayRgba, ENT_QUOTES, 'UTF-8')
+    : '';
+$loginBoxStyle = (string)($loginSettings['boxStyle'] ?? 'card');
+if (!in_array($loginBoxStyle, ['card', 'plain'], true)) {
+    $loginBoxStyle = 'card';
+}
+$loginBoxColor = trim((string)($loginSettings['boxColor'] ?? ''));
+$loginBoxTextColor = trim((string)($loginSettings['boxTextColor'] ?? ''));
+$loginBoxVariables = [];
+if ($loginBoxStyle === 'card' && $loginBoxColor !== '' && preg_match('/^#[0-9a-fA-F]{6}$/', $loginBoxColor)) {
+    $loginBoxVariables[] = '--login-box-bg: ' . $loginBoxColor;
+}
+if ($loginBoxTextColor !== '' && preg_match('/^#[0-9a-fA-F]{6}$/', $loginBoxTextColor)) {
+    $loginBoxVariables[] = '--login-box-text: ' . $loginBoxTextColor;
+}
+$loginBoxStyleAttr = $loginBoxVariables
+    ? ' style="' . htmlspecialchars(implode('; ', $loginBoxVariables), ENT_QUOTES, 'UTF-8') . '"'
+    : '';
 ?>
 <!DOCTYPE html>
 <html lang="en" data-site-theme="<?php echo htmlspecialchars($adminTheme === 'system' ? 'light' : $adminTheme); ?>">
@@ -527,9 +613,10 @@ $brandName = $siteSettings['branding']['name'] ?? (defined('SITE_NAME') ? SITE_N
     </style>
     <?php endif; ?>
 </head>
-<body class="login-page">
-    <div class="login-container">
-        <?php if ($showBranding): ?>
+<body class="<?php echo htmlspecialchars($loginBodyClass); ?>"<?php echo $loginImageLayout !== 'none' ? ' style="--login-image: url(&quot;' . htmlspecialchars($loginCssImage, ENT_QUOTES, 'UTF-8') . '&quot;)' . $loginOverlayStyle . '"' : ''; ?>>
+    <div class="login-media" aria-hidden="true"></div>
+    <div class="login-container login-container--<?php echo htmlspecialchars($loginBoxStyle, ENT_QUOTES, 'UTF-8'); ?>"<?php echo $loginBoxStyleAttr; ?>>
+        <?php if ($showBranding && $brandLogo !== ''): ?>
         <div class="login-logo">
             <?php echo nibblyIconOrImg($brandLogo, $brandName, ['width' => 40, 'height' => 40]); ?>
         </div>

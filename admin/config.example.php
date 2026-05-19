@@ -9,7 +9,7 @@
 // VERSION
 // ============================================================
 
-define('NIBBLY_VERSION', '1.3.0');
+define('NIBBLY_VERSION', '1.3.1');
 
 // Default favicon path used as fallback by the admin UI before settings.json
 // values are applied. Override in settings.json -> "favicon".
