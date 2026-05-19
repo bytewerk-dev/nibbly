@@ -116,6 +116,51 @@ function nibblyAccessMaintenanceIsActive(array $maintenance): bool {
     return $timestamp === false || $timestamp > time();
 }
 
+function nibblyAccessAssetPath(string $path): string {
+    $path = trim($path);
+    if ($path === '') {
+        return '';
+    }
+    if (preg_match('#^https?://#i', $path)) {
+        return '';
+    }
+    return '/' . ltrim($path, '/');
+}
+
+function nibblyAccessResolveBrandAsset(array $settings, string $asset): string {
+    if ($asset === 'favicon') {
+        return nibblyAccessAssetPath((string)($settings['favicon'] ?? '/assets/images/favicon.svg'));
+    }
+    if ($asset === 'logo') {
+        $logo = (string)($settings['branding']['logo'] ?? '');
+        return nibblyAccessAssetPath($logo !== '' ? $logo : (string)($settings['favicon'] ?? '/assets/images/favicon.svg'));
+    }
+    return '';
+}
+
+function nibblyAccessCssUrl(string $path): string {
+    return str_replace(["\\", "\"", "\n", "\r"], ["\\\\", "\\\"", "", ""], $path);
+}
+
+function nibblyAccessImageLayout(string $layout): string {
+    if ($layout === 'split') {
+        return 'left';
+    }
+    return in_array($layout, ['none', 'background', 'left', 'right'], true) ? $layout : 'none';
+}
+
+function nibblyAccessRgbaFromHex(string $hex, int $opacity): string {
+    if (!preg_match('/^#[0-9a-fA-F]{6}$/', $hex)) {
+        return '';
+    }
+    $opacity = max(0, min(100, $opacity));
+    $red = hexdec(substr($hex, 1, 2));
+    $green = hexdec(substr($hex, 3, 2));
+    $blue = hexdec(substr($hex, 5, 2));
+    $alpha = rtrim(rtrim(sprintf('%.2F', $opacity / 100), '0'), '.');
+    return "rgba($red, $green, $blue, $alpha)";
+}
+
 function nibblyAccessRenderStandalonePage(array $options): void {
     $status = (int)($options['status'] ?? 503);
     http_response_code($status);
@@ -130,6 +175,24 @@ function nibblyAccessRenderStandalonePage(array $options): void {
     $mode = htmlspecialchars((string)($options['mode'] ?? 'maintenance'), ENT_QUOTES, 'UTF-8');
     $until = htmlspecialchars((string)($options['until'] ?? ''), ENT_QUOTES, 'UTF-8');
     $showCountdown = !empty($options['showCountdown']) && $until !== '';
+    $brandAsset = nibblyAccessAssetPath((string)($options['brandAssetPath'] ?? ''));
+    $image = nibblyAccessAssetPath((string)($options['image'] ?? ''));
+    $imageLayout = $image !== '' ? nibblyAccessImageLayout((string)($options['imageLayout'] ?? 'none')) : 'none';
+    $bodyClass = 'nb-lock-page';
+    if ($imageLayout === 'background') {
+        $bodyClass .= ' nb-lock-page--background';
+    } elseif ($imageLayout === 'left') {
+        $bodyClass .= ' nb-lock-page--split nb-lock-page--image-left';
+    } elseif ($imageLayout === 'right') {
+        $bodyClass .= ' nb-lock-page--split nb-lock-page--image-right';
+    }
+    $cssImage = nibblyAccessCssUrl($image);
+    $overlayColor = trim((string)($options['overlayColor'] ?? ''));
+    $overlayOpacity = (int)($options['overlayOpacity'] ?? 88);
+    $overlayRgba = nibblyAccessRgbaFromHex($overlayColor, $overlayOpacity);
+    $overlayStyle = $overlayColor !== '' && preg_match('/^#[0-9a-fA-F]{6}$/', $overlayColor)
+        ? '; --nb-lock-overlay-color: ' . htmlspecialchars($overlayRgba, ENT_QUOTES, 'UTF-8')
+        : '';
     ?>
 <!doctype html>
 <html lang="de">
@@ -156,7 +219,17 @@ function nibblyAccessRenderStandalonePage(array $options): void {
         :root[data-theme="light"] { color-scheme: light; --nb-bg: #f7f7f4; --nb-fg: #141414; --nb-muted: #646464; --nb-border: rgba(20,20,20,.14); --nb-error: #b42318; }
         * { box-sizing: border-box; }
         body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--nb-bg); color: var(--nb-fg); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+        body.nb-lock-page--background { background: linear-gradient(var(--nb-lock-overlay-color, color-mix(in srgb, #f7f7f4 88%, transparent)), var(--nb-lock-overlay-color, color-mix(in srgb, #f7f7f4 88%, transparent))), var(--nb-lock-image), var(--nb-bg); background-position: center; background-size: cover; }
+        :root[data-theme="dark"] body.nb-lock-page--background { background: linear-gradient(var(--nb-lock-overlay-color, color-mix(in srgb, #101010 82%, transparent)), var(--nb-lock-overlay-color, color-mix(in srgb, #101010 82%, transparent))), var(--nb-lock-image), var(--nb-bg); background-position: center; background-size: cover; }
         main { width: min(680px, calc(100vw - 40px)); padding: 56px 0; }
+        .nb-lock-shell { width: 100%; min-height: 100vh; display: grid; place-items: center; }
+        .nb-lock-page--split .nb-lock-shell { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+        .nb-lock-media { display: none; width: 100%; height: 100%; min-height: 100vh; background-image: var(--nb-lock-image); background-position: center; background-size: cover; }
+        .nb-lock-page--split .nb-lock-media { display: block; }
+        .nb-lock-page--image-right .nb-lock-media { grid-column: 2; }
+        .nb-lock-page--image-right main { grid-column: 1; grid-row: 1; }
+        .nb-lock-page--split main { width: min(560px, calc(100% - 64px)); justify-self: center; }
+        .nb-lock-brand { display: block; width: auto; max-width: 168px; max-height: 72px; margin: 0 0 26px; object-fit: contain; }
         .nb-lock-label { display: inline-flex; margin-bottom: 24px; padding: 6px 10px; border: 1px solid var(--nb-border); border-radius: 999px; color: var(--nb-muted); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
         h1 { margin: 0 0 18px; font-size: clamp(34px, 6vw, 68px); line-height: .95; letter-spacing: 0; }
         p { margin: 0; color: var(--nb-muted); font-size: clamp(17px, 2vw, 21px); line-height: 1.55; }
@@ -167,10 +240,18 @@ function nibblyAccessRenderStandalonePage(array $options): void {
         input { width: 100%; min-height: 46px; padding: 0 14px; border: 1px solid var(--nb-border); border-radius: 6px; background: transparent; color: inherit; font: inherit; }
         button { min-height: 46px; border: 0; border-radius: 6px; background: var(--nb-fg); color: var(--nb-bg); font: inherit; font-weight: 700; cursor: pointer; }
         .nb-error { margin-top: 12px; color: var(--nb-error); font-size: 14px; }
+        @media (max-width: 760px) {
+            .nb-lock-page--split .nb-lock-shell { grid-template-columns: 1fr; }
+            .nb-lock-page--split .nb-lock-media { min-height: 34vh; }
+            .nb-lock-page--split main { width: min(680px, calc(100vw - 40px)); }
+        }
     </style>
 </head>
-<body data-nibbly-lock="<?php echo $mode; ?>">
+<body class="<?php echo htmlspecialchars($bodyClass, ENT_QUOTES, 'UTF-8'); ?>" data-nibbly-lock="<?php echo $mode; ?>"<?php echo $imageLayout !== 'none' ? ' style="--nb-lock-image: url(&quot;' . htmlspecialchars($cssImage, ENT_QUOTES, 'UTF-8') . '&quot;)' . $overlayStyle . '"' : ''; ?>>
+    <div class="nb-lock-shell">
+        <?php if (in_array($imageLayout, ['left', 'right'], true)): ?><div class="nb-lock-media" aria-hidden="true"></div><?php endif; ?>
     <main>
+        <?php if ($brandAsset !== ''): ?><img class="nb-lock-brand" src="<?php echo htmlspecialchars($brandAsset, ENT_QUOTES, 'UTF-8'); ?>" alt=""><?php endif; ?>
         <div class="nb-lock-label"><?php echo $mode === 'launch' ? 'Launch' : ($mode === 'private' ? 'Privat' : 'Wartung'); ?></div>
         <h1><?php echo $title; ?></h1>
         <?php if ($text): ?><p><?php echo $text; ?></p><?php endif; ?>
@@ -188,6 +269,7 @@ function nibblyAccessRenderStandalonePage(array $options): void {
         </script>
         <?php endif; ?>
     </main>
+    </div>
 </body>
 </html>
     <?php
@@ -229,6 +311,11 @@ function nibblyAccessEnforceMaintenance(): void {
         'text' => $maintenance['text'] ?? 'Wir sind in Kürze wieder online.',
         'until' => $until,
         'showCountdown' => !empty($maintenance['showCountdown']),
+        'brandAssetPath' => nibblyAccessResolveBrandAsset($settings, (string)($maintenance['brandAsset'] ?? 'none')),
+        'image' => $maintenance['image'] ?? '',
+        'imageLayout' => $maintenance['imageLayout'] ?? 'none',
+        'overlayColor' => $maintenance['overlayColor'] ?? '',
+        'overlayOpacity' => $maintenance['overlayOpacity'] ?? 88,
         'retryAfter' => $retryAfter,
     ]);
 }

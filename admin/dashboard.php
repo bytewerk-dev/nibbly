@@ -267,7 +267,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         </div>
     </aside>
 
-    <div class="admin-main" id="adminMain">
+    <div class="admin-main<?php echo !empty($_SESSION['password_warning']) ? ' has-security-warning' : ''; ?>" id="adminMain">
     <?php
     // Check if current user has no email address (only relevant when email is active)
     $currentUserId = $_SESSION['admin_user_id'] ?? '';
@@ -288,14 +288,17 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     </div>
     <?php endif; ?>
     <?php if (!empty($_SESSION['password_warning'])): ?>
-    <div class="info-banner info-banner--warning" id="passwordWarning">
+    <div class="info-banner info-banner--warning mail-config-banner security-warning-banner" id="passwordWarning">
         <div class="info-banner__inner">
-            <strong class="info-banner__title"><?php echo nbIcon('alert'); ?> <?php echo t('security.warning'); ?></strong>
-            <span class="info-banner__body">
-                <?php echo t('security.weak_password'); ?>
-                <strong><?php echo t('security.change_now'); ?></strong> &mdash; this is a significant security risk.
-                <a href="#" class="info-banner__cta" onclick="switchTab('settings'); document.querySelector('[data-settings-tab=&quot;my-account&quot;]').click(); return false;"><?php echo t('security.change_link'); ?> &rarr;</a>
+            <span class="info-banner__icon"><?php echo nbIcon('alert'); ?></span>
+            <span class="info-banner__content">
+                <strong class="info-banner__title"><?php echo t('security.warning'); ?></strong>
+                <span class="info-banner__body">
+                    <?php echo t('security.weak_password'); ?>
+                    <strong><?php echo t('security.change_now'); ?></strong> &mdash; this is a significant security risk.
+                </span>
             </span>
+            <button type="button" class="info-banner__cta info-banner__cta-button" onclick="switchTab('settings'); document.querySelector('[data-settings-tab=&quot;my-account&quot;]').click(); return false;"><?php echo t('security.change_link'); ?> &rarr;</button>
         </div>
     </div>
     <?php endif; ?>
@@ -1333,6 +1336,67 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             </label>
                         </div>
                     </div>
+                    <fieldset class="settings-section settings-section--compact settings-section--visual">
+                        <legend><?php echo t('settings.login_visual'); ?></legend>
+                        <div class="settings-visual-grid">
+                            <div class="form-group">
+                                <label for="loginBrandAsset"><?php echo t('settings.visual_brand_asset'); ?></label>
+                                <select id="loginBrandAsset" class="topbar-select access-select">
+                                    <option value="none"><?php echo t('settings.visual_brand_none'); ?></option>
+                                    <option value="favicon"><?php echo t('settings.visual_brand_favicon'); ?></option>
+                                    <option value="logo"><?php echo t('settings.visual_brand_logo'); ?></option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="loginImageLayout"><?php echo t('settings.visual_image_layout'); ?></label>
+                                <select id="loginImageLayout" class="topbar-select access-select">
+                                    <option value="none"><?php echo t('settings.visual_image_none'); ?></option>
+                                    <option value="left"><?php echo t('settings.visual_image_left'); ?></option>
+                                    <option value="right"><?php echo t('settings.visual_image_right'); ?></option>
+                                    <option value="background"><?php echo t('settings.visual_image_background'); ?></option>
+                                </select>
+                            </div>
+                            <div class="form-group visual-overlay-color-group" id="loginOverlayColorGroup" hidden>
+                                <label for="loginOverlayColor"><?php echo t('settings.visual_overlay_color'); ?></label>
+                                <div class="visual-color-opacity-row">
+                                    <input type="color" id="loginOverlayColor" value="#ffffff">
+                                    <div class="range-input-group visual-opacity-control">
+                                        <input type="range" id="loginOverlayOpacity" class="range-input" min="0" max="100" value="86">
+                                        <span class="range-value" id="loginOverlayOpacityValue">86%</span>
+                                    </div>
+                                </div>
+                                <small class="form-hint"><?php echo t('settings.visual_overlay_color_hint'); ?></small>
+                            </div>
+                            <div class="form-group">
+                                <label for="loginBoxStyle"><?php echo t('settings.visual_login_box'); ?></label>
+                                <select id="loginBoxStyle" class="topbar-select access-select">
+                                    <option value="card"><?php echo t('settings.visual_login_box_card'); ?></option>
+                                    <option value="plain"><?php echo t('settings.visual_login_box_plain'); ?></option>
+                                </select>
+                            </div>
+                            <div class="form-group visual-box-color-group" id="loginBoxColorGroup">
+                                <label for="loginBoxColor"><?php echo t('settings.visual_box_color'); ?></label>
+                                <input type="color" id="loginBoxColor" value="#ffffff">
+                                <small class="form-hint"><?php echo t('settings.visual_box_color_hint'); ?></small>
+                            </div>
+                            <div class="form-group visual-box-color-group">
+                                <label for="loginBoxTextColor"><?php echo t('settings.visual_box_text_color'); ?></label>
+                                <input type="color" id="loginBoxTextColor" value="#111827">
+                                <small class="form-hint"><?php echo t('settings.visual_box_text_color_hint'); ?></small>
+                            </div>
+                            <div class="form-group access-wide">
+                                <label for="loginImage"><?php echo t('settings.visual_image'); ?></label>
+                                <div class="logo-path-input">
+                                    <span class="input-with-clear">
+                                        <input type="text" id="loginImage" placeholder="/assets/images/login.jpg">
+                                        <button type="button" class="input-clear-btn" data-clear-target="loginImage" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                    </span>
+                                    <button type="button" class="btn btn-secondary btn-sm" id="browseLoginImageBtn"><?php echo t('btn.browse'); ?></button>
+                                </div>
+                                <small class="form-hint"><?php echo t('settings.visual_image_hint'); ?></small>
+                            </div>
+                        </div>
+                    </fieldset>
                     <button type="submit" class="btn btn-primary" id="saveLoginBtn"><?php echo t('settings.save_login'); ?></button>
                 </form>
             </div>
@@ -1382,6 +1446,45 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                                         <span class="toggle-slider"></span>
                                     </div>
                                 </label>
+                            </div>
+                            <div class="form-group">
+                                <label for="maintenanceImageLayout"><?php echo t('settings.visual_image_layout'); ?></label>
+                                <select id="maintenanceImageLayout" class="topbar-select access-select">
+                                    <option value="none"><?php echo t('settings.visual_image_none'); ?></option>
+                                    <option value="left"><?php echo t('settings.visual_image_left'); ?></option>
+                                    <option value="right"><?php echo t('settings.visual_image_right'); ?></option>
+                                    <option value="background"><?php echo t('settings.visual_image_background'); ?></option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="maintenanceBrandAsset"><?php echo t('settings.visual_brand_asset'); ?></label>
+                                <select id="maintenanceBrandAsset" class="topbar-select access-select">
+                                    <option value="none"><?php echo t('settings.visual_brand_none'); ?></option>
+                                    <option value="favicon"><?php echo t('settings.visual_brand_favicon'); ?></option>
+                                    <option value="logo"><?php echo t('settings.visual_brand_logo'); ?></option>
+                                </select>
+                            </div>
+                            <div class="form-group visual-overlay-color-group" id="maintenanceOverlayColorGroup" hidden>
+                                <label for="maintenanceOverlayColor"><?php echo t('settings.visual_overlay_color'); ?></label>
+                                <div class="visual-color-opacity-row">
+                                    <input type="color" id="maintenanceOverlayColor" value="#ffffff">
+                                    <div class="range-input-group visual-opacity-control">
+                                        <input type="range" id="maintenanceOverlayOpacity" class="range-input" min="0" max="100" value="88">
+                                        <span class="range-value" id="maintenanceOverlayOpacityValue">88%</span>
+                                    </div>
+                                </div>
+                                <small class="form-hint"><?php echo t('settings.visual_overlay_color_hint'); ?></small>
+                            </div>
+                            <div class="form-group access-wide">
+                                <label for="maintenanceImage"><?php echo t('settings.visual_image'); ?></label>
+                                <div class="logo-path-input">
+                                    <span class="input-with-clear">
+                                        <input type="text" id="maintenanceImage" placeholder="/assets/images/maintenance.jpg">
+                                        <button type="button" class="input-clear-btn" data-clear-target="maintenanceImage" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                    </span>
+                                    <button type="button" class="btn btn-secondary btn-sm" id="browseMaintenanceImageBtn"><?php echo t('btn.browse'); ?></button>
+                                </div>
+                                <small class="form-hint"><?php echo t('settings.visual_image_hint'); ?></small>
                             </div>
                         </div>
                     </fieldset>
@@ -7219,6 +7322,27 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var loginMode = (settings.general && settings.general.frontendLoginRedirect) || 'auto';
         var modeRadio = document.querySelector('input[name="frontendLoginRedirect"][value="' + loginMode + '"]');
         if (modeRadio) modeRadio.checked = true;
+        var loginVisual = settings.login || {};
+        var loginBrandEl = document.getElementById('loginBrandAsset');
+        if (loginBrandEl) loginBrandEl.value = loginVisual.brandAsset || 'favicon';
+        var loginImageLayoutEl = document.getElementById('loginImageLayout');
+        if (loginImageLayoutEl) loginImageLayoutEl.value = normalizeVisualImageLayout(loginVisual.imageLayout || 'none');
+        var loginOverlayColorEl = document.getElementById('loginOverlayColor');
+        if (loginOverlayColorEl) loginOverlayColorEl.value = loginVisual.overlayColor || '#ffffff';
+        setOverlayOpacity('loginOverlayOpacity', 'loginOverlayOpacityValue', loginVisual.overlayOpacity, 86);
+        updateVisualOverlayVisibility('loginImageLayout', 'loginOverlayColorGroup');
+        var loginBoxStyleEl = document.getElementById('loginBoxStyle');
+        if (loginBoxStyleEl) loginBoxStyleEl.value = loginVisual.boxStyle || 'card';
+        var loginBoxColorEl = document.getElementById('loginBoxColor');
+        if (loginBoxColorEl) loginBoxColorEl.value = loginVisual.boxColor || '#ffffff';
+        var loginBoxTextColorEl = document.getElementById('loginBoxTextColor');
+        if (loginBoxTextColorEl) loginBoxTextColorEl.value = loginVisual.boxTextColor || '#111827';
+        updateLoginBoxColorVisibility();
+        var loginImageEl = document.getElementById('loginImage');
+        if (loginImageEl) {
+            loginImageEl.value = loginVisual.image || '';
+            updateClearButton(loginImageEl);
+        }
 
         // Access / privacy
         var access = settings.access || {};
@@ -7235,6 +7359,19 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         if (maintUntilEl) maintUntilEl.value = (maintenance.until || '').slice(0, 16);
         var maintCountdownEl = document.getElementById('maintenanceCountdown');
         if (maintCountdownEl) maintCountdownEl.checked = !!maintenance.showCountdown;
+        var maintBrandEl = document.getElementById('maintenanceBrandAsset');
+        if (maintBrandEl) maintBrandEl.value = maintenance.brandAsset || 'none';
+        var maintImageLayoutEl = document.getElementById('maintenanceImageLayout');
+        if (maintImageLayoutEl) maintImageLayoutEl.value = normalizeVisualImageLayout(maintenance.imageLayout || 'none');
+        var maintOverlayColorEl = document.getElementById('maintenanceOverlayColor');
+        if (maintOverlayColorEl) maintOverlayColorEl.value = maintenance.overlayColor || '#ffffff';
+        setOverlayOpacity('maintenanceOverlayOpacity', 'maintenanceOverlayOpacityValue', maintenance.overlayOpacity, 88);
+        updateVisualOverlayVisibility('maintenanceImageLayout', 'maintenanceOverlayColorGroup');
+        var maintImageEl = document.getElementById('maintenanceImage');
+        if (maintImageEl) {
+            maintImageEl.value = maintenance.image || '';
+            updateClearButton(maintImageEl);
+        }
         var bypassParamEl = document.getElementById('maintenanceBypassParam');
         if (bypassParamEl) bypassParamEl.value = maintenance.bypassParam || 'preview';
         var bypassKeyEl = document.getElementById('maintenanceBypassKey');
@@ -7356,6 +7493,40 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var logoVal = document.getElementById('settingsLogo').value.trim();
         var group = document.getElementById('logoDisplayGroup');
         if (group) group.style.display = logoVal ? 'none' : '';
+    }
+
+    function normalizeVisualImageLayout(layout) {
+        return layout === 'split' ? 'left' : (['none', 'background', 'left', 'right'].includes(layout) ? layout : 'none');
+    }
+
+    function updateVisualOverlayVisibility(layoutSelectId, groupId) {
+        var select = document.getElementById(layoutSelectId);
+        var group = document.getElementById(groupId);
+        if (!select || !group) return;
+        group.hidden = normalizeVisualImageLayout(select.value) !== 'background';
+    }
+
+    function setOverlayOpacity(inputId, valueId, value, fallback) {
+        var input = document.getElementById(inputId);
+        var valueEl = document.getElementById(valueId);
+        if (!input) return;
+        var numeric = Number.isFinite(Number(value)) ? Number(value) : fallback;
+        numeric = Math.max(0, Math.min(100, Math.round(numeric)));
+        input.value = numeric;
+        if (valueEl) valueEl.textContent = numeric + '%';
+    }
+
+    function syncOverlayOpacity(inputId, valueId) {
+        var input = document.getElementById(inputId);
+        if (!input) return;
+        setOverlayOpacity(inputId, valueId, input.value, Number(input.value) || 0);
+    }
+
+    function updateLoginBoxColorVisibility() {
+        var select = document.getElementById('loginBoxStyle');
+        var group = document.getElementById('loginBoxColorGroup');
+        if (!select || !group) return;
+        group.hidden = select.value !== 'card';
     }
 
     // ============================================================
@@ -7686,6 +7857,24 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         }, input ? input.value : null, { types: ['image'], type: 'image' });
     });
 
+    var browseLoginImageBtn = document.getElementById('browseLoginImageBtn');
+    if (browseLoginImageBtn) browseLoginImageBtn.addEventListener('click', function() {
+        var input = document.getElementById('loginImage');
+        NbImageManager.open(function(path) {
+            input.value = path;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }, input ? input.value : null, { types: ['image'], type: 'image' });
+    });
+
+    var browseMaintenanceImageBtn = document.getElementById('browseMaintenanceImageBtn');
+    if (browseMaintenanceImageBtn) browseMaintenanceImageBtn.addEventListener('click', function() {
+        var input = document.getElementById('maintenanceImage');
+        NbImageManager.open(function(path) {
+            input.value = path;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }, input ? input.value : null, { types: ['image'], type: 'image' });
+    });
+
     // Manual edits to the logo path also toggle the 3-way selector
     document.getElementById('settingsLogo').addEventListener('input', function() {
         updateLogoPreview(this.value.trim());
@@ -7710,6 +7899,32 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     document.getElementById('settingsDefaultOgImage').addEventListener('input', function() {
         updateDefaultOgPreview(this.value.trim());
         updateClearButton(this);
+    });
+    var loginImageInput = document.getElementById('loginImage');
+    if (loginImageInput) loginImageInput.addEventListener('input', function() {
+        updateClearButton(this);
+    });
+    var loginImageLayoutSelect = document.getElementById('loginImageLayout');
+    if (loginImageLayoutSelect) loginImageLayoutSelect.addEventListener('change', function() {
+        updateVisualOverlayVisibility('loginImageLayout', 'loginOverlayColorGroup');
+    });
+    var loginOverlayOpacityInput = document.getElementById('loginOverlayOpacity');
+    if (loginOverlayOpacityInput) loginOverlayOpacityInput.addEventListener('input', function() {
+        syncOverlayOpacity('loginOverlayOpacity', 'loginOverlayOpacityValue');
+    });
+    var loginBoxStyleSelect = document.getElementById('loginBoxStyle');
+    if (loginBoxStyleSelect) loginBoxStyleSelect.addEventListener('change', updateLoginBoxColorVisibility);
+    var maintenanceImageInput = document.getElementById('maintenanceImage');
+    if (maintenanceImageInput) maintenanceImageInput.addEventListener('input', function() {
+        updateClearButton(this);
+    });
+    var maintenanceImageLayoutSelect = document.getElementById('maintenanceImageLayout');
+    if (maintenanceImageLayoutSelect) maintenanceImageLayoutSelect.addEventListener('change', function() {
+        updateVisualOverlayVisibility('maintenanceImageLayout', 'maintenanceOverlayColorGroup');
+    });
+    var maintenanceOverlayOpacityInput = document.getElementById('maintenanceOverlayOpacity');
+    if (maintenanceOverlayOpacityInput) maintenanceOverlayOpacityInput.addEventListener('input', function() {
+        syncOverlayOpacity('maintenanceOverlayOpacity', 'maintenanceOverlayOpacityValue');
     });
 
     document.getElementById('resetBrandingBtn').addEventListener('click', function() {
@@ -8703,6 +8918,22 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 if (!settings.general) settings.general = {};
                 var modeRadio = document.querySelector('input[name="frontendLoginRedirect"]:checked');
                 settings.general.frontendLoginRedirect = modeRadio ? modeRadio.value : 'auto';
+                settings.login = {
+                    brandAsset: document.getElementById('loginBrandAsset').value,
+                    image: document.getElementById('loginImage').value.trim(),
+                    imageLayout: document.getElementById('loginImageLayout').value,
+                    overlayColor: document.getElementById('loginImageLayout').value === 'background'
+                        ? document.getElementById('loginOverlayColor').value
+                        : '',
+                    overlayOpacity: document.getElementById('loginImageLayout').value === 'background'
+                        ? parseInt(document.getElementById('loginOverlayOpacity').value, 10)
+                        : 86,
+                    boxStyle: document.getElementById('loginBoxStyle').value,
+                    boxColor: document.getElementById('loginBoxStyle').value === 'card'
+                        ? document.getElementById('loginBoxColor').value
+                        : '',
+                    boxTextColor: document.getElementById('loginBoxTextColor').value
+                };
 
                 var formData = new FormData();
                 formData.append('action', 'save-settings');
@@ -8749,6 +8980,15 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     text: document.getElementById('maintenanceText').value.trim(),
                     until: document.getElementById('maintenanceUntil').value,
                     showCountdown: document.getElementById('maintenanceCountdown').checked,
+                    brandAsset: document.getElementById('maintenanceBrandAsset').value,
+                    image: document.getElementById('maintenanceImage').value.trim(),
+                    imageLayout: document.getElementById('maintenanceImageLayout').value,
+                    overlayColor: document.getElementById('maintenanceImageLayout').value === 'background'
+                        ? document.getElementById('maintenanceOverlayColor').value
+                        : '',
+                    overlayOpacity: document.getElementById('maintenanceImageLayout').value === 'background'
+                        ? parseInt(document.getElementById('maintenanceOverlayOpacity').value, 10)
+                        : 88,
                     bypassParam: document.getElementById('maintenanceBypassParam').value.trim() || 'preview',
                     bypassKey: document.getElementById('maintenanceBypassKey').value
                 };
@@ -9055,6 +9295,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     // Remove password warning banner if present
                     var warning = document.getElementById('passwordWarning');
                     if (warning) warning.remove();
+                    var adminMain = document.getElementById('adminMain');
+                    if (adminMain) adminMain.classList.remove('has-security-warning');
                 } else {
                     showToast(result.message, 'error');
                 }

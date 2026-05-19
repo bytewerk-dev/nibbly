@@ -622,8 +622,12 @@
           "type": "object",
           "properties": {
             "logo": { "type": "string", "description": "Path to logo image. Empty = text only." },
+            "logoDark": { "type": "string", "description": "Optional dark-mode logo image." },
+            "adminLogo": { "type": "string", "description": "Optional admin logo image." },
             "name": { "type": "string", "description": "Site name for header and admin." },
-            "showBranding": { "type": "boolean", "default": true }
+            "showBranding": { "type": "boolean", "default": true },
+            "logoDisplay": { "type": "string", "enum": ["favicon", "text", "both"], "default": "both" },
+            "logoSize": { "type": "string", "enum": ["small", "medium", "large"], "default": "medium" }
           }
         },
         "theme": {
@@ -636,6 +640,42 @@
             },
             "primaryColor": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
             "accentColor": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" }
+          }
+        },
+        "login": {
+          "type": "object",
+          "properties": {
+            "brandAsset": { "type": "string", "enum": ["none", "favicon", "logo"], "default": "favicon" },
+            "image": { "type": "string", "description": "Optional login image path." },
+            "imageLayout": { "type": "string", "enum": ["none", "background", "left", "right"], "default": "none" },
+            "overlayColor": { "type": "string", "pattern": "^(|#[0-9a-fA-F]{6})$", "description": "Optional overlay color for background image layouts." },
+            "overlayOpacity": { "type": "integer", "minimum": 0, "maximum": 100, "default": 86, "description": "Overlay opacity percentage for background image layouts." },
+            "boxStyle": { "type": "string", "enum": ["card", "plain"], "default": "card" },
+            "boxColor": { "type": "string", "pattern": "^(|#[0-9a-fA-F]{6})$", "description": "Optional login box background color." },
+            "boxTextColor": { "type": "string", "pattern": "^(|#[0-9a-fA-F]{6})$", "description": "Optional login box text color." }
+          }
+        },
+        "access": {
+          "type": "object",
+          "properties": {
+            "maintenance": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean", "default": false },
+                "mode": { "type": "string", "enum": ["maintenance", "offline", "launch"], "default": "maintenance" },
+                "title": { "type": "string" },
+                "text": { "type": "string" },
+                "until": { "type": "string" },
+                "showCountdown": { "type": "boolean", "default": false },
+                "brandAsset": { "type": "string", "enum": ["none", "favicon", "logo"], "default": "none" },
+                "image": { "type": "string", "description": "Optional maintenance image path." },
+                "imageLayout": { "type": "string", "enum": ["none", "background", "left", "right"], "default": "none" },
+                "overlayColor": { "type": "string", "pattern": "^(|#[0-9a-fA-F]{6})$", "description": "Optional overlay color for background image layouts." },
+                "overlayOpacity": { "type": "integer", "minimum": 0, "maximum": 100, "default": 88, "description": "Overlay opacity percentage for background image layouts." },
+                "bypassParam": { "type": "string", "default": "preview" },
+                "bypassKeyHash": { "type": "string" }
+              }
+            }
           }
         }
       }
