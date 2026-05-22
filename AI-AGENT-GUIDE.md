@@ -116,6 +116,36 @@ If AI features are disabled, hide AI buttons and tools throughout the admin UI.
 If AI is enabled but a capability lacks a model or key, show a clear disabled
 state instead of a failing action.
 
+## Multilingual Admin Editor Fields
+
+Admin/editor dialogs can group language variants of the same field into tabs.
+This is a Core UI feature for editor modals and structured admin editors, not
+for public visitor forms.
+
+Use either a language-object field with `localized: true`:
+
+```php
+[
+    'label' => 'Event',
+    'fields' => [
+        ['key' => 'title', 'type' => 'input', 'label' => 'Title', 'localized' => true],
+        ['key' => 'description', 'type' => 'textarea', 'label' => 'Description', 'localized' => true],
+        ['key' => 'url', 'type' => 'url', 'label' => 'URL'],
+    ],
+]
+```
+
+or explicit language-suffixed paths such as `title.de`, `title.en`,
+`description.de`, and `description.en`. Nibbly reads language codes from
+`$SITE_LANGUAGES`; one-language sites render the fields normally without tabs.
+Fields that are not language-specific remain outside the tabs. The tab UI is a
+rendering layer only, so saving keeps the same JSON paths and data shape.
+
+When the AI module is enabled, multilingual editor tabs show a translation
+button for the active source language. The generated translations are written
+only into the still-open dialog fields and are persisted only if the editor uses
+the normal Save action.
+
 ## Accessibility Best Practices
 
 Nibbly Core provides the baseline accessibility plumbing for public pages and

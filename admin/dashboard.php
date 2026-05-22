@@ -517,6 +517,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     <button class="btn btn-secondary btn-sm" id="eventEditorDeleteBtn" onclick="deleteCurrentEvent()" title="<?php echo t('editor.move_to_trash'); ?>">
                         <?php echo nbIcon('trash', 14); ?>
                     </button>
+                    <button class="btn btn-secondary btn-sm" onclick="closeEventEditor()"><?php echo t('btn.cancel'); ?></button>
                     <button class="btn btn-primary btn-sm" onclick="saveCurrentEvent()"><?php echo t('btn.save'); ?></button>
                 </div>
             </div>
@@ -674,7 +675,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
             <div class="dashboard-status-strip" id="dashboardStatusStrip" aria-label="<?php echo htmlspecialchars(t('dashboard_home.site_status'), ENT_QUOTES, 'UTF-8'); ?>"></div>
 
-            <section class="dashboard-section dashboard-section--ai"<?php echo $aiFeaturesEnabled ? '' : ' hidden'; ?>>
+            <?php if ($aiFeaturesEnabled): ?>
+            <section class="dashboard-section dashboard-section--ai">
                 <div class="dashboard-section-header">
                     <div>
                         <h3><?php echo t('dashboard_home.ai_tools'); ?></h3>
@@ -841,6 +843,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     </section>
                 </div>
             </section>
+            <?php endif; ?>
 
             <section class="dashboard-section dashboard-section--analytics">
                 <div class="dashboard-section-header">
@@ -3249,7 +3252,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         seoField.appendChild(seoWrap);
         seoBody.appendChild(seoField);
         refreshSeoAiButtons();
-        if (!currentAiSettings) loadAiSettings().then(refreshSeoAiButtons).catch(refreshSeoAiButtons);
+        if (AI_FEATURES_ENABLED && !currentAiSettings) {
+            loadAiSettings().then(refreshSeoAiButtons).catch(refreshSeoAiButtons);
+        }
 
         // Nav locations
         const navField = document.createElement('div');
@@ -6696,10 +6701,12 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             renderDashboardTrafficChart(analytics.series || []);
             renderDashboardHourlyChart(analytics.hourlyToday || []);
 
-            currentAiSettings = (data.ai && data.ai.settings) || {};
-            populateAiSettings(currentAiSettings);
-            updateAiUsage(data.ai ? data.ai.usage : null);
-            updateDashboardAiStatus(currentAiSettings);
+            if (AI_FEATURES_ENABLED) {
+                currentAiSettings = (data.ai && data.ai.settings) || {};
+                populateAiSettings(currentAiSettings);
+                updateAiUsage(data.ai ? data.ai.usage : null);
+                updateDashboardAiStatus(currentAiSettings);
+            }
         } catch (error) {
             var target = document.getElementById('dashboardTopPages');
             if (target) target.textContent = error.message;
@@ -6989,6 +6996,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     }
 
     async function loadAiSettings() {
+        if (!AI_FEATURES_ENABLED) return;
         try {
             var response = await fetch('api.php?action=load-ai-settings');
             var result = await response.json();
@@ -7181,7 +7189,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             _menuOrderLoaded = true;
             loadMenuOrder();
         }
-        if (tab === 'ai' && typeof loadAiSettings === 'function') {
+        if (tab === 'ai' && AI_FEATURES_ENABLED && typeof loadAiSettings === 'function') {
             loadAiSettings();
         }
     }
@@ -10273,6 +10281,79 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     let eventsLoaded = false;
     let currentEventIndex = null;
     const EVENT_TRANSLATABLE = ['title', 'location', 'description', 'admission'];
+    function adminLangCodes() {
+        return Object.keys(SITE_LANGUAGES || {});
+    }
+    function adminLangLabel(code) {
+        return String((SITE_LANGUAGES && SITE_LANGUAGES[code]) || code).toUpperCase();
+    }
+    function activeAdminLang(section) {
+        return section.querySelector('.ce-lang-tab.active')?.dataset.lang || DEFAULT_LANG;
+    }
+    function readAdminLangField(fieldEl) {
+        const input = fieldEl.querySelector('textarea, input:not([type="hidden"]), select');
+        return input ? input.value || '' : '';
+    }
+    function writeAdminLangField(fieldEl, value) {
+        const input = fieldEl.querySelector('textarea, input:not([type="hidden"]), select');
+        if (!input) return;
+        input.value = value == null ? '' : String(value);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    async function translateAdminLanguageSection(section, button) {
+        if (!AI_FEATURES_ENABLED || !section) return;
+        const sourceLang = activeAdminLang(section);
+        const targetLangs = adminLangCodes().filter(code => code !== sourceLang);
+        const fields = {};
+        section.querySelectorAll('[data-lang="' + CSS.escape(sourceLang) + '"][data-i18n-field]').forEach(fieldEl => {
+            const value = readAdminLangField(fieldEl);
+            if (value.trim() !== '') fields[fieldEl.dataset.i18nField] = value;
+        });
+        if (!Object.keys(fields).length) {
+            showToast(t('editor.translate_no_source') || 'No source text to translate.', 'error');
+            return;
+        }
+        const previous = button.textContent;
+        button.disabled = true;
+        button.textContent = t('editor.translating') || 'Translating...';
+        try {
+            const formData = new FormData();
+            formData.append('action', 'ai-generate-text');
+            formData.append('maxOutputTokens', '1800');
+            formData.append('prompt', [
+                'Translate these Nibbly admin editor fields from ' + sourceLang + ' into the requested target languages.',
+                'Return strict JSON only. Shape: {"translations":{"LANG":{"field":"translated value"}}}.',
+                'Keep HTML tags if present. Do not add Markdown or explanations.',
+                '',
+                JSON.stringify({ sourceLang, targetLangs, fields: fields }, null, 2)
+            ].join('\n'));
+            formData.append('csrf_token', CSRF_TOKEN);
+            const response = await fetch('api.php', { method: 'POST', body: formData });
+            const result = await response.json();
+            if (!result.success) throw new Error(result.message || t('toast.error'));
+            let payload;
+            try {
+                payload = JSON.parse(String(result.data?.text || '').replace(/^```json\s*|\s*```$/g, '').trim());
+            } catch (error) {
+                throw new Error(t('editor.translate_invalid_response') || 'AI returned an unreadable translation.');
+            }
+            const translations = payload.translations || payload;
+            targetLangs.forEach(lang => {
+                Object.entries(translations[lang] || {}).forEach(([field, value]) => {
+                    const fieldEl = section.querySelector('[data-lang="' + CSS.escape(lang) + '"][data-i18n-field="' + CSS.escape(field) + '"]');
+                    if (fieldEl) writeAdminLangField(fieldEl, value);
+                });
+            });
+            updateAiUsage(result.data ? result.data.limits : null);
+            showToast(t('editor.translate_done') || 'Translations inserted.', 'success');
+        } catch (error) {
+            showToast(error.message, 'error');
+        } finally {
+            button.disabled = false;
+            button.textContent = previous;
+        }
+    }
 
     async function loadEventsEditor() {
         try {
@@ -10505,26 +10586,33 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         const langSection = document.createElement('div');
         langSection.className = 'ce-lang-section';
         const langCodes = Object.keys(SITE_LANGUAGES);
+        const isMultiLang = langCodes.length > 1;
 
-        const tabsHtml = langCodes.map(code => {
+        const tabsHtml = isMultiLang ? langCodes.map(code => {
             const isDefault = code === DEFAULT_LANG;
-            return `<button type="button" class="ce-lang-tab${isDefault ? ' active' : ''}" data-lang="${code}" data-event-idx="${index}">${SITE_LANGUAGES[code]}${isDefault ? ' ★' : ''}</button>`;
-        }).join('');
+            return `<button type="button" class="ce-lang-tab${isDefault ? ' active' : ''}" role="tab" aria-selected="${isDefault ? 'true' : 'false'}" tabindex="${isDefault ? '0' : '-1'}" data-lang="${code}" data-event-idx="${index}">${escapeHtml(adminLangLabel(code))}${isDefault ? ' ★' : ''}</button>`;
+        }).join('') : '';
 
-        langSection.innerHTML = `<div class="ce-lang-tabs">${tabsHtml}</div>`;
+        langSection.innerHTML = isMultiLang
+            ? `<div class="ce-lang-header"><div class="ce-lang-tabs" role="tablist" aria-label="${escapeHtml(t('editor.language_tabs') || 'Languages')}">${tabsHtml}</div>${AI_FEATURES_ENABLED ? `<button type="button" class="btn btn-secondary btn-sm ce-lang-translate">${escapeHtml(t('editor.translate_from_active') || 'Translate from active language')}</button>` : ''}</div>`
+            : '';
 
         langCodes.forEach(code => {
             const panel = document.createElement('div');
             panel.className = 'ce-lang-panel';
+            if (code === DEFAULT_LANG) panel.classList.add('active');
+            panel.setAttribute('role', 'tabpanel');
             panel.dataset.lang = code;
             panel.dataset.eventIdx = index;
-            panel.style.display = code === DEFAULT_LANG ? '' : 'none';
+            panel.hidden = isMultiLang && code !== DEFAULT_LANG;
 
             EVENT_TRANSLATABLE.forEach(field => {
                 const val = eventObj[field]?.[code] || '';
                 const isLong = field === 'description';
                 const fieldDiv = document.createElement('div');
                 fieldDiv.className = 'ce-field';
+                fieldDiv.dataset.lang = code;
+                fieldDiv.dataset.i18nField = field;
                 fieldDiv.innerHTML = `<label class="ce-field-label">${field.charAt(0).toUpperCase() + field.slice(1)}</label>`;
 
                 if (isLong) {
@@ -10551,16 +10639,42 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         container.appendChild(langSection);
 
         // Tab switching
-        langSection.querySelectorAll('.ce-lang-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                const idx = tab.dataset.eventIdx;
-                langSection.querySelectorAll('.ce-lang-tab').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                langSection.querySelectorAll('.ce-lang-panel').forEach(p => {
-                    p.style.display = p.dataset.lang === tab.dataset.lang ? '' : 'none';
+        langSection.querySelectorAll('.ce-lang-tab').forEach((tab, tabIndex) => {
+            const activateTab = (targetTab, focus = false) => {
+                langSection.querySelectorAll('.ce-lang-tab').forEach(t => {
+                    const active = t === targetTab;
+                    t.classList.toggle('active', active);
+                    t.setAttribute('aria-selected', active ? 'true' : 'false');
+                    t.tabIndex = active ? 0 : -1;
+                    if (active && focus) t.focus();
                 });
+                langSection.querySelectorAll('.ce-lang-panel').forEach(p => {
+                    const active = p.dataset.lang === targetTab.dataset.lang;
+                    p.hidden = !active;
+                    p.classList.toggle('active', active);
+                });
+            };
+            tab.addEventListener('click', () => {
+                activateTab(tab);
+            });
+            tab.addEventListener('keydown', e => {
+                const tabs = Array.from(langSection.querySelectorAll('.ce-lang-tab'));
+                if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+                e.preventDefault();
+                let next = tabIndex;
+                if (e.key === 'ArrowLeft') next = tabIndex === 0 ? tabs.length - 1 : tabIndex - 1;
+                if (e.key === 'ArrowRight') next = tabIndex === tabs.length - 1 ? 0 : tabIndex + 1;
+                if (e.key === 'Home') next = 0;
+                if (e.key === 'End') next = tabs.length - 1;
+                activateTab(tabs[next], true);
             });
         });
+        const translateBtn = langSection.querySelector('.ce-lang-translate');
+        if (translateBtn) {
+            translateBtn.addEventListener('click', function() {
+                translateAdminLanguageSection(langSection, translateBtn);
+            });
+        }
 
         // Save button is in the editor header, not duplicated inline.
     }

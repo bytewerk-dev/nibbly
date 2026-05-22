@@ -2,7 +2,7 @@
 
 A flat-file CMS built on PHP with no database. Content lives in JSON files, pages are PHP templates, and an inline editor lets you edit everything directly on the page. Zero dependencies, zero build steps.
 
-**Version 1.3.1** — Examples and full documentation at [nibbly.dev](https://nibbly.dev/).
+**Version 1.3.2** — Examples and full documentation at [nibbly.dev](https://nibbly.dev/).
 
 ## Features
 

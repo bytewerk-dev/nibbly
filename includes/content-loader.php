@@ -618,11 +618,18 @@ function nibblyInferGroupSchemaFromDefaults($defaults, $label = 'Item') {
     if (!is_array($defaults)) return [];
 
     $fields = [];
+    $languageCodes = [];
+    if (isset($GLOBALS['SITE_LANGUAGES']) && is_array($GLOBALS['SITE_LANGUAGES'])) {
+        $languageCodes = array_keys($GLOBALS['SITE_LANGUAGES']);
+    } elseif (defined('SITE_LANG_DEFAULT')) {
+        $languageCodes = [SITE_LANG_DEFAULT];
+    }
     foreach ($defaults as $key => $value) {
         if (!is_string($key) || $key === '' || $key === 'hidden') continue;
 
         $lower = strtolower($key);
         $type = 'text';
+        $localized = false;
 
         if (preg_match('/^(image|imagesrc|src|photo|portrait|logo|avatar|cover|thumbnail)$/', $lower)) {
             $type = 'image';
@@ -637,6 +644,8 @@ function nibblyInferGroupSchemaFromDefaults($defaults, $label = 'Item') {
         }
 
         if (is_array($value)) {
+            $valueKeys = array_keys($value);
+            $localized = !empty($languageCodes) && !empty(array_intersect($languageCodes, $valueKeys));
             if (array_key_exists('src', $value) || array_key_exists('alt', $value)) {
                 $type = 'image';
             } elseif (array_key_exists('href', $value) || array_key_exists('text', $value)) {
@@ -644,11 +653,15 @@ function nibblyInferGroupSchemaFromDefaults($defaults, $label = 'Item') {
             }
         }
 
-        $fields[] = [
+        $field = [
             'key' => $key,
             'type' => $type,
             'label' => ucwords(str_replace(['_', '-'], ' ', $key)),
         ];
+        if ($localized) {
+            $field['localized'] = true;
+        }
+        $fields[] = $field;
     }
 
     $hasSpecialField = false;

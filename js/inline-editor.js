@@ -121,6 +121,7 @@
         // Language config (populated from meta tags during init)
         languages: {},
         defaultLang: 'en',
+        aiFeaturesEnabled: window.NB_AI_FEATURES_ENABLED !== false,
         // News post editing
         isNewsPost: false,
         newsPostId: null,
@@ -1432,6 +1433,288 @@
         return normalized;
     }
 
+    function editorLanguageEntries() {
+        const languages = EditorConfig.languages && typeof EditorConfig.languages === 'object'
+            ? EditorConfig.languages
+            : {};
+        return Object.entries(languages);
+    }
+
+    function editorLanguageCodes() {
+        return editorLanguageEntries().map(([code]) => code);
+    }
+
+    function editorIsMultilingual() {
+        return editorLanguageCodes().length > 1;
+    }
+
+    function languageLabel(code) {
+        const languages = EditorConfig.languages || {};
+        const label = languages[code] || code;
+        return String(label || code).toUpperCase();
+    }
+
+    function splitLocalizedPath(field) {
+        const raw = String(field.path || field.key || '');
+        const parts = raw.split('.');
+        if (parts.length < 2) return null;
+        const lang = parts[parts.length - 1];
+        if (!editorLanguageCodes().includes(lang)) return null;
+        return {
+            base: parts.slice(0, -1).join('.'),
+            lang,
+        };
+    }
+
+    function isLocalizedGroupField(field, page, groupKey) {
+        if (field.localized === true || field.multilingual === true || field.translatable === true) {
+            return true;
+        }
+        const path = groupFieldPath(groupKey, normalizeGroupField(field));
+        const value = getNestedValue(EditorConfig.contentData[page] || {}, path);
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+        const codes = editorLanguageCodes();
+        return codes.length > 0 && codes.some(code => Object.prototype.hasOwnProperty.call(value, code));
+    }
+
+    function stripLanguageFromLabel(label, lang) {
+        const text = String(label || '');
+        return text
+            .replace(new RegExp('\\s*\\(?\\b' + lang + '\\b\\)?\\s*$', 'i'), '')
+            .replace(/\s*[-–—:]\s*$/, '')
+            .trim() || text;
+    }
+
+    function localizedFieldBaseLabel(field, base, lang) {
+        if (field.label) return stripLanguageFromLabel(field.label, lang || '');
+        const last = String(base || field.key || field.path || '').split('.').pop();
+        return ucwords(last.replace(/[_-]/g, ' '));
+    }
+
+    function ucwords(value) {
+        return String(value || '').replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    function fieldWithPath(field, path, label) {
+        const clone = { ...field, path, key: path, label };
+        delete clone.localized;
+        delete clone.multilingual;
+        delete clone.translatable;
+        return clone;
+    }
+
+    function buildLocalizedGroupLayout(fields, page, groupKey) {
+        const codes = editorLanguageCodes();
+        if (!editorIsMultilingual()) {
+            return {
+                flatFields: fields,
+                html: fields.map((field, index) => renderGroupEditorField(field, index)).join('\n')
+            };
+        }
+
+        const normalFields = [];
+        const localizedByBase = new Map();
+
+        fields.forEach((field) => {
+            const normalized = normalizeGroupField(field);
+            const split = splitLocalizedPath(normalized);
+
+            if (split) {
+                if (!localizedByBase.has(split.base)) {
+                    localizedByBase.set(split.base, { label: localizedFieldBaseLabel(normalized, split.base, split.lang), byLang: {} });
+                }
+                localizedByBase.get(split.base).byLang[split.lang] = normalized;
+                return;
+            }
+
+            if (isLocalizedGroupField(normalized, page, groupKey)) {
+                const base = normalized.path || normalized.key || '';
+                if (!localizedByBase.has(base)) {
+                    localizedByBase.set(base, { label: localizedFieldBaseLabel(normalized, base), byLang: {} });
+                }
+                codes.forEach(code => {
+                    localizedByBase.get(base).byLang[code] = fieldWithPath(normalized, base + '.' + code, localizedFieldBaseLabel(normalized, base));
+                });
+                return;
+            }
+
+            normalFields.push(normalized);
+        });
+
+        if (localizedByBase.size === 0) {
+            return {
+                flatFields: fields,
+                html: fields.map((field, index) => renderGroupEditorField(field, index)).join('\n')
+            };
+        }
+
+        const flatFields = [];
+        const normalHtml = normalFields.map((field) => {
+            const index = flatFields.length;
+            flatFields.push(field);
+            return renderGroupEditorField(field, index);
+        }).join('\n');
+
+        const defaultLang = codes.includes(EditorConfig.defaultLang) ? EditorConfig.defaultLang : codes[0];
+        const tabId = 'group-lang-tabs-' + Date.now();
+        const canTranslate = EditorConfig.aiFeaturesEnabled === true;
+        const tabsHtml = codes.map(code => {
+            const active = code === defaultLang;
+            return `<button type="button" class="editor-lang-tab${active ? ' active' : ''}" id="${tabId}-tab-${escHtml(code)}" role="tab" aria-selected="${active ? 'true' : 'false'}" aria-controls="${tabId}-panel-${escHtml(code)}" tabindex="${active ? '0' : '-1'}" data-editor-lang-tab="${escHtml(code)}">${escHtml(languageLabel(code))}</button>`;
+        }).join('');
+
+        let panelsHtml = '';
+        codes.forEach(code => {
+            const active = code === defaultLang;
+            let panelFields = '';
+            localizedByBase.forEach((group, base) => {
+                const field = group.byLang[code] || fieldWithPath(group.byLang[defaultLang] || {}, base + '.' + code, group.label);
+                const index = flatFields.length;
+                flatFields.push(field);
+                const rendered = renderGroupEditorField(field, index);
+                panelFields += rendered.replace(
+                    /^<div class="([^"]*)"/,
+                    `<div class="$1" data-editor-lang="${escHtml(code)}" data-editor-lang-field="${escHtml(base)}"`
+                );
+            });
+            panelsHtml += `<div class="editor-lang-panel${active ? ' active' : ''}" id="${tabId}-panel-${escHtml(code)}" role="tabpanel" aria-labelledby="${tabId}-tab-${escHtml(code)}" data-editor-lang-panel="${escHtml(code)}"${active ? '' : ' hidden'}>${panelFields}</div>`;
+        });
+
+        const translateButton = canTranslate
+            ? `<button type="button" class="editor-lang-translate-btn" data-editor-lang-translate>${escHtml(tFallback('editor.translate_from_active', 'Translate from active language'))}</button>`
+            : '';
+
+        const langHtml = `<section class="editor-lang-section" data-editor-lang-section>
+            <div class="editor-lang-header">
+                <div class="editor-lang-tabs" role="tablist" aria-label="${escHtml(tFallback('editor.language_tabs', 'Languages'))}">${tabsHtml}</div>
+                ${translateButton}
+            </div>
+            ${panelsHtml}
+        </section>`;
+
+        return { flatFields, html: normalHtml + langHtml };
+    }
+
+    function setupEditorLanguageTabs(root) {
+        root.querySelectorAll('[data-editor-lang-section]').forEach(section => {
+            const tabs = Array.from(section.querySelectorAll('[data-editor-lang-tab]'));
+            const panels = Array.from(section.querySelectorAll('[data-editor-lang-panel]'));
+            const activate = (lang, focus = false) => {
+                tabs.forEach(tab => {
+                    const active = tab.dataset.editorLangTab === lang;
+                    tab.classList.toggle('active', active);
+                    tab.setAttribute('aria-selected', active ? 'true' : 'false');
+                    tab.tabIndex = active ? 0 : -1;
+                    if (active && focus) tab.focus();
+                });
+                panels.forEach(panel => {
+                    const active = panel.dataset.editorLangPanel === lang;
+                    panel.hidden = !active;
+                    panel.classList.toggle('active', active);
+                });
+            };
+
+            tabs.forEach((tab, index) => {
+                tab.addEventListener('click', () => activate(tab.dataset.editorLangTab));
+                tab.addEventListener('keydown', e => {
+                    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+                    e.preventDefault();
+                    let next = index;
+                    if (e.key === 'ArrowLeft') next = index === 0 ? tabs.length - 1 : index - 1;
+                    if (e.key === 'ArrowRight') next = index === tabs.length - 1 ? 0 : index + 1;
+                    if (e.key === 'Home') next = 0;
+                    if (e.key === 'End') next = tabs.length - 1;
+                    activate(tabs[next].dataset.editorLangTab, true);
+                });
+            });
+
+            const translateBtn = section.querySelector('[data-editor-lang-translate]');
+            if (translateBtn) {
+                translateBtn.addEventListener('click', () => translateEditorLanguageSection(section, translateBtn));
+            }
+        });
+    }
+
+    function getActiveEditorLanguage(section) {
+        return section.querySelector('[data-editor-lang-tab].active')?.dataset.editorLangTab
+            || EditorConfig.defaultLang
+            || editorLanguageCodes()[0];
+    }
+
+    function readSimpleEditorInput(fieldEl) {
+        const input = fieldEl.querySelector('textarea, input:not([type="hidden"]), select');
+        if (!input || input.type === 'checkbox') return null;
+        return input.value || '';
+    }
+
+    function writeSimpleEditorInput(fieldEl, value) {
+        const input = fieldEl.querySelector('textarea, input:not([type="hidden"]), select');
+        if (!input || input.type === 'checkbox') return;
+        input.value = value == null ? '' : String(value);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    async function translateEditorLanguageSection(section, button) {
+        if (!EditorConfig.aiFeaturesEnabled) return;
+        const sourceLang = getActiveEditorLanguage(section);
+        const targetLangs = editorLanguageCodes().filter(code => code !== sourceLang);
+        if (!targetLangs.length) return;
+
+        const sourceFields = {};
+        section.querySelectorAll(`[data-editor-lang="${CSS.escape(sourceLang)}"][data-editor-lang-field]`).forEach(fieldEl => {
+            const value = readSimpleEditorInput(fieldEl);
+            if (value !== null && String(value).trim() !== '') {
+                sourceFields[fieldEl.dataset.editorLangField] = value;
+            }
+        });
+        if (Object.keys(sourceFields).length === 0) {
+            showToast(tFallback('editor.translate_no_source', 'No source text to translate.'), 'error');
+            return;
+        }
+
+        const previousText = button.textContent;
+        button.disabled = true;
+        button.textContent = tFallback('editor.translating', 'Translating...');
+        try {
+            const prompt = [
+                'Translate these Nibbly editor fields from ' + sourceLang + ' into the requested target languages.',
+                'Return strict JSON only. Shape: {"translations":{"LANG":{"field.path":"translated value"}}}.',
+                'Keep HTML tags if present. Do not add Markdown or explanations.',
+                '',
+                JSON.stringify({ sourceLang, targetLangs, fields: sourceFields }, null, 2)
+            ].join('\n');
+            const formData = new FormData();
+            formData.append('action', 'ai-generate-text');
+            formData.append('prompt', prompt);
+            formData.append('maxOutputTokens', '1800');
+            formData.append('csrf_token', EditorConfig.csrfToken);
+            const response = await fetch(EditorConfig.apiUrl, { method: 'POST', body: formData });
+            const result = await response.json();
+            if (!result.success) throw new Error(result.message || tFallback('toast.error', 'Error'));
+            let payload = {};
+            try {
+                payload = JSON.parse(String(result.data?.text || '').replace(/^```json\s*|\s*```$/g, '').trim());
+            } catch (e) {
+                throw new Error(tFallback('editor.translate_invalid_response', 'AI returned an unreadable translation.'));
+            }
+            const translations = payload.translations || payload;
+            targetLangs.forEach(lang => {
+                const langTranslations = translations[lang] || {};
+                Object.entries(langTranslations).forEach(([base, value]) => {
+                    const fieldEl = section.querySelector(`[data-editor-lang="${CSS.escape(lang)}"][data-editor-lang-field="${CSS.escape(base)}"]`);
+                    if (fieldEl) writeSimpleEditorInput(fieldEl, value);
+                });
+            });
+            showToast(tFallback('editor.translate_done', 'Translations inserted.'), 'success');
+        } catch (error) {
+            showToast(error.message, 'error');
+        } finally {
+            button.disabled = false;
+            button.textContent = previousText;
+        }
+    }
+
     function getAvailableIconsForField(field = {}) {
         const allIcons = window.NB_AVAILABLE_ICONS && typeof window.NB_AVAILABLE_ICONS === 'object'
             ? window.NB_AVAILABLE_ICONS
@@ -1758,11 +2041,14 @@
         const title = document.getElementById('editable-group-modal-title');
         const label = schema.label || groupKey.split('.').pop() || groupKey;
 
-        EditorConfig.currentGroup = { element: groupEl, page, groupKey, schema, fields };
+        const layout = buildLocalizedGroupLayout(fields, page, groupKey);
+        const renderedFields = layout.flatFields || fields;
+        EditorConfig.currentGroup = { element: groupEl, page, groupKey, schema, fields: renderedFields };
         title.textContent = formatEditorTitle(label);
-        body.innerHTML = fields.map((field, index) => renderGroupEditorField(field, index)).join('\n');
+        body.innerHTML = layout.html;
 
-        fields.forEach((field, index) => populateGroupEditorField(field, index, page, groupKey));
+        renderedFields.forEach((field, index) => populateGroupEditorField(field, index, page, groupKey));
+        setupEditorLanguageTabs(body);
         body.querySelectorAll('[data-group-icon-picker]').forEach(picker => {
             picker.addEventListener('click', (e) => {
                 const btn = e.target.closest('[data-group-icon-value]');
@@ -1791,7 +2077,7 @@
             });
         });
 
-        fields.forEach((field, index) => {
+        renderedFields.forEach((field, index) => {
             if (normalizeGroupField(field).type === 'link') {
                 initPagePicker(groupFieldIds(index, 'page').id, groupFieldIds(index, 'href').id);
             }
@@ -3452,34 +3738,35 @@
     function createEventEditorUI() {
         const langs = Object.entries(EditorConfig.languages);
         const defaultLang = EditorConfig.defaultLang;
+        const isMultiLang = langs.length > 1;
 
         // Build language tabs
-        const tabsHtml = langs.map(([code, name], i) => {
+        const tabsHtml = isMultiLang ? langs.map(([code, name], i) => {
             const isDefault = code === defaultLang;
             const active = isDefault ? ' active' : '';
-            return `<button type="button" class="event-lang-tab${active}" data-lang="${code}">${name}${isDefault ? ' ★' : ''}</button>`;
-        }).join('');
+            return `<button type="button" class="event-lang-tab editor-lang-tab${active}" role="tab" aria-selected="${isDefault ? 'true' : 'false'}" tabindex="${isDefault ? '0' : '-1'}" data-lang="${code}">${escHtml(languageLabel(code))}${isDefault ? ' ★' : ''}</button>`;
+        }).join('') : '';
 
         // Build language panels (translatable fields)
         const panelsHtml = langs.map(([code, name]) => {
             const isDefault = code === defaultLang;
-            const display = isDefault ? '' : ' style="display:none;"';
+            const display = !isMultiLang || isDefault ? '' : ' hidden';
             const reqMark = isDefault ? ' *' : '';
             return `
-                <div class="event-lang-panel" data-lang="${code}"${display}>
-                    <div class="editor-field">
+                <div class="event-lang-panel editor-lang-panel${isDefault ? ' active' : ''}" role="tabpanel" data-lang="${code}"${display}>
+                    <div class="editor-field" data-editor-lang="${code}" data-editor-lang-field="title">
                         <label>${t('event.title')}${reqMark}</label>
                         <input type="text" id="event-title-${code}"${isDefault ? ' required' : ''}>
                     </div>
-                    <div class="editor-field">
+                    <div class="editor-field" data-editor-lang="${code}" data-editor-lang-field="location">
                         <label>${t('event.location')}</label>
                         <input type="text" id="event-location-${code}">
                     </div>
-                    <div class="editor-field">
+                    <div class="editor-field" data-editor-lang="${code}" data-editor-lang-field="description">
                         <label>${t('event.description')}</label>
                         <textarea id="event-description-${code}" rows="3"></textarea>
                     </div>
-                    <div class="editor-field">
+                    <div class="editor-field" data-editor-lang="${code}" data-editor-lang-field="admission">
                         <label>${t('event.admission')}</label>
                         <input type="text" id="event-admission-${code}">
                     </div>
@@ -3534,13 +3821,16 @@
                         </div>
                     </div>
 
-                    <div class="event-lang-section">
-                        <div class="event-lang-tabs">
+                    <div class="event-lang-section editor-lang-section" data-event-lang-section>
+                        ${isMultiLang ? `<div class="event-lang-tabs editor-lang-header">
+                            <div class="editor-lang-tabs" role="tablist" aria-label="${escHtml(tFallback('editor.language_tabs', 'Languages'))}">
                             ${tabsHtml}
+                            </div>
+                            ${EditorConfig.aiFeaturesEnabled ? `<button type="button" class="editor-lang-translate-btn" data-event-lang-translate>${escHtml(tFallback('editor.translate_from_active', 'Translate from active language'))}</button>` : ''}
                             <button type="button" class="event-lang-copy-btn" id="event-copy-default" title="${t('event.copy_to_all')}">
                                 ${Icons.copy || '⧉'} ${t('event.copy_to_all')}
                             </button>
-                        </div>
+                        </div>` : ''}
                         ${panelsHtml}
                     </div>
                 </div>
@@ -3554,19 +3844,38 @@
         document.body.appendChild(modal);
 
         // Tab switching
-        modal.querySelectorAll('.event-lang-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                modal.querySelectorAll('.event-lang-tab').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                const lang = tab.dataset.lang;
-                modal.querySelectorAll('.event-lang-panel').forEach(p => {
-                    p.style.display = p.dataset.lang === lang ? '' : 'none';
+        modal.querySelectorAll('.event-lang-tab').forEach((tab, index) => {
+            const activateEventLang = (targetTab, focus = false) => {
+                modal.querySelectorAll('.event-lang-tab').forEach(t => {
+                    const active = t === targetTab;
+                    t.classList.toggle('active', active);
+                    t.setAttribute('aria-selected', active ? 'true' : 'false');
+                    t.tabIndex = active ? 0 : -1;
+                    if (active && focus) t.focus();
                 });
+                const lang = targetTab.dataset.lang;
+                modal.querySelectorAll('.event-lang-panel').forEach(p => {
+                    const active = p.dataset.lang === lang;
+                    p.hidden = !active;
+                    p.classList.toggle('active', active);
+                });
+            };
+            tab.addEventListener('click', () => activateEventLang(tab));
+            tab.addEventListener('keydown', e => {
+                const tabs = Array.from(modal.querySelectorAll('.event-lang-tab'));
+                if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+                e.preventDefault();
+                let next = index;
+                if (e.key === 'ArrowLeft') next = index === 0 ? tabs.length - 1 : index - 1;
+                if (e.key === 'ArrowRight') next = index === tabs.length - 1 ? 0 : index + 1;
+                if (e.key === 'Home') next = 0;
+                if (e.key === 'End') next = tabs.length - 1;
+                activateEventLang(tabs[next], true);
             });
         });
 
         // Copy default language to all others
-        document.getElementById('event-copy-default').addEventListener('click', () => {
+        document.getElementById('event-copy-default')?.addEventListener('click', () => {
             const dl = defaultLang;
             const fields = ['title', 'location', 'description', 'admission'];
             const otherLangs = langs.map(([c]) => c).filter(c => c !== dl);
@@ -3578,6 +3887,9 @@
                 });
             });
             showToast(t('toast.copied_to_empty'), 'success');
+        });
+        modal.querySelector('[data-event-lang-translate]')?.addEventListener('click', function() {
+            translateEditorLanguageSection(modal.querySelector('[data-event-lang-section]'), this);
         });
 
         modal.querySelector('.editor-modal-backdrop').addEventListener('click', closeEventModal);
@@ -5137,9 +5449,13 @@
         // Reset tabs to default language
         modal.querySelectorAll('.event-lang-tab').forEach(t => {
             t.classList.toggle('active', t.dataset.lang === EditorConfig.defaultLang);
+            t.setAttribute('aria-selected', t.dataset.lang === EditorConfig.defaultLang ? 'true' : 'false');
+            t.tabIndex = t.dataset.lang === EditorConfig.defaultLang ? 0 : -1;
         });
         modal.querySelectorAll('.event-lang-panel').forEach(p => {
-            p.style.display = p.dataset.lang === EditorConfig.defaultLang ? '' : 'none';
+            const active = p.dataset.lang === EditorConfig.defaultLang;
+            p.hidden = !active;
+            p.classList.toggle('active', active);
         });
 
         if (eventId) {
