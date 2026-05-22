@@ -88,6 +88,18 @@ function dashboardReadJsonFile(string $path): array {
     return is_array($data) ? $data : [];
 }
 
+function dashboardAiModuleEnabled(): bool {
+    if (!defined('SETTINGS_PATH') || !is_file(SETTINGS_PATH)) {
+        return true;
+    }
+    $settings = dashboardReadJsonFile(SETTINGS_PATH);
+    $modules = $settings['modules'] ?? [];
+    if (!is_array($modules)) {
+        return true;
+    }
+    return !array_key_exists('ai', $modules) || !empty($modules['ai']);
+}
+
 function dashboardStatusOverview(string $pagesPath, string $newsPath): array {
     $contentRoot = dirname($pagesPath);
     $mails = dashboardReadJsonFile($contentRoot . '/mails.json');
@@ -1163,16 +1175,19 @@ switch ($action) {
         $newsPath = dirname(__DIR__) . '/content/news/';
         $pageCount = count(glob($pagesPath . '[a-z][a-z]_*.json') ?: []);
         $newsCount = is_dir($newsPath) ? count(glob($newsPath . '*.json') ?: []) : 0;
-        jsonResponse(true, [
+        $response = [
             'pages' => $pageCount,
             'news' => $newsCount,
             'status' => dashboardStatusOverview($pagesPath, $newsPath),
             'analytics' => nibblyAnalyticsSummary($analyticsPeriod, $analyticsCount),
-            'ai' => [
+        ];
+        if (dashboardAiModuleEnabled()) {
+            $response['ai'] = [
                 'settings' => nibblyAiLoadSettings(true),
                 'usage' => nibblyAiUsageSummary()
-            ]
-        ]);
+            ];
+        }
+        jsonResponse(true, $response);
         break;
 
     // ============================================================
@@ -1195,6 +1210,12 @@ switch ($action) {
     // ============================================================
 
     case 'load-ai-settings':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(true, [
+                'settings' => null,
+                'usage' => null
+            ]);
+        }
         jsonResponse(true, [
             'settings' => nibblyAiLoadSettings(true),
             'usage' => nibblyAiUsageSummary()
@@ -1242,6 +1263,9 @@ switch ($action) {
         break;
 
     case 'ai-test':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
         if (!isAdmin()) {
             jsonResponse(false, null, 'Forbidden');
         }
@@ -1262,6 +1286,9 @@ switch ($action) {
         break;
 
     case 'ai-chat':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
         if (!validateCsrfToken()) {
             jsonResponse(false, null, 'Invalid CSRF token');
         }
@@ -1285,6 +1312,9 @@ switch ($action) {
         break;
 
     case 'ai-generate-text':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
         if (!validateCsrfToken()) {
             jsonResponse(false, null, 'Invalid CSRF token');
         }
@@ -1305,6 +1335,9 @@ switch ($action) {
         break;
 
     case 'ai-generate-seo':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
         if (!isAdmin()) {
             jsonResponse(false, null, 'Forbidden');
         }
