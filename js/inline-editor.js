@@ -1,5 +1,5 @@
 /**
- * Inline Editor - Nibbly CMS
+ * Inline Editor - nibbly CMS
  * Edit content directly on the page when logged in as admin.
  *
  * Features:
@@ -1678,7 +1678,7 @@
         button.textContent = tFallback('editor.translating', 'Translating...');
         try {
             const prompt = [
-                'Translate these Nibbly editor fields from ' + sourceLang + ' into the requested target languages.',
+                'Translate these nibbly editor fields from ' + sourceLang + ' into the requested target languages.',
                 'Return strict JSON only. Shape: {"translations":{"LANG":{"field.path":"translated value"}}}.',
                 'Keep HTML tags if present. Do not add Markdown or explanations.',
                 '',
@@ -6309,6 +6309,7 @@
         restoreFromHistory: restoreFromHistory,
         clearHistory: clearHistory,
         // Edit-Mode
+        isEditMode: function() { return EditorConfig.editMode === true; },
         enterEditMode: enterEditMode,
         exitEditMode: exitEditMode,
         saveAllChanges: saveAllChanges,

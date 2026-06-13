@@ -47,7 +47,7 @@ class SmtpMailer {
     /**
      * Sends an email via SMTP
      */
-    public function send($to, $subject, $body, $fromEmail, $fromName = '', $replyTo = '') {
+    public function send($to, $subject, $body, $fromEmail, $fromName = '', $replyTo = '', $bcc = []) {
         try {
             // Connect to the server
             if (!$this->connect()) {
@@ -80,7 +80,7 @@ class SmtpMailer {
             }
 
             // Send email
-            if (!$this->sendMail($to, $subject, $body, $fromEmail, $fromName, $replyTo)) {
+            if (!$this->sendMail($to, $subject, $body, $fromEmail, $fromName, $replyTo, $bcc)) {
                 $this->disconnect();
                 return false;
             }
@@ -183,7 +183,37 @@ class SmtpMailer {
         return true;
     }
 
-    private function sendMail($to, $subject, $body, $fromEmail, $fromName, $replyTo) {
+    private function normalizeRecipients($value) {
+        $rawItems = is_array($value) ? $value : explode(',', (string)$value);
+        $recipients = [];
+
+        foreach ($rawItems as $item) {
+            foreach (explode(',', (string)$item) as $email) {
+                $email = trim(str_replace(["\r", "\n", "\t"], '', (string)$email));
+                if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $recipients[] = $email;
+                }
+            }
+        }
+
+        return array_values(array_unique($recipients));
+    }
+
+    private function formatRecipientHeader(array $recipients) {
+        return implode(', ', array_map(function ($email) {
+            return '<' . $email . '>';
+        }, $recipients));
+    }
+
+    private function sendMail($to, $subject, $body, $fromEmail, $fromName, $replyTo, $bcc = []) {
+        $toRecipients = $this->normalizeRecipients($to);
+        $bccRecipients = $this->normalizeRecipients($bcc);
+
+        if (empty($toRecipients)) {
+            $this->lastError = 'No valid recipient address';
+            return false;
+        }
+
         // MAIL FROM
         $response = $this->sendCommand("MAIL FROM:<$fromEmail>");
         if (substr($response, 0, 3) !== '250') {
@@ -191,11 +221,13 @@ class SmtpMailer {
             return false;
         }
 
-        // RCPT TO
-        $response = $this->sendCommand("RCPT TO:<$to>");
-        if (substr($response, 0, 3) !== '250') {
-            $this->lastError = "RCPT TO rejected: $response";
-            return false;
+        // BCC recipients are envelope recipients only and are not written to headers.
+        foreach (array_merge($toRecipients, $bccRecipients) as $recipient) {
+            $response = $this->sendCommand("RCPT TO:<$recipient>");
+            if (!in_array(substr($response, 0, 3), ['250', '251'], true)) {
+                $this->lastError = "RCPT TO rejected for $recipient: $response";
+                return false;
+            }
         }
 
         // DATA
@@ -209,7 +241,7 @@ class SmtpMailer {
         $headers = [];
         $headers[] = "Date: " . date('r');
         $headers[] = "From: " . ($fromName ? "=?UTF-8?B?" . base64_encode($fromName) . "?= <$fromEmail>" : $fromEmail);
-        $headers[] = "To: <$to>";
+        $headers[] = "To: " . $this->formatRecipientHeader($toRecipients);
         $headers[] = "Subject: =?UTF-8?B?" . base64_encode($subject) . "?=";
 
         if ($replyTo) {

@@ -12,6 +12,7 @@ This is the canonical, tool-neutral guide for AI coding agents. `AGENTS.md` and 
 | Content JSON | `content/pages/{lang}_{slug}.json` (e.g. `content/pages/en_about.json`) |
 | News posts | `content/news/{slug}.json` |
 | Footer content | `content/pages/footer.json` |
+| Form definitions | `content/forms/*.json` |
 | Site settings | `content/settings.json` |
 | Maintenance/private access | `includes/access-guard.php` + `content/settings.json` / page `visibility` |
 | Menu registry | `content/menus.json` |
@@ -33,7 +34,9 @@ This is the canonical, tool-neutral guide for AI coding agents. `AGENTS.md` and 
 | Events | `content/events.json` |
 | Email config | `content/settings.json` → `email` section |
 | SMTP mailer | `api/SmtpMailer.php` |
-| Contact form API | `api/contact.php` |
+| JSON form renderer | `includes/forms.php` |
+| Public form submit API | `api/form-submit.php` |
+| Legacy contact form API | `api/contact.php` |
 | AI gateway | `includes/ai/ai-helper.php` |
 | AI settings | `content/ai-settings.json` |
 | AI usage/audit | `content/ai-usage.json`, `content/ai-audit/*.jsonl` |
@@ -50,25 +53,59 @@ php -S localhost:3000 router.php
 
 The `router.php` handles clean URLs, language routing, and news post URLs without requiring Apache.
 
-## Protected Public Forms
+## JSON-Backed Public Forms
 
-Use the form protection helpers for public forms instead of hand-rolling
-tokens or honeypots. The default contact form includes are lazy-loaded and
-protected automatically.
+Nibbly supports simple, flat-file public forms stored in `content/forms/*.json`.
+This is the preferred path for vibe-coded sites: an agent can generate the form
+structure once, and non-technical admins can later adjust labels,
+placeholders, required state, select/radio options, column widths, success text,
+and notification behaviour in **Dashboard -> Settings -> Forms**.
 
-For custom forms, include the helper fields inside the `<form>` and validate
-the matching form id in the submit endpoint:
+The goal is not a full visual form builder. Keep complex conditional logic,
+custom validation, and page-specific behaviour in the site template or a
+site-owned script. Use JSON forms when users need safe edits to an existing
+form.
 
-```php
-<?php require_once __DIR__ . '/../includes/form-protection.php'; ?>
+### Form JSON
 
-<form class="contact-form" action="<?php echo $basePath; ?>api/contact.php" method="post">
-    <?php echo nibblyFormProtectionFields('contact'); ?>
-    <!-- visible form fields -->
-</form>
+```json
+{
+  "id": "contact",
+  "label": "Kontaktformular",
+  "description": "",
+  "enabled": true,
+  "submit": {
+    "store": true,
+    "email": true,
+    "subject": "Kontaktanfrage: {name}",
+    "successText": "Vielen Dank für deine Nachricht."
+  },
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "required": true, "width": 6 },
+    { "key": "email", "type": "email", "label": "E-Mail", "required": true, "width": 6 },
+    { "key": "message", "type": "textarea", "label": "Nachricht", "required": true, "width": 12 }
+  ]
+}
 ```
 
-For a lazy-loaded form placeholder, use:
+Supported field types are `text`, `email`, `tel`, `textarea`, `select`,
+`radio`, `checkbox`, `date`, `time`, `hidden`, `heading`, and `note`. Supported
+widths are `3`, `4`, `6`, `8`, and `12` on a 12-column grid. `select` and
+`radio` fields use `options` entries shaped as `{ "value": "...", "label": "..." }`.
+
+### Rendering
+
+For a direct server-side render:
+
+```php
+<?php
+require_once __DIR__ . '/../includes/forms.php';
+echo nibblyForm('contact', ['basePath' => $basePath, 'lang' => $currentLang]);
+?>
+```
+
+For lazy loading, use the existing placeholder. `api/form.php?form=<id>` renders
+JSON forms when a matching `content/forms/<id>.json` exists:
 
 ```php
 <?php
@@ -79,9 +116,19 @@ echo nibblyLazyFormPlaceholder('contact', [
 ?>
 ```
 
-The lazy endpoint (`api/form.php`) only renders whitelisted core forms. Add new
-custom forms there deliberately; never include arbitrary PHP paths from request
-parameters.
+JSON forms submit to `api/form-submit.php`. The renderer adds the one-time token,
+honeypot, `form_id`, loading spans, and `.form-feedback` markup expected by the
+shared footer JavaScript. Submissions are stored in `content/mails.json` with
+`formId`, `formLabel`, and a structured `fields[]` array; the dashboard inbox can
+filter by form.
+
+### Legacy and Custom PHP Forms
+
+The legacy `includes/contact-form.php` and `api/contact.php` continue to work
+for older templates. For fully custom PHP forms that do not use JSON rendering,
+include `includes/form-protection.php`, call `nibblyFormProtectionFields($id)`,
+validate with `nibblyValidateFormToken()`, and store messages with the same
+`formId`/`formLabel` metadata if they should appear clearly in the inbox.
 
 ## AI Gateway
 
@@ -98,10 +145,14 @@ keys are never exposed by `load-ai-settings`; it only returns `hasApiKey` and
 provider metadata. Do not add direct browser-to-provider calls.
 
 Provider credentials are stored per provider, so admins can switch between
-OpenAI, OpenRouter, Ollama, LM Studio, or another OpenAI-compatible endpoint
-without replacing keys. Local/private URLs (`localhost`, private IP ranges, or
-self-hosted gateways) must only be accepted when the explicit local-provider
-setting is enabled.
+OpenAI, OpenRouter, Anthropic (Claude), Ollama, LM Studio, or another
+OpenAI-compatible endpoint without replacing keys. The Anthropic provider is
+translated to and from the Messages API inside the gateway (including
+streaming) so all callers keep one OpenAI-style request/response shape; it
+serves chat and text only, not image generation. Chat replies can stream over
+Server-Sent Events with an automatic fallback to the buffered JSON response.
+Local/private URLs (`localhost`, private IP ranges, or self-hosted gateways)
+must only be accepted when the explicit local-provider setting is enabled.
 
 Generated images are validated and saved under `assets/images/generated/`, are
 visible in the Media Library, and are indexed in `content/ai-image-history.json`
@@ -115,6 +166,150 @@ Dashboard AI UI should honor both global module visibility and AI feature flags.
 If AI features are disabled, hide AI buttons and tools throughout the admin UI.
 If AI is enabled but a capability lacks a model or key, show a clear disabled
 state instead of a failing action.
+
+### Frontend AI Assistant
+
+The frontend Copilot is the logged-in editor chat widget loaded by
+`includes/footer.php` through `js/ai-copilot.js` and `css/ai-copilot.css`.
+It must remain an editor-facing orchestration layer, not a direct AI or file
+access layer.
+
+Core files:
+
+- `includes/ai/copilot-context.php` builds the safe page/content manifest,
+  validates suggested field values, normalizes image paths, creates/publishes
+  page/news/event drafts, and exposes role-derived Copilot permissions.
+  It also exposes a compact `knowledgeBase` with curated Nibbly guidance from
+  local product/agent docs. Keep this summary bounded and intentional; do not
+  stream arbitrary repository files, PHP templates, or raw server documentation
+  into the frontend Copilot context.
+  Standard-page `sections[]` entries should be traversed into concrete
+  manifest paths such as `sections.0.content` and `sections.2.src`; do not
+  collapse the whole sections array into a single AI target.
+  Keep structural metadata out of writable Copilot targets: page/lang identity,
+  timestamps, publication flags, section ids, section types, layout size/level,
+  and variant/style controls should not be suggested or applied by chat.
+  Visibility flags such as `field__hidden`, section `hidden`, and status fields
+  should also stay out of generic field suggestions; hide/show must use the
+  dedicated signed visibility action instead of an ordinary boolean proposal.
+- `admin/api.php` owns all Copilot actions: context, chat, field suggestions,
+  HTML formatting, visibility previews/applies, confirmed field apply, undo,
+  content draft/create/publish, and image generation.
+- `js/ai-copilot.js` renders the chat panel, preview cards, confirmations,
+  image variant selection, alt-text editing, undo, and publish controls.
+  If `window.NB_ADMIN_API_URL` is missing, it must infer `admin/api.php` from
+  its own script URL so nested frontend pages still post to the right endpoint.
+- `css/ai-copilot.css` styles the widget independently from public site CSS.
+- `admin/lang/*.json` should contain user-facing Copilot strings. The widget
+  uses `window.NB_LANG` with safe English fallbacks.
+
+Safety rules:
+
+- Never expose provider API keys, raw PHP templates, server files, password
+  hashes, unrestricted JSON, or local provider internals to the model.
+- Browser code must only call `admin/api.php`; provider requests go through
+  `includes/ai/ai-helper.php`.
+- Every write must require an authenticated session, CSRF, a Copilot permission,
+  and a server-side manifest match. The model output is untrusted.
+- Previewed field and image proposals must carry a server-side signature over
+  page, path, type, current hash, and allowed value hashes. Apply actions must
+  reject unsigned proposals or values outside the signed preview.
+- Field updates are limited to manifest-supported field types. Text, HTML, link,
+  boolean, known select values such as `seo.robots`, and image replacements have
+  type-specific validation.
+- When a frontend editable link is selected, `js/ai-copilot.js` should resolve
+  the instruction to the matching manifest subfield: `.href`/`.url` for target
+  changes, `.text`/`.label`/`.title` for label changes. Do not apply AI output
+  to the whole link object.
+- Simple selected-field HTML formatting requests such as bold, italic, and
+  underline should use `ai-copilot-format-html` /
+  `nibblyCopilotBuildHtmlFormatProposal()` so they become signed preview
+  proposals without spending a model call or bypassing confirmation.
+- Explicit selected-field hide/show requests should use `ai-copilot-visibility`
+  and `ai-copilot-apply-visibility`. Sign the page/path/action/current-state,
+  write only the matching `path__hidden` flag, create a backup, audit the
+  hidden-state change, and return an Undo token bound to that hidden path.
+- HTML suggestions must pass the existing sanitizer. Links must reject unsafe
+  protocols. Image paths must stay under `/assets/images/` and point to an
+  existing raster media file (`jpg`, `jpeg`, `png`, `webp`, `gif`). Do not allow
+  SVG replacement or reference images through the Copilot image workflow.
+- Image draft selection must stay inside the Copilot panel: editors choose the
+  target image field and generate/edit mode before `ai-copilot-generate-image`
+  is called. Do not use native `prompt()`/`confirm()` dialogs for this image
+  selection flow.
+- Image draft provider options must also stay inside the Copilot panel and be
+  allowlisted server-side before they reach the provider gateway. Current
+  Copilot options are size/orientation, variant count, raster output format, and
+  quality.
+- Confirmed page changes must create backups and return a signed, limited undo
+  token for the same page/path. Do not turn the Copilot into a general backup
+  browser.
+- Copilot proposal audit summaries should store path/type/current hash/value
+  hash metadata, not raw generated values. Use `nibblyCopilotProposalAuditSummary()`
+  rather than logging proposal payloads directly.
+- Content creation must default to safe draft states: pages private/no nav,
+  news hidden, events hidden. Publishing requires a separate explicit
+  confirmation and Copilot publish permission.
+- Content draft previews must be signed before create actions accept them.
+  Never accept a page/news/event creation payload that bypasses the preview
+  signature.
+- Image generation is available only when the AI module, AI settings, image
+  feature flag, image model, and target image field all allow it. Editors choose
+  whether to use the current field image as an edit reference or generate a new
+  image from prompt/context only.
+- Copilot actions should use `nibblyCopilotAssertBurstLimit()` after session
+  and CSRF checks for session-scoped burst protection. This complements the AI
+  gateway's daily request, token, and budget limits; it does not replace them.
+- Write and image actions should call `nibblyAiAudit()` with enough metadata to
+  debug what happened without logging secrets.
+
+Verification for Copilot changes:
+
+```bash
+php -l includes/ai/copilot-context.php && php -l includes/ai/ai-helper.php && php -l admin/api.php && php -l includes/footer.php
+node --check js/ai-copilot.js
+php tests/copilot-smoke.php
+node tests/copilot-api-smoke.js
+node tests/copilot-js-smoke.js
+php tests/copilot-i18n-smoke.php
+find . -maxdepth 3 \( -path './.git' -o -path './relaunch' \) -prune -o -name '*.json' -print | xargs -n 20 php -r 'foreach (array_slice($argv,1) as $f) { json_decode(file_get_contents($f), true); if (json_last_error() !== JSON_ERROR_NONE) { fwrite(STDERR, $f . ": " . json_last_error_msg() . PHP_EOL); exit(1); } }'
+git diff --check -- AI-COPILOT-GOAL.md AI-AGENT-GUIDE.md includes/ai/copilot-context.php includes/ai/ai-helper.php admin/api.php includes/footer.php js/ai-copilot.js css/ai-copilot.css tests/copilot-smoke.php tests/copilot-api-smoke.js tests/copilot-js-smoke.js tests/copilot-i18n-smoke.php admin/lang/*.json
+```
+
+When a configured local site is available, also run a browser check as a logged-in
+editor: confirm that the widget appears only when AI is available, field
+suggestions show preview cards before saving, apply creates a backup and undo
+works, page/news/event creation starts as draft/private/hidden, publish requires
+confirmation, and image generation respects the edit-vs-generate choice.
+
+## Admin UI Conventions Added in 1.4.x
+
+Recent dashboard work tightened several admin surfaces. Preserve these patterns
+when adding related UI:
+
+- **Content editor sections**: the left section jump menu is sticky while
+  scrolling, supports search and type filtering, keeps long labels clamped, and
+  greys out filtered/non-jumpable items. Keyboard section navigation should keep
+  the active marker stable after programmatic scrolls.
+- **Section editor cards**: type badges should look like metadata, not primary
+  action buttons. Insert controls between filtered-out sections should not leave
+  large empty gaps.
+- **Messages**: the page is explicitly labelled as contact/form submissions.
+  Header copy sits with the title, actions align as a toolbar, and the list can
+  filter by form.
+- **Settings forms**: prefer clear native controls (`select`, checkboxes,
+  buttons) over card-like pseudo-buttons when the interaction is selection.
+  Compact editor rows should use normal label casing, aligned controls, and no
+  horizontal overflow.
+- **Media and branding previews**: transparent images should be rendered on a
+  visible checkerboard/transparency surface in dark mode.
+- **Dashboard stats**: stat labels align at the top of their cards and numbers
+  align at the bottom for quick scanning.
+- **AI dashboard panel**: hide disabled AI tools. If AI services are disabled or
+  unconfigured, show only a compact dismissible notice where appropriate.
+
+Admin CSS is cache-busted from `admin/dashboard.php` with `filemtime()` so
+layout changes in `admin/style.css` are visible after reload.
 
 ## Multilingual Admin Editor Fields
 

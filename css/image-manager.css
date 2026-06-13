@@ -20,6 +20,13 @@
     --nb-imgmgr-accent-active: var(--nb-primary-active, var(--nb-imgmgr-accent-hover));
     --nb-imgmgr-accent-subtle: color-mix(in srgb, var(--nb-imgmgr-accent) 10%, transparent);
     --nb-imgmgr-accent-muted: color-mix(in srgb, var(--nb-imgmgr-accent) 20%, transparent);
+    --nb-imgmgr-transparent-bg: #f8fafc;
+    --nb-imgmgr-transparent-check: #d7e0ec;
+    --nb-imgmgr-transparent-grid:
+        linear-gradient(45deg, var(--nb-imgmgr-transparent-check) 25%, transparent 25%),
+        linear-gradient(-45deg, var(--nb-imgmgr-transparent-check) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, var(--nb-imgmgr-transparent-check) 75%),
+        linear-gradient(-45deg, transparent 75%, var(--nb-imgmgr-transparent-check) 75%);
 }
 
 .nb-imgmgr-modal {
@@ -196,6 +203,12 @@
     display: none;
 }
 
+/* Folder action buttons match the 32px folder filter beside them. */
+.nb-imgmgr-folder-tools .nb-imgmgr-action-btn {
+    width: 32px;
+    height: 32px;
+}
+
 .nb-imgmgr-folder-filter {
     min-height: 28px;
     max-width: 180px;
@@ -335,9 +348,146 @@
 /* Body — scrollable content area */
 .nb-imgmgr-body {
     flex: 1;
+    display: flex;
+    min-height: 0;
+    background: var(--nb-bg, #fafafa);
+}
+
+/* Finder-style folder sidebar */
+.nb-imgmgr-sidebar {
+    flex: 0 0 200px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-right: 1px solid var(--nb-border, #e5e5e5);
+    background: var(--nb-bg-elevated, #fff);
+}
+
+.nb-imgmgr-sidebar[hidden] {
+    display: none;
+}
+
+.nb-imgmgr-sidebar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 10px 8px 14px;
+}
+
+.nb-imgmgr-sidebar-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--nb-text-muted, #888);
+}
+
+.nb-imgmgr-folder-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 8px 12px;
+}
+
+.nb-imgmgr-folder-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--nb-text, #1a1a1a);
+    user-select: none;
+}
+
+.nb-imgmgr-folder-item:hover {
+    background: var(--nb-bg-hover, rgba(127, 127, 127, 0.1));
+}
+
+.nb-imgmgr-folder-item.is-active {
+    background: var(--nb-primary-muted, rgba(46, 149, 210, 0.18));
+    color: var(--nb-primary, #2e95d2);
+}
+
+.nb-imgmgr-folder-item:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--nb-primary, #2e95d2);
+}
+
+.nb-imgmgr-folder-item-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    color: var(--nb-text-muted, #888);
+}
+
+.nb-imgmgr-folder-item.is-active .nb-imgmgr-folder-item-icon {
+    color: inherit;
+}
+
+.nb-imgmgr-folder-item-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.nb-imgmgr-folder-item-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.875rem;
+}
+
+.nb-imgmgr-folder-item-count {
+    flex: 0 0 auto;
+    font-size: 0.72rem;
+    color: var(--nb-text-muted, #999);
+    font-variant-numeric: tabular-nums;
+}
+
+.nb-imgmgr-folder-item-delete {
+    flex: 0 0 auto;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--nb-text-muted, #888);
+    cursor: pointer;
+}
+
+.nb-imgmgr-folder-item:hover .nb-imgmgr-folder-item-delete,
+.nb-imgmgr-folder-item:focus-within .nb-imgmgr-folder-item-delete {
+    display: inline-flex;
+}
+
+.nb-imgmgr-folder-item-delete:hover {
+    background: var(--nb-danger-bg, rgba(192, 57, 43, 0.12));
+    color: var(--nb-danger, #c0392b);
+}
+
+.nb-imgmgr-folder-item-delete svg {
+    width: 14px;
+    height: 14px;
+}
+
+.nb-imgmgr-folder-item-delete + .nb-imgmgr-folder-item-count,
+.nb-imgmgr-folder-item:hover .nb-imgmgr-folder-item-count {
+    /* count hides behind the delete button on hover to avoid crowding */
+}
+
+.nb-imgmgr-folder-item:hover .nb-imgmgr-folder-item-count {
+    display: none;
+}
+
+.nb-imgmgr-content {
+    flex: 1;
+    min-width: 0;
     overflow-y: auto;
     padding: 16px 20px;
-    background: var(--nb-bg, #fafafa);
 }
 
 /* Dropzone */
@@ -345,7 +495,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 16px;
+    gap: 12px;
     height: 90px;
     margin: 12px 20px;
     padding: 0 20px;
@@ -354,6 +504,53 @@
     background: var(--nb-bg, #fafafa);
     transition: border-color 0.15s, background 0.15s;
     flex-shrink: 0;
+}
+
+.nb-imgmgr-dropzone-upload {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.nb-imgmgr-dropzone--with-ai {
+    justify-content: space-between;
+}
+
+.nb-imgmgr-dropzone--with-ai .nb-imgmgr-dropzone-upload {
+    justify-content: center;
+}
+
+.nb-imgmgr-ai-generator-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 14px;
+    border: 1px solid var(--nb-border, #d2d2d2);
+    border-radius: 6px;
+    background: var(--nb-bg-elevated, #fff);
+    color: var(--nb-text, #1a1a1a);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.nb-imgmgr-ai-generator-btn:hover {
+    border-color: var(--nb-imgmgr-accent);
+    color: var(--nb-imgmgr-accent);
+    background: var(--nb-imgmgr-accent-subtle);
+}
+
+.nb-imgmgr-ai-generator-btn svg {
+    width: 15px;
+    height: 15px;
 }
 
 .nb-imgmgr-dropzone--active {
@@ -474,9 +671,10 @@
 
 .nb-imgmgr-thumb {
     height: 110px;
-    background-size: cover;
-    background-position: center;
-    background-color: var(--nb-bg-sunken, #f0f0f0);
+    background-color: var(--nb-imgmgr-transparent-bg);
+    background-image: var(--nb-imgmgr-transparent-grid);
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    background-size: 16px 16px;
 }
 
 .nb-imgmgr-thumb-btn {
@@ -488,11 +686,38 @@
     font: inherit;
 }
 
+.nb-imgmgr-thumb-btn--image {
+    position: relative;
+    overflow: hidden;
+}
+
+.nb-imgmgr-thumb-surface {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+}
+
+.nb-imgmgr-thumb-surface img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
 .nb-imgmgr-media-icon {
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--nb-imgmgr-accent);
+}
+
+.nb-imgmgr-media-icon.nb-imgmgr-thumb,
+.nb-imgmgr-media-icon.nb-imgmgr-list-thumb {
+    background-color: var(--nb-bg-sunken, #f0f0f0);
+    background-image: none;
 }
 
 .nb-imgmgr-media-icon svg {
@@ -591,6 +816,7 @@
     color: var(--nb-text-muted, #6e6e6e);
     transition: background 0.15s, color 0.15s;
     padding: 0;
+    text-decoration: none;
 }
 
 .nb-imgmgr-action-btn svg {
@@ -625,7 +851,7 @@
 .nb-imgmgr-list-header,
 .nb-imgmgr-row {
     display: grid;
-    grid-template-columns: 36px 60px 1fr 90px 130px 150px;
+    grid-template-columns: 36px 60px 1fr 90px 130px 108px;
     gap: 10px;
     padding: 8px 12px;
     align-items: center;
@@ -790,9 +1016,10 @@
 .nb-imgmgr-list-thumb {
     width: 54px;
     height: 40px;
-    background-size: cover;
-    background-position: center;
-    background-color: var(--nb-bg-sunken, #f0f0f0);
+    background-color: var(--nb-imgmgr-transparent-bg);
+    background-image: var(--nb-imgmgr-transparent-grid);
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    background-size: 16px 16px;
     border-radius: 4px;
 }
 
@@ -808,10 +1035,14 @@
     color: var(--nb-text-muted, #6e6e6e);
 }
 
+/* Fixed 3-column grid so list-row actions always read as tidy 2x3 blocks
+   (6 actions in library mode, 3 in trash) instead of an uneven 5+1 wrap. */
 .nb-imgmgr-list-actions {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(3, 28px);
     gap: 4px;
-    justify-content: flex-end;
+    justify-content: end;
+    justify-items: center;
 }
 
 /* ============================================================
@@ -871,6 +1102,21 @@
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.nb-imgmgr-lightbox-stage--image {
+    padding: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    background-color: var(--nb-imgmgr-transparent-bg);
+    background-image: var(--nb-imgmgr-transparent-grid);
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    background-size: 16px 16px;
+    box-shadow: 0 10px 50px rgba(0, 0, 0, 0.6);
+}
+
+.nb-imgmgr-lightbox-stage--image img {
+    box-shadow: none;
 }
 
 .nb-imgmgr-lightbox-media {
@@ -1065,7 +1311,8 @@
     color: var(--nb-text, #1a1a1a);
 }
 
-.nb-imgmgr-move-select {
+.nb-imgmgr-move-select,
+.nb-imgmgr-folder-name-input {
     width: 100%;
     min-height: 36px;
     border: 1px solid var(--nb-border, #d2d2d2);
@@ -1075,6 +1322,12 @@
     font: inherit;
     font-size: 13px;
     padding: 0 10px;
+}
+
+.nb-imgmgr-folder-name-input:focus {
+    outline: none;
+    border-color: var(--nb-primary, #2e95d2);
+    box-shadow: 0 0 0 3px var(--nb-primary-muted, rgba(46, 149, 210, 0.25));
 }
 
 .nb-imgmgr-replace-options {
@@ -1237,5 +1490,54 @@
 
     .nb-imgmgr-lightbox-nav--next {
         right: 10px;
+    }
+
+    /* On narrow screens the folder sidebar becomes a horizontal scroll strip. */
+    .nb-imgmgr-body {
+        flex-direction: column;
+    }
+
+    .nb-imgmgr-sidebar {
+        flex: 0 0 auto;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        border-right: 0;
+        border-bottom: 1px solid var(--nb-border, #e5e5e5);
+        padding: 8px 12px;
+        overflow-x: auto;
+    }
+
+    .nb-imgmgr-sidebar-head {
+        flex: 0 0 auto;
+        padding: 0;
+        gap: 6px;
+    }
+
+    .nb-imgmgr-sidebar-title {
+        display: none;
+    }
+
+    .nb-imgmgr-folder-list {
+        flex: 1;
+        display: flex;
+        gap: 6px;
+        padding: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+
+    .nb-imgmgr-folder-item {
+        flex: 0 0 auto;
+        padding: 6px 10px;
+    }
+
+    .nb-imgmgr-folder-item-count {
+        display: none;
+    }
+
+    /* Keep delete reachable on touch where there is no hover. */
+    .nb-imgmgr-folder-item-delete {
+        display: inline-flex;
     }
 }

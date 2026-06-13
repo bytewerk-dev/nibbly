@@ -6,6 +6,84 @@
 
 
 /* ============================================================
+   ADMIN SURFACES
+   ============================================================ */
+
+.nb-admin-panel,
+.nb-admin-group,
+.nb-admin-item {
+    color: var(--nb-text);
+    border: 1px solid var(--nb-border);
+    box-shadow: none;
+}
+
+.nb-admin-panel {
+    background: var(--nb-surface-panel, var(--nb-bg-elevated));
+    border-radius: var(--nb-radius-lg);
+    padding: var(--nb-space-5) var(--nb-space-6);
+}
+
+.nb-admin-group {
+    background: var(--nb-surface-group, color-mix(in srgb, var(--nb-bg-elevated) 88%, var(--nb-bg)));
+    border-radius: var(--nb-radius-lg);
+    padding: var(--nb-space-4) var(--nb-space-5);
+}
+
+.nb-admin-item {
+    background: var(--nb-surface-item, var(--nb-bg));
+    border-radius: var(--nb-radius-md);
+    padding: var(--nb-space-3);
+}
+
+.nb-admin-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--nb-space-2);
+}
+
+.nb-admin-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--nb-border);
+    border-radius: var(--nb-radius-md);
+    background: var(--nb-bg-elevated);
+    color: var(--nb-text-muted);
+    cursor: pointer;
+    transition: background-color var(--nb-duration-fast) var(--nb-ease),
+                border-color var(--nb-duration-fast) var(--nb-ease),
+                color var(--nb-duration-fast) var(--nb-ease),
+                transform var(--nb-duration-fast) var(--nb-ease);
+}
+
+.nb-admin-icon-button:hover,
+.nb-admin-icon-button:focus-visible {
+    background: var(--nb-bg-hover);
+    border-color: var(--nb-border-strong);
+    color: var(--nb-text);
+    outline: none;
+}
+
+.nb-admin-icon-button:focus-visible {
+    box-shadow: 0 0 0 3px var(--nb-focus-ring, var(--nb-primary-muted));
+}
+
+.nb-admin-icon-button:active {
+    transform: scale(0.98);
+}
+
+.nb-admin-icon-button svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 1.5;
+}
+
+
+/* ============================================================
    BUTTONS
    ============================================================ */
 
@@ -208,7 +286,7 @@
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' stroke='%23525252' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 12px center;
-    padding-right: 36px;
+    padding-right: 40px;
 }
 
 .nb-field__hint {
@@ -246,7 +324,7 @@
     background: var(--nb-bg-elevated);
     border: 1px solid var(--nb-border);
     border-radius: var(--nb-radius-lg);
-    box-shadow: var(--nb-shadow-sm);
+    box-shadow: none;
 }
 
 .nb-card__header {

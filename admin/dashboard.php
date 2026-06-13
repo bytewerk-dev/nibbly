@@ -9,6 +9,7 @@ require_once __DIR__ . '/../includes/version.php';
 require_once __DIR__ . '/lang/i18n.php';
 require_once __DIR__ . '/users.php';
 require_once __DIR__ . '/../includes/asset-helpers.php';
+require_once __DIR__ . '/../includes/ai/ai-helper.php';
 ensureUsersFile();
 
 // Check authentication
@@ -37,7 +38,7 @@ $isAdminUser = ($userRole === 'admin');
 
 // Load settings for theme
 $_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg';
-$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => ['adminTheme' => 'dark', 'primaryColor' => '#2563eb', 'accentColor' => '#60a5fa', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'buttonGlow' => true, 'buttonRadius' => 6], 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'messages' => true, 'iconManager' => true]];
+$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => ['adminTheme' => 'dark', 'primaryColor' => '#3858e9', 'accentColor' => '#b45309', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'buttonGlow' => true, 'buttonRadius' => 6], 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'messages' => true, 'iconManager' => true]];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     $loadedSettings = json_decode(file_get_contents(SETTINGS_PATH), true);
     if (is_array($loadedSettings)) {
@@ -54,6 +55,13 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
 $adminTheme = $siteSettings['theme']['adminTheme'] ?? 'dark';
 $dashboardModules = array_replace(['news' => true, 'events' => true, 'messages' => true, 'iconManager' => true, 'ai' => true], is_array($siteSettings['modules'] ?? null) ? $siteSettings['modules'] : []);
 $aiFeaturesEnabled = !empty($dashboardModules['ai']);
+$aiDashboardVisible = $aiFeaturesEnabled || $isAdminUser;
+$_aiDashboardPublicSettings = $aiFeaturesEnabled && function_exists('nibblyAiLoadSettings') ? nibblyAiLoadSettings(true) : [];
+$_aiDashboardCopilotAvailable = $aiFeaturesEnabled
+    && !empty($_aiDashboardPublicSettings['enabled'])
+    && !empty($_aiDashboardPublicSettings['hasApiKey'])
+    && !empty($_aiDashboardPublicSettings['features']['backendAssistant'])
+    && (!isset($_aiDashboardPublicSettings['assistantSurfaces']['dashboard']) || !empty($_aiDashboardPublicSettings['assistantSurfaces']['dashboard']));
 $validDashboardTabs = ['home', 'content', 'settings'];
 if (!empty($dashboardModules['news'])) $validDashboardTabs[] = 'news';
 if (!empty($dashboardModules['events'])) $validDashboardTabs[] = 'events';
@@ -83,6 +91,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         'download'  => '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
         'upload'    => '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
         'alert'     => '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+        'refresh'   => '<path d="M21 12a9 9 0 11-2.64-6.36"/><path d="M21 3v6h-6"/>',
         'ai'        => '<path d="M12 2l1.6 5.2L19 9l-5.4 1.8L12 16l-1.6-5.2L5 9l5.4-1.8L12 2z"/><path d="M19 14l.8 2.7L22 17.5l-2.2.8L19 21l-.8-2.7-2.2-.8 2.2-.8L19 14z"/><path d="M5 13l.7 2.1L8 16l-2.3.9L5 19l-.7-2.1L2 16l2.3-.9L5 13z"/>',
     ];
     $p = $paths[$name] ?? '';
@@ -101,8 +110,13 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     $_dashFaviconType = pathinfo($_dashFavicon, PATHINFO_EXTENSION) === 'svg' ? 'image/svg+xml' : 'image/png';
     ?>
     <link rel="icon" href="<?php echo htmlspecialchars($_dashFavicon); ?>" type="<?php echo $_dashFaviconType; ?>">
-    <link rel="stylesheet" href="style.css">
+    <meta name="csrf-token" content="<?php echo htmlspecialchars($csrfToken); ?>">
+    <link rel="stylesheet" href="style.css?v=<?php echo @filemtime(__DIR__ . '/style.css') ?: time(); ?>">
     <link rel="stylesheet" href="../css/image-manager.css?v=<?php echo @filemtime(__DIR__ . '/../css/image-manager.css') ?: time(); ?>">
+    <link rel="stylesheet" href="../css/nb-select.css?v=<?php echo @filemtime(__DIR__ . '/../css/nb-select.css') ?: time(); ?>">
+    <?php if ($_aiDashboardCopilotAvailable && is_file(__DIR__ . '/../css/ai-copilot.css')): ?>
+    <link rel="stylesheet" href="../css/ai-copilot.css?v=<?php echo @filemtime(__DIR__ . '/../css/ai-copilot.css') ?: time(); ?>">
+    <?php endif; ?>
     <?php if ($adminTheme === 'system'): ?>
     <script>
     (function() {
@@ -138,7 +152,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         --nb-primary-btn: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $_pcLight; ?> 70%, white) 0%, <?php echo $_pcLight; ?> 70%);
         --nb-primary-btn-hover: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $_pcLight; ?> 50%, white) 0%, <?php echo $_pcLight; ?> 70%);
         --nb-brand: <?php echo $_acLight; ?>;
+        --nb-brand-light: color-mix(in srgb, <?php echo $_acLight; ?> 65%, white);
         --nb-brand-dark: color-mix(in srgb, <?php echo $_acLight; ?> 80%, black);
+        --nb-brand-subtle: color-mix(in srgb, <?php echo $_acLight; ?> 12%, transparent);
         --nb-sidebar-bg: <?php echo $_sbLight; ?>;
         --nb-bg: color-mix(in srgb, <?php echo $_sbLight; ?> 55%, white);
         --nb-bg-elevated: color-mix(in srgb, <?php echo $_sbLight; ?> 18%, white);
@@ -155,7 +171,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         --nb-primary-btn: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $_pcDark; ?> 70%, white) 0%, <?php echo $_pcDark; ?> 70%);
         --nb-primary-btn-hover: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $_pcDark; ?> 50%, white) 0%, <?php echo $_pcDark; ?> 70%);
         --nb-brand: <?php echo $_acDark; ?>;
+        --nb-brand-light: color-mix(in srgb, <?php echo $_acDark; ?> 70%, white);
         --nb-brand-dark: color-mix(in srgb, <?php echo $_acDark; ?> 80%, black);
+        --nb-brand-subtle: color-mix(in srgb, <?php echo $_acDark; ?> 18%, transparent);
         --nb-sidebar-bg: <?php echo $_sbDark; ?>;
         --nb-bg: color-mix(in srgb, <?php echo $_sbDark; ?> 78%, #202428);
         --nb-bg-elevated: color-mix(in srgb, <?php echo $_sbDark; ?> 58%, #2a2d31);
@@ -263,7 +281,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 <?php echo nbIcon('logout'); ?>
                 <span><?php echo t('nav.logout'); ?></span>
             </a>
-            <a class="sidebar-version" href="https://nibbly.dev" target="_blank" rel="noopener noreferrer">Nibbly <?php echo htmlspecialchars(nibblyVersion(), ENT_QUOTES, 'UTF-8'); ?></a>
+            <a class="sidebar-version" href="https://nibbly.dev" target="_blank" rel="noopener noreferrer">nibbly <?php echo htmlspecialchars(nibblyVersion(), ENT_QUOTES, 'UTF-8'); ?></a>
         </div>
     </aside>
 
@@ -597,9 +615,17 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     <button type="button" class="info-banner__cta info-banner__cta-button" onclick="openEmailSettings()"><?php echo t('mails.open_email_settings'); ?> &rarr;</button>
                 </div>
             </div>
-            <div class="page-list-header">
+            <div class="page-list-header page-list-header--mails">
                 <div class="page-list-header-left">
-                    <h2><?php echo t('mails.title'); ?></h2>
+                    <div class="page-list-title-stack">
+                        <h2><?php echo t('mails.title'); ?></h2>
+                        <p><?php echo t('mails.source_hint'); ?></p>
+                    </div>
+                </div>
+                <div class="page-list-header-actions">
+                    <select id="mailFormFilter" class="topbar-select mail-form-filter" onchange="setMailFormFilter(this.value)" aria-label="<?php echo htmlspecialchars(t('mails.filter_form'), ENT_QUOTES, 'UTF-8'); ?>">
+                        <option value=""><?php echo t('mails.all_forms'); ?></option>
+                    </select>
                     <button class="btn btn-secondary btn-sm" onclick="loadMails()"><?php echo t('btn.refresh'); ?></button>
                     <button class="btn btn-secondary btn-sm" onclick="markAllMailsRead()"><?php echo t('mails.mark_all_read'); ?></button>
                     <button class="btn btn-secondary btn-sm" id="deleteReadMailsBtn" onclick="deleteReadMails()" disabled><?php echo t('mails.delete_read'); ?></button>
@@ -615,6 +641,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             <th class="mail-col-flag page-list-sortable" data-mail-sort="starred" onclick="sortMails('starred')" title="<?php echo t('mails.sort_starred'); ?>">
                                 <button type="button" class="mail-header-sort" tabindex="-1" aria-label="<?php echo t('mails.sort_starred'); ?>">☆<span class="page-list-sort-icon"></span></button>
                             </th>
+                            <th class="page-list-sortable" data-mail-sort="form" onclick="sortMails('form')"><?php echo t('mails.col_form'); ?> <span class="page-list-sort-icon"></span></th>
                             <th class="page-list-col-title page-list-sortable" data-mail-sort="from" onclick="sortMails('from')"><?php echo t('mails.col_from'); ?> <span class="page-list-sort-icon"></span></th>
                             <th class="page-list-sortable" data-mail-sort="subject" onclick="sortMails('subject')"><?php echo t('mails.col_subject'); ?> <span class="page-list-sort-icon"></span></th>
                             <th class="page-list-col-date page-list-sortable" data-mail-sort="received" onclick="sortMails('received')"><?php echo t('mails.col_received'); ?> <span class="page-list-sort-icon"></span></th>
@@ -675,17 +702,21 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
             <div class="dashboard-status-strip" id="dashboardStatusStrip" aria-label="<?php echo htmlspecialchars(t('dashboard_home.site_status'), ENT_QUOTES, 'UTF-8'); ?>"></div>
 
-            <?php if ($aiFeaturesEnabled): ?>
-            <section class="dashboard-section dashboard-section--ai">
+            <?php if ($aiDashboardVisible): ?>
+            <section class="dashboard-section dashboard-section--ai" id="dashboardAiSection" data-ai-module-enabled="<?php echo $aiFeaturesEnabled ? 'true' : 'false'; ?>">
                 <div class="dashboard-section-header">
                     <div>
                         <h3><?php echo t('dashboard_home.ai_tools'); ?></h3>
                         <p id="dashboardAiStatus" class="dashboard-status-text"></p>
                     </div>
                     <div class="dashboard-section-actions">
-                        <span class="ai-usage-summary" id="aiUsageSummary"<?php echo $aiFeaturesEnabled ? '' : ' hidden'; ?>></span>
+                        <span class="ai-usage-summary" id="aiUsageSummary" hidden></span>
                         <?php if ($isAdminUser): ?>
+                        <?php if ($aiFeaturesEnabled): ?>
                         <button type="button" class="btn btn-secondary btn-sm" onclick="switchTab('settings', {settingsTab: 'ai'});"><?php echo t('ai.open_settings'); ?></button>
+                        <?php else: ?>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="switchTab('settings', {settingsTab: 'modules'});"><?php echo t('settings.modules_nav'); ?></button>
+                        <?php endif; ?>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -694,16 +725,35 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     <div class="info-banner__inner">
                         <strong class="info-banner__title"><?php echo nbIcon('alert'); ?> <?php echo t('ai.not_configured_title'); ?></strong>
                         <span class="info-banner__body">
-                            <?php echo t('ai.not_configured_text'); ?>
+                            <span id="aiUnavailableText"><?php echo t('ai.not_configured_text'); ?></span>
                             <?php if ($isAdminUser): ?>
+                            <?php if ($aiFeaturesEnabled): ?>
                             <button type="button" class="info-banner__cta info-banner__cta-button" onclick="switchTab('settings', {settingsTab: 'ai'});"><?php echo t('ai.open_settings'); ?> &rarr;</button>
+                            <?php else: ?>
+                            <button type="button" class="info-banner__cta info-banner__cta-button" onclick="switchTab('settings', {settingsTab: 'modules'});"><?php echo t('settings.modules_nav'); ?> &rarr;</button>
+                            <?php endif; ?>
                             <?php endif; ?>
                         </span>
+                        <button type="button" class="info-banner__close" id="aiUnavailableDismiss" aria-label="<?php echo htmlspecialchars(t('ai.dismiss_notice'), ENT_QUOTES, 'UTF-8'); ?>">&times;</button>
                     </div>
                 </div>
 
-                <div class="ai-grid">
-                    <section class="ai-card ai-card--assistant">
+                <?php if ($aiFeaturesEnabled): ?>
+                <section class="ai-image-jobs-panel" id="aiImageJobsPanel" hidden>
+                    <div class="ai-image-jobs-panel__copy">
+                        <h4><?php echo t('ai.image_jobs_title'); ?></h4>
+                        <p id="aiImageJobsStatus"><?php echo t('ai.image_jobs_idle'); ?></p>
+                    </div>
+                    <div class="ai-image-jobs-panel__actions">
+                        <span class="ai-image-jobs-panel__meta" id="aiImageJobsMeta" hidden></span>
+                        <button type="button" class="btn btn-secondary btn-sm" id="aiImageJobsCheck">
+                            <?php echo nbIcon('refresh', 14); ?>
+                            <span><?php echo t('ai.image_jobs_check'); ?></span>
+                        </button>
+                    </div>
+                </section>
+                <div class="ai-grid" id="dashboardAiTools" hidden>
+                    <section class="ai-card ai-card--assistant" id="aiAssistantCard" data-ai-feature="backendAssistant" hidden>
                         <h3><?php echo t('ai.assistant'); ?></h3>
                         <div class="ai-chat-log" id="aiChatLog" aria-live="polite"></div>
                         <form id="aiChatForm" class="ai-form">
@@ -716,13 +766,16 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </form>
                     </section>
 
-                    <section class="ai-card ai-card--tools">
+                    <section class="ai-card ai-card--tools" id="aiToolsCard" hidden>
                         <div class="ai-tool-tabs" role="tablist" aria-label="<?php echo htmlspecialchars(t('dashboard_home.ai_tools'), ENT_QUOTES, 'UTF-8'); ?>">
-                            <button type="button" class="ai-tool-tab active" data-ai-tool-tab="image" onclick="switchAiToolTab('image')" role="tab" aria-selected="true"><?php echo t('ai.image_generator'); ?></button>
-                            <button type="button" class="ai-tool-tab" data-ai-tool-tab="text" onclick="switchAiToolTab('text')" role="tab" aria-selected="false"><?php echo t('ai.text_generator'); ?></button>
+                            <button type="button" class="ai-tool-tab" data-ai-tool-tab="image" data-ai-feature="imageGeneration" onclick="switchAiToolTab('image')" role="tab" aria-selected="false" hidden><?php echo t('ai.image_generator'); ?></button>
+                            <button type="button" class="ai-tool-tab" data-ai-tool-tab="text" data-ai-feature="seoTextGeneration" onclick="switchAiToolTab('text')" role="tab" aria-selected="false" hidden><?php echo t('ai.text_generator'); ?></button>
+                            <?php if ($isAdminUser): ?>
+                            <button type="button" class="ai-tool-tab" data-ai-tool-tab="audit" data-ai-feature="seoTextGeneration" onclick="switchAiToolTab('audit')" role="tab" aria-selected="false" hidden><?php echo t('ai.audit_tab'); ?></button>
+                            <?php endif; ?>
                         </div>
 
-                        <div class="ai-tool-panel" id="aiTextToolPanel" data-ai-tool-panel="text" role="tabpanel" hidden>
+                        <div class="ai-tool-panel" id="aiTextToolPanel" data-ai-tool-panel="text" data-ai-feature="seoTextGeneration" role="tabpanel" hidden>
                             <form id="aiTextForm" class="ai-form">
                                 <textarea id="aiTextPrompt" rows="6" placeholder="<?php echo htmlspecialchars(t('ai.text_placeholder'), ENT_QUOTES, 'UTF-8'); ?>" disabled></textarea>
                                 <div class="form-row-inline">
@@ -738,7 +791,17 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             <textarea id="aiTextResult" class="ai-result" rows="8" readonly></textarea>
                         </div>
 
-                        <div class="ai-tool-panel active" id="aiImageToolPanel" data-ai-tool-panel="image" role="tabpanel">
+                        <?php if ($isAdminUser): ?>
+                        <div class="ai-tool-panel" id="aiAuditToolPanel" data-ai-tool-panel="audit" data-ai-feature="seoTextGeneration" role="tabpanel" hidden>
+                            <p class="form-hint"><?php echo t('ai.audit_hint'); ?></p>
+                            <div class="ai-form">
+                                <button type="button" class="btn btn-primary" id="aiAuditRun"><?php echo t('ai.audit_run'); ?></button>
+                            </div>
+                            <div id="aiAuditResults" class="ai-audit-results" aria-live="polite"></div>
+                        </div>
+                        <?php endif; ?>
+
+                        <div class="ai-tool-panel" id="aiImageToolPanel" data-ai-tool-panel="image" data-ai-feature="imageGeneration" role="tabpanel" hidden>
                             <form id="aiImageForm" class="ai-form">
                                 <textarea id="aiImagePrompt" rows="4" placeholder="<?php echo htmlspecialchars(t('ai.image_placeholder'), ENT_QUOTES, 'UTF-8'); ?>" disabled></textarea>
 	                                <div class="ai-image-command-row">
@@ -842,6 +905,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </div>
                     </section>
                 </div>
+                <?php endif; ?>
             </section>
             <?php endif; ?>
 
@@ -987,6 +1051,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 <button class="settings-tab-btn" data-settings-tab="access"><?php echo t('settings.access'); ?></button>
                 <button class="settings-tab-btn" data-settings-tab="email"><?php echo t('settings.email'); ?></button>
                 <button class="settings-tab-btn" data-settings-tab="privacy"><?php echo t('settings.privacy'); ?></button>
+                <button class="settings-tab-btn" data-settings-tab="forms"><?php echo t('forms.title'); ?></button>
                 <?php if ($aiFeaturesEnabled): ?>
                 <button class="settings-tab-btn" data-settings-tab="ai"><?php echo t('ai.settings'); ?></button>
                 <?php endif; ?>
@@ -1207,23 +1272,26 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         <input type="hidden" id="settingsAdminTheme" value="light">
                     </div>
                     <div class="theme-color-grid">
-                    <fieldset class="theme-color-section" data-mode="light">
+                    <div class="theme-color-preview" data-mode="light">
+                    <fieldset class="theme-color-section">
                         <legend><?php echo t('settings.theme_section_light'); ?></legend>
                         <div class="form-group">
                             <label for="settingsPrimaryColor"><?php echo t('settings.primary_color'); ?></label>
                             <div class="color-input-group">
-                                <input type="color" id="settingsPrimaryColorPicker" value="#2563eb" class="color-picker">
-                                <input type="text" id="settingsPrimaryColor" value="#2563eb" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
+                                <input type="color" id="settingsPrimaryColorPicker" value="#3858e9" class="color-picker">
+                                <input type="text" id="settingsPrimaryColor" value="#3858e9" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
                             </div>
                             <small class="form-hint"><?php echo t('settings.primary_color_hint'); ?></small>
+                            <small class="theme-contrast-feedback" data-contrast-for="primaryColor"></small>
                         </div>
                         <div class="form-group">
                             <label for="settingsAccentColor"><?php echo t('settings.accent_color'); ?></label>
                             <div class="color-input-group">
-                                <input type="color" id="settingsAccentColorPicker" value="#60a5fa" class="color-picker">
-                                <input type="text" id="settingsAccentColor" value="#60a5fa" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
+                                <input type="color" id="settingsAccentColorPicker" value="#b45309" class="color-picker">
+                                <input type="text" id="settingsAccentColor" value="#b45309" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
                             </div>
                             <small class="form-hint"><?php echo t('settings.accent_color_hint'); ?></small>
+                            <small class="theme-contrast-feedback" data-contrast-for="accentColor"></small>
                         </div>
                         <div class="form-group">
                             <label for="settingsSidebarBg"><?php echo t('settings.sidebar_bg'); ?></label>
@@ -1234,28 +1302,33 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                                 <button type="button" class="auto-reset-btn" data-auto-reset="sidebarBg" title="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>" aria-label="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>">&#x21BA;</button>
                             </div>
                             <small class="form-hint"><?php echo t('settings.sidebar_bg_hint'); ?></small>
+                            <small class="theme-contrast-feedback" data-contrast-for="sidebarBg"></small>
                         </div>
                     </fieldset>
+                    </div>
 
-                    <fieldset class="theme-color-section" data-mode="dark">
+                    <div class="theme-color-preview" data-mode="dark">
+                    <fieldset class="theme-color-section">
                         <legend><?php echo t('settings.theme_section_dark'); ?></legend>
                         <div class="form-group">
                             <label for="settingsDarkPrimaryColor"><?php echo t('settings.primary_color'); ?></label>
                             <div class="color-input-group" data-auto-field="darkPrimaryColor">
-                                <input type="color" id="settingsDarkPrimaryColorPicker" value="#2563eb" class="color-picker">
-                                <input type="text" id="settingsDarkPrimaryColor" value="#2563eb" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
+                                <input type="color" id="settingsDarkPrimaryColorPicker" value="#3858e9" class="color-picker">
+                                <input type="text" id="settingsDarkPrimaryColor" value="#3858e9" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
                                 <span class="auto-badge" data-auto-for="darkPrimaryColor" hidden><?php echo t('settings.auto_badge'); ?></span>
                                 <button type="button" class="auto-reset-btn" data-auto-reset="darkPrimaryColor" title="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>" aria-label="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>">&#x21BA;</button>
                             </div>
+                            <small class="theme-contrast-feedback" data-contrast-for="darkPrimaryColor"></small>
                         </div>
                         <div class="form-group">
                             <label for="settingsDarkAccentColor"><?php echo t('settings.accent_color'); ?></label>
                             <div class="color-input-group" data-auto-field="darkAccentColor">
-                                <input type="color" id="settingsDarkAccentColorPicker" value="#60a5fa" class="color-picker">
-                                <input type="text" id="settingsDarkAccentColor" value="#60a5fa" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
+                                <input type="color" id="settingsDarkAccentColorPicker" value="#b45309" class="color-picker">
+                                <input type="text" id="settingsDarkAccentColor" value="#b45309" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
                                 <span class="auto-badge" data-auto-for="darkAccentColor" hidden><?php echo t('settings.auto_badge'); ?></span>
                                 <button type="button" class="auto-reset-btn" data-auto-reset="darkAccentColor" title="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>" aria-label="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>">&#x21BA;</button>
                             </div>
+                            <small class="theme-contrast-feedback" data-contrast-for="darkAccentColor"></small>
                         </div>
                         <div class="form-group">
                             <label for="settingsDarkSidebarBg"><?php echo t('settings.sidebar_bg'); ?></label>
@@ -1265,30 +1338,34 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                                 <span class="auto-badge" data-auto-for="darkSidebarBg" hidden><?php echo t('settings.auto_badge'); ?></span>
                                 <button type="button" class="auto-reset-btn" data-auto-reset="darkSidebarBg" title="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>" aria-label="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>">&#x21BA;</button>
                             </div>
+                            <small class="theme-contrast-feedback" data-contrast-for="darkSidebarBg"></small>
                         </div>
                         <small class="form-hint"><?php echo t('settings.dark_section_hint'); ?></small>
                     </fieldset>
+                    </div>
                     </div>
 
                     <div class="form-group">
                         <label><?php echo t('settings.button_style'); ?></label>
                         <div class="btn-style-row">
                             <div class="btn-style-controls">
-                                <label class="toggle-label">
-                                    <span><?php echo t('settings.button_glow'); ?></span>
-                                    <div class="toggle-switch">
-                                        <input type="checkbox" id="settingsButtonGlow" checked>
-                                        <span class="toggle-slider"></span>
-                                    </div>
-                                </label>
-                                <div class="range-field">
+                                <div class="range-field btn-style-radius-field">
                                     <label for="settingsButtonRadius"><?php echo t('settings.button_radius'); ?></label>
                                     <div class="range-input-group">
                                         <input type="range" id="settingsButtonRadius" min="0" max="24" value="6" class="range-input">
                                         <span class="range-value" id="settingsButtonRadiusValue">6px</span>
                                     </div>
                                 </div>
-                                <small class="form-hint"><?php echo t('settings.button_glow_hint'); ?></small>
+                                <div class="btn-style-glow-field">
+                                    <label class="toggle-label">
+                                        <span><?php echo t('settings.button_glow'); ?></span>
+                                        <div class="toggle-switch">
+                                            <input type="checkbox" id="settingsButtonGlow" checked>
+                                            <span class="toggle-slider"></span>
+                                        </div>
+                                    </label>
+                                    <small class="form-hint"><?php echo t('settings.button_glow_hint'); ?></small>
+                                </div>
                             </div>
                             <div class="btn-style-preview" id="btnStylePreview">
                                 <button type="button" class="btn-preview-primary" id="previewBtnPrimary"><?php echo t('settings.preview_primary'); ?></button>
@@ -1379,12 +1456,18 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             </div>
                             <div class="form-group visual-box-color-group" id="loginBoxColorGroup">
                                 <label for="loginBoxColor"><?php echo t('settings.visual_box_color'); ?></label>
-                                <input type="color" id="loginBoxColor" value="#ffffff">
+                                <div class="color-input-group">
+                                    <input type="color" id="loginBoxColorPicker" value="#ffffff" class="color-picker">
+                                    <input type="text" id="loginBoxColor" value="#ffffff" class="color-hex-input" maxlength="7" pattern="#[0-9a-fA-F]{6}">
+                                </div>
                                 <small class="form-hint"><?php echo t('settings.visual_box_color_hint'); ?></small>
                             </div>
                             <div class="form-group visual-box-color-group">
                                 <label for="loginBoxTextColor"><?php echo t('settings.visual_box_text_color'); ?></label>
-                                <input type="color" id="loginBoxTextColor" value="#111827">
+                                <div class="color-input-group">
+                                    <input type="color" id="loginBoxTextColorPicker" value="#111827" class="color-picker">
+                                    <input type="text" id="loginBoxTextColor" value="#111827" class="color-hex-input" maxlength="7" pattern="#[0-9a-fA-F]{6}">
+                                </div>
                                 <small class="form-hint"><?php echo t('settings.visual_box_text_color_hint'); ?></small>
                             </div>
                             <div class="form-group access-wide">
@@ -1566,8 +1649,14 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
                     <div class="form-group">
                         <label for="settingsRecipientEmail"><?php echo t('settings.recipient_email'); ?></label>
-                        <input type="email" id="settingsRecipientEmail" placeholder="info@example.com">
+                        <input type="text" id="settingsRecipientEmail" placeholder="info@example.com, team@example.com">
                         <small class="form-hint"><?php echo t('settings.recipient_email_hint'); ?></small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="settingsBccEmail"><?php echo t('settings.bcc_email'); ?></label>
+                        <input type="text" id="settingsBccEmail" placeholder="archive@example.com, backup@example.com">
+                        <small class="form-hint"><?php echo t('settings.bcc_email_hint'); ?></small>
                     </div>
 
                     <div class="form-group">
@@ -1628,6 +1717,91 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 </form>
             </div>
 
+            <!-- Forms Panel -->
+            <div class="settings-panel" id="settingsPanel-forms">
+                <h2><?php echo t('forms.title'); ?></h2>
+                <p class="settings-description"><?php echo t('forms.desc'); ?></p>
+
+                <div class="forms-admin-layout">
+                    <aside class="forms-admin-list">
+                        <div class="forms-admin-list__head">
+                            <div class="form-group forms-admin-select-group">
+                                <label for="formsAdminSelect"><?php echo t('forms.select_form'); ?></label>
+                                <select id="formsAdminSelect" class="topbar-select"></select>
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-sm" id="newFormBtn"><?php echo t('forms.new'); ?></button>
+                        </div>
+                        <p id="formsAdminMeta" class="forms-admin-meta"></p>
+                    </aside>
+
+                    <form id="formsAdminForm" class="settings-form forms-admin-editor">
+                        <fieldset class="settings-section">
+                            <legend><?php echo t('forms.base_data'); ?></legend>
+                            <div class="form-row-inline">
+                                <div class="form-group">
+                                    <label for="formEditorId"><?php echo t('forms.form_id'); ?></label>
+                                    <input type="text" id="formEditorId" autocomplete="off">
+                                    <small class="form-hint"><?php echo t('forms.form_id_hint'); ?></small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="formEditorLabel"><?php echo t('forms.label'); ?></label>
+                                    <input type="text" id="formEditorLabel">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="formEditorDescription"><?php echo t('forms.description'); ?></label>
+                                <textarea id="formEditorDescription" rows="3"></textarea>
+                            </div>
+                            <div class="forms-admin-switches">
+                                <label class="checkbox-label"><input type="checkbox" id="formEditorEnabled"> <?php echo t('forms.enabled'); ?></label>
+                                <label class="checkbox-label"><input type="checkbox" id="formEditorStore"> <?php echo t('forms.store'); ?></label>
+                                <label class="checkbox-label"><input type="checkbox" id="formEditorEmail"> <?php echo t('forms.email'); ?></label>
+                            </div>
+                            <div class="form-row-inline">
+                                <div class="form-group">
+                                    <label for="formEditorSubject"><?php echo t('forms.subject'); ?></label>
+                                    <input type="text" id="formEditorSubject" placeholder="{form}: {name}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="formEditorSuccess"><?php echo t('forms.success_text'); ?></label>
+                                    <input type="text" id="formEditorSuccess">
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <fieldset class="settings-section">
+                            <legend><?php echo t('forms.fields'); ?></legend>
+                            <div class="forms-fields-toolbar">
+                                <button type="button" class="btn btn-secondary btn-sm" id="addFormFieldBtn"><?php echo t('forms.add_field'); ?></button>
+                            </div>
+                            <div class="forms-fields-table-wrap">
+                                <table class="users-table forms-fields-table">
+                                    <thead>
+                                        <tr>
+                                            <th><?php echo t('forms.type'); ?></th>
+                                            <th><?php echo t('forms.key'); ?></th>
+                                            <th><?php echo t('forms.label'); ?></th>
+                                            <th><?php echo t('forms.placeholder'); ?></th>
+                                            <th><?php echo t('forms.width'); ?></th>
+                                            <th><?php echo t('forms.required'); ?></th>
+                                            <th><?php echo t('forms.options'); ?></th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="formFieldsBody"></tbody>
+                                </table>
+                            </div>
+                            <small class="form-hint"><?php echo t('forms.options_hint'); ?></small>
+                        </fieldset>
+
+                        <div class="settings-actions-row">
+                            <button type="submit" class="btn btn-primary" id="saveFormBtn"><?php echo t('forms.save'); ?></button>
+                            <div id="formsAdminResult" class="settings-test-result" style="display:none;"></div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <!-- AI Settings Panel -->
             <?php if ($aiFeaturesEnabled): ?>
             <div class="settings-panel" id="settingsPanel-ai">
@@ -1653,6 +1827,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                                 <select id="aiProvider" class="topbar-select">
                                     <option value="openai-compatible"><?php echo t('ai.openai_compatible'); ?></option>
                                     <option value="openrouter"><?php echo t('ai.openrouter'); ?></option>
+                                    <option value="anthropic"><?php echo t('ai.anthropic'); ?></option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -1682,17 +1857,32 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </div>
                     </fieldset>
 
+                    <fieldset class="settings-section" id="aiUsagePanel" hidden>
+                        <legend><?php echo t('ai.usage_panel'); ?></legend>
+                        <div class="ai-usage-stats" id="aiUsagePanelBody"></div>
+                    </fieldset>
+
                     <fieldset class="settings-section">
                         <legend><?php echo t('ai.models'); ?></legend>
                         <p class="form-hint ai-section-hint"><?php echo t('ai.models_hint'); ?></p>
                         <div class="form-row-inline">
                             <div class="form-group">
                                 <label for="aiChatModel"><?php echo t('ai.chat_model'); ?></label>
-                                <input type="text" id="aiChatModel" placeholder="gpt-4.1-mini">
+                                <div class="nb-combobox" data-model-combobox>
+                                    <input type="text" id="aiChatModel" placeholder="gpt-4.1-mini" role="combobox" aria-autocomplete="list" aria-expanded="false" autocomplete="off" spellcheck="false">
+                                    <button type="button" class="input-clear-btn nb-combobox__clear" data-clear-target="aiChatModel" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                    <button type="button" class="nb-combobox__toggle" aria-label="<?php echo t('ai.model_list_open'); ?>" tabindex="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button>
+                                    <div class="nb-combobox__list" role="listbox" hidden></div>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label for="aiTextModel"><?php echo t('ai.text_model'); ?></label>
-                                <input type="text" id="aiTextModel" placeholder="gpt-4.1-mini">
+                                <div class="nb-combobox" data-model-combobox>
+                                    <input type="text" id="aiTextModel" placeholder="gpt-4.1-mini" role="combobox" aria-autocomplete="list" aria-expanded="false" autocomplete="off" spellcheck="false">
+                                    <button type="button" class="input-clear-btn nb-combobox__clear" data-clear-target="aiTextModel" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                    <button type="button" class="nb-combobox__toggle" aria-label="<?php echo t('ai.model_list_open'); ?>" tabindex="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button>
+                                    <div class="nb-combobox__list" role="listbox" hidden></div>
+                                </div>
                             </div>
                             <input type="hidden" id="aiImageModel" value="gpt-image-2">
                         </div>
@@ -1700,10 +1890,13 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
                     <fieldset class="settings-section">
                         <legend><?php echo t('ai.features'); ?></legend>
-                        <div class="form-group access-toggle-row">
+                        <div class="form-group access-toggle-row ai-feature-toggle-grid">
                             <label class="toggle-label"><span><?php echo t('ai.feature_assistant'); ?></span><div class="toggle-switch"><input type="checkbox" id="aiFeatureAssistant"><span class="toggle-slider"></span></div></label>
                             <label class="toggle-label"><span><?php echo t('ai.feature_seo'); ?></span><div class="toggle-switch"><input type="checkbox" id="aiFeatureSeo"><span class="toggle-slider"></span></div></label>
                             <label class="toggle-label"><span><?php echo t('ai.feature_images'); ?></span><div class="toggle-switch"><input type="checkbox" id="aiFeatureImages"><span class="toggle-slider"></span></div></label>
+                            <label class="toggle-label"><span><?php echo t('ai.assistant_surface_visual_editor'); ?></span><div class="toggle-switch"><input type="checkbox" id="aiAssistantSurfaceVisualEditor"><span class="toggle-slider"></span></div></label>
+                            <label class="toggle-label"><span><?php echo t('ai.assistant_surface_dashboard'); ?></span><div class="toggle-switch"><input type="checkbox" id="aiAssistantSurfaceDashboard"><span class="toggle-slider"></span></div></label>
+                            <label class="toggle-label"><span><?php echo t('ai.assistant_force_english'); ?></span><div class="toggle-switch"><input type="checkbox" id="aiAssistantForceEnglish"><span class="toggle-slider"></span></div></label>
                         </div>
                     </fieldset>
 
@@ -1716,9 +1909,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             <div class="form-group"><label for="aiDailyImageRequests"><?php echo t('ai.daily_image_requests'); ?></label><input type="number" id="aiDailyImageRequests" min="0" value="10"></div>
                         </div>
                         <div class="form-row-inline">
-                            <div class="form-group"><label for="aiMaxInputTokens"><?php echo t('ai.max_input_tokens'); ?></label><input type="number" id="aiMaxInputTokens" min="100" value="6000"></div>
-                            <div class="form-group"><label for="aiMaxOutputTokens"><?php echo t('ai.max_output_tokens'); ?></label><input type="number" id="aiMaxOutputTokens" min="16" value="1200"></div>
-                            <div class="form-group"><label for="aiRequestTimeout"><?php echo t('ai.request_timeout'); ?></label><input type="number" id="aiRequestTimeout" min="5" max="600" value="120"></div>
+                            <div class="form-group"><label for="aiMaxInputTokens"><?php echo t('ai.max_input_tokens'); ?></label><input type="number" id="aiMaxInputTokens" min="100" value="24000"><small class="form-hint"><?php echo t('ai.max_input_tokens_hint'); ?></small></div>
+                            <div class="form-group"><label for="aiMaxOutputTokens"><?php echo t('ai.max_output_tokens'); ?></label><input type="number" id="aiMaxOutputTokens" min="16" value="4096"><small class="form-hint"><?php echo t('ai.max_output_tokens_hint'); ?></small></div>
+                            <div class="form-group"><label for="aiRequestTimeout"><?php echo t('ai.request_timeout'); ?></label><input type="number" id="aiRequestTimeout" min="5" max="600" value="300"><small class="form-hint"><?php echo t('ai.request_timeout_hint'); ?></small></div>
                         </div>
                     </fieldset>
 
@@ -1749,19 +1942,21 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     <button type="button" class="btn btn-primary" id="addUserBtn">+ <?php echo t('settings.add_user'); ?></button>
                 </div>
 
-                <table class="users-table" id="usersTable">
-                    <thead>
-                        <tr>
-                            <th><?php echo t('settings.user_username'); ?></th>
-                            <th><?php echo t('settings.user_email'); ?></th>
-                            <th><?php echo t('settings.user_role'); ?></th>
-                            <th><?php echo t('settings.user_last_login'); ?></th>
-                            <th><?php echo t('settings.user_actions'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody id="usersTableBody">
-                    </tbody>
-                </table>
+                <div class="page-list-table-wrap users-table-wrap">
+                    <table class="page-list-table users-table users-table--admin" id="usersTable">
+                        <thead>
+                            <tr>
+                                <th><?php echo t('settings.user_username'); ?></th>
+                                <th><?php echo t('settings.user_email'); ?></th>
+                                <th><?php echo t('settings.user_role'); ?></th>
+                                <th><?php echo t('settings.user_last_login'); ?></th>
+                                <th><?php echo t('settings.user_actions'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- Menus Panel -->
@@ -2328,6 +2523,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     </div>
     <?php endif; ?>
 
+    <script src="../js/nb-select.js?v=<?php echo @filemtime(__DIR__ . '/../js/nb-select.js') ?: time(); ?>"></script>
     <script src="../js/image-manager.js?v=<?php echo @filemtime(__DIR__ . '/../js/image-manager.js') ?: time(); ?>"></script>
     <script>
     // Block Type Registry
@@ -2339,10 +2535,27 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     // Admin translations for JS
     const NB_LANG = <?php echo json_encode(array_merge(tEditorAll(), tAll()), JSON_UNESCAPED_UNICODE); ?>;
+    window.NB_LANG = NB_LANG;
+    window.NB_AI_FEATURES_ENABLED = <?php echo json_encode($aiFeaturesEnabled); ?>;
+    window.NB_AI_COPILOT_AVAILABLE = <?php echo json_encode($_aiDashboardCopilotAvailable); ?>;
+    window.NB_AI_COPILOT_MODE = 'dashboard';
+    window.NB_AI_ASSISTANT_LANGUAGE = <?php echo json_encode(function_exists('_nbAdminLang') ? _nbAdminLang() : (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en')); ?>;
+    window.NB_ADMIN_API_URL = 'api.php';
+    window.NB_AI_COPILOT_GET_CONTENT_PAGE = function() {
+        if (typeof currentPage === 'string' && currentPage) return currentPage;
+        var select = document.getElementById('pageSelect');
+        return select && select.value ? select.value : '';
+    };
     // Menu registry for Page Settings nav checkboxes
     window.NB_MENUS = <?php echo json_encode(getMenuRegistry()['menus'] ?? [], JSON_UNESCAPED_UNICODE); ?>;
     const DASHBOARD_MODULES = <?php echo json_encode($dashboardModules, JSON_UNESCAPED_UNICODE); ?>;
     const AI_FEATURES_ENABLED = DASHBOARD_MODULES.ai !== false;
+    const AI_NOTICE_DISMISSED_KEY = 'nibbly.aiUnavailableNotice.dismissed';
+    const AI_FEATURE_DEFAULTS = {
+        backendAssistant: true,
+        seoTextGeneration: true,
+        imageGeneration: true
+    };
     function t(key, params) {
         let s = NB_LANG[key] || key;
         if (params) { for (const [k, v] of Object.entries(params)) { s = s.replace('{' + k + '}', v); } }
@@ -3362,6 +3575,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             btn.disabled = !usable;
             btn.title = usable ? t('editor.ai_fill_field') : t('ai.not_configured_text');
         });
+        document.querySelectorAll('.ai-field-hint').forEach(function(hint) {
+            hint.hidden = !dashboardAiImageUsable;
+        });
         var status = document.getElementById('seoAiStatus');
         if (status) status.textContent = usable ? '' : t('editor.ai_unavailable');
     }
@@ -3544,22 +3760,226 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         };
     }
 
-    function getSectionPreview(section) {
+    function getSectionPreview(section, maxLength = 72) {
+        const formatPreview = (value) => {
+            const clean = value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+            if (!maxLength || clean.length <= maxLength) return clean;
+            return clean.slice(0, maxLength) + '…';
+        };
         if (!section || typeof section !== 'object') return '';
         const preferred = ['title', 'heading', 'headline', 'text', 'content', 'caption', 'src', 'image', 'url'];
         for (const key of preferred) {
             const value = section[key];
             if (typeof value === 'string' && value.trim()) {
-                const clean = value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-                return clean.length > 72 ? clean.slice(0, 72) + '…' : clean;
+                return formatPreview(value);
             }
         }
         for (const value of Object.values(section)) {
             if (typeof value === 'string' && value.trim() && value.length <= 120) {
-                return value.length > 72 ? value.slice(0, 72) + '…' : value;
+                return formatPreview(value);
             }
         }
         return '';
+    }
+
+    let sectionObserver = null;
+    let activeSectionIndex = 0;
+    let sectionScrollLockIndex = null;
+    let sectionScrollLockTimer = null;
+    let sectionDragIndex = null;
+    let sectionCompactMode = localStorage.getItem('nibblySectionCompactMode') === '1';
+
+    function getSectionTypeLabel(section) {
+        const def = window.BlockTypeRegistry?.[section?.type];
+        return def?.label || section?.type || 'Section';
+    }
+
+    function getSectionHeading(section, index) {
+        const typeLabel = getSectionTypeLabel(section);
+        const preview = getSectionPreview(section);
+        return preview ? `${index + 1}. ${typeLabel} - ${preview}` : `${index + 1}. ${typeLabel}`;
+    }
+
+    function getSectionSearchText(section, index) {
+        return [
+            index + 1,
+            section?.type || '',
+            getSectionTypeLabel(section),
+            getSectionPreview(section, 0),
+            section?.id || ''
+        ].join(' ').toLowerCase();
+    }
+
+    function getSectionIssues(section, index, sections) {
+        const issues = [];
+        const def = window.BlockTypeRegistry?.[section?.type];
+        if (def?.fields) {
+            def.fields.forEach(field => {
+                const value = section?.[field.key];
+                if ((field.type === 'image' || field.type === 'audio') && (!value || !String(value).trim())) {
+                    issues.push(t('editor.missing_media'));
+                }
+            });
+        }
+        if (section?.type === 'image' && section.src && !String(section.alt || '').trim()) {
+            issues.push(t('editor.missing_alt'));
+        }
+        const level = String(section?.level || section?.titleTag || '').toLowerCase();
+        if (level === 'h1') {
+            const h1Before = sections.slice(0, index).some(item => String(item?.level || item?.titleTag || '').toLowerCase() === 'h1');
+            if (h1Before) issues.push(t('editor.duplicate_h1'));
+        }
+        return issues;
+    }
+
+    function renderSectionInsertControls(index) {
+        const wrap = document.createElement('div');
+        wrap.className = 'ce-section-insert';
+        wrap.dataset.insertIndex = index;
+        let html = `<button type="button" class="ce-section-insert__trigger" onclick="toggleSectionInsertMenu(this)">${t('editor.insert_here')}</button>`;
+        html += '<div class="ce-section-insert__menu" hidden>';
+        if (window.BlockTypeRegistry) {
+            for (const [type, def] of Object.entries(window.BlockTypeRegistry)) {
+                html += `<button type="button" onclick="addSection('${type}', ${index})">+ ${escapeHtml(def.label || type)}</button>`;
+            }
+        }
+        html += '</div>';
+        wrap.innerHTML = html;
+        return wrap;
+    }
+
+    function toggleSectionInsertMenu(btn) {
+        const menu = btn.parentElement?.querySelector('.ce-section-insert__menu');
+        if (!menu) return;
+        const nextHidden = !menu.hidden;
+        document.querySelectorAll('.ce-section-insert__menu').forEach(el => { el.hidden = true; });
+        menu.hidden = nextHidden;
+    }
+
+    function applySectionFilter() {
+        const query = (document.getElementById('sectionSearchInput')?.value || '').trim().toLowerCase();
+        const type = document.getElementById('sectionTypeFilter')?.value || '';
+        let visible = 0;
+        document.querySelectorAll('.section-item').forEach(item => {
+            const matchesQuery = !query || (item.dataset.search || '').includes(query);
+            const matchesType = !type || item.dataset.type === type;
+            const show = matchesQuery && matchesType;
+            item.hidden = !show;
+            const navItem = document.querySelector(`.ce-section-nav__item[data-section-index="${item.dataset.index}"]`);
+            if (navItem) {
+                navItem.hidden = false;
+                navItem.classList.toggle('is-filtered-out', !show);
+                navItem.setAttribute('aria-disabled', show ? 'false' : 'true');
+            }
+            if (show) visible++;
+        });
+        document.querySelectorAll('.ce-section-insert').forEach(el => { el.hidden = !!query || !!type; });
+        const empty = document.getElementById('sectionFilterEmpty');
+        if (empty) empty.hidden = visible !== 0;
+    }
+
+    function setActiveSection(index) {
+        activeSectionIndex = Math.max(0, Math.min(index, (currentContent.sections || []).length - 1));
+        document.querySelectorAll('.section-item').forEach(item => {
+            const isActive = Number(item.dataset.index) === activeSectionIndex;
+            item.classList.toggle('is-active', isActive);
+            if (sectionCompactMode && isActive) item.classList.add('is-open');
+        });
+        document.querySelectorAll('.ce-section-nav__item').forEach(item => {
+            item.classList.toggle('is-active', Number(item.dataset.sectionIndex) === activeSectionIndex);
+        });
+    }
+
+    function initSectionObserver() {
+        if (sectionObserver) sectionObserver.disconnect();
+        const items = document.querySelectorAll('.section-item');
+        if (!items.length) return;
+        sectionObserver = new IntersectionObserver(entries => {
+            if (sectionScrollLockIndex !== null) {
+                setActiveSection(sectionScrollLockIndex);
+                return;
+            }
+            const visible = entries
+                .filter(entry => entry.isIntersecting)
+                .sort((a, b) => Math.abs(a.boundingClientRect.top - 110) - Math.abs(b.boundingClientRect.top - 110));
+            if (visible[0]) setActiveSection(Number(visible[0].target.dataset.index));
+        }, { rootMargin: '-110px 0px -55% 0px', threshold: [0, 0.1, 0.35] });
+        items.forEach(item => sectionObserver.observe(item));
+        setActiveSection(activeSectionIndex);
+    }
+
+    function scrollToSection(index) {
+        const target = document.getElementById(`section-${index}`);
+        if (!target) return;
+        sectionScrollLockIndex = index;
+        if (sectionScrollLockTimer) clearTimeout(sectionScrollLockTimer);
+        sectionScrollLockTimer = setTimeout(() => {
+            sectionScrollLockIndex = null;
+            sectionScrollLockTimer = null;
+        }, 800);
+        setActiveSection(index);
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function toggleCompactMode(force) {
+        sectionCompactMode = typeof force === 'boolean' ? force : !sectionCompactMode;
+        localStorage.setItem('nibblySectionCompactMode', sectionCompactMode ? '1' : '0');
+        document.querySelectorAll('.ce-content-layout').forEach(layout => {
+            layout.classList.toggle('ce-content-layout--compact', sectionCompactMode);
+        });
+        const btn = document.getElementById('sectionCompactToggle');
+        if (btn) {
+            btn.classList.toggle('active', sectionCompactMode);
+            btn.setAttribute('aria-pressed', sectionCompactMode ? 'true' : 'false');
+        }
+        if (sectionCompactMode) {
+            document.querySelectorAll('.section-item').forEach(item => {
+                item.classList.toggle('is-open', Number(item.dataset.index) === activeSectionIndex);
+                const sectionBtn = item.querySelector('.section-toggle-btn');
+                if (sectionBtn) {
+                    const open = item.classList.contains('is-open');
+                    sectionBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+                    sectionBtn.title = open ? t('editor.collapse_section') : t('editor.expand_section');
+                }
+            });
+        } else {
+            document.querySelectorAll('.section-item').forEach(item => item.classList.add('is-open'));
+        }
+    }
+
+    function toggleSectionOpen(index) {
+        const item = document.getElementById(`section-${index}`);
+        if (!item) return;
+        item.classList.toggle('is-open');
+        const btn = item.querySelector('.section-toggle-btn');
+        if (btn) {
+            const open = item.classList.contains('is-open');
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            btn.title = open ? t('editor.collapse_section') : t('editor.expand_section');
+        }
+    }
+
+    function reorderSection(fromIndex, toIndex) {
+        if (!currentContent?.sections || fromIndex === toIndex) return;
+        if (toIndex < 0 || toIndex >= currentContent.sections.length) return;
+        pushUndoSnapshot();
+        const openTypes = sectionCompactMode
+            ? Array.from(document.querySelectorAll('.section-item.is-open')).map(item => Number(item.dataset.index))
+            : [];
+        const [moved] = currentContent.sections.splice(fromIndex, 1);
+        currentContent.sections.splice(toIndex, 0, moved);
+        renderEditor();
+        if (sectionCompactMode) {
+            openTypes.forEach(oldIndex => {
+                let next = oldIndex;
+                if (oldIndex === fromIndex) next = toIndex;
+                else if (fromIndex < toIndex && oldIndex > fromIndex && oldIndex <= toIndex) next = oldIndex - 1;
+                else if (fromIndex > toIndex && oldIndex >= toIndex && oldIndex < fromIndex) next = oldIndex + 1;
+                document.getElementById(`section-${next}`)?.classList.add('is-open');
+            });
+        }
+        setActiveSection(toIndex);
+        markDirty();
     }
 
     function renderContentPanel(panel) {
@@ -3568,19 +3988,46 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
         const layout = document.createElement('div');
         layout.className = 'ce-content-layout';
+        layout.classList.toggle('ce-content-layout--compact', sectionCompactMode);
 
         const nav = document.createElement('aside');
         nav.className = 'ce-section-nav';
-        nav.innerHTML = `<div class="ce-section-nav__title">${t('editor.sections')}</div>`;
+        nav.innerHTML = `<div class="ce-section-nav__title">${t('editor.sections')}</div>
+            <div class="ce-section-nav__tools">
+                <input type="search" id="sectionSearchInput" class="ce-section-nav__search" placeholder="${t('editor.search_sections')}">
+                <select id="sectionTypeFilter" class="ce-section-nav__select">
+                    <option value="">${t('editor.filter_all_types')}</option>
+                </select>
+            </div>`;
+        const typeFilter = nav.querySelector('#sectionTypeFilter');
+        const seenTypes = new Set();
+        sections.forEach(section => {
+            if (!section?.type || seenTypes.has(section.type)) return;
+            seenTypes.add(section.type);
+            const option = document.createElement('option');
+            option.value = section.type;
+            option.textContent = getSectionTypeLabel(section);
+            typeFilter.appendChild(option);
+        });
         const navList = document.createElement('div');
         navList.className = 'ce-section-nav__list';
         nav.appendChild(navList);
+        const navEmpty = document.createElement('p');
+        navEmpty.id = 'sectionFilterEmpty';
+        navEmpty.className = 'ce-section-nav__empty';
+        navEmpty.hidden = true;
+        navEmpty.textContent = t('editor.no_section_matches');
+        nav.appendChild(navEmpty);
 
         const editor = document.createElement('div');
         editor.className = 'ce-section-editor';
         const header = document.createElement('div');
         header.className = 'ce-section-editor__header';
-        header.innerHTML = `<h3>${t('editor.sections')}</h3><span>${t('editor.items', {count: sections.length})}</span>`;
+        header.innerHTML = `<h3>${t('editor.sections')}</h3>
+            <div class="ce-section-editor__tools">
+                <span>${t('editor.items', {count: sections.length})}</span>
+                <button type="button" class="btn btn-secondary btn-sm" id="sectionCompactToggle" aria-pressed="${sectionCompactMode ? 'true' : 'false'}" onclick="toggleCompactMode()">${t('editor.compact_mode')}</button>
+            </div>`;
         editor.appendChild(header);
 
         const legacyContainer = document.createElement('div');
@@ -3589,18 +4036,43 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         editor.appendChild(legacyContainer);
 
         if (sections.length > 0) {
+            legacyContainer.appendChild(renderSectionInsertControls(0));
             sections.forEach((section, index) => {
+                const issues = getSectionIssues(section, index, sections);
                 addSectionElement(section, index, legacyContainer);
-                const def = window.BlockTypeRegistry?.[section.type];
-                const typeLabel = def?.label || section.type || 'Section';
-                const preview = getSectionPreview(section);
+                legacyContainer.appendChild(renderSectionInsertControls(index + 1));
+                const typeLabel = getSectionTypeLabel(section);
+                const preview = getSectionPreview(section, 240);
                 const link = document.createElement('a');
                 link.href = `#section-${index}`;
                 link.className = 'ce-section-nav__item';
-                link.innerHTML = `<span>${index + 1}. ${escapeHtml(typeLabel)}</span>${preview ? `<small>${escapeHtml(preview)}</small>` : ''}`;
+                link.setAttribute('draggable', 'true');
+                link.dataset.sectionIndex = index;
+                link.dataset.type = section.type || '';
+                link.innerHTML = `<span>${index + 1}. ${escapeHtml(typeLabel)}</span>${preview ? `<small title="${escapeHtml(preview)}">${escapeHtml(preview)}</small>` : ''}${issues.length ? `<em title="${escapeHtml(issues.join('\n'))}">${issues.length}</em>` : ''}`;
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
-                    document.getElementById(`section-${index}`)?.scrollIntoView({behavior: 'smooth', block: 'start'});
+                    if (link.classList.contains('is-filtered-out')) return;
+                    scrollToSection(index);
+                });
+                link.addEventListener('dragstart', e => {
+                    sectionDragIndex = index;
+                    e.dataTransfer.effectAllowed = 'move';
+                    link.classList.add('is-dragging');
+                });
+                link.addEventListener('dragend', () => {
+                    sectionDragIndex = null;
+                    document.querySelectorAll('.is-dragging, .is-drop-target').forEach(el => el.classList.remove('is-dragging', 'is-drop-target'));
+                });
+                link.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    link.classList.add('is-drop-target');
+                });
+                link.addEventListener('dragleave', () => link.classList.remove('is-drop-target'));
+                link.addEventListener('drop', e => {
+                    e.preventDefault();
+                    link.classList.remove('is-drop-target');
+                    reorderSection(sectionDragIndex, index);
                 });
                 navList.appendChild(link);
             });
@@ -3624,6 +4096,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         layout.appendChild(nav);
         layout.appendChild(editor);
         panel.appendChild(layout);
+        nav.querySelector('#sectionSearchInput')?.addEventListener('input', applySectionFilter);
+        nav.querySelector('#sectionTypeFilter')?.addEventListener('change', applySectionFilter);
+        toggleCompactMode(sectionCompactMode);
+        initSectionObserver();
     }
 
     // Render editor — generic JSON-to-form
@@ -4040,7 +4516,13 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             showToast: function(msg, type) {
                 if (typeof showToast === 'function') showToast(msg, type);
             },
-            showConfirm: null
+            showConfirm: null,
+            canGenerateImages: function() {
+                return dashboardAiImageUsable === true;
+            },
+            openImageGenerator: function(prompt, aspectRatio) {
+                openAiImageGenerator(prompt || '', aspectRatio || 'auto');
+            }
         });
     }
 
@@ -4154,17 +4636,46 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     // Keyboard shortcuts for undo/redo
     document.addEventListener('keydown', function(e) {
+        const tag = document.activeElement?.tagName;
+        const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || document.activeElement?.isContentEditable;
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+            if (!currentContent) return;
+            e.preventDefault();
+            saveContent();
+            return;
+        }
         if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
             if (!currentContent) return;
             // Ignore when typing in input/textarea
-            const tag = document.activeElement?.tagName;
-            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+            if (isTyping) return;
             e.preventDefault();
             if (e.shiftKey) {
                 editorRedo();
             } else {
                 editorUndo();
             }
+            return;
+        }
+        if (!currentContent || isTyping) return;
+        if (e.key === '/') {
+            const search = document.getElementById('sectionSearchInput');
+            if (search) {
+                e.preventDefault();
+                search.focus();
+            }
+            return;
+        }
+        if (e.key === 'j' || e.key === 'k') {
+            e.preventDefault();
+            const direction = e.key === 'j' ? 1 : -1;
+            const next = Math.max(0, Math.min(activeSectionIndex + direction, (currentContent.sections || []).length - 1));
+            scrollToSection(next);
+            return;
+        }
+        if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+            e.preventDefault();
+            const direction = e.key === 'ArrowDown' ? 1 : -1;
+            reorderSection(activeSectionIndex, activeSectionIndex + direction);
         }
     });
 
@@ -4271,14 +4782,21 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     function addSectionElement(section, index, container) {
         if (!container) container = document.getElementById('sectionsLegacyContainer');
         const div = document.createElement('div');
-        div.className = 'section-item';
+        div.className = 'section-item is-open';
         div.id = `section-${index}`;
         div.dataset.index = index;
         div.dataset.type = section.type;
+        div.dataset.search = getSectionSearchText(section, index);
+        div.setAttribute('draggable', 'true');
 
         const def = window.BlockTypeRegistry?.[section.type];
-        const typeLabel = def?.label || section.type;
+        const typeLabel = getSectionTypeLabel(section);
         const preview = getSectionPreview(section);
+        const fullTitle = getSectionHeading(section, index);
+        const issues = getSectionIssues(section, index, currentContent.sections || []);
+        const issueLabel = issues.length === 1
+            ? t('editor.section_issue', {count: issues.length})
+            : t('editor.section_issues', {count: issues.length});
 
         // Build form fields from registry
         let content = '';
@@ -4349,8 +4867,12 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         div.innerHTML = `
             <div class="section-header">
                 <div class="section-heading">
+                    <button type="button" class="section-drag-handle" draggable="true" title="${t('editor.drag_section')}" aria-label="${t('editor.drag_section')}">⋮⋮</button>
+                    <button type="button" class="section-toggle-btn" onclick="toggleSectionOpen(${index})" aria-expanded="true" title="${t('editor.collapse_section')}">▾</button>
+                    <span class="section-index-label">${index + 1}</span>
                     <span class="section-type ${section.type}">${typeLabel}</span>
-                    <span class="section-title-preview">${preview ? escapeHtml(preview) : 'Section ' + (index + 1)}</span>
+                    <span class="section-title-preview" title="${escapeHtml(fullTitle)}">${preview ? escapeHtml(preview) : 'Section ' + (index + 1)}</span>
+                    ${issues.length ? `<span class="section-issue-badge" title="${escapeHtml(issues.join('\n'))}">${escapeHtml(issueLabel)}</span>` : ''}
                 </div>
                 <div class="section-actions">
                     <button class="btn btn-sm btn-secondary" onclick="moveSection(${index}, -1)">&#8593;</button>
@@ -4362,11 +4884,34 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         `;
 
         container.appendChild(div);
+        div.addEventListener('dragstart', e => {
+            if (!e.target.closest('.section-drag-handle') && !e.target.closest('.section-header')) {
+                e.preventDefault();
+                return;
+            }
+            sectionDragIndex = index;
+            e.dataTransfer.effectAllowed = 'move';
+            div.classList.add('is-dragging');
+        });
+        div.addEventListener('dragend', () => {
+            sectionDragIndex = null;
+            document.querySelectorAll('.is-dragging, .is-drop-target').forEach(el => el.classList.remove('is-dragging', 'is-drop-target'));
+        });
+        div.addEventListener('dragover', e => {
+            e.preventDefault();
+            div.classList.add('is-drop-target');
+        });
+        div.addEventListener('dragleave', () => div.classList.remove('is-drop-target'));
+        div.addEventListener('drop', e => {
+            e.preventDefault();
+            div.classList.remove('is-drop-target');
+            reorderSection(sectionDragIndex, index);
+        });
         sectionCounter++;
     }
 
     // Add new section (registry-driven)
-    function addSection(type) {
+    function addSection(type, insertIndex) {
         pushUndoSnapshot();
         if (!currentContent) {
             currentContent = { sections: [] };
@@ -4383,8 +4928,13 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             ...defaults
         };
 
-        currentContent.sections.push(newSection);
+        const targetIndex = Number.isInteger(insertIndex)
+            ? Math.max(0, Math.min(insertIndex, currentContent.sections.length))
+            : currentContent.sections.length;
+        currentContent.sections.splice(targetIndex, 0, newSection);
         renderEditor();
+        setActiveSection(targetIndex);
+        requestAnimationFrame(() => scrollToSection(targetIndex));
         markDirty();
     }
 
@@ -4392,14 +4942,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     function moveSection(index, direction) {
         const newIndex = index + direction;
         if (newIndex < 0 || newIndex >= currentContent.sections.length) return;
-
-        pushUndoSnapshot();
-
-        const temp = currentContent.sections[index];
-        currentContent.sections[index] = currentContent.sections[newIndex];
-        currentContent.sections[newIndex] = temp;
-
-        renderEditor();
+        reorderSection(index, newIndex);
     }
 
     // Delete section
@@ -4459,6 +5002,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
             if (result.success) {
                 showToast(t('toast.saved'), 'success');
+                isDirty = false;
                 currentContent.lastModified = result.data.lastModified;
                 if (result.data.seoHealth) {
                     const lang = document.getElementById('langSelect').value;
@@ -4679,7 +5223,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     let currentSettings = null;
     let currentAiSettings = null;
     let aiChatMessages = [];
+    let dashboardAiImageUsable = false;
     let currentDashboardAnalyticsRange = { period: 'days', count: 30 };
+    let formsAdminLoaded = false;
 
     function dashboardHashFor(tab, subtab) {
         const publicTab = tab === 'home' ? 'dashboard' : (tab === 'content' ? 'pages' : (tab === 'mails' ? 'messages' : tab));
@@ -4925,8 +5471,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         if (tab === 'icons' && typeof loadIconManager === 'function') {
             loadIconManager();
         }
-        if (tab === 'settings' && options.settingsTab) {
-            activateSettingsTab(options.settingsTab, { silent: true });
+        if (tab === 'settings') {
+            activateSettingsTab(options.settingsTab || getActiveSettingsTab(), { silent: true });
         }
 
         if (tab === 'settings' && !settingsLoaded) {
@@ -5480,6 +6026,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     // ============================================================
 
     let mailsData = [];
+    let mailFormsData = [];
+    let mailFormFilter = '';
     let mailSortField = 'received';
     let mailSortDir = 'desc';
 
@@ -5492,7 +6040,14 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             const result = await response.json();
 
             if (result.success) {
-                mailsData = result.data;
+                if (Array.isArray(result.data)) {
+                    mailsData = result.data;
+                    mailFormsData = [];
+                } else {
+                    mailsData = result.data.mails || [];
+                    mailFormsData = result.data.forms || [];
+                }
+                populateMailFormFilter();
                 renderMails();
                 updateMailBadge();
                 updateMailConfigBanner();
@@ -5508,22 +6063,24 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         const tbody = document.getElementById('mailsList');
         if (!tbody) return;
         tbody.innerHTML = '';
+        const visibleMails = getFilteredMails();
 
-        if (!mailsData || mailsData.length === 0) {
+        if (!visibleMails || visibleMails.length === 0) {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td colspan="5" style="color: var(--nb-text-muted); text-align: center; padding: var(--nb-space-6);">${escapeHtml(t('mails.no_messages'))}</td>`;
+            tr.innerHTML = `<td colspan="6" style="color: var(--nb-text-muted); text-align: center; padding: var(--nb-space-6);">${escapeHtml(t('mails.no_messages'))}</td>`;
             tbody.appendChild(tr);
             updateMailBulkActions();
             updateMailSortIndicators();
             return;
         }
 
-        getSortedMails().forEach(mail => {
+        getSortedMails(visibleMails).forEach(mail => {
             const date = new Date(mail.timestamp);
             const dateStr = date.toLocaleDateString();
             const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const isUnread = !mail.read;
             const isStarred = !!mail.starred;
+            const formLabel = mail.formLabel || mail.formId || t('forms.contact_default');
 
             const tr = document.createElement('tr');
             tr.className = 'page-list-row';
@@ -5558,6 +6115,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 setMailFlags(mail.id, { starred: !isStarred });
             };
             tdStar.appendChild(starBtn);
+
+            const tdForm = document.createElement('td');
+            tdForm.className = 'mail-cell-form';
+            tdForm.textContent = formLabel;
 
             const tdFrom = document.createElement('td');
             tdFrom.className = 'page-list-cell-title';
@@ -5602,6 +6163,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
             tr.appendChild(tdRead);
             tr.appendChild(tdStar);
+            tr.appendChild(tdForm);
             tr.appendChild(tdFrom);
             tr.appendChild(tdSubject);
             tr.appendChild(tdDate);
@@ -5611,13 +6173,51 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         updateMailSortIndicators();
     }
 
-    function getSortedMails() {
-        return [...mailsData].sort((a, b) => {
+    function populateMailFormFilter() {
+        const select = document.getElementById('mailFormFilter');
+        if (!select) return;
+        const current = mailFormFilter;
+        const byId = new Map();
+        (mailFormsData || []).forEach(form => {
+            if (form.id) byId.set(form.id, form.label || form.id);
+        });
+        (mailsData || []).forEach(mail => {
+            const id = mail.formId || 'contact';
+            if (!byId.has(id)) byId.set(id, mail.formLabel || id);
+        });
+        select.innerHTML = `<option value="">${escapeHtml(t('mails.all_forms'))}</option>`;
+        Array.from(byId.entries())
+            .sort((a, b) => String(a[1]).localeCompare(String(b[1]), undefined, { sensitivity: 'base' }))
+            .forEach(([id, label]) => {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = label;
+                select.appendChild(option);
+            });
+        select.value = byId.has(current) ? current : '';
+        mailFormFilter = select.value;
+    }
+
+    function setMailFormFilter(value) {
+        mailFormFilter = value || '';
+        renderMails();
+    }
+
+    function getFilteredMails() {
+        const list = Array.isArray(mailsData) ? mailsData : [];
+        if (!mailFormFilter) return list;
+        return list.filter(mail => (mail.formId || 'contact') === mailFormFilter);
+    }
+
+    function getSortedMails(list) {
+        return [...(list || mailsData)].sort((a, b) => {
             let cmp = 0;
             if (mailSortField === 'read') {
                 cmp = Number(!!a.read) - Number(!!b.read);
             } else if (mailSortField === 'starred') {
                 cmp = Number(!!a.starred) - Number(!!b.starred);
+            } else if (mailSortField === 'form') {
+                cmp = String(a.formLabel || a.formId || '').localeCompare(String(b.formLabel || b.formId || ''), undefined, { sensitivity: 'base' });
             } else if (mailSortField === 'from') {
                 cmp = String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' });
             } else if (mailSortField === 'subject') {
@@ -5634,7 +6234,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             mailSortDir = mailSortDir === 'asc' ? 'desc' : 'asc';
         } else {
             mailSortField = field;
-            mailSortDir = field === 'read' || field === 'from' || field === 'subject' ? 'asc' : 'desc';
+            mailSortDir = field === 'read' || field === 'from' || field === 'subject' || field === 'form' ? 'asc' : 'desc';
         }
         renderMails();
     }
@@ -5735,9 +6335,28 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         const date = new Date(mail.timestamp);
         const dateStr = date.toLocaleDateString();
         const timeStr = date.toLocaleTimeString();
+        const formLabel = mail.formLabel || mail.formId || t('forms.contact_default');
+        const fields = Array.isArray(mail.fields) ? mail.fields.filter(field => field && field.value !== '') : [];
+        const fieldsHtml = fields.length ? `
+            <div class="mail-detail-row mail-detail-fields">
+                <label>${t('mails.form_fields')}</label>
+                <div class="mail-fields-list">
+                    ${fields.map(field => `
+                        <div class="mail-field-item">
+                            <span>${escapeHtml(field.label || field.key || '')}</span>
+                            <strong>${escapeHtml(field.value || '').replace(/\n/g, '<br>')}</strong>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        ` : '';
 
         document.getElementById('mailDetailTitle').textContent = mail.occasion;
         document.getElementById('mailDetailContent').innerHTML = `
+            <div class="mail-detail-row">
+                <label>${t('mails.form')}</label>
+                <span>${escapeHtml(formLabel)}</span>
+            </div>
             <div class="mail-detail-row">
                 <label>${t('mails.date')}</label>
                 <span>${dateStr} ${timeStr}</span>
@@ -5766,6 +6385,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 <label>${t('mails.message')}</label>
                 <div class="mail-message-text">${escapeHtml(mail.message).replace(/\n/g, '<br>')}</div>
             </div>
+            ${fieldsHtml}
         `;
 
         document.getElementById('mailDeleteBtn').onclick = () => deleteMail(mailId);
@@ -6486,8 +7106,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     function updateAiUsage(usage) {
         var el = document.getElementById('aiUsageSummary');
-        if (!AI_FEATURES_ENABLED) {
+        if (!AI_FEATURES_ENABLED || !aiServiceIsUsable(currentAiSettings || {})) {
             if (el) el.hidden = true;
+            renderAiUsagePanel(null);
             return;
         }
         if (!el || !usage) return;
@@ -6498,10 +7119,106 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             today: today.requests || 0,
             cost: formatAiCents(month.estimatedCostCents || 0)
         });
+        renderAiUsagePanel(usage);
+    }
+
+    function aiUsageStatTile(value, label, sub) {
+        var tile = document.createElement('div');
+        tile.className = 'ai-usage-stat';
+        var valueEl = document.createElement('span');
+        valueEl.className = 'ai-usage-stat__value';
+        valueEl.textContent = value;
+        var labelEl = document.createElement('span');
+        labelEl.className = 'ai-usage-stat__label';
+        labelEl.textContent = label;
+        tile.appendChild(valueEl);
+        tile.appendChild(labelEl);
+        if (sub) {
+            var subEl = document.createElement('span');
+            subEl.className = 'ai-usage-stat__sub';
+            subEl.textContent = sub;
+            tile.appendChild(subEl);
+        }
+        return tile;
+    }
+
+    function renderAiUsagePanel(usage) {
+        var panel = document.getElementById('aiUsagePanel');
+        var body = document.getElementById('aiUsagePanelBody');
+        if (!panel || !body) return;
+        if (!usage) {
+            panel.hidden = true;
+            return;
+        }
+        panel.hidden = false;
+        var today = usage.today || {};
+        var month = usage.month || {};
+        var budgetCents = parseInt((currentAiSettings && currentAiSettings.limits && currentAiSettings.limits.monthlyBudgetCents) || 0, 10);
+
+        body.innerHTML = '';
+        var grid = document.createElement('div');
+        grid.className = 'ai-usage-grid';
+        grid.appendChild(aiUsageStatTile(
+            String(today.requests || 0),
+            t('ai.usage_requests_today'),
+            t('ai.usage_text_image_split', { text: today.textRequests || 0, images: today.imageRequests || 0 })
+        ));
+        grid.appendChild(aiUsageStatTile(
+            formatAiCents(month.estimatedCostCents || 0),
+            t('ai.usage_cost_month'),
+            t('ai.usage_requests_month', { requests: month.requests || 0 })
+        ));
+        grid.appendChild(aiUsageStatTile(
+            ((month.inputTokens || 0) + (month.outputTokens || 0)).toLocaleString(),
+            t('ai.usage_tokens_month'),
+            t('ai.usage_tokens_split', {
+                input: (month.inputTokens || 0).toLocaleString(),
+                output: (month.outputTokens || 0).toLocaleString()
+            })
+        ));
+        body.appendChild(grid);
+
+        if (budgetCents > 0) {
+            var spent = month.estimatedCostCents || 0;
+            var ratio = spent / budgetCents;
+            var budget = document.createElement('div');
+            budget.className = 'ai-usage-budget';
+            var header = document.createElement('div');
+            header.className = 'ai-usage-budget__header';
+            var label = document.createElement('span');
+            label.className = 'ai-usage-budget__label';
+            label.textContent = t('ai.usage_budget');
+            var value = document.createElement('span');
+            value.className = 'ai-usage-budget__value';
+            value.textContent = t('ai.usage_budget_value', {
+                spent: formatAiCents(spent),
+                budget: formatAiCents(budgetCents),
+                percent: Math.min(999, Math.round(ratio * 100))
+            });
+            header.appendChild(label);
+            header.appendChild(value);
+            var bar = document.createElement('div');
+            bar.className = 'ai-usage-budget__bar';
+            var fill = document.createElement('div');
+            fill.className = 'ai-usage-budget__fill'
+                + (ratio >= 1 ? ' ai-usage-budget__fill--over' : (ratio >= 0.8 ? ' ai-usage-budget__fill--warn' : ''));
+            fill.style.width = Math.min(100, Math.max(ratio > 0 ? 2 : 0, Math.round(ratio * 100))) + '%';
+            bar.appendChild(fill);
+            budget.appendChild(header);
+            budget.appendChild(bar);
+            body.appendChild(budget);
+        }
     }
 
     function switchAiToolTab(tool) {
-        var activeTool = tool === 'image' ? 'image' : 'text';
+        var requestedTool = ['image', 'text', 'audit'].indexOf(tool) !== -1 ? tool : 'text';
+        var availableTabs = Array.from(document.querySelectorAll('.ai-tool-tab')).filter(function(tab) {
+            return !tab.hidden;
+        });
+        if (!availableTabs.length) return;
+        var activeTool = availableTabs.some(function(tab) {
+            return tab.dataset.aiToolTab === requestedTool;
+        }) ? requestedTool : availableTabs[0].dataset.aiToolTab;
         document.querySelectorAll('.ai-tool-tab').forEach(function(tab) {
             var isActive = tab.dataset.aiToolTab === activeTool;
             tab.classList.toggle('active', isActive);
@@ -6514,6 +7231,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     }
 
     function openAiImageGenerator(promptText, aspectRatio) {
+        if (!dashboardAiImageUsable) {
+            showToast(t('ai.image_generator_disabled'), 'warning');
+            return;
+        }
         switchTab('home');
         switchAiToolTab('image');
         var prompt = document.getElementById('aiImagePrompt');
@@ -6641,7 +7362,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var chips = [];
 
         if (isDashboardModuleEnabled('mails')) {
-            chips.push('<button type="button" class="dashboard-status-chip" onclick="switchTab(&quot;mails&quot;)"><span>' + escapeHtml(t('dashboard_home.unread_messages')) + '</span><strong>' + (status.messages?.unread || 0) + '</strong></button>');
+            var unreadCount = status.messages?.unread || 0;
+            chips.push('<button type="button" class="dashboard-status-chip' + (unreadCount > 0 ? ' dashboard-status-chip--accent' : '') + '" onclick="switchTab(&quot;mails&quot;)"><span>' + escapeHtml(t('dashboard_home.unread_messages')) + '</span><strong>' + unreadCount + '</strong></button>');
         }
 
         var backupText = backup.newest ? formatDashboardDate(backup.newest) : t('dashboard_home.no_backup');
@@ -6705,7 +7427,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 currentAiSettings = (data.ai && data.ai.settings) || {};
                 populateAiSettings(currentAiSettings);
                 updateAiUsage(data.ai ? data.ai.usage : null);
-                updateDashboardAiStatus(currentAiSettings);
+                updateDashboardAiPanel(currentAiSettings);
+            } else {
+                updateDashboardAiPanel({});
             }
         } catch (error) {
             var target = document.getElementById('dashboardTopPages');
@@ -6835,18 +7559,116 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var target = document.getElementById('dashboardAiStatus');
         if (!target) return;
         if (!AI_FEATURES_ENABLED) {
-            target.textContent = '';
+            target.textContent = t('ai.module_disabled_status');
             return;
         }
         var configured = aiProviderIsConfigured(settings);
-        if (!configured) {
-            target.textContent = t('ai.not_configured_text');
-        } else if (!settings.enabled) {
+        if (!settings.enabled) {
             target.textContent = t('ai.disabled_status');
+        } else if (!configured) {
+            target.textContent = t('ai.not_configured_text');
         } else {
             target.textContent = t('ai.configured_status');
         }
     }
+
+    function aiFeatureEnabled(settings, feature) {
+        settings = settings || currentAiSettings || {};
+        var features = settings.features || {};
+        if (Object.prototype.hasOwnProperty.call(features, feature)) {
+            return !!features[feature];
+        }
+        return !!AI_FEATURE_DEFAULTS[feature];
+    }
+
+    function aiServiceIsUsable(settings) {
+        settings = settings || currentAiSettings || {};
+        return AI_FEATURES_ENABLED && !!settings.enabled && aiProviderIsConfigured(settings);
+    }
+
+    function aiUnavailableNoticeDismissed() {
+        try {
+            return localStorage.getItem(AI_NOTICE_DISMISSED_KEY) === '1';
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function dismissAiUnavailableNotice() {
+        try {
+            localStorage.setItem(AI_NOTICE_DISMISSED_KEY, '1');
+        } catch (e) {}
+        var section = document.getElementById('dashboardAiSection');
+        var usable = aiServiceIsUsable(currentAiSettings || {});
+        if (section && !usable) section.hidden = true;
+    }
+
+    function updateDashboardAiPanel(settings) {
+        settings = settings || currentAiSettings || {};
+        var section = document.getElementById('dashboardAiSection');
+        if (!section) return;
+
+        var configured = AI_FEATURES_ENABLED && aiProviderIsConfigured(settings);
+        var serviceEnabled = AI_FEATURES_ENABLED && !!settings.enabled;
+        var usable = configured && serviceEnabled;
+        var unavailableDismissed = aiUnavailableNoticeDismissed();
+        var banner = document.getElementById('aiUnavailableBanner');
+        var bannerText = document.getElementById('aiUnavailableText');
+        var tools = document.getElementById('dashboardAiTools');
+        var usage = document.getElementById('aiUsageSummary');
+        var assistantEnabled = usable && aiFeatureEnabled(settings, 'backendAssistant');
+        var textEnabled = usable && aiFeatureEnabled(settings, 'seoTextGeneration');
+        var imageEnabled = usable && aiFeatureEnabled(settings, 'imageGeneration');
+        var imageJobsPanel = document.getElementById('aiImageJobsPanel');
+
+        dashboardAiImageUsable = imageEnabled;
+        if (window.NbImageManager && typeof NbImageManager.refresh === 'function') {
+            NbImageManager.refresh();
+        }
+        section.hidden = !usable && unavailableDismissed;
+        updateDashboardAiStatus(settings);
+
+        if (usage && !usable) usage.hidden = true;
+
+        if (banner) {
+            banner.hidden = usable;
+        }
+        if (bannerText) {
+            if (!AI_FEATURES_ENABLED) {
+                bannerText.textContent = t('ai.module_disabled_status');
+            } else if (!serviceEnabled) {
+                bannerText.textContent = t('ai.disabled_status');
+            } else {
+                bannerText.textContent = t('ai.not_configured_text');
+            }
+        }
+
+        if (tools) tools.hidden = !usable || (!assistantEnabled && !textEnabled && !imageEnabled);
+        if (imageJobsPanel) imageJobsPanel.hidden = !imageEnabled;
+
+        var assistantCard = document.getElementById('aiAssistantCard');
+        if (assistantCard) assistantCard.hidden = !assistantEnabled;
+
+        var toolsCard = document.getElementById('aiToolsCard');
+        if (toolsCard) toolsCard.hidden = !textEnabled && !imageEnabled;
+
+        document.querySelectorAll('.ai-tool-tab, .ai-tool-panel').forEach(function(el) {
+            var feature = el.dataset.aiFeature;
+            var visible = feature === 'imageGeneration' ? imageEnabled : (feature === 'seoTextGeneration' ? textEnabled : true);
+            el.hidden = !visible;
+            if (!visible) {
+                el.classList.remove('active');
+                if (el.classList.contains('ai-tool-tab')) el.setAttribute('aria-selected', 'false');
+            }
+        });
+
+        if (textEnabled || imageEnabled) {
+            var currentActive = document.querySelector('.ai-tool-tab.active:not([hidden])');
+            switchAiToolTab(currentActive ? currentActive.dataset.aiToolTab : (imageEnabled ? 'image' : 'text'));
+        }
+    }
+
+    document.getElementById('aiUnavailableDismiss')?.addEventListener('click', dismissAiUnavailableNotice);
 
     function aiIsLocalProviderUrl(baseUrl) {
         try {
@@ -6875,7 +7697,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         provider = provider || settings.provider || document.getElementById('aiProvider')?.value || 'openai-compatible';
         var defaults = {
             'openai-compatible': { baseUrl: 'https://api.openai.com/v1', organization: '', hasApiKey: false },
-            openrouter: { baseUrl: 'https://openrouter.ai/api/v1', organization: '', hasApiKey: false }
+            openrouter: { baseUrl: 'https://openrouter.ai/api/v1', organization: '', hasApiKey: false },
+            anthropic: { baseUrl: 'https://api.anthropic.com/v1', organization: '', hasApiKey: false }
         };
         var credentials = settings.providerCredentials && settings.providerCredentials[provider]
             ? settings.providerCredentials[provider]
@@ -6890,6 +7713,231 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var baseUrl = String(document.getElementById('aiBaseUrl')?.value || credentials.baseUrl || settings.baseUrl || '').trim();
         return provider === 'openrouter' || baseUrl.indexOf('openrouter.ai') !== -1;
     }
+
+    function aiUsesAnthropic(settings) {
+        settings = settings || currentAiSettings || {};
+        var provider = String(document.getElementById('aiProvider')?.value || settings.provider || '').trim();
+        var credentials = aiProviderCredentials(settings, provider);
+        var baseUrl = String(document.getElementById('aiBaseUrl')?.value || credentials.baseUrl || settings.baseUrl || '').trim();
+        return provider === 'anthropic' || baseUrl.indexOf('api.anthropic.com') !== -1;
+    }
+
+    var AI_TEXT_MODEL_PRESETS = {
+        'openai-compatible': {
+            chat: 'gpt-4.1-mini',
+            text: 'gpt-4.1-mini',
+            suggestions: ['gpt-4.1-mini', 'gpt-4.1']
+        },
+        openrouter: {
+            chat: 'openai/gpt-4.1-mini',
+            text: 'openai/gpt-4.1-mini',
+            suggestions: ['openai/gpt-4.1-mini', 'openai/gpt-4.1', 'anthropic/claude-sonnet-4-6', 'anthropic/claude-haiku-4-5', 'google/gemini-3.1-flash']
+        },
+        anthropic: {
+            chat: 'claude-sonnet-4-6',
+            text: 'claude-haiku-4-5',
+            suggestions: ['claude-sonnet-4-6', 'claude-haiku-4-5', 'claude-opus-4-8']
+        }
+    };
+
+    var aiOpenRouterModelsCache = null;
+    var aiOpenRouterModelsLoading = false;
+
+    // Load the live OpenRouter catalog through the server cache; the static
+    // preset list stays as fallback when the request fails or is pending.
+    function loadOpenRouterModels() {
+        if (aiOpenRouterModelsCache || aiOpenRouterModelsLoading) return;
+        aiOpenRouterModelsLoading = true;
+        var formData = new FormData();
+        formData.append('action', 'ai-openrouter-models');
+        formData.append('csrf_token', CSRF_TOKEN);
+        fetch('api.php', { method: 'POST', body: formData, cache: 'no-store' })
+            .then(function(response) { return response.json(); })
+            .then(function(result) {
+                if (!result.success || !result.data) return;
+                aiOpenRouterModelsCache = result.data;
+                applyOpenRouterModels();
+            })
+            .catch(function() { /* keep static fallback */ })
+            .finally(function() { aiOpenRouterModelsLoading = false; });
+    }
+
+    function applyOpenRouterModels() {
+        var data = aiOpenRouterModelsCache;
+        if (!data) return;
+        if (Array.isArray(data.textModels) && data.textModels.length) {
+            AI_TEXT_MODEL_PRESETS.openrouter.suggestions = data.textModels.map(function(model) { return model.id; });
+        }
+        if (Array.isArray(data.imageModels) && data.imageModels.length) {
+            AI_IMAGE_MODEL_OPTIONS.openrouter = data.imageModels.map(function(model) {
+                return { value: model.id, label: model.name || model.id };
+            });
+        }
+        var provider = document.getElementById('aiProvider')?.value || (currentAiSettings && currentAiSettings.provider) || '';
+        if (provider === 'openrouter') {
+            updateAiModelPlaceholders('openrouter');
+            updateAiImageModelControl(currentAiSettings || {});
+        }
+    }
+
+    function maybeAutofillOpenRouterPricing() {
+        var provider = document.getElementById('aiProvider')?.value;
+        if (provider !== 'openrouter' || !aiOpenRouterModelsCache) return;
+        var model = String(document.getElementById('aiChatModel')?.value || '').trim();
+        var match = (aiOpenRouterModelsCache.textModels || []).find(function(entry) { return entry.id === model; });
+        if (!match || (!match.promptCentsPerMillion && !match.completionCentsPerMillion)) return;
+        var inputPrice = document.getElementById('aiInputPrice');
+        var outputPrice = document.getElementById('aiOutputPrice');
+        if (inputPrice && match.promptCentsPerMillion > 0) inputPrice.value = match.promptCentsPerMillion;
+        if (outputPrice && match.completionCentsPerMillion > 0) outputPrice.value = match.completionCentsPerMillion;
+        if (typeof showToast === 'function') showToast(t('ai.pricing_autofilled'), 'info');
+    }
+
+    function aiModelIsPresetDefault(value) {
+        value = String(value || '').trim();
+        if (!value) return true;
+        return Object.keys(AI_TEXT_MODEL_PRESETS).some(function(provider) {
+            var preset = AI_TEXT_MODEL_PRESETS[provider];
+            return preset.chat === value || preset.text === value;
+        });
+    }
+
+    // Keep the model inputs aligned with the selected provider: adjust
+    // placeholders and suggestions always, and swap the values only when they
+    // still hold another provider's default (never a custom model).
+    function updateAiModelPlaceholders(provider) {
+        var preset = AI_TEXT_MODEL_PRESETS[provider] || AI_TEXT_MODEL_PRESETS['openai-compatible'];
+        var chatInput = document.getElementById('aiChatModel');
+        var textInput = document.getElementById('aiTextModel');
+        if (chatInput) {
+            chatInput.placeholder = preset.chat;
+            if (aiModelIsPresetDefault(chatInput.value)) chatInput.value = preset.chat;
+            updateClearButton(chatInput);
+        }
+        if (textInput) {
+            textInput.placeholder = preset.text;
+            if (aiModelIsPresetDefault(textInput.value)) textInput.value = preset.text;
+            updateClearButton(textInput);
+        }
+        aiModelComboboxes.forEach(function(combobox) { combobox.refresh(); });
+        if (provider === 'openrouter') {
+            loadOpenRouterModels();
+        }
+    }
+
+    function aiModelSuggestions() {
+        var provider = document.getElementById('aiProvider')?.value
+            || (currentAiSettings && currentAiSettings.provider) || 'openai-compatible';
+        var preset = AI_TEXT_MODEL_PRESETS[provider] || AI_TEXT_MODEL_PRESETS['openai-compatible'];
+        return preset.suggestions.slice();
+    }
+
+    // Custom combobox: identical rendering in every browser (incl. Safari and
+    // embedded webviews) instead of the unstylable native datalist popup.
+    var aiModelComboboxes = [];
+    function setupModelCombobox(root) {
+        var input = root.querySelector('input');
+        var toggle = root.querySelector('.nb-combobox__toggle');
+        var list = root.querySelector('.nb-combobox__list');
+        if (!input || !list) return null;
+        var activeIndex = -1;
+        var items = [];
+
+        function close() {
+            list.hidden = true;
+            input.setAttribute('aria-expanded', 'false');
+            activeIndex = -1;
+        }
+
+        function select(value) {
+            input.value = value;
+            close();
+            updateClearButton(input);
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            input.focus();
+        }
+
+        function highlight(index) {
+            activeIndex = index;
+            Array.from(list.children).forEach(function(item, i) {
+                item.classList.toggle('is-active', i === index);
+                item.setAttribute('aria-selected', i === index ? 'true' : 'false');
+                if (i === index) item.scrollIntoView({ block: 'nearest' });
+            });
+        }
+
+        function open(filterText) {
+            var all = aiModelSuggestions();
+            var filter = String(filterText || '').trim().toLowerCase();
+            items = filter && all.indexOf(input.value.trim()) === -1
+                ? all.filter(function(model) { return model.toLowerCase().indexOf(filter) !== -1; })
+                : all;
+            if (!items.length) { close(); return; }
+            list.innerHTML = '';
+            items.forEach(function(model, index) {
+                var item = document.createElement('div');
+                item.className = 'nb-combobox__option';
+                item.setAttribute('role', 'option');
+                item.textContent = model;
+                item.addEventListener('mousedown', function(event) {
+                    event.preventDefault();
+                    select(model);
+                });
+                list.appendChild(item);
+            });
+            list.hidden = false;
+            input.setAttribute('aria-expanded', 'true');
+            highlight(-1);
+        }
+
+        input.addEventListener('input', function() {
+            updateClearButton(input);
+            open(input.value);
+        });
+        input.addEventListener('keydown', function(event) {
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                if (list.hidden) { open(input.value); return; }
+                var count = list.children.length;
+                if (!count) return;
+                var next = event.key === 'ArrowDown'
+                    ? (activeIndex + 1) % count
+                    : (activeIndex - 1 + count) % count;
+                highlight(next);
+            } else if (event.key === 'Enter') {
+                if (!list.hidden && activeIndex >= 0 && items[activeIndex] !== undefined) {
+                    event.preventDefault();
+                    select(items[activeIndex]);
+                }
+            } else if (event.key === 'Escape' && !list.hidden) {
+                event.stopPropagation();
+                close();
+            }
+        });
+        input.addEventListener('blur', function() {
+            window.setTimeout(close, 120);
+        });
+        if (toggle) {
+            toggle.addEventListener('mousedown', function(event) {
+                event.preventDefault();
+                if (list.hidden) {
+                    input.focus();
+                    open('');
+                } else {
+                    close();
+                }
+            });
+        }
+
+        return { refresh: function() { if (!list.hidden) open(input.value); } };
+    }
+
+    document.querySelectorAll('[data-model-combobox]').forEach(function(root) {
+        var combobox = setupModelCombobox(root);
+        if (combobox) aiModelComboboxes.push(combobox);
+    });
+
+    document.getElementById('aiChatModel')?.addEventListener('change', maybeAutofillOpenRouterPricing);
 
     var AI_IMAGE_MODEL_OPTIONS = {
         'openai-compatible': [
@@ -6957,11 +8005,16 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     function updateAiAvailability(settings) {
         settings = settings || currentAiSettings || {};
+        updateDashboardAiPanel(settings);
         if (!AI_FEATURES_ENABLED) return;
         updateAiImageModelControl(settings);
         var configured = aiProviderIsConfigured(settings);
         var enabled = !!settings.enabled;
         var usable = configured && enabled;
+        var assistantUsable = usable && aiFeatureEnabled(settings, 'backendAssistant');
+        var textUsable = usable && aiFeatureEnabled(settings, 'seoTextGeneration');
+        var imageUsable = usable && aiFeatureEnabled(settings, 'imageGeneration') && !aiUsesAnthropic(settings);
+        dashboardAiImageUsable = imageUsable;
         var status = document.getElementById('aiProviderStatus');
         if (status) {
             status.className = 'ai-status-box ' + (usable ? 'ai-status-box--ok' : 'ai-status-box--warning');
@@ -6973,20 +8026,28 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var banner = document.getElementById('aiUnavailableBanner');
         if (banner) banner.hidden = usable;
 
-        document.querySelectorAll('#aiChatForm textarea, #aiChatForm button, #aiTextForm textarea, #aiTextForm input, #aiTextForm button, #aiImageForm textarea, #aiImageForm select, #aiImageForm input, #aiImageForm button').forEach(function(el) {
-            el.disabled = !usable;
+        document.querySelectorAll('#aiChatForm textarea, #aiChatForm button').forEach(function(el) {
+            el.disabled = !assistantUsable;
+        });
+        document.querySelectorAll('#aiTextForm textarea, #aiTextForm input, #aiTextForm button').forEach(function(el) {
+            el.disabled = !textUsable;
+        });
+        document.querySelectorAll('#aiImageForm textarea, #aiImageForm select, #aiImageForm input, #aiImageForm button').forEach(function(el) {
+            el.disabled = !imageUsable;
         });
 
         var imageModel = String(document.getElementById('aiImageModelPicker')?.value || settings.imageModel || document.getElementById('aiImageModel')?.value || '').trim();
-        var imageModelMissing = usable && !imageModel;
+        var imageModelMissing = imageUsable && !imageModel;
         var imageModelNote = document.getElementById('aiImageModelNote');
         var imageButton = document.getElementById('aiGenerateImageButton');
-        if (imageButton && imageModelMissing) {
-            imageButton.disabled = true;
+        if (imageButton) {
+            imageButton.disabled = !imageUsable || imageModelMissing;
         }
         if (imageModelNote) {
-            imageModelNote.textContent = aiUsesOpenRouter(settings) ? t('ai.image_openrouter_note') : t('ai.image_model_missing_note');
-            imageModelNote.hidden = !imageModelMissing && !aiUsesOpenRouter(settings);
+            imageModelNote.textContent = aiUsesAnthropic(settings)
+                ? t('ai.image_anthropic_note')
+                : (aiUsesOpenRouter(settings) ? t('ai.image_openrouter_note') : t('ai.image_model_missing_note'));
+            imageModelNote.hidden = !imageUsable || (!imageModelMissing && !aiUsesOpenRouter(settings));
         }
 
         document.querySelectorAll('#aiFeatureAssistant, #aiFeatureSeo, #aiFeatureImages').forEach(function(el) {
@@ -7004,6 +8065,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             currentAiSettings = result.data.settings || {};
             populateAiSettings(currentAiSettings);
             updateAiUsage(result.data.usage);
+            updateDashboardAiPanel(currentAiSettings);
         } catch (error) {
             var usage = document.getElementById('aiUsageSummary');
             if (usage) usage.textContent = error.message;
@@ -7017,6 +8079,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var fields = {
             aiEnabled: !!settings.enabled,
             aiAllowLocalProvider: !!settings.allowLocalProvider,
+            aiAssistantForceEnglish: !!settings.assistantForceEnglish,
+            aiAssistantSurfaceVisualEditor: !settings.assistantSurfaces || settings.assistantSurfaces.visualEditor !== false,
+            aiAssistantSurfaceDashboard: !settings.assistantSurfaces || settings.assistantSurfaces.dashboard !== false,
             aiFeatureAssistant: !!(settings.features && settings.features.backendAssistant),
             aiFeatureSeo: !!(settings.features && settings.features.seoTextGeneration),
             aiFeatureImages: !!(settings.features && settings.features.imageGeneration)
@@ -7036,9 +8101,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             aiDailyRequests: settings.limits?.dailyRequests ?? 100,
             aiDailyTextRequests: settings.limits?.dailyTextRequests ?? 80,
             aiDailyImageRequests: settings.limits?.dailyImageRequests ?? 10,
-            aiMaxInputTokens: settings.limits?.maxInputTokens ?? 6000,
-            aiMaxOutputTokens: settings.limits?.maxOutputTokens ?? 1200,
-            aiRequestTimeout: settings.limits?.requestTimeoutSeconds ?? 120,
+            aiMaxInputTokens: settings.limits?.maxInputTokens ?? 24000,
+            aiMaxOutputTokens: settings.limits?.maxOutputTokens ?? 4096,
+            aiRequestTimeout: settings.limits?.requestTimeoutSeconds ?? 300,
             aiInputPrice: settings.pricing?.inputCentsPerMillion ?? 15,
             aiOutputPrice: settings.pricing?.outputCentsPerMillion ?? 60,
             aiImagePrice: settings.pricing?.imageCentsPerRequest ?? 5
@@ -7053,6 +8118,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var clearKey = document.getElementById('aiClearApiKey');
         if (clearKey) clearKey.checked = false;
         updateAiApiKeyHint(provider);
+        updateAiModelPlaceholders(provider);
         updateAiAvailability(settings);
     }
 
@@ -7063,7 +8129,27 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         keyHint.textContent = credentials.hasApiKey ? t('ai.api_key_saved') : t('ai.api_key_missing');
     }
 
+    function applyAiDefaultsForNewApiKey() {
+        var keyInput = document.getElementById('aiApiKey');
+        if (!keyInput || !keyInput.value.trim()) return;
+        var provider = document.getElementById('aiProvider')?.value || (currentAiSettings && currentAiSettings.provider) || 'openai-compatible';
+        var credentials = aiProviderCredentials(currentAiSettings || {}, provider);
+        if ((currentAiSettings && currentAiSettings.hasApiKey) || credentials.hasApiKey) return;
+        [
+            'aiEnabled',
+            'aiAssistantSurfaceVisualEditor',
+            'aiAssistantSurfaceDashboard',
+            'aiFeatureAssistant',
+            'aiFeatureSeo',
+            'aiFeatureImages'
+        ].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.checked = true;
+        });
+    }
+
     function collectAiSettingsForm() {
+        applyAiDefaultsForNewApiKey();
         var provider = document.getElementById('aiProvider').value;
         var imagePicker = document.getElementById('aiImageModelPicker');
         if (imagePicker) {
@@ -7077,6 +8163,11 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             clearApiKey: document.getElementById('aiClearApiKey').checked,
             organization: document.getElementById('aiOrganization').value.trim(),
             allowLocalProvider: document.getElementById('aiAllowLocalProvider').checked,
+            assistantForceEnglish: document.getElementById('aiAssistantForceEnglish').checked,
+            assistantSurfaces: {
+                visualEditor: document.getElementById('aiAssistantSurfaceVisualEditor').checked,
+                dashboard: document.getElementById('aiAssistantSurfaceDashboard').checked
+            },
             chatModel: document.getElementById('aiChatModel').value.trim(),
             textModel: document.getElementById('aiTextModel').value.trim(),
             imageModel: document.getElementById('aiImageModel').value.trim(),
@@ -7113,6 +8204,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var clearKey = document.getElementById('aiClearApiKey');
         if (clearKey) clearKey.checked = false;
         updateAiApiKeyHint(this.value);
+        updateAiModelPlaceholders(this.value);
         updateAiImageModelControl({
             provider: this.value,
             baseUrl: baseUrl ? baseUrl.value : '',
@@ -7131,9 +8223,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         updateAiAvailability(draft);
     });
 
-    ['aiApiKey', 'aiBaseUrl', 'aiAllowLocalProvider', 'aiEnabled', 'aiImageModel', 'aiImageModelPicker'].forEach(function(id) {
+    ['aiApiKey', 'aiBaseUrl', 'aiAllowLocalProvider', 'aiEnabled', 'aiAssistantForceEnglish', 'aiAssistantSurfaceVisualEditor', 'aiAssistantSurfaceDashboard', 'aiFeatureAssistant', 'aiFeatureSeo', 'aiFeatureImages', 'aiImageModel', 'aiImageModelPicker'].forEach(function(id) {
         document.addEventListener('input', function(e) {
             if (e.target && e.target.id === id) {
+                if (id === 'aiApiKey') applyAiDefaultsForNewApiKey();
                 var draft = Object.assign({}, currentAiSettings || {}, collectAiSettingsForm());
                 draft.hasApiKey = !!(currentAiSettings && currentAiSettings.hasApiKey) || !!document.getElementById('aiApiKey').value.trim();
                 updateAiAvailability(draft);
@@ -7141,6 +8234,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         });
         document.addEventListener('change', function(e) {
             if (e.target && e.target.id === id) {
+                if (id === 'aiApiKey') applyAiDefaultsForNewApiKey();
                 var draft = Object.assign({}, currentAiSettings || {}, collectAiSettingsForm());
                 draft.hasApiKey = !!(currentAiSettings && currentAiSettings.hasApiKey) || !!document.getElementById('aiApiKey').value.trim();
                 updateAiAvailability(draft);
@@ -7174,6 +8268,230 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             .replace(/`([^`]+)`/g, '<code>$1</code>');
     };
 
+    // Form definitions
+    let formsAdminData = [];
+    let currentFormEditorId = '';
+
+    function defaultFormDefinition(id) {
+        return {
+            id: id || 'kontakt',
+            label: t('forms.contact_default'),
+            description: '',
+            enabled: true,
+            submit: {
+                store: true,
+                email: true,
+                subject: '{form}: {name}',
+                successText: t('forms.default_success')
+            },
+            fields: [
+                { type: 'text', key: 'name', label: t('mails.name').replace(':', ''), placeholder: '', required: true, width: 6, options: [] },
+                { type: 'email', key: 'email', label: t('mails.email').replace(':', ''), placeholder: '', required: true, width: 6, options: [] },
+                { type: 'textarea', key: 'message', label: t('mails.message').replace(':', ''), placeholder: '', required: true, width: 12, options: [] }
+            ]
+        };
+    }
+
+    async function loadFormsAdmin() {
+        try {
+            const response = await fetch('api.php?action=list-forms');
+            const result = await response.json();
+            if (!result.success) {
+                showToast(result.message || t('forms.load_error'), 'error');
+                return;
+            }
+            formsAdminData = result.data || [];
+            renderFormsAdminList();
+            if (formsAdminData.length && !currentFormEditorId) {
+                await loadFormEditor(formsAdminData[0].id);
+            } else if (!formsAdminData.length && !currentFormEditorId) {
+                populateFormEditor(defaultFormDefinition('kontakt'));
+            }
+        } catch (error) {
+            showToast(t('toast.error_loading', {message: error.message}), 'error');
+        }
+    }
+
+    function renderFormsAdminList() {
+        const select = document.getElementById('formsAdminSelect');
+        const meta = document.getElementById('formsAdminMeta');
+        if (!select) return;
+        const current = currentFormEditorId;
+        select.innerHTML = '';
+        if (!formsAdminData.length) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = t('forms.empty');
+            select.appendChild(option);
+            select.disabled = true;
+            if (meta) meta.textContent = '';
+            return;
+        }
+        select.disabled = false;
+        formsAdminData.forEach(form => {
+            const option = document.createElement('option');
+            option.value = form.id;
+            option.textContent = `${form.label || form.id} (${form.id})`;
+            select.appendChild(option);
+        });
+        if (formsAdminData.some(form => form.id === current)) {
+            select.value = current;
+        }
+        const selected = formsAdminData.find(form => form.id === select.value);
+        if (meta) {
+            meta.textContent = selected
+                ? `${selected.id} · ${t('forms.field_count', {count: selected.fieldCount || 0})}`
+                : '';
+        }
+    }
+
+    async function loadFormEditor(formId) {
+        try {
+            const response = await fetch('api.php?action=load-form&form_id=' + encodeURIComponent(formId));
+            const result = await response.json();
+            if (!result.success) {
+                showToast(result.message || t('forms.load_error'), 'error');
+                return;
+            }
+            populateFormEditor(result.data);
+        } catch (error) {
+            showToast(t('toast.error_loading', {message: error.message}), 'error');
+        }
+    }
+
+    function populateFormEditor(form) {
+        currentFormEditorId = form.id || '';
+        document.getElementById('formEditorId').value = form.id || '';
+        document.getElementById('formEditorLabel').value = form.label || '';
+        document.getElementById('formEditorDescription').value = form.description || '';
+        document.getElementById('formEditorEnabled').checked = form.enabled !== false;
+        document.getElementById('formEditorStore').checked = !form.submit || form.submit.store !== false;
+        document.getElementById('formEditorEmail').checked = !form.submit || form.submit.email !== false;
+        document.getElementById('formEditorSubject').value = (form.submit && form.submit.subject) || '{form}: {name}';
+        document.getElementById('formEditorSuccess').value = (form.submit && form.submit.successText) || t('forms.default_success');
+        renderFormFields(form.fields || []);
+        renderFormsAdminList();
+    }
+
+    function renderFormFields(fields) {
+        const tbody = document.getElementById('formFieldsBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        fields.forEach(field => tbody.appendChild(createFormFieldRow(field)));
+    }
+
+    function createFormFieldRow(field) {
+        const tr = document.createElement('tr');
+        tr.className = 'forms-field-row';
+        const optionsText = (field.options || []).map(option => {
+            if (typeof option === 'string') return option;
+            return option.value === option.label ? option.value : `${option.value}|${option.label}`;
+        }).join('\n');
+        tr.innerHTML = `
+            <td data-label="${escapeHtml(t('forms.type'))}"><select data-field-prop="type">
+                ${['text', 'email', 'tel', 'textarea', 'select', 'radio', 'checkbox', 'date', 'time', 'heading', 'note', 'hidden'].map(type => `<option value="${type}"${field.type === type ? ' selected' : ''}>${type}</option>`).join('')}
+            </select></td>
+            <td data-label="${escapeHtml(t('forms.key'))}"><input type="text" data-field-prop="key" value="${escapeHtml(field.key || '')}"></td>
+            <td data-label="${escapeHtml(t('forms.label'))}"><input type="text" data-field-prop="label" value="${escapeHtml(field.label || '')}"></td>
+            <td data-label="${escapeHtml(t('forms.placeholder'))}"><input type="text" data-field-prop="placeholder" value="${escapeHtml(field.placeholder || '')}"></td>
+            <td data-label="${escapeHtml(t('forms.width'))}"><select data-field-prop="width">
+                ${[3, 4, 6, 8, 12].map(width => `<option value="${width}"${Number(field.width || 12) === width ? ' selected' : ''}>${width}/12</option>`).join('')}
+            </select></td>
+            <td class="forms-field-check" data-label="${escapeHtml(t('forms.required'))}"><input type="checkbox" data-field-prop="required"${field.required ? ' checked' : ''}></td>
+            <td data-label="${escapeHtml(t('forms.options'))}"><textarea data-field-prop="options" rows="2">${escapeHtml(optionsText)}</textarea></td>
+            <td class="users-table__actions"><button type="button" class="btn-icon btn-icon--danger" title="${escapeHtml(t('btn.delete'))}">${icon('trash', 14, '2')}</button></td>
+        `;
+        tr.querySelector('.btn-icon--danger').addEventListener('click', () => tr.remove());
+        return tr;
+    }
+
+    function parseFormOptions(text) {
+        return String(text || '').split(/\r?\n/)
+            .map(line => line.trim())
+            .filter(Boolean)
+            .map(line => {
+                const parts = line.split('|');
+                const value = (parts[0] || '').trim();
+                const label = (parts[1] || parts[0] || '').trim();
+                return { value, label };
+            });
+    }
+
+    function collectFormEditor() {
+        const fields = Array.from(document.querySelectorAll('#formFieldsBody tr')).map(row => {
+            const get = prop => row.querySelector(`[data-field-prop="${prop}"]`);
+            return {
+                type: get('type').value,
+                key: get('key').value,
+                label: get('label').value,
+                placeholder: get('placeholder').value,
+                required: get('required').checked,
+                width: Number(get('width').value) || 12,
+                options: parseFormOptions(get('options').value)
+            };
+        });
+        return {
+            id: document.getElementById('formEditorId').value,
+            label: document.getElementById('formEditorLabel').value,
+            description: document.getElementById('formEditorDescription').value,
+            enabled: document.getElementById('formEditorEnabled').checked,
+            submit: {
+                store: document.getElementById('formEditorStore').checked,
+                email: document.getElementById('formEditorEmail').checked,
+                subject: document.getElementById('formEditorSubject').value,
+                successText: document.getElementById('formEditorSuccess').value
+            },
+            fields
+        };
+    }
+
+    async function saveFormEditor(event) {
+        event.preventDefault();
+        const resultBox = document.getElementById('formsAdminResult');
+        try {
+            const formData = new FormData();
+            formData.append('action', 'save-form');
+            formData.append('csrf_token', CSRF_TOKEN);
+            formData.append('form', JSON.stringify(collectFormEditor()));
+            const response = await fetch('api.php', { method: 'POST', body: formData });
+            const result = await response.json();
+            if (!result.success) {
+                showToast(result.message || t('forms.save_error'), 'error');
+                return;
+            }
+            populateFormEditor(result.data);
+            await loadFormsAdmin();
+            if (resultBox) {
+                resultBox.className = 'settings-test-result settings-test-result--success';
+                resultBox.textContent = t('forms.saved');
+                resultBox.style.display = '';
+            }
+            showToast(t('forms.saved'), 'success');
+        } catch (error) {
+            showToast(t('toast.error_generic', {message: error.message}), 'error');
+        }
+    }
+
+    document.getElementById('formsAdminForm')?.addEventListener('submit', saveFormEditor);
+    document.getElementById('formsAdminSelect')?.addEventListener('change', function() {
+        if (this.value) loadFormEditor(this.value);
+    });
+    document.getElementById('addFormFieldBtn')?.addEventListener('click', function() {
+        document.getElementById('formFieldsBody')?.appendChild(createFormFieldRow({
+            type: 'text',
+            key: 'field_' + (document.querySelectorAll('#formFieldsBody tr').length + 1),
+            label: t('forms.new_field'),
+            placeholder: '',
+            required: false,
+            width: 12,
+            options: []
+        }));
+    });
+    document.getElementById('newFormBtn')?.addEventListener('click', function() {
+        currentFormEditorId = '';
+        populateFormEditor(defaultFormDefinition('formular-' + (formsAdminData.length + 1)));
+    });
+
     // Settings sub-tabs
     function getActiveSettingsTab() {
         var active = document.querySelector('.settings-tab-btn.active');
@@ -7188,6 +8506,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         if (tab === 'menus' && typeof loadMenuOrder === 'function' && typeof _menuOrderLoaded !== 'undefined' && !_menuOrderLoaded) {
             _menuOrderLoaded = true;
             loadMenuOrder();
+        }
+        if (tab === 'forms' && typeof loadFormsAdmin === 'function' && !formsAdminLoaded) {
+            formsAdminLoaded = true;
+            loadFormsAdmin();
         }
         if (tab === 'ai' && AI_FEATURES_ENABLED && typeof loadAiSettings === 'function') {
             loadAiSettings();
@@ -7291,8 +8613,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         });
 
         // Colors — Light mode
-        var primary = settings.theme.primaryColor || '#2563eb';
-        var accent = settings.theme.accentColor || '#60a5fa';
+        var primary = settings.theme.primaryColor || '#3858e9';
+        var accent = settings.theme.accentColor || '#b45309';
         document.getElementById('settingsPrimaryColor').value = primary;
         document.getElementById('settingsPrimaryColorPicker').value = primary;
         document.getElementById('settingsAccentColor').value = accent;
@@ -7341,10 +8663,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         updateVisualOverlayVisibility('loginImageLayout', 'loginOverlayColorGroup');
         var loginBoxStyleEl = document.getElementById('loginBoxStyle');
         if (loginBoxStyleEl) loginBoxStyleEl.value = loginVisual.boxStyle || 'card';
-        var loginBoxColorEl = document.getElementById('loginBoxColor');
-        if (loginBoxColorEl) loginBoxColorEl.value = loginVisual.boxColor || '#ffffff';
-        var loginBoxTextColorEl = document.getElementById('loginBoxTextColor');
-        if (loginBoxTextColorEl) loginBoxTextColorEl.value = loginVisual.boxTextColor || '#111827';
+        setLoginColorPair('loginBoxColor', loginVisual.boxColor || '#ffffff');
+        setLoginColorPair('loginBoxTextColor', loginVisual.boxTextColor || '#111827');
         updateLoginBoxColorVisibility();
         var loginImageEl = document.getElementById('loginImage');
         if (loginImageEl) {
@@ -7410,6 +8730,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var methodSelect = document.getElementById('settingsEmailMethod');
         if (methodSelect) methodSelect.value = email.method || 'inactive';
         document.getElementById('settingsRecipientEmail').value = email.recipientEmail || '';
+        document.getElementById('settingsBccEmail').value = email.bccEmail || '';
         document.getElementById('settingsFromEmail').value = email.fromEmail || '';
         document.getElementById('settingsFromName').value = email.fromName || '';
         document.getElementById('settingsSmtpHost').value = email.smtpHost || '';
@@ -7544,8 +8865,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     // Defaults — kept in sync with server-side ($defaults in api.php load-settings)
     var THEME_DEFAULTS = {
         adminTheme: 'dark',
-        primaryColor: '#2563eb',
-        accentColor: '#60a5fa',
+        primaryColor: '#3858e9',
+        accentColor: '#b45309',
         sidebarBg: '',
         darkPrimaryColor: '',
         darkAccentColor: '',
@@ -7591,6 +8912,128 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         return '#' + [r, g, bl].map(function(c) { return c.toString(16).padStart(2, '0'); }).join('');
     }
 
+    function normalizeHexColor(value) {
+        return String(value || '').trim().toLowerCase();
+    }
+
+    function hexToRgb(hex) {
+        hex = normalizeHexColor(hex).replace('#', '');
+        return [
+            parseInt(hex.substring(0, 2), 16),
+            parseInt(hex.substring(2, 4), 16),
+            parseInt(hex.substring(4, 6), 16)
+        ];
+    }
+
+    function relativeLuminance(hex) {
+        return hexToRgb(hex).map(function(channel) {
+            var value = channel / 255;
+            return value <= 0.03928
+                ? value / 12.92
+                : Math.pow((value + 0.055) / 1.055, 2.4);
+        }).reduce(function(total, channel, index) {
+            return total + channel * [0.2126, 0.7152, 0.0722][index];
+        }, 0);
+    }
+
+    function contrastRatio(a, b) {
+        var l1 = relativeLuminance(a);
+        var l2 = relativeLuminance(b);
+        var lighter = Math.max(l1, l2);
+        var darker = Math.min(l1, l2);
+        return (lighter + 0.05) / (darker + 0.05);
+    }
+
+    function adjustColorForContrast(hex, background, minimumRatio, direction) {
+        hex = normalizeHexColor(hex);
+        if (contrastRatio(hex, background) >= minimumRatio) return hex;
+        var target = direction === 'lighter' ? '#ffffff' : '#000000';
+        for (var step = 1; step <= 20; step++) {
+            var candidate = mixColors(hex, target, 1 - (step * 0.05));
+            if (contrastRatio(candidate, background) >= minimumRatio) {
+                return candidate;
+            }
+        }
+        return target;
+    }
+
+    function sanitizeThemeContrast(theme) {
+        var result = Object.assign({}, theme);
+        var warnings = [];
+        var minReadable = 3.0;
+
+        function enforce(key, background, direction, labelKey) {
+            if (!result[key]) return;
+            var original = normalizeHexColor(result[key]);
+            var adjusted = adjustColorForContrast(original, background, minReadable, direction);
+            result[key] = adjusted;
+            if (adjusted !== original) {
+                warnings.push(t('settings.theme_color_adjusted', {field: t(labelKey), value: adjusted}));
+            }
+        }
+
+        enforce('primaryColor', '#ffffff', 'darker', 'settings.primary_color');
+        enforce('accentColor', '#ffffff', 'darker', 'settings.accent_color');
+        enforce('darkPrimaryColor', '#0b0d12', 'lighter', 'settings.primary_color');
+        enforce('darkAccentColor', '#0b0d12', 'lighter', 'settings.accent_color');
+
+        if (!result.darkPrimaryColor && result.primaryColor && contrastRatio(result.primaryColor, '#0b0d12') < minReadable) {
+            result.darkPrimaryColor = adjustColorForContrast(result.primaryColor, '#0b0d12', minReadable, 'lighter');
+            warnings.push(t('settings.theme_color_adjusted', {field: t('settings.primary_color'), value: result.darkPrimaryColor}));
+        }
+
+        if (!result.darkAccentColor && result.accentColor && contrastRatio(result.accentColor, '#0b0d12') < minReadable) {
+            result.darkAccentColor = adjustColorForContrast(result.accentColor, '#0b0d12', minReadable, 'lighter');
+            warnings.push(t('settings.theme_color_adjusted', {field: t('settings.accent_color'), value: result.darkAccentColor}));
+        }
+
+        enforce('sidebarBg', '#1a1a1a', 'lighter', 'settings.sidebar_bg');
+        enforce('darkSidebarBg', '#e5e5e5', 'darker', 'settings.sidebar_bg');
+
+        return { theme: result, warnings: warnings };
+    }
+
+    function updateThemeContrastFeedback() {
+        var minReadable = 3.0;
+        var values = {
+            primaryColor: document.getElementById('settingsPrimaryColor').value,
+            accentColor: document.getElementById('settingsAccentColor').value,
+            sidebarBg: document.getElementById('settingsSidebarBg').value,
+            darkPrimaryColor: document.getElementById('settingsDarkPrimaryColor').value,
+            darkAccentColor: document.getElementById('settingsDarkAccentColor').value,
+            darkSidebarBg: document.getElementById('settingsDarkSidebarBg').value
+        };
+        var checks = {
+            primaryColor: {background: '#ffffff', textContrast: false},
+            accentColor: {background: '#ffffff', textContrast: false},
+            sidebarBg: {background: '#1a1a1a', textContrast: true},
+            darkPrimaryColor: {background: '#0b0d12', textContrast: false},
+            darkAccentColor: {background: '#0b0d12', textContrast: false},
+            darkSidebarBg: {background: '#e5e5e5', textContrast: true}
+        };
+        var hex = /^#[0-9a-fA-F]{6}$/;
+
+        Object.keys(checks).forEach(function(key) {
+            var el = document.querySelector('.theme-contrast-feedback[data-contrast-for="' + key + '"]');
+            if (!el) return;
+            var value = values[key];
+            if (!hex.test(value)) {
+                el.dataset.state = 'error';
+                el.textContent = t('settings.contrast_invalid');
+                return;
+            }
+            var ratio = contrastRatio(value, checks[key].background);
+            var state = ratio < minReadable ? 'error' : 'ok';
+            var keyLabel = checks[key].textContrast
+                ? (ratio < minReadable ? 'settings.text_contrast_error' : 'settings.text_contrast_ok')
+                : (ratio < minReadable ? 'settings.contrast_error' : 'settings.contrast_ok');
+            el.dataset.state = state;
+            el.textContent = t(keyLabel, {
+                ratio: ratio.toFixed(1)
+            });
+        });
+    }
+
     // Track which optional fields are in "auto" mode (empty in JSON, derived for display)
     var AUTO_STATE = {
         sidebarBg: true,
@@ -7620,15 +9063,32 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     function readThemeFormState() {
         return {
             adminTheme: document.getElementById('settingsAdminTheme').value,
-            primaryColor: document.getElementById('settingsPrimaryColor').value,
-            accentColor: document.getElementById('settingsAccentColor').value,
-            sidebarBg: AUTO_STATE.sidebarBg ? '' : document.getElementById('settingsSidebarBg').value,
-            darkPrimaryColor: AUTO_STATE.darkPrimaryColor ? '' : document.getElementById('settingsDarkPrimaryColor').value,
-            darkAccentColor: AUTO_STATE.darkAccentColor ? '' : document.getElementById('settingsDarkAccentColor').value,
-            darkSidebarBg: AUTO_STATE.darkSidebarBg ? '' : document.getElementById('settingsDarkSidebarBg').value,
+            primaryColor: normalizeHexColor(document.getElementById('settingsPrimaryColor').value),
+            accentColor: normalizeHexColor(document.getElementById('settingsAccentColor').value),
+            sidebarBg: AUTO_STATE.sidebarBg ? '' : normalizeHexColor(document.getElementById('settingsSidebarBg').value),
+            darkPrimaryColor: AUTO_STATE.darkPrimaryColor ? '' : normalizeHexColor(document.getElementById('settingsDarkPrimaryColor').value),
+            darkAccentColor: AUTO_STATE.darkAccentColor ? '' : normalizeHexColor(document.getElementById('settingsDarkAccentColor').value),
+            darkSidebarBg: AUTO_STATE.darkSidebarBg ? '' : normalizeHexColor(document.getElementById('settingsDarkSidebarBg').value),
             buttonGlow: document.getElementById('settingsButtonGlow').checked,
             buttonRadius: parseInt(document.getElementById('settingsButtonRadius').value, 10)
         };
+    }
+
+    function syncThemeFormColors(theme) {
+        function setPair(id, value) {
+            var input = document.getElementById(id);
+            var picker = document.getElementById(id + 'Picker');
+            if (input && value) input.value = value;
+            if (picker && value) picker.value = value;
+        }
+
+        setPair('settingsPrimaryColor', theme.primaryColor);
+        setPair('settingsAccentColor', theme.accentColor);
+        if (!AUTO_STATE.sidebarBg) setPair('settingsSidebarBg', theme.sidebarBg);
+        if (!AUTO_STATE.darkPrimaryColor) setPair('settingsDarkPrimaryColor', theme.darkPrimaryColor);
+        if (!AUTO_STATE.darkAccentColor) setPair('settingsDarkAccentColor', theme.darkAccentColor);
+        if (!AUTO_STATE.darkSidebarBg) setPair('settingsDarkSidebarBg', theme.darkSidebarBg);
+        refreshAutoDisplays();
     }
 
     // Re-derive auto-fields when their source colors change (cascading display)
@@ -7666,6 +9126,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         refreshAutoDisplays();
         var theme = readThemeFormState();
         applyTheme(theme);
+        updateThemeContrastFeedback();
     }
 
     // Combined button preview — uses primary color of the currently active theme
@@ -7684,7 +9145,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var btnPrimary = document.getElementById('previewBtnPrimary');
         var btnSecondary = document.getElementById('previewBtnSecondary');
         if (btnPrimary) {
-            btnPrimary.style.background = primary;
+            var primaryGlow = adjustColor(primary, 30);
+            btnPrimary.style.background = glow
+                ? 'radial-gradient(ellipse at 50% 0%, ' + primaryGlow + ' 0%, ' + primary + ' 70%)'
+                : primary;
             btnPrimary.style.borderRadius = radius + 'px';
             if (glow) {
                 btnPrimary.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15), 0 4px 20px ' + hexToRgba(primary, 0.35);
@@ -7777,7 +9241,18 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             }
         }
         picker.addEventListener('input', onPicker);
+        picker.addEventListener('change', updateThemeContrastFeedback);
         hex.addEventListener('input', onHex);
+        hex.addEventListener('blur', function() {
+            if (/^#[0-9a-fA-F]{6}$/.test(this.value)) {
+                this.value = normalizeHexColor(this.value);
+                picker.value = this.value;
+                updateColorPreview();
+            } else {
+                updateThemeContrastFeedback();
+            }
+        });
+        hex.addEventListener('change', updateThemeContrastFeedback);
     }
 
     bindColorPair('primaryColor', false);
@@ -7786,6 +9261,38 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     bindColorPair('darkPrimaryColor', true);
     bindColorPair('darkAccentColor', true);
     bindColorPair('darkSidebarBg', true);
+
+    function setLoginColorPair(id, value) {
+        var normalized = /^#[0-9a-fA-F]{6}$/.test(value || '') ? normalizeHexColor(value) : '';
+        var hex = document.getElementById(id);
+        var picker = document.getElementById(id + 'Picker');
+        if (hex && normalized) hex.value = normalized;
+        if (picker && normalized) picker.value = normalized;
+    }
+
+    function bindLoginColorPair(id) {
+        var hex = document.getElementById(id);
+        var picker = document.getElementById(id + 'Picker');
+        if (!hex || !picker) return;
+
+        picker.addEventListener('input', function() {
+            hex.value = this.value;
+        });
+        hex.addEventListener('input', function() {
+            if (/^#[0-9a-fA-F]{6}$/.test(this.value)) {
+                picker.value = this.value;
+            }
+        });
+        hex.addEventListener('blur', function() {
+            if (/^#[0-9a-fA-F]{6}$/.test(this.value)) {
+                this.value = normalizeHexColor(this.value);
+                picker.value = this.value;
+            }
+        });
+    }
+
+    bindLoginColorPair('loginBoxColor');
+    bindLoginColorPair('loginBoxTextColor');
 
     // Auto-reset buttons — return a field to "auto" (empty stored, derived display)
     document.querySelectorAll('.auto-reset-btn[data-auto-reset]').forEach(function(btn) {
@@ -8045,7 +9552,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
         try {
             var settings = Object.assign({}, currentSettings || {});
-            settings.theme = readThemeFormState();
+            var contrastResult = sanitizeThemeContrast(readThemeFormState());
+            settings.theme = contrastResult.theme;
+            syncThemeFormColors(settings.theme);
+            updateThemeContrastFeedback();
 
             var formData = new FormData();
             formData.append('action', 'save-settings');
@@ -8058,7 +9568,18 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             if (result.success) {
                 currentSettings = result.data;
                 applyTheme(currentSettings.theme);
-                showToast(t('toast.theme_saved'), 'success');
+                var serverTheme = sanitizeThemeContrast(currentSettings.theme || {});
+                if (serverTheme.warnings.length) {
+                    syncThemeFormColors(serverTheme.theme);
+                    updateThemeContrastFeedback();
+                    showToast(serverTheme.warnings[0], 'warning');
+                } else if (contrastResult.warnings.length) {
+                    updateThemeContrastFeedback();
+                    showToast(contrastResult.warnings[0], 'warning');
+                } else {
+                    updateThemeContrastFeedback();
+                    showToast(t('toast.theme_saved'), 'success');
+                }
             } else {
                 showToast(result.message, 'error');
             }
@@ -8127,6 +9648,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 '--nb-brand: ' + c.accent + ';' +
                 '--nb-brand-light: ' + adjustColor(c.accent, 20) + ';' +
                 '--nb-brand-dark: ' + adjustColor(c.accent, -20) + ';' +
+                '--nb-brand-subtle: ' + hexToRgba(c.accent, isDark ? 0.18 : 0.12) + ';' +
                 '--nb-sidebar-bg: ' + c.sidebar + ';' +
                 '--nb-bg: ' + bg + ';' +
                 '--nb-bg-elevated: ' + bgElevated + ';' +
@@ -8198,8 +9720,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 formData.append('action', 'save-ai-settings');
                 formData.append('settings', JSON.stringify(collectAiSettingsForm()));
                 formData.append('csrf_token', CSRF_TOKEN);
-                var response = await fetch('api.php', { method: 'POST', body: formData });
-                var result = await response.json();
+                var configuredTimeout = parseInt(document.getElementById('aiRequestTimeout')?.value || '300', 10);
+                var imageTimeoutMs = Math.max(300000, (Number.isFinite(configuredTimeout) ? configuredTimeout : 300) * 1000 + 30000);
+                var result = await fetchJsonWithTimeout('api.php', { method: 'POST', body: formData }, imageTimeoutMs);
                 if (!result.success) throw new Error(result.message);
                 currentAiSettings = result.data.settings;
                 populateAiSettings(currentAiSettings);
@@ -8325,12 +9848,169 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         });
     }
 
+    var aiAuditRunButton = document.getElementById('aiAuditRun');
+    if (aiAuditRunButton) {
+        aiAuditRunButton.addEventListener('click', runAiContentAudit);
+    }
+
+    async function aiAuditPost(action, payload) {
+        var formData = new FormData();
+        formData.append('action', action);
+        formData.append('csrf_token', CSRF_TOKEN);
+        Object.keys(payload || {}).forEach(function(key) {
+            formData.append(key, payload[key]);
+        });
+        var response = await fetch('api.php', { method: 'POST', body: formData, cache: 'no-store' });
+        var result = await response.json();
+        if (!result.success) throw new Error(result.message || 'Error');
+        return result.data;
+    }
+
+    function aiAuditStatusBadge(row) {
+        var key = 'ai.audit_status_' + row.descriptionStatus;
+        var cls = row.descriptionStatus === 'ok' ? 'ai-audit-badge--ok' : 'ai-audit-badge--warn';
+        return '<span class="ai-audit-badge ' + cls + '">' + escapeHtml(t(key)) + ' (' + row.descriptionLength + ')</span>';
+    }
+
+    async function runAiContentAudit() {
+        var results = document.getElementById('aiAuditResults');
+        if (!results) return;
+        aiAuditRunButton.disabled = true;
+        results.textContent = t('ai.audit_running');
+        try {
+            var data = await aiAuditPost('ai-content-audit', {});
+            var pages = Array.isArray(data.pages) ? data.pages : [];
+            if (!pages.length) {
+                results.textContent = t('ai.audit_empty');
+                return;
+            }
+            var html = '<table class="ai-audit-table"><thead><tr>'
+                + '<th>' + escapeHtml(t('ai.audit_col_page')) + '</th>'
+                + '<th>' + escapeHtml(t('ai.audit_col_description')) + '</th>'
+                + '<th>' + escapeHtml(t('ai.audit_col_alt')) + '</th>'
+                + '<th></th>'
+                + '</tr></thead><tbody>';
+            pages.forEach(function(row, index) {
+                var needsDescription = row.descriptionStatus !== 'ok';
+                html += '<tr data-audit-page="' + escapeHtml(row.contentPage) + '">'
+                    + '<td><strong>' + escapeHtml(row.title) + '</strong><br><small>' + escapeHtml(row.contentPage) + '</small></td>'
+                    + '<td data-audit-cell="description">' + aiAuditStatusBadge(row) + '</td>'
+                    + '<td>' + (row.missingAlt > 0
+                        ? '<span class="ai-audit-badge ai-audit-badge--warn">' + escapeHtml(t('ai.audit_alt_missing', { count: row.missingAlt })) + '</span>'
+                        : '<span class="ai-audit-badge ai-audit-badge--ok">' + escapeHtml(t('ai.audit_status_ok')) + '</span>') + '</td>'
+                    + '<td data-audit-cell="actions">' + (needsDescription
+                        ? '<button type="button" class="btn btn-secondary btn-sm" data-audit-suggest="' + escapeHtml(row.contentPage) + '">' + escapeHtml(t('ai.audit_suggest')) + '</button>'
+                        : '') + '</td>'
+                    + '</tr>';
+            });
+            html += '</tbody></table>';
+            results.innerHTML = html;
+            results.querySelectorAll('[data-audit-suggest]').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    aiAuditSuggestDescription(button.getAttribute('data-audit-suggest'), button);
+                });
+            });
+        } catch (error) {
+            results.textContent = error.message;
+        } finally {
+            aiAuditRunButton.disabled = false;
+        }
+    }
+
+    async function aiAuditSuggestDescription(contentPage, button) {
+        var row = document.querySelector('[data-audit-page="' + (window.CSS && CSS.escape ? CSS.escape(contentPage) : contentPage) + '"]');
+        if (!row) return;
+        var actionsCell = row.querySelector('[data-audit-cell="actions"]');
+        button.disabled = true;
+        button.textContent = t('ai.generating');
+        try {
+            var data = await aiAuditPost('ai-content-audit-suggest', { contentPage: contentPage });
+            updateAiUsage(data.limits);
+            var descriptionCell = row.querySelector('[data-audit-cell="description"]');
+            if (descriptionCell) {
+                descriptionCell.innerHTML = '<em>' + escapeHtml(data.description) + '</em>';
+            }
+            actionsCell.innerHTML = '';
+            var applyButton = document.createElement('button');
+            applyButton.type = 'button';
+            applyButton.className = 'btn btn-primary btn-sm';
+            applyButton.textContent = t('ai.audit_apply');
+            applyButton.addEventListener('click', async function() {
+                if (!window.confirm(t('ai.audit_apply_confirm', { page: contentPage }))) return;
+                applyButton.disabled = true;
+                try {
+                    await aiAuditPost('ai-content-audit-apply', {
+                        contentPage: contentPage,
+                        description: data.description,
+                        confirmed: '1'
+                    });
+                    actionsCell.innerHTML = '<span class="ai-audit-badge ai-audit-badge--ok">' + escapeHtml(t('ai.audit_applied')) + '</span>';
+                } catch (error) {
+                    applyButton.disabled = false;
+                    showToast(error.message, 'error');
+                }
+            });
+            actionsCell.appendChild(applyButton);
+        } catch (error) {
+            button.disabled = false;
+            button.textContent = t('ai.audit_suggest');
+            showToast(error.message, 'error');
+        }
+    }
+
 	    var aiImageForm = document.getElementById('aiImageForm');
 	    var aiImageBusy = false;
 	    var AI_IMAGE_REFERENCE_LIMIT = 16;
 	    var aiImageReferences = [];
 	    var aiImageHistoryOffset = 0;
 	    var AI_IMAGE_HISTORY_LIMIT = 12;
+	    var aiImageJobPollTimer = null;
+	    var aiImageKnownFinishedJobs = new Set();
+	    var aiImageRunningJobs = new Set();
+	    var AI_IMAGE_JOB_NOTICE_STORAGE_KEY = 'nibbly.aiImageJobNotices.v1';
+	    var AI_IMAGE_JOB_NOTICE_LIMIT = 80;
+
+    function aiImageJobNoticeKey(job) {
+        if (!job || !job.id) return '';
+        return [job.id, job.status || '', job.finishedAt || job.updatedAt || ''].join(':');
+    }
+
+    function readAiImageJobNotices() {
+        try {
+            var raw = window.localStorage ? window.localStorage.getItem(AI_IMAGE_JOB_NOTICE_STORAGE_KEY) : '';
+            var notices = raw ? JSON.parse(raw) : {};
+            return notices && typeof notices === 'object' ? notices : {};
+        } catch (error) {
+            return {};
+        }
+    }
+
+    function writeAiImageJobNotices(notices) {
+        if (!window.localStorage) return;
+        try {
+            var entries = Object.entries(notices || {})
+                .sort(function(a, b) { return Number(b[1] || 0) - Number(a[1] || 0); })
+                .slice(0, AI_IMAGE_JOB_NOTICE_LIMIT);
+            window.localStorage.setItem(AI_IMAGE_JOB_NOTICE_STORAGE_KEY, JSON.stringify(Object.fromEntries(entries)));
+        } catch (error) {
+            // Notification history is only a UI convenience.
+        }
+    }
+
+    function aiImageJobNoticeWasShown(job) {
+        var key = aiImageJobNoticeKey(job);
+        if (!key) return false;
+        return !!readAiImageJobNotices()[key];
+    }
+
+    function markAiImageJobNoticeShown(job) {
+        var key = aiImageJobNoticeKey(job);
+        if (!key) return;
+        var notices = readAiImageJobNotices();
+        notices[key] = Date.now();
+        writeAiImageJobNotices(notices);
+    }
+
     function setAiImageBusy(isBusy, activeButton, loadingTextKey) {
         aiImageBusy = isBusy;
         var buttons = [
@@ -8339,7 +10019,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         ];
         buttons.forEach(function(button) {
             if (!button) return;
-            button.disabled = isBusy || !aiEnabled;
+            button.disabled = isBusy || !dashboardAiImageUsable;
             if (button === activeButton) {
                 if (isBusy) {
                     button.dataset.originalHtml = button.dataset.originalHtml || button.innerHTML;
@@ -8357,6 +10037,178 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             }
         });
     }
+
+    function renderAiImageResult(result, target) {
+        if (!target || !result) return;
+        var paths = Array.isArray(result.paths) ? result.paths : [result.path];
+        paths = paths.filter(Boolean);
+        if (!paths.length) {
+            target.innerHTML = '<div class="ai-image-message ai-image-message--error" role="alert"><strong>Error</strong><span>' + escapeHtml(t('ai.image_history_error')) + '</span></div>';
+            return;
+        }
+        target.innerHTML = '<div class="ai-image-gallery">' + paths.map(function(path) {
+            var filename = (path || '').split('/').pop();
+            return '<figure class="ai-image-figure"><button type="button" class="ai-image-preview-btn" data-ai-preview="' + escapeHtml(path) + '" data-ai-preview-name="' + escapeHtml(filename) + '"><img src="' + escapeHtml(path) + '" alt=""></button><figcaption><button type="button" class="btn btn-secondary btn-sm" onclick="switchTab(&quot;media&quot;)">' + escapeHtml(t('nav.media_library')) + '</button></figcaption></figure>';
+        }).join('') + '</div>';
+    }
+
+    function setAiImageJobMessage(target, job, messageKey) {
+        if (!target) return;
+        var prompt = String((job && job.prompt) || '').trim();
+        target.innerHTML = '<div class="ai-image-message" role="status">'
+            + '<strong>' + escapeHtml(t(messageKey || 'ai.image_job_queued')) + '</strong>'
+            + (prompt ? '<span class="ai-image-message__prompt">' + escapeHtml(prompt) + '</span>' : '')
+            + '</div>';
+    }
+
+    function setAiImageJobsChecking(isChecking) {
+        var button = document.getElementById('aiImageJobsCheck');
+        if (!button) return;
+        button.disabled = isChecking || !dashboardAiImageUsable;
+        button.classList.toggle('is-loading', !!isChecking);
+        button.setAttribute('aria-busy', isChecking ? 'true' : 'false');
+    }
+
+    function formatAiImageJobTime(value) {
+        if (!value) return '';
+        var date = new Date(value);
+        return isNaN(date.getTime()) ? '' : date.toLocaleString();
+    }
+
+    function updateAiImageJobsPanel(jobs, isChecking) {
+        var panel = document.getElementById('aiImageJobsPanel');
+        var status = document.getElementById('aiImageJobsStatus');
+        var meta = document.getElementById('aiImageJobsMeta');
+        if (!panel || !status) return;
+        panel.hidden = !dashboardAiImageUsable;
+        setAiImageJobsChecking(!!isChecking);
+        jobs = Array.isArray(jobs) ? jobs : [];
+        var openJobs = jobs.filter(function(job) {
+            return job && (job.status === 'queued' || job.status === 'running');
+        });
+        var latest = jobs[0] || null;
+        if (openJobs.length) {
+            status.textContent = t('ai.image_jobs_open', { count: openJobs.length });
+            if (meta) {
+                meta.hidden = false;
+                meta.textContent = openJobs[0].prompt || '';
+            }
+            return;
+        }
+        if (latest && latest.status === 'success') {
+            status.textContent = t('ai.image_jobs_finished');
+            if (meta) {
+                meta.hidden = false;
+                meta.textContent = formatAiImageJobTime(latest.finishedAt || latest.updatedAt);
+            }
+            return;
+        }
+        if (latest && latest.status === 'error') {
+            status.textContent = t('ai.image_jobs_failed');
+            if (meta) {
+                meta.hidden = false;
+                meta.textContent = latest.error || formatAiImageJobTime(latest.finishedAt || latest.updatedAt);
+            }
+            return;
+        }
+        status.textContent = t('ai.image_jobs_idle');
+        if (meta) {
+            meta.hidden = true;
+            meta.textContent = '';
+        }
+    }
+
+    async function runAiImageJob(job) {
+        if (!job || !job.id || aiImageRunningJobs.has(job.id)) return;
+        aiImageRunningJobs.add(job.id);
+        try {
+            var formData = new FormData();
+            formData.append('action', 'ai-image-job-run');
+            formData.append('job_id', job.id);
+            formData.append('csrf_token', CSRF_TOKEN);
+            await fetch('api.php', { method: 'POST', body: formData, cache: 'no-store' });
+        } finally {
+            aiImageRunningJobs.delete(job.id);
+        }
+    }
+
+    async function pollAiImageJobs(activeJobId, target, options) {
+        options = options || {};
+        updateAiImageJobsPanel(null, !!options.manual);
+        try {
+            var params = new URLSearchParams({
+                action: 'ai-image-jobs',
+                open_only: '0',
+                limit: '30',
+                csrf_token: CSRF_TOKEN
+            });
+            var response = await fetch('api.php?' + params.toString(), { cache: 'no-store' });
+            var result = await response.json();
+            if (!result.success) throw new Error(result.message || 'Error');
+            var jobs = Array.isArray(result.data.jobs) ? result.data.jobs : [];
+            var openJobs = jobs.filter(function(job) {
+                return job.status === 'queued' || job.status === 'running';
+            });
+            updateAiImageJobsPanel(jobs, false);
+            var runningJobs = openJobs.filter(function(job) { return job.status === 'running'; });
+            var queuedJobs = openJobs.filter(function(job) { return job.status === 'queued'; });
+            if (!runningJobs.length && queuedJobs.length) {
+                runAiImageJob(queuedJobs[queuedJobs.length - 1]);
+            }
+
+            jobs.forEach(function(job) {
+                if (!job || !job.id || (job.status !== 'success' && job.status !== 'error')) return;
+                var noticeAlreadyShown = aiImageKnownFinishedJobs.has(job.id) || aiImageJobNoticeWasShown(job);
+                var isActiveJob = job.id === activeJobId;
+                var isPassivePoll = !activeJobId && !target && !options.manual;
+                aiImageKnownFinishedJobs.add(job.id);
+                if (job.status === 'success') {
+                    if (!noticeAlreadyShown && !isPassivePoll) {
+                        showToast(t('ai.image_job_finished'), 'success');
+                    }
+                    if (isActiveJob && target) {
+                        renderAiImageResult(job.result, target);
+                        updateAiUsage(job.result && job.result.limits ? job.result.limits : null);
+                    }
+                    loadAiImageHistory(true);
+                } else {
+                    if (!noticeAlreadyShown && !isPassivePoll) {
+                        showToast(job.error || t('ai.image_job_failed'), 'error');
+                    }
+                    if (isActiveJob && target) {
+                        target.innerHTML = '<div class="ai-image-message ai-image-message--error" role="alert"><strong>Error</strong><span>' + escapeHtml(job.error || t('ai.image_job_failed')) + '</span></div>';
+                    }
+                    loadAiImageHistory(true);
+                }
+                markAiImageJobNoticeShown(job);
+            });
+
+            if (openJobs.length) {
+                aiImageJobPollTimer = window.setTimeout(function() {
+                    pollAiImageJobs(activeJobId, target);
+                }, 12000);
+            } else {
+                aiImageJobPollTimer = null;
+            }
+        } catch (error) {
+            setAiImageJobsChecking(false);
+            aiImageJobPollTimer = window.setTimeout(function() {
+                pollAiImageJobs(activeJobId, target);
+            }, 15000);
+        }
+    }
+
+    function startAiImageJobPolling(activeJobId, target, options) {
+        if (aiImageJobPollTimer) {
+            window.clearTimeout(aiImageJobPollTimer);
+            aiImageJobPollTimer = null;
+        }
+        pollAiImageJobs(activeJobId || '', target || null, options || {});
+    }
+
+    document.getElementById('aiImageJobsCheck')?.addEventListener('click', function() {
+        startAiImageJobPolling('', null, { manual: true });
+    });
 
     if (aiImageForm) {
         aiImageForm.addEventListener('submit', async function(e) {
@@ -8389,18 +10241,22 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 	                });
                 formData.append('filenameHint', prompt.substring(0, 60));
                 formData.append('csrf_token', CSRF_TOKEN);
-                var response = await fetch('api.php', { method: 'POST', body: formData });
-                var result = await response.json();
+                var result = await fetchJsonWithTimeout('api.php', { method: 'POST', body: formData }, 45000);
                 if (!result.success) throw new Error(result.message);
-                var paths = Array.isArray(result.data.paths) ? result.data.paths : [result.data.path];
-                target.innerHTML = '<div class="ai-image-gallery">' + paths.map(function(path) {
-                    var filename = (path || '').split('/').pop();
-                    return '<figure class="ai-image-figure"><button type="button" class="ai-image-preview-btn" data-ai-preview="' + escapeHtml(path) + '" data-ai-preview-name="' + escapeHtml(filename) + '"><img src="' + escapeHtml(path) + '" alt=""></button><figcaption><button type="button" class="btn btn-secondary btn-sm" onclick="switchTab(&quot;media&quot;)">' + escapeHtml(t('nav.media_library')) + '</button></figcaption></figure>';
-                }).join('') + '</div>';
-                updateAiUsage(result.data.limits);
-                loadAiImageHistory(true);
+                if (result.data && result.data.job) {
+                    setAiImageJobMessage(target, result.data.job, 'ai.image_job_queued');
+                    runAiImageJob(result.data.job);
+                    startAiImageJobPolling(result.data.job.id, target);
+                } else {
+                    renderAiImageResult(result.data, target);
+                    updateAiUsage(result.data.limits);
+                    loadAiImageHistory(true);
+                }
             } catch (error) {
-                target.innerHTML = '<div class="ai-image-message ai-image-message--error" role="alert"><strong>Error</strong><span>' + escapeHtml(error.message) + '</span></div>';
+                var message = error && error.name === 'AbortError'
+                    ? t('copilot.image_request_timeout')
+                    : (error.message || t('toast.error'));
+                target.innerHTML = '<div class="ai-image-message ai-image-message--error" role="alert"><strong>Error</strong><span>' + escapeHtml(message) + '</span></div>';
             } finally {
                 setAiImageBusy(false, btn);
             }
@@ -8547,6 +10403,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     if (document.getElementById('aiImageHistoryList')) {
         loadAiImageHistory(true);
+        startAiImageJobPolling('', null);
     }
 
 	    var aiImageReference = document.getElementById('aiImageReference');
@@ -9151,6 +11008,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         return {
             method: document.getElementById('settingsEmailMethod').value,
             recipientEmail: document.getElementById('settingsRecipientEmail').value.trim(),
+            bccEmail: document.getElementById('settingsBccEmail').value.trim(),
             fromEmail: document.getElementById('settingsFromEmail').value.trim(),
             fromName: document.getElementById('settingsFromName').value.trim(),
             smtpHost: document.getElementById('settingsSmtpHost').value.trim(),
@@ -9507,9 +11365,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         };
 
         var remotePlaceholders = {
-            dropbox: { app_key: 'Dropbox app key', path: '/Nibbly Backups' },
+            dropbox: { app_key: 'Dropbox app key', path: '/nibbly Backups' },
             google_drive: { client_id: 'Google OAuth client ID', client_secret: t('settings.remote_placeholder_optional'), folder_id: t('settings.remote_placeholder_optional') },
-            onedrive: { client_id: 'Microsoft app client ID', client_secret: t('settings.remote_placeholder_optional'), folder_path: '/Nibbly Backups' },
+            onedrive: { client_id: 'Microsoft app client ID', client_secret: t('settings.remote_placeholder_optional'), folder_path: '/nibbly Backups' },
             sftp: { port: '22', remote_path: '/home/user/backups' },
             ftp: { port: '21', remote_path: 'backups', ssl: '0', passive: '1' },
             s3: { endpoint: 'https://s3.example.com', region: 'eu-central-1', prefix: 'nibbly', path_style: '0' },
@@ -10322,7 +12180,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             formData.append('action', 'ai-generate-text');
             formData.append('maxOutputTokens', '1800');
             formData.append('prompt', [
-                'Translate these Nibbly admin editor fields from ' + sourceLang + ' into the requested target languages.',
+                'Translate these nibbly admin editor fields from ' + sourceLang + ' into the requested target languages.',
                 'Return strict JSON only. Shape: {"translations":{"LANG":{"field":"translated value"}}}.',
                 'Keep HTML tags if present. Do not add Markdown or explanations.',
                 '',
@@ -11386,5 +13244,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     <?php endif; ?>
 
     </script>
+    <?php if ($_aiDashboardCopilotAvailable && is_file(__DIR__ . '/../js/ai-copilot.js')): ?>
+    <script src="../js/ai-copilot.js?v=<?php echo @filemtime(__DIR__ . '/../js/ai-copilot.js') ?: time(); ?>"></script>
+    <?php endif; ?>
 </body>
 </html>

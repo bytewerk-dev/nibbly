@@ -19,6 +19,7 @@ Nibbly is a flat-file CMS built on PHP with no database dependency. Content is s
 admin/           Admin panel (login, dashboard, API, setup wizard)
 content/
   pages/         Page JSON files ({lang}_{slug}.json, footer.json)
+  forms/         Public form definitions
   news/          News post JSON files ({slug}.json)
   settings.json  Site-wide settings (favicon, theme, etc.)
   events.json    Events data
@@ -31,6 +32,7 @@ includes/
   footer.php     Footer + scripts + inline editor bootstrap
   access-guard.php  Maintenance mode, preview bypass, and private page enforcement
   content-loader.php  Template API (editable fields, render components)
+  forms.php            JSON-backed public forms
   ai/               AI provider gateway, limits, usage, audit, generated images
   block-types.php     Block type registry
   block-renderers/    One PHP file per block type
@@ -166,6 +168,44 @@ After successful login the behaviour is controlled by the `general.frontendLogin
 The `?redirect=…` parameter is sanitised by `validateRedirectUrl()` in `admin/index.php` — it must be same-origin and may not point inside `/admin/`, so the shortcode cannot be used for open redirects.
 
 To move the trigger somewhere else (e.g. the tagline or a hidden element), simply place the `[id="adminAccess"]…[/id]` shortcode around any other footer text. Removing the shortcode disables the hidden access entirely; admins must then visit `/admin/` directly.
+
+### Form JSON (`content/forms/{id}.json`)
+
+Public forms can be stored as JSON definitions. This keeps the no-database
+model intact while giving admins a limited, safe editor for existing forms under
+**Dashboard -> Settings -> Forms**.
+
+```json
+{
+  "id": "contact",
+  "label": "Kontaktformular",
+  "description": "",
+  "enabled": true,
+  "submit": {
+    "store": true,
+    "email": true,
+    "subject": "Kontaktanfrage: {name}",
+    "successText": "Vielen Dank für deine Nachricht."
+  },
+  "fields": [
+    { "key": "name", "type": "text", "label": "Name", "required": true, "width": 6 },
+    { "key": "email", "type": "email", "label": "E-Mail", "required": true, "width": 6 },
+    { "key": "phone", "type": "tel", "label": "Telefon", "required": false, "width": 12 },
+    { "key": "message", "type": "textarea", "label": "Nachricht", "required": true, "width": 12 }
+  ]
+}
+```
+
+`id` is normalized to lowercase letters, numbers, dashes, and underscores and is
+used for `content/forms/{id}.json`, lazy rendering, CSRF-style form tokens, and
+mail metadata. Supported `type` values are `text`, `email`, `tel`, `textarea`,
+`select`, `radio`, `checkbox`, `date`, `time`, `hidden`, `heading`, and `note`.
+Supported `width` values are `3`, `4`, `6`, `8`, and `12` on a 12-column grid.
+`select` and `radio` fields use `options[]` entries with `value` and `label`.
+
+`submit.store=false` skips local inbox storage. `submit.email=false` skips email
+notification even if SMTP/sendmail is configured. `submit.subject` supports
+simple placeholders such as `{form}`, `{name}`, and `{email}`.
 
 ### Settings JSON (`content/settings.json`)
 
@@ -718,14 +758,31 @@ Full-site backups are created by `includes/backup-helper.php` and can be run fro
 ### Mail & Settings
 | Action | Method | Description |
 |---|---|---|
-| `load-mails` | GET | Load contact form submissions |
+| `load-mails` | GET | Load form submissions and available form metadata |
 | `mark-mail-read` | POST | Mark single mail as read |
+| `update-mail-flags` | POST | Update mail read/starred flags |
 | `mark-all-mails-read` | POST | Mark all mails as read |
 | `delete-mail` | POST | Delete a mail |
+| `delete-read-mails` | POST | Delete all read mails |
 | `unread-mail-count` | GET | Get count of unread mails |
 | `change-password` | POST | Change admin password |
 | `load-settings` | GET | Load site settings |
 | `save-settings` | POST | Save site settings |
+
+### Forms
+| Action | Method | Description |
+|---|---|---|
+| `list-forms` | GET | List `content/forms/*.json` definitions |
+| `load-form` | GET | Load one normalized form definition |
+| `save-form` | POST | Save one form definition from the Forms settings panel |
+
+Public form endpoints live in `api/`:
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `api/form.php?form={id}` | GET | Lazy-render a JSON form when `content/forms/{id}.json` exists, otherwise fall back to whitelisted legacy forms |
+| `api/form-submit.php` | POST | Validate, notify, and store JSON form submissions |
+| `api/contact.php` | POST | Legacy contact form endpoint; still stores compatible `formId` / `formLabel` metadata |
 
 ## Theming
 
@@ -811,11 +868,66 @@ The theme toggle sets `data-theme="dark"` or `data-theme="light"` on `<html>`. T
 
 Example fonts are provided in `examples/fonts/`.
 
-## Contact Form System
+## Form System
 
-The contact form partial (`includes/contact-form.php`) renders an AJAX form that submits to `admin/api.php`. Submissions are stored as JSON files in `content/mails/` and can be managed via the admin dashboard.
+Nibbly has two public form paths:
 
-The form uses JavaScript in `includes/footer.php` to handle submission, show loading state, and display success/error feedback.
+1. **JSON-backed forms** are the current default for simple forms. Definitions
+   live in `content/forms/*.json`, render through `includes/forms.php`, and
+   submit to `api/form-submit.php`.
+2. **Legacy PHP forms** such as `includes/contact-form.php` still submit to
+   `api/contact.php` and remain supported for older templates or highly custom
+   markup.
+
+`includes/forms.php` provides the JSON form API:
+
+| Function | Purpose |
+|---|---|
+| `nibblyFormLoad($id)` | Load and normalize one form definition |
+| `nibblyFormSave($form)` | Normalize and write a form JSON file |
+| `nibblyFormsList()` | List available forms for settings and inbox filters |
+| `nibblyFormRender($id, $options)` / `nibblyForm($id, $options)` | Render a visitor-facing form |
+| `nibblyFormValidateSubmission($form, $lang)` | Validate required fields and email fields |
+| `nibblyFormsSaveSubmission($submission)` | Store a submission in `content/mails.json` |
+| `nibblyFormsSendNotification(...)` | Send SMTP/sendmail notifications using `content/settings.json` email config |
+
+The renderer emits `.contact-form.nibbly-json-form`, a hidden `form_id`, a
+one-time token, a honeypot, `.btn-text` / `.btn-loading`, `.form-feedback`, and
+a `.nibbly-form-grid` wrapper. The shared JavaScript in `includes/footer.php`
+handles AJAX submission for both legacy and JSON forms.
+
+Submissions are stored in `content/mails.json` with at least:
+
+```json
+{
+  "id": "mail_...",
+  "formId": "contact",
+  "formLabel": "Kontaktformular",
+  "name": "Example",
+  "email": "hello@example.com",
+  "occasion": "Kontaktanfrage: Example",
+  "message": "Message body",
+  "fields": [
+    { "key": "name", "label": "Name", "type": "text", "value": "Example" }
+  ],
+  "timestamp": "2026-06-02T12:00:00+00:00",
+  "status": "local_only",
+  "read": false,
+  "starred": false
+}
+```
+
+The dashboard messages view is labelled as contact/form submissions, supports a
+form filter, shows the source form in the table, and displays structured
+`fields[]` values in the detail view. Older messages without `formId` are
+normalized to the contact form for display.
+
+The Forms settings panel intentionally stays narrower than a full form builder:
+admins can switch forms through a select, create a new simple definition, edit
+form metadata, enable/disable local storage and email notification, and edit
+field type, key, label, placeholder, required state, width, and options.
+Conditional display logic and custom frontend behaviour should remain in
+site-owned templates or scripts.
 
 ## News/Blog System
 

@@ -54,6 +54,22 @@ function sanitizeHeaderValue($value) {
     return str_replace(["\r", "\n", "\t"], '', trim($value));
 }
 
+function parseConfiguredEmailList($value): array {
+    $rawItems = is_array($value) ? $value : explode(',', (string)$value);
+    $emails = [];
+
+    foreach ($rawItems as $item) {
+        foreach (explode(',', (string)$item) as $email) {
+            $email = sanitizeHeaderValue($email);
+            if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $emails[] = $email;
+            }
+        }
+    }
+
+    return array_values(array_unique($emails));
+}
+
 /**
  * Save email locally as backup
  */
@@ -196,14 +212,15 @@ $body .= str_repeat('-', 40) . "\n";
 // email delivery is disabled or misconfigured, so contact requests are not lost.
 $sent = false;
 $method = $emailConfig['method'] ?? 'inactive';
-$to = $emailConfig['recipientEmail'] ?? '';
-$fromEmail = $emailConfig['fromEmail'] ?? $to;
-$fromName = $emailConfig['fromName'] ?? '';
+$toRecipients = parseConfiguredEmailList($emailConfig['recipientEmail'] ?? '');
+$bccRecipients = parseConfiguredEmailList($emailConfig['bccEmail'] ?? '');
+$to = implode(', ', $toRecipients);
+$fromEmail = sanitizeHeaderValue($emailConfig['fromEmail'] ?? '') ?: ($toRecipients[0] ?? '');
+$fromName = sanitizeHeaderValue($emailConfig['fromName'] ?? '');
 $replyToEmail = filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : '';
 $isEmailConfigured = $emailConfig
     && $method !== 'inactive'
-    && !empty($to)
-    && filter_var($to, FILTER_VALIDATE_EMAIL);
+    && !empty($toRecipients);
 
 if ($isEmailConfigured && $method === 'smtp') {
     $mailer = new SmtpMailer(
@@ -215,12 +232,13 @@ if ($isEmailConfigured && $method === 'smtp') {
     );
 
     $sent = $mailer->send(
-        $to,
+        $toRecipients,
         $subject,
         $body,
         $fromEmail,
         $fromName,
-        $replyToEmail
+        $replyToEmail,
+        $bccRecipients
     );
 } elseif ($isEmailConfigured && $method === 'sendmail') {
     // PHP mail() — requires server IP to be whitelisted for sending
@@ -233,6 +251,9 @@ if ($isEmailConfigured && $method === 'smtp') {
     $headers[] = 'X-Mailer: Nibbly CMS';
 
     $sent = @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', $body, implode("\r\n", $headers));
+    foreach ($bccRecipients as $bccRecipient) {
+        $sent = @mail($bccRecipient, '=?UTF-8?B?' . base64_encode($subject) . '?=', $body, implode("\r\n", $headers)) && $sent;
+    }
 }
 
 $status = $sent ? 'sent' : ($isEmailConfigured ? 'send_failed' : 'local_only');
@@ -240,12 +261,20 @@ $saved = saveMailBackup($mailsFile, [
     'id' => uniqid('mail_'),
     'timestamp' => date('c'),
     'lang' => $lang,
+    'formId' => 'contact',
+    'formLabel' => $lang === 'de' ? 'Kontaktformular' : 'Contact form',
     'name' => $name,
     'email' => $email,
     'phone' => $phone,
     'occasion' => $occasion,
     'date' => $date,
     'message' => $message,
+    'fields' => [
+        ['key' => 'name', 'label' => $lang === 'de' ? 'Name' : 'Name', 'value' => $name],
+        ['key' => 'email', 'label' => $lang === 'de' ? 'E-Mail' : 'Email', 'value' => $email],
+        ['key' => 'phone', 'label' => $lang === 'de' ? 'Telefon' : 'Phone', 'value' => $phone],
+        ['key' => 'message', 'label' => $lang === 'de' ? 'Nachricht' : 'Message', 'value' => $message],
+    ],
     'status' => $status,
     'read' => false,
     'starred' => false

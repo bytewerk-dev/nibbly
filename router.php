@@ -83,16 +83,18 @@ $cleanUri = trim($uri, '/');
 
 // News post URL: /en/news/slug or /news/slug
 if (preg_match('#^([a-z]{2})/news/([a-z0-9-]+)$#', $cleanUri, $m)) {
+    $currentLang = $m[1];
     $_GET['slug'] = $m[2];
     $basePath = '../../';
-    include $root . '/' . $m[1] . '/news-post.php';
+    include $root . '/includes/news-post.php';
     return true;
 }
 if (preg_match('#^news/([a-z0-9-]+)$#', $cleanUri, $m)) {
     $primaryLang = _routerGetPrimaryLang();
+    $currentLang = $primaryLang;
     $_GET['slug'] = $m[1];
     $basePath = '../';
-    include $root . '/' . $primaryLang . '/news-post.php';
+    include $root . '/includes/news-post.php';
     return true;
 }
 

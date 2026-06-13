@@ -1,0 +1,191 @@
+/**
+ * nb-select — token-styled replacement for native <select> dropdowns.
+ * Loaded in the admin dashboard and in the visual editor (admin only).
+ * The base button rule uses :where() so mirrored select classes
+ * (e.g. .topbar-select) keep full control over sizing and shape.
+ */
+
+.nb-select {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    vertical-align: middle;
+}
+
+.form-group .nb-select,
+.form-group .nb-select__button {
+    display: block;
+    width: 100%;
+}
+
+.nb-select .nb-select__native {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+/* One uniform input-field look for every enhanced select, regardless of the
+   classes mirrored from the original element (overrides e.g. the
+   .topbar-select pill shape by specificity). */
+.nb-select .nb-select__button {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    height: 40px;
+    min-height: 40px;
+    padding: 0 12px 0 14px;
+    border: 1px solid var(--nb-border, #d4d4d4);
+    border-radius: var(--nb-radius-md, 8px);
+    background: var(--nb-bg-elevated, #fff) !important;
+    color: var(--nb-text, inherit);
+    font-family: inherit;
+    font-size: 0.9375rem;
+    line-height: 1.3;
+    cursor: pointer;
+    text-align: left;
+}
+
+/* Modal control rows (.modal-input): selects, text inputs, and inline
+   buttons share one 36px height so mixed rows align exactly
+   (icon manager toolbar, iconify import, user form, ...). */
+.nb-select--modal-input .nb-select__button {
+    height: 36px;
+    min-height: 36px;
+    padding: 0 10px 0 12px;
+    font-size: 0.875rem;
+}
+
+input.modal-input {
+    height: 36px;
+    min-height: 36px;
+}
+
+.iconify-import-controls .btn {
+    height: 36px;
+    min-height: 36px;
+}
+
+/* Media library toolbar selects: match the 32px Library/Trash toggle. */
+.nb-select--nb-imgmgr-folder-filter .nb-select__button,
+.nb-select--nb-imgmgr-upload-type .nb-select__button,
+.nb-select--nb-imgmgr-move-select .nb-select__button {
+    height: 32px;
+    min-height: 32px;
+    padding: 0 8px 0 10px;
+    font-size: 0.8125rem;
+}
+
+/* Compact variant for the content editor topbar (language/page pickers):
+   matches the small buttons (.btn-sm, 30px) they sit next to. Scoped to the
+   topbar container so selects elsewhere keep the regular 40px height. */
+.topbar-selectors .nb-select .nb-select__button,
+.page-list-header .nb-select .nb-select__button {
+    height: 30px;
+    min-height: 30px;
+    padding: 0 10px 0 12px;
+    font-size: 0.8125rem;
+    width: auto;
+}
+
+.topbar-selectors .nb-select .nb-select__button .nb-select__caret svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* Same focus/active treatment as regular form inputs (.form-group input). */
+.nb-select .nb-select__button:focus,
+.nb-select .nb-select__button[aria-expanded="true"] {
+    outline: none;
+    border-color: var(--nb-primary, #2e95d2);
+    box-shadow: 0 0 0 3px var(--nb-primary-muted, rgba(46, 149, 210, 0.25));
+}
+
+/* Comboboxes (e.g. #aiChatModel) share the unified 40px control height. */
+.nb-combobox input {
+    height: 40px;
+}
+
+.nb-select__button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.nb-select__value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.nb-select__caret {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--nb-text-muted, #888);
+}
+
+.nb-select__caret svg {
+    width: 13px;
+    height: 13px;
+}
+
+.nb-select__list {
+    position: fixed;
+    z-index: 10010;
+    min-width: 140px;
+    max-width: min(420px, calc(100vw - 24px));
+    overflow-y: auto;
+    background: var(--nb-bg-elevated, #fff);
+    border: 1px solid var(--nb-border, #e5e5e5);
+    border-radius: var(--nb-radius-md, 10px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.nb-select__list[hidden] {
+    display: none;
+}
+
+.nb-select__option {
+    padding: 7px 10px;
+    border-radius: var(--nb-radius-sm, 6px);
+    font-size: 0.875rem;
+    color: var(--nb-text, inherit);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.nb-select__option:hover,
+.nb-select__option.is-active {
+    background: var(--nb-bg-hover, rgba(127, 127, 127, 0.12));
+}
+
+.nb-select__option.is-selected {
+    font-weight: 600;
+}
+
+.nb-select__option[aria-disabled="true"] {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.nb-select__group {
+    padding: 8px 10px 2px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--nb-text-muted, #888);
+}

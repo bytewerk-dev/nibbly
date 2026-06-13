@@ -1,0 +1,54 @@
+{
+    "id": "contact",
+    "label": "Kontaktformular",
+    "description": "",
+    "enabled": true,
+    "submit": {
+        "store": true,
+        "email": true,
+        "subject": "Kontaktanfrage: {name}",
+        "successText": "Vielen Dank für deine Nachricht."
+    },
+    "fields": [
+        {
+            "key": "name",
+            "type": "text",
+            "label": "Name",
+            "placeholder": "",
+            "help": "",
+            "required": true,
+            "width": 6,
+            "options": []
+        },
+        {
+            "key": "email",
+            "type": "email",
+            "label": "E-Mail",
+            "placeholder": "",
+            "help": "",
+            "required": true,
+            "width": 6,
+            "options": []
+        },
+        {
+            "key": "phone",
+            "type": "tel",
+            "label": "Telefon",
+            "placeholder": "",
+            "help": "",
+            "required": false,
+            "width": 12,
+            "options": []
+        },
+        {
+            "key": "message",
+            "type": "textarea",
+            "label": "Nachricht",
+            "placeholder": "",
+            "help": "",
+            "required": true,
+            "width": 12,
+            "options": []
+        }
+    ]
+}

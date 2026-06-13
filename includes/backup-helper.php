@@ -340,7 +340,7 @@ function backupIsPoolFilename($name) {
 
 function backupRemoteFolder($base) {
     $base = trim((string)$base);
-    if ($base === '') $base = '/Nibbly Backups';
+    if ($base === '') $base = '/nibbly Backups';
     $site = backupSiteIdentifier();
     $trimmed = trim($base, '/');
     if ($trimmed === '') return '/' . $site;
@@ -820,7 +820,7 @@ function backupRemoteUploadDropbox($filePath, array $target) {
     $settings = $target['settings'];
     $token = $settings['access_token'] ?? '';
     if ($token === '') throw new RuntimeException('Dropbox access token is missing.');
-    $folder = backupRemoteFolder($settings['path'] ?? '/Nibbly Backups');
+    $folder = backupRemoteFolder($settings['path'] ?? '/nibbly Backups');
     backupRemoteEnsureDropboxFolder($token, $folder);
     $remotePath = ($folder === '/' ? '' : $folder) . '/' . basename($filePath);
     backupRemoteCurl('https://content.dropboxapi.com/2/files/upload', [
@@ -866,7 +866,7 @@ function backupRemoteEnsureDropboxFolder($token, $folder) {
 
 function backupRemoteDropboxPath(array $target, $file = '') {
     $settings = $target['settings'];
-    $folder = backupRemoteFolder($settings['path'] ?? '/Nibbly Backups');
+    $folder = backupRemoteFolder($settings['path'] ?? '/nibbly Backups');
     return ($folder === '/' ? '' : $folder) . ($file !== '' ? '/' . basename($file) : '');
 }
 
@@ -952,7 +952,7 @@ function backupRemoteUploadGoogleDrive($filePath, array $target) {
     $token = $settings['access_token'] ?? '';
     if ($token === '') throw new RuntimeException('Google Drive access token is missing.');
     $metadata = ['name' => basename($filePath)];
-    $siteFolderId = backupRemoteGoogleFolderPathId($token, $settings['folder_id'] ?? '', $settings['folder_path'] ?? '/Nibbly Backups');
+    $siteFolderId = backupRemoteGoogleFolderPathId($token, $settings['folder_id'] ?? '', $settings['folder_path'] ?? '/nibbly Backups');
     if ($siteFolderId !== '') $metadata['parents'] = [$siteFolderId];
     $boundary = 'nibbly-' . bin2hex(random_bytes(8));
     $body = "--$boundary\r\n"
@@ -972,7 +972,7 @@ function backupRemoteUploadGoogleDrive($filePath, array $target) {
     ]);
 }
 
-function backupRemoteGoogleFolderPathId($token, $parentId = '', $basePath = '/Nibbly Backups') {
+function backupRemoteGoogleFolderPathId($token, $parentId = '', $basePath = '/nibbly Backups') {
     $folder = trim(backupRemoteFolder($basePath), '/');
     if ($folder === '') return '';
     $currentParent = trim((string)$parentId);
@@ -1055,7 +1055,7 @@ function backupRemoteGoogleFileId($file, array $target) {
     $settings = $target['settings'];
     $token = $settings['access_token'] ?? '';
     if ($token === '') throw new RuntimeException('Google Drive access token is missing.');
-    $folderId = backupRemoteGoogleFolderPathId($token, $settings['folder_id'] ?? '', $settings['folder_path'] ?? '/Nibbly Backups');
+    $folderId = backupRemoteGoogleFolderPathId($token, $settings['folder_id'] ?? '', $settings['folder_path'] ?? '/nibbly Backups');
     $safeName = str_replace(["\\", "'"], ["\\\\", "\\'"], basename($file));
     $query = "mimeType!='application/vnd.google-apps.folder' and name='{$safeName}' and trashed=false";
     if ($folderId !== '') {
@@ -1076,7 +1076,7 @@ function backupRemoteListGoogleDrive(array $target) {
     $settings = $target['settings'];
     $token = $settings['access_token'] ?? '';
     if ($token === '') throw new RuntimeException('Google Drive access token is missing.');
-    $folderId = backupRemoteGoogleFolderPathId($token, $settings['folder_id'] ?? '', $settings['folder_path'] ?? '/Nibbly Backups');
+    $folderId = backupRemoteGoogleFolderPathId($token, $settings['folder_id'] ?? '', $settings['folder_path'] ?? '/nibbly Backups');
     if ($folderId === '') return ['ok' => true, 'message' => 'No remote backups found.', 'files' => []];
 
     $files = [];
@@ -1138,7 +1138,7 @@ function backupRemoteUploadOneDrive($filePath, array $target) {
     $settings = $target['settings'];
     $token = $settings['access_token'] ?? '';
     if ($token === '') throw new RuntimeException('OneDrive access token is missing.');
-    $folder = trim(backupRemoteFolder($settings['folder_path'] ?? '/Nibbly Backups'), '/');
+    $folder = trim(backupRemoteFolder($settings['folder_path'] ?? '/nibbly Backups'), '/');
     backupRemoteEnsureOneDriveFolder($token, $folder);
     $remotePath = rawurlencode(($folder !== '' ? $folder . '/' : '') . basename($filePath));
     $remotePath = str_replace('%2F', '/', $remotePath);
@@ -1193,7 +1193,7 @@ function backupRemoteEnsureOneDriveFolder($token, $folder) {
 
 function backupRemoteOneDriveFolderPath(array $target) {
     $settings = $target['settings'];
-    return trim(backupRemoteFolder($settings['folder_path'] ?? '/Nibbly Backups'), '/');
+    return trim(backupRemoteFolder($settings['folder_path'] ?? '/nibbly Backups'), '/');
 }
 
 function backupRemoteListOneDrive(array $target) {

@@ -1,6 +1,6 @@
 <?php
 /**
- * Nibbly CMS — Admin i18n helper
+ * nibbly CMS — Admin i18n helper
  *
  * Provides t() for translating admin UI strings.
  * Language files: admin/lang/{code}.json  (flat key-value)

@@ -1,6 +1,6 @@
 <?php
 /**
- * Nibbly AI gateway.
+ * nibbly AI gateway.
  *
  * Centralizes provider configuration, usage limits, audit logging, and media
  * storage so CMS features do not talk to AI vendors directly.
@@ -17,6 +17,9 @@ if (!defined('NIBBLY_AI_AUDIT_DIR')) {
 }
 if (!defined('NIBBLY_AI_IMAGE_HISTORY_PATH')) {
     define('NIBBLY_AI_IMAGE_HISTORY_PATH', dirname(__DIR__, 2) . '/content/ai-image-history.json');
+}
+if (!defined('NIBBLY_AI_IMAGE_JOBS_DIR')) {
+    define('NIBBLY_AI_IMAGE_JOBS_DIR', dirname(__DIR__, 2) . '/content/ai-image-jobs');
 }
 if (!defined('NIBBLY_AI_GENERATED_IMAGE_DIR')) {
     define('NIBBLY_AI_GENERATED_IMAGE_DIR', dirname(__DIR__, 2) . '/assets/images/generated');
@@ -38,6 +41,11 @@ function nibblyAiDefaults(): array {
                 'baseUrl' => 'https://openrouter.ai/api/v1',
                 'apiKey' => '',
                 'organization' => ''
+            ],
+            'anthropic' => [
+                'baseUrl' => 'https://api.anthropic.com/v1',
+                'apiKey' => '',
+                'organization' => ''
             ]
         ],
         'chatModel' => 'gpt-4.1-mini',
@@ -45,19 +53,24 @@ function nibblyAiDefaults(): array {
         'imageModel' => 'gpt-image-2',
         'organization' => '',
         'allowLocalProvider' => false,
+        'assistantForceEnglish' => false,
+        'assistantSurfaces' => [
+            'visualEditor' => true,
+            'dashboard' => true
+        ],
         'features' => [
             'backendAssistant' => true,
             'seoTextGeneration' => true,
-            'imageGeneration' => false
+            'imageGeneration' => true
         ],
         'limits' => [
             'monthlyBudgetCents' => 1000,
             'dailyRequests' => 100,
             'dailyTextRequests' => 80,
             'dailyImageRequests' => 10,
-            'maxInputTokens' => 6000,
-            'maxOutputTokens' => 1200,
-            'requestTimeoutSeconds' => 120
+            'maxInputTokens' => 24000,
+            'maxOutputTokens' => 4096,
+            'requestTimeoutSeconds' => 300
         ],
         'pricing' => [
             'inputCentsPerMillion' => 15,
@@ -65,7 +78,7 @@ function nibblyAiDefaults(): array {
             'imageCentsPerRequest' => 5
         ],
         'systemPrompts' => [
-            'assistant' => 'You are the Nibbly CMS assistant. Answer clearly and practically. If a task needs admin access, explain where to do it in the Nibbly dashboard. Do not invent settings that do not exist.',
+            'assistant' => 'You are the nibbly CMS assistant. Answer clearly and practically. If a task needs admin access, explain where to do it in the nibbly dashboard. Do not invent settings that do not exist.',
             'seo' => 'You write concise, search-friendly website copy. Return only the requested text unless a format is explicitly requested.'
         ]
     ];
@@ -154,7 +167,7 @@ function nibblyAiSaveSettings(array $input, array $existing = []): array {
     $existing = $existing ?: nibblyAiLoadSettings(false);
 
     $provider = (string)($input['provider'] ?? $existing['provider'] ?? $defaults['provider']);
-    if (!in_array($provider, ['openai-compatible', 'openrouter'], true)) {
+    if (!in_array($provider, ['openai-compatible', 'openrouter', 'anthropic'], true)) {
         throw new RuntimeException('Unsupported AI provider.');
     }
 
@@ -171,6 +184,8 @@ function nibblyAiSaveSettings(array $input, array $existing = []): array {
     }
 
     $apiKey = trim((string)($input['apiKey'] ?? ''));
+    $newApiKeyProvided = $apiKey !== '';
+    $hadProviderApiKey = !empty($currentProviderCredentials['apiKey']);
     if ($apiKey === '' && !empty($currentProviderCredentials['apiKey'])) {
         $apiKey = (string)$currentProviderCredentials['apiKey'];
     }
@@ -202,6 +217,11 @@ function nibblyAiSaveSettings(array $input, array $existing = []): array {
         'imageModel' => $imageModel,
         'organization' => $organization,
         'allowLocalProvider' => $allowLocal,
+        'assistantForceEnglish' => !empty($input['assistantForceEnglish']),
+        'assistantSurfaces' => [
+            'visualEditor' => !array_key_exists('assistantSurfaces', $input) || !empty($input['assistantSurfaces']['visualEditor']),
+            'dashboard' => !array_key_exists('assistantSurfaces', $input) || !empty($input['assistantSurfaces']['dashboard'])
+        ],
         'features' => [
             'backendAssistant' => !empty($input['features']['backendAssistant']),
             'seoTextGeneration' => !empty($input['features']['seoTextGeneration']),
@@ -212,9 +232,9 @@ function nibblyAiSaveSettings(array $input, array $existing = []): array {
             'dailyRequests' => nibblyAiClampInt($input['limits']['dailyRequests'] ?? 100, 0, 10000),
             'dailyTextRequests' => nibblyAiClampInt($input['limits']['dailyTextRequests'] ?? 80, 0, 10000),
             'dailyImageRequests' => nibblyAiClampInt($input['limits']['dailyImageRequests'] ?? 10, 0, 1000),
-            'maxInputTokens' => nibblyAiClampInt($input['limits']['maxInputTokens'] ?? 6000, 100, 200000),
-            'maxOutputTokens' => nibblyAiClampInt($input['limits']['maxOutputTokens'] ?? 1200, 16, 32000),
-            'requestTimeoutSeconds' => nibblyAiClampInt($input['limits']['requestTimeoutSeconds'] ?? 120, 5, 600)
+            'maxInputTokens' => nibblyAiClampInt($input['limits']['maxInputTokens'] ?? 24000, 100, 200000),
+            'maxOutputTokens' => nibblyAiClampInt($input['limits']['maxOutputTokens'] ?? 4096, 16, 32000),
+            'requestTimeoutSeconds' => nibblyAiClampInt($input['limits']['requestTimeoutSeconds'] ?? 300, 5, 600)
         ],
         'pricing' => [
             'inputCentsPerMillion' => nibblyAiClampInt($input['pricing']['inputCentsPerMillion'] ?? 15, 0, 100000),
@@ -226,6 +246,15 @@ function nibblyAiSaveSettings(array $input, array $existing = []): array {
             'seo' => substr(trim((string)($input['systemPrompts']['seo'] ?? $defaults['systemPrompts']['seo'])), 0, 4000)
         ]
     ];
+
+    if ($newApiKeyProvided && !$hadProviderApiKey && empty($input['clearApiKey'])) {
+        $settings['enabled'] = true;
+        $settings['assistantSurfaces']['visualEditor'] = true;
+        $settings['assistantSurfaces']['dashboard'] = true;
+        $settings['features']['backendAssistant'] = true;
+        $settings['features']['seoTextGeneration'] = true;
+        $settings['features']['imageGeneration'] = true;
+    }
 
     $dir = dirname(NIBBLY_AI_SETTINGS_PATH);
     if (!is_dir($dir)) {
@@ -316,6 +345,220 @@ function nibblyAiChat(array $messages, array $options = []): array {
     ];
 }
 
+/**
+ * Stream a chat completion, invoking $onDelta with each text fragment as it
+ * arrives. Returns the same result shape as nibblyAiChat(). Falls back to a
+ * buffered request (one delta with the full text) when streaming is not
+ * possible, so callers never need a second code path.
+ */
+function nibblyAiChatStream(array $messages, array $options, callable $onDelta): array {
+    $settings = nibblyAiLoadSettings(false);
+    nibblyAiEnsureEnabled($settings);
+    $feature = $options['feature'] ?? 'backendAssistant';
+    if ($feature !== '') {
+        nibblyAiEnsureFeature($settings, $feature);
+    }
+    if (!function_exists('curl_init')) {
+        $result = nibblyAiChat($messages, $options);
+        $onDelta((string)$result['text']);
+        return $result;
+    }
+
+    $cleanMessages = nibblyAiCleanMessages($messages);
+    if (!$cleanMessages) {
+        throw new RuntimeException('No AI messages provided.');
+    }
+    $inputTokens = nibblyAiEstimateTokens(json_encode($cleanMessages, JSON_UNESCAPED_UNICODE));
+    if ($inputTokens > (int)$settings['limits']['maxInputTokens']) {
+        throw new RuntimeException('AI input is too long for the configured limit.');
+    }
+    $maxOutput = nibblyAiClampInt($options['maxOutputTokens'] ?? $settings['limits']['maxOutputTokens'], 16, (int)$settings['limits']['maxOutputTokens']);
+    nibblyAiAssertWithinLimits($settings, 'text', nibblyAiEstimateTextCost($settings, $inputTokens, $maxOutput));
+
+    $model = trim((string)($options['model'] ?? '')) ?: (string)$settings['chatModel'];
+    $temperature = isset($options['temperature']) ? (float)$options['temperature'] : 0.3;
+    if (nibblyAiIsAnthropicSettings($settings)) {
+        $url = rtrim((string)$settings['baseUrl'], '/') . '/messages';
+        $headers = ['Content-Type: application/json', 'Accept: text/event-stream', 'anthropic-version: 2023-06-01'];
+        $key = trim((string)($settings['apiKey'] ?? ''));
+        if ($key !== '') {
+            $headers[] = 'x-api-key: ' . $key;
+        }
+        $system = [];
+        $chatMessages = [];
+        foreach ($cleanMessages as $message) {
+            if ($message['role'] === 'system') {
+                $system[] = $message['content'];
+                continue;
+            }
+            $chatMessages[] = $message;
+        }
+        while ($chatMessages && $chatMessages[0]['role'] !== 'user') {
+            array_shift($chatMessages);
+        }
+        if (!$chatMessages) {
+            throw new RuntimeException('No AI messages provided.');
+        }
+        $body = [
+            'model' => $model,
+            'max_tokens' => $maxOutput,
+            'messages' => $chatMessages,
+            'temperature' => min(1.0, max(0.0, $temperature)),
+            'stream' => true
+        ];
+        if ($system) {
+            $body['system'] = implode("\n\n", $system);
+        }
+    } else {
+        $url = rtrim((string)$settings['baseUrl'], '/') . '/chat/completions';
+        $headers = ['Content-Type: application/json', 'Accept: text/event-stream'];
+        $key = trim((string)($settings['apiKey'] ?? ''));
+        if ($key !== '') {
+            $headers[] = 'Authorization: Bearer ' . $key;
+        }
+        if (!empty($settings['organization'])) {
+            $headers[] = 'OpenAI-Organization: ' . $settings['organization'];
+        }
+        $body = [
+            'model' => $model,
+            'messages' => $cleanMessages,
+            'max_tokens' => $maxOutput,
+            'temperature' => $temperature,
+            'stream' => true
+        ];
+    }
+
+    $timeout = nibblyAiRequestTimeout($settings);
+    nibblyAiExtendExecutionTime($timeout + 10);
+    $started = microtime(true);
+    $state = [
+        'buffer' => '',
+        'raw' => '',
+        'text' => '',
+        'inputTokens' => 0,
+        'outputTokens' => 0
+    ];
+    $parseLine = static function (string $line) use (&$state, $onDelta): void {
+        $line = trim($line);
+        if ($line === '' || !str_starts_with($line, 'data:')) {
+            return;
+        }
+        $payload = trim(substr($line, 5));
+        if ($payload === '' || $payload === '[DONE]') {
+            return;
+        }
+        $chunk = json_decode($payload, true);
+        if (!is_array($chunk)) {
+            return;
+        }
+        $delta = '';
+        // OpenAI-compatible chunk shape.
+        $choice = $chunk['choices'][0] ?? null;
+        if (is_array($choice) && is_string($choice['delta']['content'] ?? null)) {
+            $delta = $choice['delta']['content'];
+        }
+        if (is_array($chunk['usage'] ?? null)) {
+            $state['inputTokens'] = (int)($chunk['usage']['prompt_tokens'] ?? $state['inputTokens']);
+            $state['outputTokens'] = (int)($chunk['usage']['completion_tokens'] ?? $state['outputTokens']);
+        }
+        // Anthropic Messages API event shapes.
+        $type = (string)($chunk['type'] ?? '');
+        if ($type === 'content_block_delta' && (string)($chunk['delta']['type'] ?? '') === 'text_delta') {
+            $delta = (string)($chunk['delta']['text'] ?? '');
+        } elseif ($type === 'message_start') {
+            $state['inputTokens'] = (int)($chunk['message']['usage']['input_tokens'] ?? $state['inputTokens']);
+        } elseif ($type === 'message_delta') {
+            $state['outputTokens'] = (int)($chunk['usage']['output_tokens'] ?? $state['outputTokens']);
+        }
+        if ($delta !== '') {
+            $state['text'] .= $delta;
+            $onDelta($delta);
+        }
+    };
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        CURLOPT_HTTPHEADER => $headers,
+        CURLOPT_RETURNTRANSFER => false,
+        CURLOPT_CONNECTTIMEOUT => min(10, $timeout),
+        CURLOPT_TIMEOUT => $timeout,
+        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        CURLOPT_NOSIGNAL => true,
+        CURLOPT_WRITEFUNCTION => static function ($ch, string $chunk) use (&$state, $parseLine): int {
+            $state['raw'] .= $chunk;
+            $state['buffer'] .= $chunk;
+            while (($pos = strpos($state['buffer'], "\n")) !== false) {
+                $parseLine(substr($state['buffer'], 0, $pos));
+                $state['buffer'] = substr($state['buffer'], $pos + 1);
+            }
+            return strlen($chunk);
+        }
+    ]);
+    $ok = curl_exec($ch);
+    $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+    if ($state['buffer'] !== '') {
+        $parseLine($state['buffer']);
+    }
+
+    if ($status < 200 || $status >= 300) {
+        $data = json_decode($state['raw'], true);
+        $message = is_array($data) ? ($data['error']['message'] ?? $data['message'] ?? 'AI provider error') : 'AI provider error';
+        nibblyAiAudit('provider-error', false, ['status' => $status, 'message' => $message]);
+        throw new RuntimeException($message);
+    }
+    if ($ok === false && $state['text'] === '') {
+        throw new RuntimeException($curlError !== '' ? 'AI provider request failed: ' . $curlError : 'AI provider request failed.');
+    }
+    if ($state['text'] === '') {
+        // Provider ignored stream=true and returned one JSON document.
+        $data = json_decode($state['raw'], true);
+        if (is_array($data)) {
+            $text = trim((string)($data['choices'][0]['message']['content'] ?? ''));
+            if ($text === '' && is_array($data['content'] ?? null)) {
+                foreach ($data['content'] as $block) {
+                    if (is_array($block) && (string)($block['type'] ?? '') === 'text') {
+                        $text .= (string)($block['text'] ?? '');
+                    }
+                }
+            }
+            if ($text !== '') {
+                $state['text'] = $text;
+                $onDelta($text);
+            }
+        }
+    }
+    if ($state['text'] === '') {
+        throw new RuntimeException('AI provider returned an empty response.');
+    }
+
+    $actualInput = $state['inputTokens'] > 0 ? $state['inputTokens'] : $inputTokens;
+    $actualOutput = $state['outputTokens'] > 0 ? $state['outputTokens'] : nibblyAiEstimateTokens($state['text']);
+    $actualCost = nibblyAiEstimateTextCost($settings, $actualInput, $actualOutput);
+    nibblyAiRecordUsage('text', $actualInput, $actualOutput, $actualCost);
+    nibblyAiAudit('chat', true, [
+        'model' => $model,
+        'streamed' => true,
+        'inputTokens' => $actualInput,
+        'outputTokens' => $actualOutput,
+        'estimatedCostCents' => $actualCost,
+        'durationMs' => (int)round((microtime(true) - $started) * 1000)
+    ]);
+
+    return [
+        'text' => $state['text'],
+        'usage' => [
+            'inputTokens' => $actualInput,
+            'outputTokens' => $actualOutput,
+            'estimatedCostCents' => $actualCost
+        ],
+        'limits' => nibblyAiUsageSummary()
+    ];
+}
+
 function nibblyAiGenerateText(string $prompt, array $options = []): array {
     $settings = nibblyAiLoadSettings(false);
     $feature = $options['feature'] ?? 'seoTextGeneration';
@@ -324,9 +567,10 @@ function nibblyAiGenerateText(string $prompt, array $options = []): array {
         ['role' => 'system', 'content' => $system],
         ['role' => 'user', 'content' => $prompt]
     ];
+    $model = trim((string)($options['model'] ?? ''));
     return nibblyAiChat($messages, [
         'feature' => $feature,
-        'model' => $settings['textModel'] ?: $settings['chatModel'],
+        'model' => $model !== '' ? $model : ($settings['textModel'] ?: $settings['chatModel']),
         'maxOutputTokens' => $options['maxOutputTokens'] ?? null,
         'temperature' => $options['temperature'] ?? 0.4
     ]);
@@ -336,6 +580,9 @@ function nibblyAiGenerateImage(string $prompt, array $options = []): array {
     $settings = nibblyAiLoadSettings(false);
     nibblyAiEnsureEnabled($settings);
     nibblyAiEnsureFeature($settings, 'imageGeneration');
+    if (nibblyAiIsAnthropicSettings($settings)) {
+        throw new RuntimeException('The Anthropic provider supports chat and text features only. Use an OpenAI-compatible or OpenRouter provider for image generation.');
+    }
 
     $prompt = trim($prompt);
     if ($prompt === '') {
@@ -387,6 +634,12 @@ function nibblyAiGenerateImage(string $prompt, array $options = []): array {
     $aspectRatio = nibblyAiCleanAspectRatio((string)($options['aspectRatio'] ?? 'auto'));
     $started = microtime(true);
     $referencePaths = nibblyAiCollectReferenceImagePaths($options);
+    nibblyAiAudit('image-references-collected', true, [
+        'usesOpenRouter' => $usesOpenRouter,
+        'referenceImagePathsIn' => count(is_array($options['referenceImagePaths'] ?? null) ? $options['referenceImagePaths'] : []),
+        'referenceMediaPathsIn' => count(is_array($options['referenceMediaPaths'] ?? null) ? $options['referenceMediaPaths'] : []),
+        'collected' => count($referencePaths)
+    ]);
 
     if ($usesOpenRouter) {
         [$paths, $revisedPrompts] = nibblyAiGenerateOpenRouterImages($settings, [
@@ -657,6 +910,210 @@ function nibblyAiClearImageHistory(): void {
     nibblyAiSaveImageHistory(['items' => []]);
 }
 
+function nibblyAiEnsureImageJobsDir(): void {
+    if (!is_dir(NIBBLY_AI_IMAGE_JOBS_DIR)) {
+        mkdir(NIBBLY_AI_IMAGE_JOBS_DIR, 0755, true);
+    }
+}
+
+function nibblyAiImageJobPath(string $id): string {
+    $id = preg_replace('/[^a-zA-Z0-9_-]/', '', $id);
+    if ($id === '') {
+        throw new RuntimeException('Invalid image job ID.');
+    }
+    return NIBBLY_AI_IMAGE_JOBS_DIR . '/' . $id . '.json';
+}
+
+function nibblyAiCreateImageJob(string $kind, array $payload): array {
+    nibblyAiEnsureImageJobsDir();
+    $id = 'job_' . gmdate('Ymd_His') . '_' . substr(bin2hex(random_bytes(5)), 0, 10);
+    $jobDir = NIBBLY_AI_IMAGE_JOBS_DIR . '/' . $id;
+    if (!is_dir($jobDir)) {
+        mkdir($jobDir, 0755, true);
+    }
+    $payload = nibblyAiPersistImageJobReferences($payload, $jobDir);
+    $job = [
+        'id' => $id,
+        'kind' => in_array($kind, ['dashboard', 'copilot'], true) ? $kind : 'dashboard',
+        'status' => 'queued',
+        'createdAt' => gmdate('c'),
+        'updatedAt' => gmdate('c'),
+        'startedAt' => '',
+        'finishedAt' => '',
+        'attempts' => 0,
+        'user' => (string)($_SESSION['admin_username'] ?? ($_SESSION['admin_user_id'] ?? '')),
+        'payload' => $payload,
+        'result' => null,
+        'error' => ''
+    ];
+    nibblyAiSaveImageJob($job);
+    return nibblyAiPublicImageJob($job);
+}
+
+function nibblyAiPersistImageJobReferences(array $payload, string $jobDir): array {
+    $options = is_array($payload['options'] ?? null) ? $payload['options'] : [];
+    $paths = $options['referenceImagePaths'] ?? [];
+    if (!is_array($paths)) {
+        $paths = [$paths];
+    }
+    $names = $options['referenceImageNames'] ?? [];
+    if (!is_array($names)) {
+        $names = [$names];
+    }
+    $savedPaths = [];
+    $savedNames = [];
+    foreach ($paths as $index => $path) {
+        $path = (string)$path;
+        if ($path === '' || !is_file($path)) {
+            continue;
+        }
+        $info = @getimagesize($path);
+        if ($info === false || !in_array($info[2], [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP], true)) {
+            continue;
+        }
+        $ext = match ($info[2]) {
+            IMAGETYPE_JPEG => 'jpg',
+            IMAGETYPE_PNG => 'png',
+            IMAGETYPE_WEBP => 'webp',
+            default => 'img'
+        };
+        $target = $jobDir . '/reference-' . ($index + 1) . '.' . $ext;
+        if (@copy($path, $target)) {
+            $savedPaths[] = $target;
+            $name = trim((string)($names[$index] ?? basename($path)));
+            $savedNames[] = substr($name !== '' ? $name : basename($target), 0, 180);
+        }
+    }
+    $options['referenceImagePaths'] = $savedPaths;
+    $options['referenceImageNames'] = $savedNames;
+    $payload['options'] = $options;
+    return $payload;
+}
+
+function nibblyAiSaveImageJob(array $job): void {
+    nibblyAiEnsureImageJobsDir();
+    $job['updatedAt'] = gmdate('c');
+    file_put_contents(nibblyAiImageJobPath((string)$job['id']), json_encode($job, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX);
+}
+
+function nibblyAiLoadImageJob(string $id): array {
+    $path = nibblyAiImageJobPath($id);
+    if (!is_file($path)) {
+        throw new RuntimeException('Image job not found.');
+    }
+    $job = json_decode((string)file_get_contents($path), true);
+    if (!is_array($job) || empty($job['id'])) {
+        throw new RuntimeException('Invalid image job.');
+    }
+    return $job;
+}
+
+function nibblyAiImageJobTimestamp($value): int {
+    if (!$value) {
+        return 0;
+    }
+    $timestamp = strtotime((string)$value);
+    return $timestamp === false ? 0 : $timestamp;
+}
+
+function nibblyAiImageJobStaleAfterSeconds(): int {
+    $settings = nibblyAiLoadSettings(true);
+    $timeout = (int)($settings['limits']['requestTimeoutSeconds'] ?? 300);
+    return nibblyAiClampInt($timeout + 60, 180, 900);
+}
+
+function nibblyAiRefreshImageJobState(array $job): array {
+    if ((string)($job['status'] ?? '') !== 'running') {
+        return $job;
+    }
+    $started = nibblyAiImageJobTimestamp($job['startedAt'] ?? ($job['updatedAt'] ?? ''));
+    if ($started > 0 && time() - $started > nibblyAiImageJobStaleAfterSeconds()) {
+        $job['status'] = 'error';
+        $job['finishedAt'] = gmdate('c');
+        $job['error'] = 'Image generation timed out. No image was created.';
+        nibblyAiSaveImageJob($job);
+    }
+    return $job;
+}
+
+function nibblyAiListImageJobs(bool $openOnly = false, int $limit = 20, ?string $user = null): array {
+    nibblyAiEnsureImageJobsDir();
+    $jobs = [];
+    $user = $user !== null ? trim($user) : null;
+    foreach (glob(NIBBLY_AI_IMAGE_JOBS_DIR . '/job_*.json') ?: [] as $file) {
+        $job = json_decode((string)file_get_contents($file), true);
+        if (!is_array($job) || empty($job['id'])) {
+            continue;
+        }
+        $job = nibblyAiRefreshImageJobState($job);
+        if ($user !== null && (string)($job['user'] ?? '') !== $user) {
+            continue;
+        }
+        if ($openOnly && !in_array((string)($job['status'] ?? ''), ['queued', 'running'], true)) {
+            continue;
+        }
+        $jobs[] = $job;
+    }
+    usort($jobs, fn($a, $b) => strcmp((string)($b['createdAt'] ?? ''), (string)($a['createdAt'] ?? '')));
+    $limit = nibblyAiClampInt($limit, 1, 100);
+    return array_map('nibblyAiPublicImageJob', array_slice($jobs, 0, $limit));
+}
+
+function nibblyAiPublicImageJob(array $job): array {
+    $payload = is_array($job['payload'] ?? null) ? $job['payload'] : [];
+    $options = is_array($payload['options'] ?? null) ? $payload['options'] : [];
+    $result = is_array($job['result'] ?? null) ? $job['result'] : null;
+    return [
+        'id' => (string)($job['id'] ?? ''),
+        'kind' => (string)($job['kind'] ?? ''),
+        'status' => (string)($job['status'] ?? 'queued'),
+        'createdAt' => (string)($job['createdAt'] ?? ''),
+        'updatedAt' => (string)($job['updatedAt'] ?? ''),
+        'startedAt' => (string)($job['startedAt'] ?? ''),
+        'finishedAt' => (string)($job['finishedAt'] ?? ''),
+        'prompt' => substr((string)($payload['prompt'] ?? $payload['instruction'] ?? ''), 0, 8000),
+        'model' => substr((string)($options['model'] ?? ''), 0, 120),
+        'count' => (int)($options['count'] ?? 1),
+        'result' => $result,
+        'error' => substr((string)($job['error'] ?? ''), 0, 1000)
+    ];
+}
+
+function nibblyAiMarkImageJobRunning(string $id): array {
+    $job = nibblyAiLoadImageJob($id);
+    if (in_array((string)($job['status'] ?? ''), ['success', 'error'], true)) {
+        return $job;
+    }
+    if ((string)($job['status'] ?? '') === 'running') {
+        return nibblyAiRefreshImageJobState($job);
+    }
+    $job['status'] = 'running';
+    $job['startedAt'] = $job['startedAt'] ?: gmdate('c');
+    $job['attempts'] = (int)($job['attempts'] ?? 0) + 1;
+    $job['error'] = '';
+    nibblyAiSaveImageJob($job);
+    return $job;
+}
+
+function nibblyAiFinishImageJob(string $id, array $result): array {
+    $job = nibblyAiLoadImageJob($id);
+    $job['status'] = 'success';
+    $job['finishedAt'] = gmdate('c');
+    $job['result'] = $result;
+    $job['error'] = '';
+    nibblyAiSaveImageJob($job);
+    return nibblyAiPublicImageJob($job);
+}
+
+function nibblyAiFailImageJob(string $id, string $message): array {
+    $job = nibblyAiLoadImageJob($id);
+    $job['status'] = 'error';
+    $job['finishedAt'] = gmdate('c');
+    $job['error'] = substr($message, 0, 1000);
+    nibblyAiSaveImageJob($job);
+    return nibblyAiPublicImageJob($job);
+}
+
 function nibblyAiSaveImageHistory(array $history): void {
     $dir = dirname(NIBBLY_AI_IMAGE_HISTORY_PATH);
     if (!is_dir($dir)) {
@@ -718,9 +1175,13 @@ function nibblyAiProviderRequest(array $settings, string $path, array $body): ar
     if (trim((string)($settings['baseUrl'] ?? '')) === '') {
         throw new RuntimeException('AI base URL is missing.');
     }
+    if (nibblyAiIsAnthropicSettings($settings)) {
+        if ($path !== '/chat/completions') {
+            throw new RuntimeException('The Anthropic provider supports chat and text features only. Use an OpenAI-compatible or OpenRouter provider for image generation.');
+        }
+        return nibblyAiAnthropicChatRequest($settings, $body);
+    }
     $url = rtrim((string)$settings['baseUrl'], '/') . $path;
-    $timeout = nibblyAiRequestTimeout($settings);
-    nibblyAiExtendExecutionTime($timeout + 10);
     $headers = [
         'Content-Type: application/json',
         'Accept: application/json'
@@ -733,57 +1194,242 @@ function nibblyAiProviderRequest(array $settings, string $path, array $body): ar
         $headers[] = 'OpenAI-Organization: ' . $settings['organization'];
     }
 
-    $payload = json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    if (!function_exists('curl_init')) {
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => implode("\r\n", $headers),
-                'content' => $payload,
-                'timeout' => $timeout,
-                'ignore_errors' => true
-            ]
-        ]);
-        $raw = file_get_contents($url, false, $context);
-        $status = 0;
-        $responseHeaders = function_exists('http_get_last_response_headers') ? http_get_last_response_headers() : ($http_response_header ?? []);
-        if (isset($responseHeaders[0]) && preg_match('/\s(\d{3})\s/', $responseHeaders[0], $m)) {
-            $status = (int)$m[1];
+    return nibblyAiExecuteJsonRequest($settings, $url, $headers, $body);
+}
+
+function nibblyAiIsAnthropicSettings(array $settings): bool {
+    return (string)($settings['provider'] ?? '') === 'anthropic'
+        || stripos((string)($settings['baseUrl'] ?? ''), 'api.anthropic.com') !== false;
+}
+
+/**
+ * Translate an OpenAI-style chat request to the Anthropic Messages API and
+ * map the response back, so all callers keep one response shape.
+ */
+function nibblyAiAnthropicChatRequest(array $settings, array $body): array {
+    $url = rtrim((string)$settings['baseUrl'], '/') . '/messages';
+    $headers = [
+        'Content-Type: application/json',
+        'Accept: application/json',
+        'anthropic-version: 2023-06-01'
+    ];
+    $key = trim((string)($settings['apiKey'] ?? ''));
+    if ($key !== '') {
+        $headers[] = 'x-api-key: ' . $key;
+    }
+
+    $system = [];
+    $messages = [];
+    foreach (($body['messages'] ?? []) as $message) {
+        if (!is_array($message)) {
+            continue;
         }
-    } else {
-        [$raw, $status] = nibblyAiCurlPost($url, $headers, $payload, $timeout);
+        $role = (string)($message['role'] ?? '');
+        $content = (string)($message['content'] ?? '');
+        if ($content === '') {
+            continue;
+        }
+        if ($role === 'system') {
+            $system[] = $content;
+            continue;
+        }
+        if (in_array($role, ['user', 'assistant'], true)) {
+            $messages[] = ['role' => $role, 'content' => $content];
+        }
+    }
+    while ($messages && $messages[0]['role'] !== 'user') {
+        array_shift($messages);
+    }
+    if (!$messages) {
+        throw new RuntimeException('No AI messages provided.');
     }
 
-    $data = json_decode((string)$raw, true);
-    if ($status < 200 || $status >= 300) {
-        $message = is_array($data) ? ($data['error']['message'] ?? $data['message'] ?? 'AI provider error') : 'AI provider error';
-        nibblyAiAudit('provider-error', false, ['status' => $status, 'message' => $message]);
-        throw new RuntimeException($message);
+    $anthropicBody = [
+        'model' => (string)($body['model'] ?? ''),
+        'max_tokens' => max(1, (int)($body['max_tokens'] ?? 1024)),
+        'messages' => $messages
+    ];
+    if ($system) {
+        $anthropicBody['system'] = implode("\n\n", $system);
     }
-    if (!is_array($data)) {
-        throw new RuntimeException('AI provider returned invalid JSON.');
+    if (isset($body['temperature'])) {
+        $anthropicBody['temperature'] = min(1.0, max(0.0, (float)$body['temperature']));
     }
 
-    return $data;
+    $response = nibblyAiExecuteJsonRequest($settings, $url, $headers, $anthropicBody);
+    $text = '';
+    foreach ((is_array($response['content'] ?? null) ? $response['content'] : []) as $block) {
+        if (is_array($block) && (string)($block['type'] ?? '') === 'text') {
+            $text .= (string)($block['text'] ?? '');
+        }
+    }
+    $stopReason = (string)($response['stop_reason'] ?? '');
+    return [
+        'object' => 'chat.completion',
+        'model' => (string)($response['model'] ?? $anthropicBody['model']),
+        'choices' => [[
+            'message' => ['role' => 'assistant', 'content' => $text],
+            'finish_reason' => $stopReason === 'max_tokens' ? 'length' : 'stop'
+        ]],
+        'usage' => [
+            'prompt_tokens' => (int)($response['usage']['input_tokens'] ?? 0),
+            'completion_tokens' => (int)($response['usage']['output_tokens'] ?? 0)
+        ]
+    ];
+}
+
+function nibblyAiExecuteJsonRequest(array $settings, string $url, array $headers, array $body): array {
+    $timeout = nibblyAiRequestTimeout($settings);
+    nibblyAiExtendExecutionTime($timeout + 10);
+    $payload = json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $attempts = 0;
+    $streamed = false;
+    do {
+        $attempts++;
+        if (!function_exists('curl_init')) {
+            $context = stream_context_create([
+                'http' => [
+                    'method' => 'POST',
+                    'header' => implode("\r\n", $headers),
+                    'content' => $payload,
+                    'timeout' => $timeout,
+                    'ignore_errors' => true
+                ]
+            ]);
+            $raw = file_get_contents($url, false, $context);
+            $status = 0;
+            $responseHeaders = function_exists('http_get_last_response_headers') ? http_get_last_response_headers() : ($http_response_header ?? []);
+            if (isset($responseHeaders[0]) && preg_match('/\s(\d{3})\s/', $responseHeaders[0], $m)) {
+                $status = (int)$m[1];
+            }
+        } else {
+            [$raw, $status] = nibblyAiCurlPost($url, $headers, $payload, $timeout);
+        }
+
+        $data = json_decode((string)$raw, true);
+        if ($status < 200 || $status >= 300) {
+            $message = is_array($data) ? ($data['error']['message'] ?? $data['message'] ?? 'AI provider error') : 'AI provider error';
+            nibblyAiAudit('provider-error', false, ['status' => $status, 'message' => $message]);
+            throw new RuntimeException($message);
+        }
+        if (is_array($data)) {
+            return $data;
+        }
+
+        $streamed = (bool)preg_match('/(^|\n)\s*data\s*:/', (string)$raw);
+        if ($streamed) {
+            $salvaged = nibblyAiAssembleSseResponse((string)$raw);
+            if ($salvaged !== null) {
+                nibblyAiAudit('provider-sse-salvaged', true, ['status' => $status, 'attempt' => $attempts]);
+                return $salvaged;
+            }
+        }
+        nibblyAiAudit('provider-invalid-json', false, [
+            'status' => $status,
+            'attempt' => $attempts,
+            'body' => substr((string)$raw, 0, 1000)
+        ]);
+    } while ($streamed && $attempts < 2);
+
+    if ($streamed) {
+        throw new RuntimeException('AI provider returned a streaming response although nibbly requested JSON. Please retry; if this persists, use one image per request or another image model.');
+    }
+    throw new RuntimeException('AI provider returned invalid JSON.');
+}
+
+/**
+ * Rebuild a normal completion payload from an unexpected SSE stream so a
+ * provider that ignores stream=false does not fail the whole request.
+ */
+function nibblyAiAssembleSseResponse(string $raw): ?array {
+    $content = '';
+    $images = [];
+    $usage = null;
+    $finishReason = '';
+    $lastObject = null;
+    $sawChunk = false;
+    foreach (preg_split('/\r?\n/', $raw) ?: [] as $line) {
+        $line = trim($line);
+        if ($line === '' || !str_starts_with($line, 'data:')) {
+            continue;
+        }
+        $payload = trim(substr($line, 5));
+        if ($payload === '' || $payload === '[DONE]') {
+            continue;
+        }
+        $chunk = json_decode($payload, true);
+        if (!is_array($chunk)) {
+            continue;
+        }
+        $lastObject = $chunk;
+        $choice = $chunk['choices'][0] ?? null;
+        if (!is_array($choice)) {
+            continue;
+        }
+        $sawChunk = true;
+        $delta = is_array($choice['delta'] ?? null)
+            ? $choice['delta']
+            : (is_array($choice['message'] ?? null) ? $choice['message'] : []);
+        if (is_string($delta['content'] ?? null)) {
+            $content .= $delta['content'];
+        }
+        if (is_array($delta['images'] ?? null)) {
+            $images = array_merge($images, $delta['images']);
+        }
+        if (!empty($choice['finish_reason'])) {
+            $finishReason = (string)$choice['finish_reason'];
+        }
+        if (is_array($chunk['usage'] ?? null)) {
+            $usage = $chunk['usage'];
+        }
+    }
+    if (!$sawChunk) {
+        // Some providers stream one complete JSON object in a single data: line.
+        if (is_array($lastObject) && (is_array($lastObject['choices'] ?? null) || is_array($lastObject['data'] ?? null))) {
+            return $lastObject;
+        }
+        return null;
+    }
+    if ($content === '' && !$images) {
+        return null;
+    }
+    $message = ['role' => 'assistant', 'content' => $content];
+    if ($images) {
+        $message['images'] = $images;
+    }
+    return [
+        'object' => 'chat.completion',
+        'choices' => [[
+            'message' => $message,
+            'finish_reason' => $finishReason !== '' ? $finishReason : 'stop'
+        ]],
+        'usage' => is_array($usage) ? $usage : []
+    ];
 }
 
 function nibblyAiCurlPost(string $url, array $headers, $postFields, int $timeout): array {
     $attempts = 0;
     $lastError = '';
+    $lastPartial = '';
     do {
         $attempts++;
+        $buffer = '';
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $postFields,
             CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_RETURNTRANSFER => false,
             CURLOPT_CONNECTTIMEOUT => min(10, $timeout),
             CURLOPT_TIMEOUT => $timeout,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_NOSIGNAL => true,
             CURLOPT_FRESH_CONNECT => $attempts > 1,
-            CURLOPT_FORBID_REUSE => true
+            CURLOPT_FORBID_REUSE => true,
+            CURLOPT_WRITEFUNCTION => static function ($ch, string $chunk) use (&$buffer): int {
+                $buffer .= $chunk;
+                return strlen($chunk);
+            }
         ]);
         $raw = curl_exec($ch);
         $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -797,10 +1443,17 @@ function nibblyAiCurlPost(string $url, array $headers, $postFields, int $timeout
         $lastError = curl_error($ch);
         curl_close($ch);
         if ($raw !== false) {
-            return [$raw, $status];
+            return [$buffer, $status];
         }
+        $lastPartial = $buffer;
     } while ($attempts < 2 && nibblyAiShouldRetryCurlError($lastError, $downloadedBytes));
 
+    if ($lastPartial !== '') {
+        nibblyAiAudit('provider-curl-partial', false, [
+            'message' => $lastError,
+            'partial' => substr($lastPartial, 0, 1000)
+        ]);
+    }
     throw new RuntimeException($lastError !== '' ? 'AI provider request failed: ' . $lastError : 'AI provider request failed.');
 }
 
@@ -865,24 +1518,52 @@ function nibblyAiIsOpenRouterSettings(array $settings): bool {
 
 function nibblyAiGenerateOpenRouterImages(array $settings, array $options): array {
     $count = nibblyAiClampInt($options['count'] ?? 1, 1, 10);
-    $settings['limits']['requestTimeoutSeconds'] = max(300, nibblyAiRequestTimeout($settings));
+    $settings['limits']['requestTimeoutSeconds'] = max(480, nibblyAiRequestTimeout($settings));
     $paths = [];
     $revisedPrompts = [];
 
     for ($i = 0; $i < $count; $i++) {
-        $response = nibblyAiProviderRequest($settings, '/chat/completions', nibblyAiBuildOpenRouterImageBody($options));
-        [$payloads, $texts] = nibblyAiExtractOpenRouterImagePayloads($response);
-        foreach ($texts as $text) {
-            if ($text !== '') {
-                $revisedPrompts[] = $text;
+        try {
+            $requestBody = nibblyAiBuildOpenRouterImageBody($options);
+            $refPartCount = 0;
+            foreach (($requestBody['messages'][0]['content'] ?? []) as $part) {
+                if (is_array($part) && ($part['type'] ?? '') === 'image_url') {
+                    $refPartCount++;
+                }
             }
-        }
-        foreach ($payloads as $payload) {
-            $binary = nibblyAiProviderImagePayloadToBinary($payload);
-            $paths[] = nibblyAiStoreGeneratedImage($binary, (string)($options['filenameHint'] ?? 'ai-image'), (string)($options['size'] ?? 'auto'), count($paths) + 1);
-            if (count($paths) >= $count) {
-                break 2;
+            nibblyAiAudit('openrouter-image-request', true, [
+                'model' => (string)($requestBody['model'] ?? ''),
+                'referencePathsIn' => count($options['referencePaths'] ?? []),
+                'imageContentParts' => $refPartCount,
+                'modalities' => $requestBody['modalities'] ?? null,
+                'aspectRatioIn' => (string)($options['aspectRatio'] ?? ''),
+                'sizeIn' => (string)($options['size'] ?? ''),
+                'imageConfig' => $requestBody['image_config'] ?? null
+            ]);
+            $response = nibblyAiProviderRequest($settings, '/chat/completions', $requestBody);
+            [$payloads, $texts] = nibblyAiExtractOpenRouterImagePayloads($response);
+            foreach ($texts as $text) {
+                if ($text !== '') {
+                    $revisedPrompts[] = $text;
+                }
             }
+            foreach ($payloads as $payload) {
+                $binary = nibblyAiProviderImagePayloadToBinary($payload);
+                $paths[] = nibblyAiStoreGeneratedImage($binary, (string)($options['filenameHint'] ?? 'ai-image'), (string)($options['size'] ?? 'auto'), count($paths) + 1);
+                if (count($paths) >= $count) {
+                    break 2;
+                }
+            }
+        } catch (Throwable $e) {
+            if (!$paths) {
+                throw $e;
+            }
+            nibblyAiAudit('image-partial', false, [
+                'requested' => $count,
+                'created' => count($paths),
+                'message' => $e->getMessage()
+            ]);
+            break;
         }
     }
 
@@ -900,8 +1581,19 @@ function nibblyAiBuildOpenRouterImageBody(array $options): array {
         $options['imageScale'] ?? null
     );
     $prompt = substr((string)($options['prompt'] ?? ''), 0, 8000);
+    $hasReference = !empty($options['referencePaths']);
+    // image_config.aspect_ratio is the structured control, but image-capable
+    // models (e.g. Gemini) tend to copy a reference image's dimensions and
+    // ignore it. Reinforce the requested ratio in the prompt and, when a
+    // reference is present, explicitly tell the model to override the
+    // reference's framing so the user's selected ratio wins.
     if (!empty($imageConfig['aspect_ratio'])) {
-        $prompt .= "\n\nRequired output aspect ratio: " . $imageConfig['aspect_ratio'] . ". Do not return a square image unless the requested ratio is 1:1.";
+        if ($hasReference) {
+            $prompt .= "\n\nOutput the final image in a " . $imageConfig['aspect_ratio']
+                . " aspect ratio, recomposing the scene to fill that frame. Use the reference image only for subject, style, and content — do not copy its aspect ratio or framing.";
+        } elseif ($imageConfig['aspect_ratio'] !== '1:1') {
+            $prompt .= "\n\nUse a " . $imageConfig['aspect_ratio'] . " aspect ratio for the output image.";
+        }
     }
     $content = [
         ['type' => 'text', 'text' => $prompt]
@@ -918,7 +1610,8 @@ function nibblyAiBuildOpenRouterImageBody(array $options): array {
         'messages' => [
             ['role' => 'user', 'content' => $content]
         ],
-        'modalities' => ['image', 'text']
+        'modalities' => ['image', 'text'],
+        'stream' => false
     ];
 
     if ($imageConfig) {
@@ -1074,7 +1767,7 @@ function nibblyAiIsValidGptImage2Size(string $size): bool {
 
 function nibblyAiRequestTimeout(array $settings): int {
     $limits = is_array($settings['limits'] ?? null) ? $settings['limits'] : [];
-    return nibblyAiClampInt($limits['requestTimeoutSeconds'] ?? 120, 5, 600);
+    return nibblyAiClampInt($limits['requestTimeoutSeconds'] ?? 300, 5, 600);
 }
 
 function nibblyAiExtendExecutionTime(int $seconds): void {
