@@ -453,7 +453,33 @@ function nibblyApiOpenRouterModels(bool $forceRefresh = false): array {
         $outputPart = str_contains($modality, '->') ? explode('->', $modality, 2)[1] : '';
         $producesImages = in_array('image', $outputs, true) || str_contains($outputPart, 'image');
         if ($producesImages) {
-            $imageModels[] = ['id' => $id, 'name' => $name];
+            $pricing = is_array($model['pricing'] ?? null) ? $model['pricing'] : [];
+            // Prefer an explicit per-output-image price (USD). Some models
+            // report a per-image-token figure here that is far below a real
+            // whole-image cost, so when it is implausibly tiny (< $0.001) fall
+            // back to estimating from the completion (output token) price,
+            // assuming a typical image is billed at ~1290 output tokens.
+            $imageFieldUsd = (float)($pricing['image'] ?? 0);
+            $completionUsd = (float)($pricing['completion'] ?? 0);
+            $perImageUsd = 0.0;
+            $estimated = false;
+            if ($imageFieldUsd >= 0.001) {
+                $perImageUsd = $imageFieldUsd;
+            } elseif ($completionUsd > 0) {
+                $perImageUsd = $completionUsd * 1290;
+                $estimated = true;
+            } elseif ($imageFieldUsd > 0) {
+                $perImageUsd = $imageFieldUsd;
+                $estimated = true;
+            }
+            // Store as a float of cents so sub-cent image prices survive
+            // (e.g. $0.0004 -> 0.04 cents); the UI formats with precision.
+            $imageModels[] = [
+                'id' => $id,
+                'name' => $name,
+                'imageCostCents' => $perImageUsd > 0 ? round($perImageUsd * 100, 4) : null,
+                'imageCostEstimated' => $estimated
+            ];
             continue;
         }
         $vendor = strtolower((string)strtok($id, '/'));

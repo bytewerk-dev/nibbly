@@ -4309,6 +4309,114 @@ select.modal-input {
     font-variant-numeric: tabular-nums;
 }
 
+/* Fill slider: the field area fills with the accent colour up to the value;
+   the percentage label sits inside the field and flips sides below 40%. */
+.fill-slider {
+    position: relative;
+    height: 40px;
+    border: 1px solid var(--nb-border);
+    border-radius: var(--nb-radius-md);
+    background: var(--nb-bg-elevated);
+    overflow: visible;
+    cursor: pointer;
+}
+
+.fill-slider__fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 70%;
+    background: var(--nb-primary);
+    pointer-events: none;
+    transition: width var(--nb-duration-fast) var(--nb-ease);
+}
+
+.fill-slider__value {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    transform: translateY(-50%);
+    z-index: 1;
+    font-size: var(--nb-text-md);
+    font-weight: 700;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+}
+
+.fill-slider__value--right {
+    left: auto;
+    right: 14px;
+    color: var(--nb-text-secondary);
+}
+
+/* Native range on top provides the interaction. The track stays transparent
+   (the fill layer shows the value) but the thumb is a visible drag handle.
+   The extra specificity overrides the .form-group input surface background. */
+.fill-slider .fill-slider__input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    box-shadow: none;
+    cursor: pointer;
+}
+
+.fill-slider__input:disabled {
+    cursor: not-allowed;
+}
+
+.fill-slider__input::-webkit-slider-runnable-track {
+    background: transparent;
+    height: 100%;
+}
+
+.fill-slider__input::-moz-range-track {
+    background: transparent;
+    height: 100%;
+}
+
+.fill-slider__input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 10px;
+    height: 46px;
+    border-radius: 6px;
+    background: #fff;
+    border: 1px solid var(--nb-primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    cursor: grab;
+    top:-3px;
+    position:relative
+}
+
+.fill-slider__input::-webkit-slider-thumb:active {
+    cursor: grabbing;
+}
+
+.fill-slider__input::-moz-range-thumb {
+    width: 10px;
+    height: 46px;
+    border-radius: 6px;
+    background: #fff;
+    border: 1px solid var(--nb-primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    cursor: grab;
+    top:-3px;
+    position:relative
+}
+
+.fill-slider:has(.fill-slider__input:focus-visible) {
+    outline: none;
+    border-color: var(--nb-primary);
+    box-shadow: 0 0 0 3px var(--nb-primary-muted);
+}
+
 /* Editor Button Settings Row */
 .editor-btn-settings-row {
     display: grid;
@@ -7827,14 +7935,26 @@ input.color-hex-input,
     padding: 10px;
 }
 
+.ai-image-history-card--multi {
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .ai-image-history-card--error {
     border-color: color-mix(in srgb, #ef4444 30%, var(--nb-border, #e5e5e5));
+}
+
+.ai-image-history-card__thumbs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: thin;
 }
 
 .ai-image-history-card__thumb {
     display: block;
     width: 88px;
     height: 88px;
+    flex: 0 0 88px;
     overflow: hidden;
     border: 0;
     border-radius: 6px;

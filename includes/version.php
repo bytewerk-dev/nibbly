@@ -7,7 +7,7 @@
  */
 
 if (!defined('NIBBLY_CORE_VERSION')) {
-    define('NIBBLY_CORE_VERSION', '1.5.0');
+    define('NIBBLY_CORE_VERSION', '1.5.1');
 }
 
 if (!function_exists('nibblyVersion')) {

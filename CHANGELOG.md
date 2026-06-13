@@ -3,6 +3,26 @@
 All notable changes to Nibbly are documented in this file. The project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] — 2026-06-14
+
+### Added
+- **Server-side image conversion**: OpenRouter image jobs now convert the
+  returned PNG to the selected format (JPEG / WebP) server-side using GD, with
+  a 0–100 % quality slider (default 70 %) in the image generator UI.
+- **Estimated cost per image**: the image generator shows an estimated cost next
+  to the computed image size — live pricing from the OpenRouter Models API for
+  OpenRouter, curated defaults for OpenAI-compatible providers, hidden for
+  Anthropic (no image support).
+- **Multi-thumbnail history**: Recent Generations cards now show all thumbnails
+  side by side when more than one image was generated in a single request.
+- **Dev login fallback**: on localhost, `admin` / `dev` always grants access
+  even if no user named "admin" exists in `users.json`.
+
+### Fixed
+- Fill-slider thumb now spans the full height of the field.
+- JS error on load when `AI_OPENAI_IMAGE_COST_CENTS` was referenced before
+  declaration.
+
 ## [1.5.0] — 2026-06-13
 
 ### Added

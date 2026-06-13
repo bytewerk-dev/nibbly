@@ -917,6 +917,7 @@
     "ai.image_size": "Resolution / orientation",
     "ai.image_size_auto": "Auto",
     "ai.image_scale": "Resolution",
+    "ai.image_cost_per_image": "Estimated cost per image: {cost}",
     "ai.image_size_note": "Computed image size: {size}.",
     "ai.image_size_note_auto": "Provider chooses the image size automatically.",
     "ai.image_orientation_square": "Square",
