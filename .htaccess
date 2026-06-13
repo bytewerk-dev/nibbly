@@ -5,6 +5,7 @@
 # and never needs to be edited when changing SITE_LANG_DEFAULT.
 
 RewriteEngine On
+Options -MultiViews
 
 # ============================================
 # Security - Protect sensitive files
@@ -21,6 +22,10 @@ RewriteRule ^content/ - [F,L]
 RewriteRule ^backups/ - [F,L]
 RewriteRule ^(.*/-trash/) - [F,L]
 
+# Route news detail URLs before Apache can resolve language-local
+# listing templates such as de/news.php or es/news.php.
+RewriteRule ^([a-z]{2}/)?news/[a-z0-9-]+/?$ /route.php [END,QSA]
+
 # ============================================
 # Static files & directories
 # ============================================
@@ -36,14 +41,17 @@ RewriteRule ^ - [L]
 
 # Clean URLs: if slug.php exists as a file, serve it directly
 RewriteCond %{REQUEST_FILENAME}.php -f
-RewriteRule ^(.+)$ $1.php [L]
+RewriteRule ^(.+)$ /$1.php [END]
 
 # ============================================
 # Front Controller
 # ============================================
 
-# Everything else goes to route.php (language routing, news, JSON pages)
-RewriteRule ^(.*)$ route.php [L,QSA]
+# Everything else goes to route.php (language routing, news, JSON pages).
+# Use an absolute target and END so requests below real language
+# directories (/de/..., /es/...) cannot enter another per-directory
+# rewrite round.
+RewriteRule ^ /route.php [END,QSA]
 
 # ============================================
 # Error Pages

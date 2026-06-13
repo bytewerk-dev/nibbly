@@ -14,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 require_once __DIR__ . '/../includes/form-protection.php';
+require_once __DIR__ . '/../includes/forms.php';
 
 $form = $_GET['form'] ?? '';
 $lang = $_GET['lang'] ?? 'en';
@@ -31,6 +32,15 @@ define('NIBBLY_RENDER_LAZY_FORM', true);
 
 header('Content-Type: text/html; charset=utf-8');
 header('X-Robots-Tag: noindex, nofollow');
+
+if (nibblyFormExists($form)) {
+    echo nibblyFormRender($form, [
+        'basePath' => $basePath,
+        'lang' => $currentLang,
+        'lazy' => false,
+    ]);
+    exit;
+}
 
 switch ($form) {
     case 'contact':

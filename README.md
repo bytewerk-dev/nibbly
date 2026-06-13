@@ -2,7 +2,7 @@
 
 A flat-file CMS built on PHP with no database. Content lives in JSON files, pages are PHP templates, and an inline editor lets you edit everything directly on the page. Zero dependencies, zero build steps.
 
-**Version 1.3.2** — Examples and full documentation at [nibbly.dev](https://nibbly.dev/).
+**Version 1.5.0** — Examples and full documentation at [nibbly.dev](https://nibbly.dev/).
 
 ## Features
 
@@ -16,13 +16,14 @@ A flat-file CMS built on PHP with no database. Content lives in JSON files, page
 - **Access controls** -- maintenance mode with preview bypass and password-protected private pages
 - **Customizable lock/login screens** -- logo/favicon, image layouts, overlays, and login box colors
 - **SEO/AEO tools** -- per-page metadata, Open Graph image fallback, sitemap/robots, and health indicators
-- **AI tools** -- server-side AI gateway for assistant chat, SEO/text generation, image generation, image-to-image, usage limits, audit logs, and provider-specific API keys
+- **AI tools** -- server-side AI gateway plus frontend editor Copilot for safe chat guidance, field suggestions, content drafts, image generation/editing, usage limits, audit logs, and provider-specific API keys
 - **Custom layouts** -- full PHP template control with editable field API
+- **JSON-backed forms** -- manage multiple simple forms from JSON, render them in templates, and collect submissions in the dashboard inbox
 - **Automatic backups** -- per-page JSON history with restore via admin panel
 - **Site backup & restore** -- download full site as ZIP, restore from backup
 - **Scheduled backups** -- server-cron or web-cron full-site ZIP backups with retention and storage limits
 - **Remote backup targets** -- upload scheduled ZIPs to Dropbox, Google Drive, OneDrive, SFTP/SCP, S3-compatible storage, or WebDAV
-- **Contact form** -- lazy-loaded, spam-protected form with file-based message storage, optional SMTP
+- **Forms & messages** -- lazy-loaded, spam-protected public forms with local message storage, optional SMTP, and form-based inbox filtering
 - **News/blog system** -- post management with listing and single-post views
 - **Event management** -- calendar events with multi-language support
 - **No build step** -- plain PHP, HTML, CSS, vanilla JS
@@ -72,6 +73,7 @@ assets/
 cli/                Command-line tools (make.php, convert.php)
 content/
   pages/            Page content JSON files
+  forms/            Public form definitions
   news/             Blog post JSON files
   events.json       Events
   settings.json     Site-wide settings
@@ -86,11 +88,12 @@ includes/
   footer.php        Footer + scripts
   asset-helpers.php Core stylesheet loader (nibblyCoreStyles)
   content-loader.php  Template API
+  forms.php         JSON form loading, rendering, validation, notifications
   block-types.php   Block type definitions
   block-renderers/  Per-block-type renderers
   nav-config.php    Navigation configuration
   access-guard.php  Maintenance mode and private page enforcement
-  ai/               AI provider gateway, usage limits, audit, and generated images
+  ai/               AI provider gateway, Copilot context/actions, usage limits, audit, and generated images
   menu-helpers.php  Menu registry
   page.php          Front controller for JSON-only pages
 js/                 Client-side scripts
@@ -200,7 +203,9 @@ To use custom fonts, place font files in `assets/fonts/` and define `@font-face`
 
 ## License
 
-MIT License -- see [LICENSE](LICENSE) for details.
+Nibbly is licensed under the Mozilla Public License 2.0 starting with version
+1.4.0. Earlier releases up to and including 1.3.2 were published under the MIT
+License. See [LICENSE](LICENSE) for details.
 
 ## Contributing
 

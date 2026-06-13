@@ -220,6 +220,75 @@ Add a new content section to an existing page.
 
 ---
 
+## Skill: create-json-form
+
+### Description
+Create or adjust a simple public form using Nibbly's JSON-backed form system.
+Use this when a generated/vibe-coded site needs a form that editors can later
+rename, re-label, or slightly adjust in the dashboard without editing PHP.
+
+### Prerequisites
+- Read `AI-AGENT-GUIDE.md` -> "JSON-Backed Public Forms"
+- Check existing definitions in `content/forms/*.json`
+- Decide whether the requested form is simple enough for JSON. If it needs
+  advanced conditional logic, custom widgets, uploads, or page-specific
+  calculations, keep that behaviour in a site-owned template/script and use the
+  JSON form only for the editable field definition when practical.
+
+### Steps
+1. Create `content/forms/{id}.json`:
+   ```json
+   {
+     "id": "contact",
+     "label": "Contact form",
+     "description": "",
+     "enabled": true,
+     "submit": {
+       "store": true,
+       "email": true,
+       "subject": "{form}: {name}",
+       "successText": "Thank you for your message."
+     },
+     "fields": [
+       { "key": "name", "type": "text", "label": "Name", "required": true, "width": 6 },
+       { "key": "email", "type": "email", "label": "Email", "required": true, "width": 6 },
+       { "key": "message", "type": "textarea", "label": "Message", "required": true, "width": 12 }
+     ]
+   }
+   ```
+2. Use supported field types only: `text`, `email`, `tel`, `textarea`,
+   `select`, `radio`, `checkbox`, `date`, `time`, `hidden`, `heading`, `note`.
+3. Use supported widths only: `3`, `4`, `6`, `8`, `12`.
+4. For `select` and `radio`, add `options`:
+   ```json
+   "options": [
+     { "value": "private", "label": "Private" },
+     { "value": "business", "label": "Business" }
+   ]
+   ```
+5. Render it in a template:
+   ```php
+   <?php
+   require_once __DIR__ . '/../includes/forms.php';
+   echo nibblyForm('contact', ['basePath' => $basePath, 'lang' => $currentLang]);
+   ?>
+   ```
+   Or use `nibblyLazyFormPlaceholder('contact', ...)` when the form should load
+   lazily.
+
+### Validation
+- JSON is valid.
+- `php -l includes/forms.php api/form-submit.php api/form.php` passes after core changes.
+- `api/form.php?form={id}` renders the form with `form_id`, `form_token`,
+  `.nibbly-form-grid`, `.btn-text`, `.btn-loading`, and `.form-feedback`.
+- Submitting stores a row in `content/mails.json` with `formId`, `formLabel`,
+  and `fields[]`.
+- The dashboard messages view can filter by the form.
+- The form appears in **Dashboard -> Settings -> Forms** and reloads with all
+  fields intact.
+
+---
+
 ## Skill: create-news-post
 
 ### Description

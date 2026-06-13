@@ -717,7 +717,7 @@ $loginBoxStyleAttr = $loginBoxVariables
 
             <p class="back-link"><a href="..">&larr; <?php echo t('login.back_to_site'); ?></a></p>
         <?php endif; ?>
-        <p class="login-version">Nibbly <?php echo htmlspecialchars(nibblyVersion(), ENT_QUOTES, 'UTF-8'); ?></p>
+        <p class="login-version">nibbly <?php echo htmlspecialchars(nibblyVersion(), ENT_QUOTES, 'UTF-8'); ?></p>
     </div>
 
     <script>

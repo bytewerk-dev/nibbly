@@ -6,10 +6,13 @@
 
 require_once 'config.php';
 require_once __DIR__ . '/users.php';
+require_once __DIR__ . '/lang/i18n.php';
 require_once __DIR__ . '/../includes/content-loader.php';
 require_once __DIR__ . '/../includes/seo-helper.php';
 require_once __DIR__ . '/../includes/ai/ai-helper.php';
+require_once __DIR__ . '/../includes/ai/copilot-context.php';
 require_once __DIR__ . '/../includes/analytics-helper.php';
+require_once __DIR__ . '/../includes/forms.php';
 ensureUsersFile();
 
 // Prevent PHP HTML error output from corrupting JSON responses
@@ -60,6 +63,256 @@ function jsonResponse($success, $data = null, $message = '') {
     exit;
 }
 
+function nibblyParseEmailList($value): array {
+    $rawItems = is_array($value) ? $value : explode(',', (string)$value);
+    $emails = [];
+
+    foreach ($rawItems as $item) {
+        foreach (explode(',', (string)$item) as $email) {
+            $email = trim(str_replace(["\r", "\n", "\t"], '', (string)$email));
+            if ($email !== '') {
+                $emails[] = $email;
+            }
+        }
+    }
+
+    return array_values(array_unique($emails));
+}
+
+function nibblyNormalizeEmailList($value): string {
+    return implode(', ', nibblyParseEmailList($value));
+}
+
+function nibblyValidateEmailList($value): bool {
+    foreach (nibblyParseEmailList($value) as $email) {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function nibblyApiCurrentAiUser(): string {
+    return (string)($_SESSION['admin_username'] ?? ($_SESSION['admin_user_id'] ?? ''));
+}
+
+function nibblyApiCanUseImageJobs(): bool {
+    return isAdmin() || (dashboardAiModuleEnabled() && nibblyCopilotCan('generateImage'));
+}
+
+function nibblyApiAssertImageJobAccess(array $job): void {
+    if (isAdmin()) {
+        return;
+    }
+    if ((string)($job['user'] ?? '') !== nibblyApiCurrentAiUser()) {
+        throw new RuntimeException('Forbidden');
+    }
+}
+
+/**
+ * Send the JSON response now and keep this PHP process alive to finish work
+ * in the background. Works on PHP-FPM (most shared hosting) without cron;
+ * returns false when detaching is unavailable so callers run synchronously.
+ */
+function nibblyApiDetachResponse(array $payload): bool {
+    if (!function_exists('fastcgi_finish_request')) {
+        return false;
+    }
+    ignore_user_abort(true);
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+    fastcgi_finish_request();
+    return true;
+}
+
+function nibblyApiRunImageJob(string $jobId): array {
+    $existingJob = nibblyAiLoadImageJob($jobId);
+    $existingJob = nibblyAiRefreshImageJobState($existingJob);
+    nibblyApiAssertImageJobAccess($existingJob);
+    if ((string)($existingJob['status'] ?? '') === 'running') {
+        return nibblyAiPublicImageJob($existingJob);
+    }
+    if (in_array((string)($existingJob['status'] ?? ''), ['success', 'error'], true)) {
+        return nibblyAiPublicImageJob($existingJob);
+    }
+    $job = nibblyAiMarkImageJobRunning($jobId);
+    if (in_array((string)($job['status'] ?? ''), ['success', 'error'], true)) {
+        return nibblyAiPublicImageJob($job);
+    }
+
+    $payload = is_array($job['payload'] ?? null) ? $job['payload'] : [];
+    $options = is_array($payload['options'] ?? null) ? $payload['options'] : [];
+    $prompt = trim((string)($payload['prompt'] ?? ''));
+    $kind = (string)($job['kind'] ?? 'dashboard');
+
+    try {
+        if ($kind === 'copilot') {
+            $contentPage = trim((string)($payload['contentPage'] ?? ''));
+            $fieldRef = trim((string)($payload['fieldRef'] ?? ''));
+            $instruction = trim((string)($payload['instruction'] ?? ''));
+            if ($contentPage === '' || $fieldRef === '' || $instruction === '' || $prompt === '') {
+                throw new RuntimeException('Image job is missing required copilot data.');
+            }
+            $settings = nibblyAiLoadSettings(false);
+            nibblyAiEnsureEnabled($settings);
+            nibblyAiEnsureFeature($settings, 'imageGeneration');
+            $context = nibblyCopilotBuildContext($contentPage, nibblyAiLoadSettings(true));
+            $fields = nibblyCopilotAllowedImageFields($context, $fieldRef);
+            if (!$fields) {
+                throw new RuntimeException('Target field does not accept AI image generation.');
+            }
+            $field = $fields[0];
+            $result = nibblyAiGenerateImage($prompt, $options);
+            $proposal = nibblyCopilotImageProposal($context, $field['id'], $instruction, $result);
+            nibblyAiAudit('copilot-generate-image', true, [
+                'jobId' => $jobId,
+                'contentPage' => $contentPage,
+                'path' => $proposal['path'],
+                'imageMode' => (string)($payload['imageMode'] ?? 'generate'),
+                'requestedCount' => (int)($options['count'] ?? 1),
+                'count' => count($proposal['paths'] ?? []),
+                'proposals' => dashboardCopilotProposalAuditSummary([$proposal])
+            ]);
+            return nibblyAiFinishImageJob($jobId, [
+                'proposal' => $proposal,
+                'usage' => $result['usage'] ?? null,
+                'limits' => $result['limits'] ?? null,
+                'context' => $context
+            ]);
+        }
+
+        if ($prompt === '') {
+            throw new RuntimeException('Image job prompt is missing.');
+        }
+        $result = nibblyAiGenerateImage($prompt, $options);
+        return nibblyAiFinishImageJob($jobId, $result);
+    } catch (Throwable $e) {
+        if ($kind === 'dashboard') {
+            $settings = nibblyAiLoadSettings(false);
+            nibblyAiRecordImageHistory([
+                'status' => 'error',
+                'model' => (string)($options['model'] ?? $settings['imageModel'] ?? ''),
+                'prompt' => $prompt,
+                'size' => (string)($options['size'] ?? ''),
+                'aspectRatio' => (string)($options['aspectRatio'] ?? ''),
+                'quality' => (string)($options['quality'] ?? ''),
+                'format' => (string)($options['outputFormat'] ?? ''),
+                'moderation' => (string)($options['moderation'] ?? ''),
+                'compression' => (int)($options['outputCompression'] ?? 0),
+                'count' => (int)($options['count'] ?? 0),
+                'referenceImages' => nibblyAiPublicReferenceList($options),
+                'outputs' => [],
+                'error' => $e->getMessage(),
+                'estimatedCostCents' => 0
+            ]);
+        }
+        nibblyAiAudit($kind === 'copilot' ? 'copilot-generate-image' : 'image', false, ['jobId' => $jobId, 'message' => $e->getMessage()]);
+        return nibblyAiFailImageJob($jobId, $e->getMessage());
+    }
+}
+
+function nibblyNormalizeHexColor(string $value): string {
+    return strtolower(trim($value));
+}
+
+function nibblyHexToRgb(string $hex): array {
+    $hex = ltrim(nibblyNormalizeHexColor($hex), '#');
+    return [
+        hexdec(substr($hex, 0, 2)),
+        hexdec(substr($hex, 2, 2)),
+        hexdec(substr($hex, 4, 2))
+    ];
+}
+
+function nibblyRgbToHex(array $rgb): string {
+    return sprintf(
+        '#%02x%02x%02x',
+        max(0, min(255, (int)round($rgb[0]))),
+        max(0, min(255, (int)round($rgb[1]))),
+        max(0, min(255, (int)round($rgb[2])))
+    );
+}
+
+function nibblyRelativeLuminance(string $hex): float {
+    $channels = array_map(function ($channel) {
+        $value = $channel / 255;
+        return $value <= 0.03928
+            ? $value / 12.92
+            : (($value + 0.055) / 1.055) ** 2.4;
+    }, nibblyHexToRgb($hex));
+
+    return ($channels[0] * 0.2126) + ($channels[1] * 0.7152) + ($channels[2] * 0.0722);
+}
+
+function nibblyContrastRatio(string $a, string $b): float {
+    $l1 = nibblyRelativeLuminance($a);
+    $l2 = nibblyRelativeLuminance($b);
+    $lighter = max($l1, $l2);
+    $darker = min($l1, $l2);
+    return ($lighter + 0.05) / ($darker + 0.05);
+}
+
+function nibblyMixHex(string $a, string $b, float $ratio): string {
+    $ar = nibblyHexToRgb($a);
+    $br = nibblyHexToRgb($b);
+    return nibblyRgbToHex([
+        ($ar[0] * $ratio) + ($br[0] * (1 - $ratio)),
+        ($ar[1] * $ratio) + ($br[1] * (1 - $ratio)),
+        ($ar[2] * $ratio) + ($br[2] * (1 - $ratio))
+    ]);
+}
+
+function nibblyAdjustColorForContrast(string $hex, string $background, float $minimumRatio, string $direction): string {
+    $hex = nibblyNormalizeHexColor($hex);
+    if (nibblyContrastRatio($hex, $background) >= $minimumRatio) {
+        return $hex;
+    }
+
+    $target = $direction === 'lighter' ? '#ffffff' : '#000000';
+    for ($step = 1; $step <= 20; $step++) {
+        $candidate = nibblyMixHex($hex, $target, 1 - ($step * 0.05));
+        if (nibblyContrastRatio($candidate, $background) >= $minimumRatio) {
+            return $candidate;
+        }
+    }
+
+    return $target;
+}
+
+function nibblySanitizeThemeContrast(array $theme): array {
+    $minReadable = 3.0;
+
+    foreach (['primaryColor', 'accentColor'] as $key) {
+        if (!empty($theme[$key])) {
+            $theme[$key] = nibblyAdjustColorForContrast((string)$theme[$key], '#ffffff', $minReadable, 'darker');
+        }
+    }
+
+    foreach (['darkPrimaryColor', 'darkAccentColor'] as $key) {
+        if (!empty($theme[$key])) {
+            $theme[$key] = nibblyAdjustColorForContrast((string)$theme[$key], '#0b0d12', $minReadable, 'lighter');
+        }
+    }
+
+    if (empty($theme['darkPrimaryColor']) && !empty($theme['primaryColor']) && nibblyContrastRatio((string)$theme['primaryColor'], '#0b0d12') < $minReadable) {
+        $theme['darkPrimaryColor'] = nibblyAdjustColorForContrast((string)$theme['primaryColor'], '#0b0d12', $minReadable, 'lighter');
+    }
+
+    if (empty($theme['darkAccentColor']) && !empty($theme['accentColor']) && nibblyContrastRatio((string)$theme['accentColor'], '#0b0d12') < $minReadable) {
+        $theme['darkAccentColor'] = nibblyAdjustColorForContrast((string)$theme['accentColor'], '#0b0d12', $minReadable, 'lighter');
+    }
+
+    if (!empty($theme['sidebarBg'])) {
+        $theme['sidebarBg'] = nibblyAdjustColorForContrast((string)$theme['sidebarBg'], '#1a1a1a', $minReadable, 'lighter');
+    }
+
+    if (!empty($theme['darkSidebarBg'])) {
+        $theme['darkSidebarBg'] = nibblyAdjustColorForContrast((string)$theme['darkSidebarBg'], '#e5e5e5', $minReadable, 'darker');
+    }
+
+    return $theme;
+}
+
 function redirectHtml($title, $message, $url = 'dashboard') {
     header_remove('Content-Type');
     header('Content-Type: text/html; charset=utf-8');
@@ -73,6 +326,339 @@ function redirectHtml($title, $message, $url = 'dashboard') {
 // Validate page name (lang_slug format, e.g. de_home, en_example)
 function validatePageName($page) {
     return preg_match('/^[a-z]{2}_[a-z0-9]+(?:-[a-z0-9]+)*$/', $page) || in_array($page, ['sidebar', 'footer']);
+}
+
+function dashboardCopilotAdminUrl(string $hash = ''): string {
+    $hash = ltrim($hash, '#');
+    return '/admin/dashboard' . ($hash !== '' ? '#' . $hash : '');
+}
+
+function dashboardCopilotPageUrl(string $pageName): string {
+    if (!preg_match('/^([a-z]{2})_([a-z0-9]+(?:-[a-z0-9]+)*)$/', $pageName, $matches)) {
+        return '';
+    }
+    return nibblySeoPageUrl($matches[1], $matches[2]);
+}
+
+function dashboardCopilotNewsUrl(string $id, string $lang): string {
+    if (!preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $id) || !preg_match('/^[a-z]{2}$/', $lang)) {
+        return '';
+    }
+    $base = nibblySeoBaseUrl();
+    $defaultLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
+    $path = $lang === $defaultLang ? '/news/' . $id : '/' . $lang . '/news/' . $id;
+    return $base . $path;
+}
+
+function dashboardCopilotCreatePageBackup(string $contentPage, bool $cleanup = true): string {
+    if (!validatePageName($contentPage)) {
+        throw new RuntimeException('Invalid page name');
+    }
+    $filepath = CONTENT_PATH . $contentPage . '.json';
+    if (!is_file($filepath)) {
+        return '';
+    }
+    for ($offset = 0; $offset < 5; $offset++) {
+        $timestamp = date('Y-m-d_His', time() + $offset);
+        $backupName = $contentPage . '_' . $timestamp . '.json';
+        $backupPath = BACKUP_PATH . $backupName;
+        if (is_file($backupPath)) {
+            continue;
+        }
+        if (!copy($filepath, $backupPath)) {
+            throw new RuntimeException('Could not create backup before AI change.');
+        }
+        if ($cleanup) {
+            cleanupOldBackups($contentPage);
+        }
+        return $backupName;
+    }
+    throw new RuntimeException('Could not allocate a backup filename before AI change.');
+}
+
+function dashboardCopilotConfirmed(): bool {
+    return (string)($_POST['confirmed'] ?? '') === '1';
+}
+
+function nibblyApiHttpGetJson(string $url, int $timeout = 12): array {
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_TIMEOUT => $timeout,
+            CURLOPT_HTTPHEADER => ['Accept: application/json'],
+            CURLOPT_USERAGENT => 'nibbly-cms'
+        ]);
+        $raw = curl_exec($ch);
+        $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+        if ($raw === false) {
+            throw new RuntimeException($error !== '' ? $error : 'Request failed.');
+        }
+    } else {
+        $context = stream_context_create(['http' => ['timeout' => $timeout, 'ignore_errors' => true, 'header' => "Accept: application/json\r\nUser-Agent: nibbly-cms"]]);
+        $raw = @file_get_contents($url, false, $context);
+        if ($raw === false) {
+            throw new RuntimeException('Request failed.');
+        }
+        $status = 200;
+        $responseHeaders = $http_response_header ?? [];
+        if (isset($responseHeaders[0]) && preg_match('/\s(\d{3})\s/', $responseHeaders[0], $m)) {
+            $status = (int)$m[1];
+        }
+    }
+    if ($status < 200 || $status >= 300) {
+        throw new RuntimeException('Request failed with status ' . $status . '.');
+    }
+    $data = json_decode((string)$raw, true);
+    if (!is_array($data)) {
+        throw new RuntimeException('Response is not valid JSON.');
+    }
+    return $data;
+}
+
+/**
+ * Fetch the OpenRouter model catalog through the server (the browser never
+ * talks to providers directly) with a 24h flat-file cache.
+ */
+function nibblyApiOpenRouterModels(bool $forceRefresh = false): array {
+    $cachePath = dirname(rtrim(CONTENT_PATH, '/')) . '/openrouter-models-cache.json';
+    if (!$forceRefresh && is_file($cachePath)) {
+        $cache = json_decode((string)file_get_contents($cachePath), true);
+        if (is_array($cache)
+            && (time() - (int)($cache['fetchedAt'] ?? 0)) < 86400
+            && is_array($cache['textModels'] ?? null)) {
+            return $cache;
+        }
+    }
+
+    $response = nibblyApiHttpGetJson('https://openrouter.ai/api/v1/models');
+    $preferredVendors = ['openai', 'anthropic', 'google', 'mistralai', 'meta-llama', 'deepseek', 'x-ai', 'qwen'];
+    $textModels = [];
+    $imageModels = [];
+    foreach ((is_array($response['data'] ?? null) ? $response['data'] : []) as $model) {
+        if (!is_array($model)) {
+            continue;
+        }
+        $id = trim((string)($model['id'] ?? ''));
+        if ($id === '' || strlen($id) > 120) {
+            continue;
+        }
+        $name = substr(trim((string)($model['name'] ?? $id)), 0, 120);
+        $arch = is_array($model['architecture'] ?? null) ? $model['architecture'] : [];
+        $outputs = is_array($arch['output_modalities'] ?? null) ? $arch['output_modalities'] : [];
+        $modality = (string)($arch['modality'] ?? '');
+        $outputPart = str_contains($modality, '->') ? explode('->', $modality, 2)[1] : '';
+        $producesImages = in_array('image', $outputs, true) || str_contains($outputPart, 'image');
+        if ($producesImages) {
+            $imageModels[] = ['id' => $id, 'name' => $name];
+            continue;
+        }
+        $vendor = strtolower((string)strtok($id, '/'));
+        if (!in_array($vendor, $preferredVendors, true)) {
+            continue;
+        }
+        $pricing = is_array($model['pricing'] ?? null) ? $model['pricing'] : [];
+        // OpenRouter pricing is USD per token; convert to cents per million tokens.
+        $textModels[] = [
+            'id' => $id,
+            'name' => $name,
+            'promptCentsPerMillion' => (int)round(((float)($pricing['prompt'] ?? 0)) * 100000000),
+            'completionCentsPerMillion' => (int)round(((float)($pricing['completion'] ?? 0)) * 100000000)
+        ];
+    }
+    usort($textModels, fn(array $a, array $b) => strcmp($a['id'], $b['id']));
+    usort($imageModels, fn(array $a, array $b) => strcmp($a['id'], $b['id']));
+    $result = [
+        'fetchedAt' => time(),
+        'textModels' => array_slice($textModels, 0, 150),
+        'imageModels' => array_slice($imageModels, 0, 50)
+    ];
+    @file_put_contents($cachePath, json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX);
+    return $result;
+}
+
+function nibblyAuditCountMissingAlt($node): int {
+    if (!is_array($node)) {
+        return 0;
+    }
+    $count = 0;
+    $src = $node['src'] ?? null;
+    if (is_string($src) && trim($src) !== '' && trim((string)($node['alt'] ?? '')) === '') {
+        $count++;
+    }
+    foreach ($node as $value) {
+        if (is_array($value)) {
+            $count += nibblyAuditCountMissingAlt($value);
+        }
+    }
+    return $count;
+}
+
+function nibblyAuditDescriptionStatus(string $description): string {
+    $length = function_exists('mb_strlen') ? mb_strlen($description, 'UTF-8') : strlen($description);
+    if ($length === 0) {
+        return 'missing';
+    }
+    if ($length < 50) {
+        return 'short';
+    }
+    if ($length > 170) {
+        return 'long';
+    }
+    return 'ok';
+}
+
+function nibblyAuditPageText(array $data, int $limit = 6000): string {
+    $parts = [];
+    $walk = function ($node) use (&$walk, &$parts): void {
+        if (is_string($node)) {
+            $text = trim(strip_tags($node));
+            if ($text !== '') {
+                $parts[] = $text;
+            }
+            return;
+        }
+        if (is_array($node)) {
+            foreach ($node as $key => $value) {
+                if (in_array((string)$key, ['src', 'id', 'type', 'href', 'url', 'image'], true)) {
+                    continue;
+                }
+                $walk($value);
+            }
+        }
+    };
+    $walk($data['sections'] ?? []);
+    return substr(implode("\n", $parts), 0, $limit);
+}
+
+function dashboardCopilotUiLanguage(): string {
+    $language = trim((string)($_POST['uiLanguage'] ?? $_GET['uiLanguage'] ?? ''));
+    if ($language === '' && function_exists('_nbAdminLang')) {
+        $language = _nbAdminLang();
+    }
+    if (function_exists('nibblyCopilotNormalizeLanguageCode')) {
+        $language = nibblyCopilotNormalizeLanguageCode($language);
+    }
+    return $language !== '' ? $language : (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en');
+}
+
+function dashboardCopilotProposalAuditSummary(array $proposals): array {
+    return nibblyCopilotProposalAuditSummary($proposals);
+}
+
+function dashboardCopilotUndoSignature(string $contentPage, string $backup, string $path): string {
+    return nibblyCopilotUndoSignature($contentPage, $backup, $path);
+}
+
+function dashboardCopilotHistoryDir(): string {
+    $dir = dirname(CONTENT_PATH) . '/ai-chat-history';
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+    return rtrim($dir, '/\\') . '/';
+}
+
+function dashboardCopilotCurrentUserKey(): string {
+    $user = (string)($_SESSION['admin_user_id'] ?? ($_SESSION['admin_username'] ?? 'admin'));
+    $user = preg_replace('/[^a-zA-Z0-9_-]/', '-', $user);
+    return trim((string)$user, '-') ?: 'admin';
+}
+
+function dashboardCopilotHistoryId(?string $id = null): string {
+    $id = trim((string)$id);
+    if ($id !== '' && preg_match('/^[a-z0-9][a-z0-9_-]{7,79}$/i', $id)) {
+        return $id;
+    }
+    return 'chat-' . date('Ymd-His') . '-' . bin2hex(random_bytes(4));
+}
+
+function dashboardCopilotHistoryPath(string $id): string {
+    if (!preg_match('/^[a-z0-9][a-z0-9_-]{7,79}$/i', $id)) {
+        throw new RuntimeException('Invalid chat history ID');
+    }
+    return dashboardCopilotHistoryDir() . $id . '.json';
+}
+
+function dashboardCopilotCleanHistoryMessages($messages): array {
+    if (!is_array($messages)) {
+        return [];
+    }
+    $clean = [];
+    foreach (array_slice($messages, -80) as $message) {
+        if (!is_array($message)) {
+            continue;
+        }
+        $role = (string)($message['role'] ?? '');
+        if (!in_array($role, ['user', 'assistant'], true)) {
+            continue;
+        }
+        $content = trim((string)($message['content'] ?? ''));
+        if ($content === '') {
+            continue;
+        }
+        $clean[] = [
+            'role' => $role,
+            'content' => substr($content, 0, 4000)
+        ];
+    }
+    return $clean;
+}
+
+function dashboardCopilotCleanImageResult($image): ?array {
+    if (!is_array($image) || trim((string)($image['path'] ?? '')) === '') {
+        return null;
+    }
+    return [
+        'path' => substr((string)$image['path'], 0, 500),
+        'alt' => substr((string)($image['alt'] ?? ''), 0, 500),
+        'prompt' => substr((string)($image['prompt'] ?? ''), 0, 1000),
+        'field' => substr((string)($image['field'] ?? ''), 0, 500),
+        'label' => substr((string)($image['label'] ?? ''), 0, 500)
+    ];
+}
+
+function dashboardCopilotHistorySummary(array $chat): array {
+    $messages = is_array($chat['messages'] ?? null) ? $chat['messages'] : [];
+    $title = trim((string)($chat['title'] ?? ''));
+    if ($title === '') {
+        foreach ($messages as $message) {
+            if (($message['role'] ?? '') === 'user') {
+                $title = trim((string)($message['content'] ?? ''));
+                break;
+            }
+        }
+    }
+    if ($title === '') {
+        $title = 'AI Assistant chat';
+    }
+    return [
+        'id' => (string)($chat['id'] ?? ''),
+        'title' => substr($title, 0, 90),
+        'contentPage' => (string)($chat['contentPage'] ?? ''),
+        'pageTitle' => substr((string)($chat['pageTitle'] ?? ''), 0, 120),
+        'url' => substr((string)($chat['url'] ?? ''), 0, 500),
+        'messageCount' => count($messages),
+        'updatedAt' => (string)($chat['updatedAt'] ?? ''),
+        'createdAt' => (string)($chat['createdAt'] ?? '')
+    ];
+}
+
+function dashboardCopilotLoadOwnedHistory(string $id): array {
+    $path = dashboardCopilotHistoryPath($id);
+    if (!is_file($path)) {
+        throw new RuntimeException('Chat history not found');
+    }
+    $chat = json_decode((string)file_get_contents($path), true);
+    if (!is_array($chat)) {
+        throw new RuntimeException('Chat history is invalid');
+    }
+    if ((string)($chat['user'] ?? '') !== dashboardCopilotCurrentUserKey()) {
+        throw new RuntimeException('Chat history not found');
+    }
+    return $chat;
 }
 
 // Validate backup filename
@@ -809,7 +1395,7 @@ function fetchIconifyJson($url) {
     $context = stream_context_create([
         'http' => [
             'timeout' => 8,
-            'header' => "User-Agent: Nibbly-CMS/1.0\r\nAccept: application/json\r\n",
+            'header' => "User-Agent: nibbly-CMS/1.0\r\nAccept: application/json\r\n",
         ],
     ]);
 
@@ -820,7 +1406,7 @@ function fetchIconifyJson($url) {
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_TIMEOUT => 8,
-            CURLOPT_USERAGENT => 'Nibbly-CMS/1.0',
+            CURLOPT_USERAGENT => 'nibbly-CMS/1.0',
             CURLOPT_HTTPHEADER => ['Accept: application/json'],
         ]);
         $json = curl_exec($ch);
@@ -1229,6 +1815,49 @@ switch ($action) {
         jsonResponse(true, nibblyAiLoadImageHistory((int)($_GET['offset'] ?? 0), (int)($_GET['limit'] ?? 12)));
         break;
 
+    case 'ai-image-jobs':
+        if (!nibblyApiCanUseImageJobs()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        $openOnly = !empty($_GET['open_only']) || !empty($_POST['open_only']);
+        $userFilter = isAdmin() ? null : nibblyApiCurrentAiUser();
+        jsonResponse(true, ['jobs' => nibblyAiListImageJobs($openOnly, (int)($_GET['limit'] ?? $_POST['limit'] ?? 20), $userFilter)]);
+        break;
+
+    case 'ai-image-job-run':
+        if (!nibblyApiCanUseImageJobs()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        $jobId = trim((string)($_POST['job_id'] ?? $_GET['job_id'] ?? ''));
+        if ($jobId === '') {
+            jsonResponse(false, null, 'Image job ID is required');
+        }
+        try {
+            $pendingJob = nibblyAiRefreshImageJobState(nibblyAiLoadImageJob($jobId));
+            nibblyApiAssertImageJobAccess($pendingJob);
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_write_close();
+            }
+            // Detach for queued jobs so generation survives closed tabs and
+            // page navigation; clients pick up the result via job polling.
+            $detached = (string)($pendingJob['status'] ?? '') === 'queued' && nibblyApiDetachResponse([
+                'success' => true,
+                'data' => ['job' => nibblyAiPublicImageJob($pendingJob)],
+                'message' => ''
+            ]);
+            $job = nibblyApiRunImageJob($jobId);
+            if ($detached) {
+                exit;
+            }
+            jsonResponse(true, ['job' => $job]);
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
     case 'clear-ai-image-history':
         if (!isAdmin()) {
             jsonResponse(false, null, 'Forbidden');
@@ -1273,7 +1902,7 @@ switch ($action) {
             jsonResponse(false, null, 'Invalid CSRF token');
         }
         try {
-            $result = nibblyAiGenerateText('Reply with exactly: Nibbly AI connection OK', [
+            $result = nibblyAiGenerateText('Reply with exactly: nibbly AI connection OK', [
                 'feature' => '',
                 'maxOutputTokens' => 256,
                 'temperature' => 0
@@ -1307,6 +1936,1172 @@ switch ($action) {
             jsonResponse(true, $result);
         } catch (Throwable $e) {
             nibblyAiAudit('chat', false, ['message' => $e->getMessage()]);
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-copilot-context':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        $contentPage = trim((string)($_POST['contentPage'] ?? $_GET['contentPage'] ?? ''));
+        $settings = nibblyAiLoadSettings(true);
+        $settings['assistantUiLanguage'] = dashboardCopilotUiLanguage();
+        jsonResponse(true, nibblyCopilotBuildContext($contentPage, $settings));
+        break;
+
+    case 'ai-copilot-history-list':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!nibblyCopilotCan('chat')) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        try {
+            nibblyCopilotAssertBurstLimit('history-list', 30, 60);
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        $userKey = dashboardCopilotCurrentUserKey();
+        $items = [];
+        foreach (glob(dashboardCopilotHistoryDir() . '*.json') ?: [] as $file) {
+            $chat = json_decode((string)file_get_contents($file), true);
+            if (!is_array($chat) || (string)($chat['user'] ?? '') !== $userKey) {
+                continue;
+            }
+            $items[] = dashboardCopilotHistorySummary($chat);
+        }
+        usort($items, fn($a, $b) => strcmp((string)($b['updatedAt'] ?? ''), (string)($a['updatedAt'] ?? '')));
+        jsonResponse(true, ['items' => array_slice($items, 0, 80)]);
+        break;
+
+    case 'ai-copilot-history-load':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!nibblyCopilotCan('chat')) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        try {
+            nibblyCopilotAssertBurstLimit('history-load', 30, 60);
+            $chat = dashboardCopilotLoadOwnedHistory(trim((string)($_POST['id'] ?? '')));
+            jsonResponse(true, [
+                'chat' => [
+                    'id' => (string)($chat['id'] ?? ''),
+                    'title' => (string)($chat['title'] ?? ''),
+                    'contentPage' => (string)($chat['contentPage'] ?? ''),
+                    'pageTitle' => (string)($chat['pageTitle'] ?? ''),
+                    'url' => (string)($chat['url'] ?? ''),
+                    'messages' => dashboardCopilotCleanHistoryMessages($chat['messages'] ?? []),
+                    'lastInstruction' => (string)($chat['lastInstruction'] ?? ''),
+                    'lastImageResult' => dashboardCopilotCleanImageResult($chat['lastImageResult'] ?? null),
+                    'createdAt' => (string)($chat['createdAt'] ?? ''),
+                    'updatedAt' => (string)($chat['updatedAt'] ?? '')
+                ]
+            ]);
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-copilot-history-save':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!nibblyCopilotCan('chat')) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        try {
+            nibblyCopilotAssertBurstLimit('history-save', 60, 60);
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        $messages = dashboardCopilotCleanHistoryMessages(json_decode((string)($_POST['messages'] ?? '[]'), true));
+        if (!$messages) {
+            jsonResponse(false, null, 'No chat messages to archive');
+        }
+        try {
+            $requestedId = trim((string)($_POST['id'] ?? ''));
+            $id = dashboardCopilotHistoryId($requestedId);
+            $path = dashboardCopilotHistoryPath($id);
+            $existing = [];
+            if ($requestedId !== '' && is_file($path)) {
+                $existing = dashboardCopilotLoadOwnedHistory($id);
+            }
+            $now = date('c');
+            $title = trim((string)($_POST['title'] ?? ''));
+            if ($title === '') {
+                foreach ($messages as $message) {
+                    if (($message['role'] ?? '') === 'user') {
+                        $title = substr((string)$message['content'], 0, 90);
+                        break;
+                    }
+                }
+            }
+            $chat = [
+                'id' => $id,
+                'user' => dashboardCopilotCurrentUserKey(),
+                'title' => $title,
+                'contentPage' => substr(trim((string)($_POST['contentPage'] ?? '')), 0, 120),
+                'pageTitle' => substr(trim((string)($_POST['pageTitle'] ?? '')), 0, 160),
+                'url' => substr(trim((string)($_POST['url'] ?? '')), 0, 500),
+                'messages' => $messages,
+                'lastInstruction' => substr((string)($_POST['lastInstruction'] ?? ''), 0, 3000),
+                'lastImageResult' => dashboardCopilotCleanImageResult(json_decode((string)($_POST['lastImageResult'] ?? 'null'), true)),
+                'createdAt' => (string)($existing['createdAt'] ?? $now),
+                'updatedAt' => $now
+            ];
+            if (file_put_contents($path, json_encode($chat, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX) === false) {
+                throw new RuntimeException('Could not save chat history');
+            }
+            jsonResponse(true, ['chat' => dashboardCopilotHistorySummary($chat)]);
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-copilot-history-delete':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!nibblyCopilotCan('chat')) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        try {
+            nibblyCopilotAssertBurstLimit('history-delete', 20, 60);
+            $id = trim((string)($_POST['id'] ?? ''));
+            dashboardCopilotLoadOwnedHistory($id);
+            $path = dashboardCopilotHistoryPath($id);
+            if (is_file($path) && !unlink($path)) {
+                throw new RuntimeException('Could not delete chat history');
+            }
+            jsonResponse(true, ['id' => $id], 'Chat history deleted');
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-copilot-chat':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!nibblyCopilotCan('chat')) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        try {
+            nibblyCopilotAssertBurstLimit('chat', 20, 60);
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        $messages = json_decode((string)($_POST['messages'] ?? '[]'), true);
+        if (!is_array($messages)) {
+            jsonResponse(false, null, 'Invalid messages JSON');
+        }
+        $cleanMessages = [];
+        foreach (array_slice($messages, -8) as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+            $role = (string)($message['role'] ?? '');
+            if (!in_array($role, ['user', 'assistant'], true)) {
+                continue;
+            }
+            $content = trim((string)($message['content'] ?? ''));
+            if ($content === '') {
+                continue;
+            }
+            $cleanMessages[] = [
+                'role' => $role,
+                'content' => substr($content, 0, 2200)
+            ];
+        }
+        if (!$cleanMessages) {
+            jsonResponse(false, null, 'Message is required');
+        }
+        try {
+            $contentPage = trim((string)($_POST['contentPage'] ?? ''));
+            $settings = nibblyAiLoadSettings(true);
+            $settings['assistantUiLanguage'] = dashboardCopilotUiLanguage();
+            $context = nibblyCopilotBuildContext($contentPage, $settings);
+            $system = nibblyCopilotSystemPrompt($context);
+            array_unshift($cleanMessages, ['role' => 'system', 'content' => $system]);
+            $result = nibblyAiChat($cleanMessages, [
+                'feature' => 'backendAssistant',
+                'maxOutputTokens' => $_POST['maxOutputTokens'] ?? 900,
+                'temperature' => 0.25
+            ]);
+            nibblyAiAudit('copilot-chat', true, [
+                'contentPage' => $contentPage,
+                'messages' => count($cleanMessages) - 1
+            ]);
+            jsonResponse(true, [
+                'reply' => (string)($result['text'] ?? ''),
+                'usage' => $result['usage'] ?? null,
+                'limits' => $result['limits'] ?? null,
+                'context' => $context
+            ]);
+        } catch (Throwable $e) {
+            nibblyAiAudit('copilot-chat', false, ['message' => $e->getMessage()]);
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-copilot-chat-stream':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!nibblyCopilotCan('chat')) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        try {
+            nibblyCopilotAssertBurstLimit('chat', 20, 60);
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        $messages = json_decode((string)($_POST['messages'] ?? '[]'), true);
+        if (!is_array($messages)) {
+            jsonResponse(false, null, 'Invalid messages JSON');
+        }
+        $cleanMessages = [];
+        foreach (array_slice($messages, -8) as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+            $role = (string)($message['role'] ?? '');
+            if (!in_array($role, ['user', 'assistant'], true)) {
+                continue;
+            }
+            $content = trim((string)($message['content'] ?? ''));
+            if ($content === '') {
+                continue;
+            }
+            $cleanMessages[] = [
+                'role' => $role,
+                'content' => substr($content, 0, 2200)
+            ];
+        }
+        if (!$cleanMessages) {
+            jsonResponse(false, null, 'Message is required');
+        }
+        try {
+            $contentPage = trim((string)($_POST['contentPage'] ?? ''));
+            $settings = nibblyAiLoadSettings(true);
+            $settings['assistantUiLanguage'] = dashboardCopilotUiLanguage();
+            $context = nibblyCopilotBuildContext($contentPage, $settings);
+            $system = nibblyCopilotSystemPrompt($context);
+            array_unshift($cleanMessages, ['role' => 'system', 'content' => $system]);
+
+            header_remove('Content-Type');
+            header('Content-Type: text/event-stream; charset=utf-8');
+            header('Cache-Control: no-cache');
+            header('X-Accel-Buffering: no');
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_write_close();
+            }
+            while (ob_get_level() > 0) {
+                ob_end_flush();
+            }
+            $emitEvent = static function (array $payload): void {
+                echo 'data: ' . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) . "\n\n";
+                flush();
+            };
+
+            $result = nibblyAiChatStream($cleanMessages, [
+                'feature' => 'backendAssistant',
+                'maxOutputTokens' => $_POST['maxOutputTokens'] ?? 900,
+                'temperature' => 0.25
+            ], static function (string $delta) use ($emitEvent): void {
+                $emitEvent(['delta' => $delta]);
+            });
+            nibblyAiAudit('copilot-chat', true, [
+                'contentPage' => $contentPage,
+                'streamed' => true,
+                'messages' => count($cleanMessages) - 1
+            ]);
+            $emitEvent([
+                'done' => true,
+                'reply' => (string)($result['text'] ?? ''),
+                'usage' => $result['usage'] ?? null,
+                'limits' => $result['limits'] ?? null,
+                'context' => $context
+            ]);
+            exit;
+        } catch (Throwable $e) {
+            nibblyAiAudit('copilot-chat', false, ['message' => $e->getMessage()]);
+            if (headers_sent()) {
+                echo 'data: ' . json_encode(['error' => $e->getMessage()], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) . "\n\n";
+                flush();
+                exit;
+            }
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-copilot-suggest':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!nibblyCopilotCan('suggestField')) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        try {
+            nibblyCopilotAssertBurstLimit('suggest', 12, 60);
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        $contentPage = trim((string)($_POST['contentPage'] ?? ''));
+        $instruction = trim((string)($_POST['instruction'] ?? ''));
+        $fieldRef = trim((string)($_POST['fieldRef'] ?? ''));
+        if ($instruction === '') {
+            jsonResponse(false, null, 'Instruction is required');
+        }
+        try {
+            $settings = nibblyAiLoadSettings(true);
+            $context = nibblyCopilotBuildContext($contentPage, $settings);
+            if (empty($context['page']['exists'])) {
+                jsonResponse(false, null, 'Content page not found');
+            }
+            $fields = nibblyCopilotAllowedSuggestionFields($context, $fieldRef);
+            if (!$fields) {
+                jsonResponse(false, null, 'No editable text fields are available for AI suggestions on this page.');
+            }
+            $pageData = nibblyCopilotLoadPageData($contentPage);
+            $prompt = nibblyCopilotBuildSuggestionPrompt($context, $fields, substr($instruction, 0, 2200));
+            $result = nibblyAiGenerateText($prompt, [
+                'feature' => 'backendAssistant',
+                'maxOutputTokens' => 1200,
+                'temperature' => 0.2,
+                'system' => 'You produce safe draft content changes for nibbly CMS. Return strict JSON only.'
+            ]);
+            $raw = nibblyCopilotExtractJsonObject((string)($result['text'] ?? ''));
+            $proposals = nibblyCopilotValidateProposals($raw, $context, $pageData);
+            nibblyAiAudit('copilot-suggest', true, [
+                'contentPage' => $contentPage,
+                'fieldRef' => $fieldRef,
+                'proposalCount' => count($proposals),
+                'proposals' => dashboardCopilotProposalAuditSummary($proposals)
+            ]);
+            jsonResponse(true, [
+                'proposals' => $proposals,
+                'usage' => $result['usage'] ?? null,
+                'limits' => $result['limits'] ?? null,
+                'context' => $context
+            ]);
+        } catch (Throwable $e) {
+            nibblyAiAudit('copilot-suggest', false, ['message' => $e->getMessage(), 'contentPage' => $contentPage]);
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-copilot-translate':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!nibblyCopilotCan('suggestField')) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        try {
+            nibblyCopilotAssertBurstLimit('translate', 6, 60);
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        $contentPage = trim((string)($_POST['contentPage'] ?? ''));
+        $instruction = trim((string)($_POST['instruction'] ?? ''));
+        $fieldRef = trim((string)($_POST['fieldRef'] ?? ''));
+        $targetLang = strtolower(trim((string)($_POST['targetLang'] ?? '')));
+        if ($contentPage === '') {
+            jsonResponse(false, null, 'Content page is required');
+        }
+        try {
+            $sourceLang = preg_match('/^([a-z]{2})_/', $contentPage, $langMatch) ? $langMatch[1] : '';
+            if ($targetLang === '') {
+                $targetLang = nibblyCopilotDetectTargetLanguage($instruction, $sourceLang);
+            }
+            if ($targetLang === '' || $targetLang === $sourceLang) {
+                jsonResponse(false, null, 'Please name the target language for the translation (for example "translate this page to English").');
+            }
+            if (!array_key_exists($targetLang, nibblyCopilotSiteLanguages())) {
+                jsonResponse(false, null, 'The language "' . $targetLang . '" is not configured for this site.');
+            }
+            $targetContentPage = nibblyCopilotTranslationCounterpart($contentPage, $targetLang);
+            if ($targetContentPage === '') {
+                jsonResponse(false, null, 'Translation drafts are only available for regular pages.');
+            }
+            $settings = nibblyAiLoadSettings(true);
+            $targetContext = nibblyCopilotBuildContext($targetContentPage, $settings);
+            if (empty($targetContext['page']['exists'])) {
+                jsonResponse(false, null, 'The ' . strtoupper($targetLang) . ' version of this page does not exist yet. Create it in the dashboard first.');
+            }
+            $sourceData = nibblyCopilotLoadPageData($contentPage);
+            $targetData = nibblyCopilotLoadPageData($targetContentPage);
+            $fields = nibblyCopilotTranslationFields($targetContext, $sourceData, $fieldRef !== '' ? $fieldRef : null);
+            if (!$fields) {
+                jsonResponse(false, null, 'No translatable fields with source content were found for this page.');
+            }
+            $prompt = nibblyCopilotBuildTranslatePrompt($fields, $sourceLang, $targetLang, substr($instruction, 0, 1200));
+            $result = nibblyAiGenerateText($prompt, [
+                'feature' => 'backendAssistant',
+                'maxOutputTokens' => 3000,
+                'temperature' => 0.2,
+                'system' => 'You translate website content faithfully for nibbly CMS. Return strict JSON only.'
+            ]);
+            $raw = nibblyCopilotExtractJsonObject((string)($result['text'] ?? ''));
+            $proposals = nibblyCopilotValidateProposals($raw, $targetContext, $targetData, count($fields));
+            foreach ($proposals as $index => $proposal) {
+                $proposals[$index]['contentPage'] = $targetContentPage;
+                $proposals[$index]['label'] = strtoupper($targetLang) . ' · ' . (string)($proposal['label'] ?? $proposal['path']);
+            }
+            nibblyAiAudit('copilot-translate', true, [
+                'contentPage' => $contentPage,
+                'targetContentPage' => $targetContentPage,
+                'targetLang' => $targetLang,
+                'proposalCount' => count($proposals),
+                'proposals' => dashboardCopilotProposalAuditSummary($proposals)
+            ]);
+            jsonResponse(true, [
+                'proposals' => $proposals,
+                'targetContentPage' => $targetContentPage,
+                'targetLang' => $targetLang,
+                'usage' => $result['usage'] ?? null,
+                'limits' => $result['limits'] ?? null
+            ]);
+        } catch (Throwable $e) {
+            nibblyAiAudit('copilot-translate', false, ['message' => $e->getMessage(), 'contentPage' => $contentPage]);
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-copilot-format-html':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!nibblyCopilotCan('suggestField')) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        try {
+            nibblyCopilotAssertBurstLimit('format-html', 20, 60);
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        $contentPage = trim((string)($_POST['contentPage'] ?? ''));
+        $fieldRef = trim((string)($_POST['fieldRef'] ?? ''));
+        $format = trim((string)($_POST['format'] ?? ''));
+        $instruction = trim((string)($_POST['instruction'] ?? ''));
+        if ($contentPage === '' || $fieldRef === '' || $format === '') {
+            jsonResponse(false, null, 'Content page, HTML field, and format action are required');
+        }
+        try {
+            $settings = nibblyAiLoadSettings(true);
+            $context = nibblyCopilotBuildContext($contentPage, $settings);
+            $proposal = nibblyCopilotBuildHtmlFormatProposal($contentPage, $fieldRef, $format, $instruction);
+            nibblyAiAudit('copilot-format-html', true, [
+                'contentPage' => $contentPage,
+                'fieldRef' => $fieldRef,
+                'format' => nibblyCopilotNormalizeFormatOperation($format),
+                'proposals' => dashboardCopilotProposalAuditSummary([$proposal])
+            ]);
+            jsonResponse(true, [
+                'proposals' => [$proposal],
+                'context' => $context
+            ]);
+        } catch (Throwable $e) {
+            nibblyAiAudit('copilot-format-html', false, ['message' => $e->getMessage(), 'contentPage' => $contentPage, 'fieldRef' => $fieldRef]);
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-copilot-visibility':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!nibblyCopilotCan('toggleVisibility')) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        try {
+            nibblyCopilotAssertBurstLimit('visibility', 20, 60);
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        $contentPage = trim((string)($_POST['contentPage'] ?? ''));
+        $fieldRef = trim((string)($_POST['fieldRef'] ?? ''));
+        $visibilityAction = trim((string)($_POST['visibilityAction'] ?? $_POST['actionValue'] ?? ''));
+        $instruction = trim((string)($_POST['instruction'] ?? ''));
+        if ($contentPage === '' || $fieldRef === '' || $visibilityAction === '') {
+            jsonResponse(false, null, 'Content page, field, and visibility action are required');
+        }
+        try {
+            $settings = nibblyAiLoadSettings(true);
+            $context = nibblyCopilotBuildContext($contentPage, $settings);
+            $proposal = nibblyCopilotBuildVisibilityProposal($contentPage, $fieldRef, $visibilityAction, $instruction);
+            nibblyAiAudit('copilot-visibility', true, [
+                'contentPage' => $contentPage,
+                'fieldRef' => $fieldRef,
+                'visibilityAction' => nibblyCopilotNormalizeVisibilityAction($visibilityAction),
+                'proposals' => dashboardCopilotProposalAuditSummary([$proposal])
+            ]);
+            jsonResponse(true, [
+                'proposals' => [$proposal],
+                'context' => $context
+            ]);
+        } catch (Throwable $e) {
+            nibblyAiAudit('copilot-visibility', false, ['message' => $e->getMessage(), 'contentPage' => $contentPage, 'fieldRef' => $fieldRef]);
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-copilot-apply':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!nibblyCopilotCan('applyField')) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        if (!dashboardCopilotConfirmed()) {
+            jsonResponse(false, null, 'AI write action requires explicit confirmation');
+        }
+        try {
+            nibblyCopilotAssertBurstLimit('apply', 30, 60);
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        $contentPage = trim((string)($_POST['contentPage'] ?? ''));
+        $path = trim((string)($_POST['path'] ?? ''));
+        $value = (string)($_POST['value'] ?? '');
+        $altValue = (string)($_POST['altValue'] ?? '');
+        $currentHash = trim((string)($_POST['currentHash'] ?? ''));
+        $allowedValueHashes = json_decode((string)($_POST['allowedValueHashes'] ?? '[]'), true);
+        if (!is_array($allowedValueHashes)) {
+            $allowedValueHashes = [];
+        }
+        $proposalSignature = trim((string)($_POST['proposalSignature'] ?? ''));
+        if ($contentPage === '' || $path === '') {
+            jsonResponse(false, null, 'Missing field target');
+        }
+        try {
+            $applied = nibblyCopilotApplyFieldUpdate($contentPage, $path, $value, $currentHash, $altValue, $allowedValueHashes, $proposalSignature);
+            $filepath = function_exists('nibblyCopilotContentPath') ? nibblyCopilotContentPath($contentPage) : '';
+            if ($filepath === '') {
+                throw new RuntimeException('Unsupported AI field update target.');
+            }
+            $backupName = preg_match('/^[a-z]{2}_[a-z0-9]+(?:-[a-z0-9]+)*$/', $contentPage)
+                ? dashboardCopilotCreatePageBackup($contentPage)
+                : '';
+            $written = file_put_contents(
+                $filepath,
+                json_encode($applied['data'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
+                LOCK_EX
+            );
+            if ($written === false) {
+                throw new RuntimeException('Could not save AI field update.');
+            }
+            nibblyAiAudit('copilot-apply', true, [
+                'contentPage' => $contentPage,
+                'path' => $path,
+                'type' => $applied['field']['type'] ?? '',
+                'oldHash' => hash('sha256', (string)$applied['oldValue']),
+                'newHash' => hash('sha256', (string)$applied['newValue'])
+            ]);
+            $response = [
+                'contentPage' => $contentPage,
+                'path' => $path,
+                'value' => $applied['newValue'],
+                'altValue' => $applied['altValue'] ?? '',
+                'lastModified' => $applied['data']['lastModified'] ?? null,
+            ];
+            if ($backupName !== '') {
+                $response['undo'] = [
+                    'contentPage' => $contentPage,
+                    'backup' => $backupName,
+                    'path' => $path,
+                    'undoSignature' => dashboardCopilotUndoSignature($contentPage, $backupName, $path)
+                ];
+            }
+            if (preg_match('/^([a-z]{2})_([a-z0-9]+(?:-[a-z0-9]+)*)$/', $contentPage, $pageParts)) {
+                $response['seoHealth'] = buildPageSeoHealth($pageParts[1], $pageParts[2], $applied['data']);
+            }
+            jsonResponse(true, $response, 'AI field update applied');
+        } catch (Throwable $e) {
+            nibblyAiAudit('copilot-apply', false, ['message' => $e->getMessage(), 'contentPage' => $contentPage, 'path' => $path]);
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-copilot-apply-visibility':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!nibblyCopilotCan('toggleVisibility')) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        if (!dashboardCopilotConfirmed()) {
+            jsonResponse(false, null, 'AI visibility action requires explicit confirmation');
+        }
+        try {
+            nibblyCopilotAssertBurstLimit('apply-visibility', 30, 60);
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        $contentPage = trim((string)($_POST['contentPage'] ?? ''));
+        $path = trim((string)($_POST['path'] ?? ''));
+        $visibilityAction = trim((string)($_POST['value'] ?? $_POST['visibilityAction'] ?? ''));
+        $currentHash = trim((string)($_POST['currentHash'] ?? ''));
+        $visibilitySignature = trim((string)($_POST['visibilitySignature'] ?? ''));
+        if ($contentPage === '' || $path === '' || $visibilityAction === '') {
+            jsonResponse(false, null, 'Missing visibility target');
+        }
+        try {
+            $applied = nibblyCopilotApplyVisibilityUpdate($contentPage, $path, $visibilityAction, $currentHash, $visibilitySignature);
+            $filepath = CONTENT_PATH . $contentPage . '.json';
+            $backupName = dashboardCopilotCreatePageBackup($contentPage);
+            $written = file_put_contents(
+                $filepath,
+                json_encode($applied['data'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
+                LOCK_EX
+            );
+            if ($written === false) {
+                throw new RuntimeException('Could not save AI visibility update.');
+            }
+            nibblyAiAudit('copilot-apply-visibility', true, [
+                'contentPage' => $contentPage,
+                'path' => $path,
+                'hiddenPath' => $applied['hiddenPath'] ?? '',
+                'oldHidden' => !empty($applied['oldHidden']),
+                'newHidden' => !empty($applied['newHidden'])
+            ]);
+            $undoPath = (string)($applied['hiddenPath'] ?? ($path . '__hidden'));
+            jsonResponse(true, [
+                'contentPage' => $contentPage,
+                'path' => $path,
+                'hiddenPath' => $undoPath,
+                'value' => $applied['newValue'],
+                'hidden' => !empty($applied['newHidden']),
+                'lastModified' => $applied['data']['lastModified'] ?? null,
+                'undo' => [
+                    'contentPage' => $contentPage,
+                    'backup' => $backupName,
+                    'path' => $undoPath,
+                    'undoSignature' => dashboardCopilotUndoSignature($contentPage, $backupName, $undoPath)
+                ]
+            ], 'AI visibility update applied');
+        } catch (Throwable $e) {
+            nibblyAiAudit('copilot-apply-visibility', false, ['message' => $e->getMessage(), 'contentPage' => $contentPage, 'path' => $path]);
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-copilot-undo':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!nibblyCopilotCan('undoField')) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        if (!dashboardCopilotConfirmed()) {
+            jsonResponse(false, null, 'AI undo action requires explicit confirmation');
+        }
+        try {
+            nibblyCopilotAssertBurstLimit('undo', 20, 60);
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        $contentPage = trim((string)($_POST['contentPage'] ?? ''));
+        $backup = trim((string)($_POST['backup'] ?? ''));
+        $undoPath = trim((string)($_POST['path'] ?? ''));
+        $undoSignature = trim((string)($_POST['undoSignature'] ?? ''));
+        if (!validatePageName($contentPage) || !validateBackupName($backup)) {
+            jsonResponse(false, null, 'Invalid undo target');
+        }
+        if ($undoPath === '' || $undoSignature === '' || !hash_equals(dashboardCopilotUndoSignature($contentPage, $backup, $undoPath), $undoSignature)) {
+            jsonResponse(false, null, 'Undo signature is missing or invalid');
+        }
+        $expectedPrefix = $contentPage . '_';
+        if (!str_starts_with($backup, $expectedPrefix)) {
+            jsonResponse(false, null, 'Backup does not belong to this page');
+        }
+        $backupPath = BACKUP_PATH . $backup;
+        $filepath = CONTENT_PATH . $contentPage . '.json';
+        if (!is_file($backupPath) || !is_file($filepath)) {
+            jsonResponse(false, null, 'Undo backup not found');
+        }
+        try {
+            $currentBackup = dashboardCopilotCreatePageBackup($contentPage, false);
+            if (!copy($backupPath, $filepath)) {
+                throw new RuntimeException('Could not restore AI backup.');
+            }
+            $restored = json_decode((string)file_get_contents($filepath), true);
+            if (!is_array($restored)) {
+                throw new RuntimeException('Restored backup is not valid JSON.');
+            }
+            $restored['lastModified'] = date('c');
+            if (file_put_contents($filepath, json_encode($restored, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX) === false) {
+                throw new RuntimeException('Could not update restored page metadata.');
+            }
+            cleanupOldBackups($contentPage);
+            nibblyAiAudit('copilot-undo', true, [
+                'contentPage' => $contentPage,
+                'backup' => $backup,
+                'currentBackup' => $currentBackup
+            ]);
+            $response = [
+                'contentPage' => $contentPage,
+                'backup' => $backup,
+                'lastModified' => $restored['lastModified'] ?? null
+            ];
+            if (preg_match('/^([a-z]{2})_([a-z0-9]+(?:-[a-z0-9]+)*)$/', $contentPage, $pageParts)) {
+                $response['seoHealth'] = buildPageSeoHealth($pageParts[1], $pageParts[2], $restored);
+            }
+            jsonResponse(true, $response, 'AI change restored from backup');
+        } catch (Throwable $e) {
+            nibblyAiAudit('copilot-undo', false, ['message' => $e->getMessage(), 'contentPage' => $contentPage, 'backup' => $backup]);
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-copilot-draft-content':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!nibblyCopilotCan('createPage') && !nibblyCopilotCan('createNews') && !nibblyCopilotCan('createEvent')) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        try {
+            nibblyCopilotAssertBurstLimit('draft-content', 8, 60);
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        $instruction = trim((string)($_POST['instruction'] ?? ''));
+        $contentType = trim((string)($_POST['contentType'] ?? ''));
+        if ($instruction === '') {
+            jsonResponse(false, null, 'Instruction is required');
+        }
+        try {
+            $settings = nibblyAiLoadSettings(true);
+            $context = nibblyCopilotBuildContext(trim((string)($_POST['contentPage'] ?? '')), $settings);
+            $existingDraftPayload = json_decode((string)($_POST['existingDraft'] ?? '[]'), true);
+            $existingDraft = [];
+            if (is_array($existingDraftPayload) && isset($existingDraftPayload['contentType'], $existingDraftPayload['draft'])) {
+                $existingDraft = [
+                    'contentType' => (string)$existingDraftPayload['contentType'],
+                    'missing' => array_values(array_filter(array_map('strval', is_array($existingDraftPayload['missing'] ?? null) ? $existingDraftPayload['missing'] : []))),
+                    'draft' => is_array($existingDraftPayload['draft'] ?? null) ? $existingDraftPayload['draft'] : []
+                ];
+                if ($contentType === '') {
+                    $contentType = $existingDraft['contentType'];
+                }
+            }
+            $prompt = nibblyCopilotBuildCreatePrompt($context, substr($instruction, 0, 2400), $contentType, $existingDraft);
+            $result = nibblyAiGenerateText($prompt, [
+                'feature' => 'backendAssistant',
+                // Full content drafts are quality-sensitive: use the chat
+                // model instead of the (typically cheaper) text model.
+                'model' => (string)($settings['chatModel'] ?? ''),
+                'maxOutputTokens' => 1200,
+                'temperature' => 0.15,
+                'system' => 'You extract safe nibbly CMS content drafts. Return strict JSON only.'
+            ]);
+            $raw = nibblyCopilotExtractJsonObject((string)($result['text'] ?? ''));
+            $draft = nibblyCopilotSignCreateDraft(nibblyCopilotNormalizeCreateDraft($raw, $context));
+            nibblyAiAudit('copilot-draft-content', true, [
+                'contentType' => $draft['contentType'],
+                'canCreate' => $draft['canCreate'],
+                'missingCount' => count($draft['missing']),
+                'missing' => $draft['missing'],
+                'draftHash' => (string)($draft['draftHash'] ?? ''),
+                'signed' => !empty($draft['draftSignature'])
+            ]);
+            jsonResponse(true, [
+                'draft' => $draft,
+                'usage' => $result['usage'] ?? null,
+                'limits' => $result['limits'] ?? null
+            ]);
+        } catch (Throwable $e) {
+            nibblyAiAudit('copilot-draft-content', false, ['message' => $e->getMessage()]);
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-copilot-create-content':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        if (!dashboardCopilotConfirmed()) {
+            jsonResponse(false, null, 'AI content creation requires explicit confirmation');
+        }
+        try {
+            nibblyCopilotAssertBurstLimit('create-content', 15, 300);
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        $draftPayload = json_decode((string)($_POST['draft'] ?? ''), true);
+        if (!is_array($draftPayload)) {
+            jsonResponse(false, null, 'Invalid draft JSON');
+        }
+        try {
+            $type = (string)($draftPayload['contentType'] ?? '');
+            $permissionMap = ['page' => 'createPage', 'news' => 'createNews', 'event' => 'createEvent'];
+            if (empty($permissionMap[$type]) || !nibblyCopilotCan($permissionMap[$type])) {
+                throw new RuntimeException('You do not have permission to create this content type.');
+            }
+            if (!nibblyCopilotVerifyCreateDraftSignature($draftPayload)) {
+                throw new RuntimeException('Draft signature is missing or invalid. Generate a fresh preview before creating content.');
+            }
+            $draft = is_array($draftPayload['draft'] ?? null) ? $draftPayload['draft'] : [];
+            $expectedHash = trim((string)($draftPayload['draftHash'] ?? ''));
+            $actualHash = hash('sha256', json_encode([$type, $draft], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            if ($expectedHash === '' || !hash_equals($expectedHash, $actualHash)) {
+                throw new RuntimeException('Draft changed after preview. Generate a fresh draft before creating content.');
+            }
+            $created = nibblyCopilotBuildCreatedContent($type, $draft);
+            if ($type === 'event') {
+                $eventsPath = defined('EVENTS_PATH') ? EVENTS_PATH : dirname(CONTENT_PATH) . '/events.json';
+                $data = is_file($eventsPath) ? (json_decode((string)file_get_contents($eventsPath), true) ?: ['events' => []]) : ['events' => []];
+                foreach ($data['events'] ?? [] as $event) {
+                    if (($event['id'] ?? '') === ($created['id'] ?? '')) {
+                        throw new RuntimeException('An event with this ID already exists.');
+                    }
+                }
+                if (is_file($eventsPath)) {
+                    $timestamp = date('Y-m-d_His');
+                    copy($eventsPath, BACKUP_PATH . 'events_' . $timestamp . '.json');
+                }
+                $data['events'][] = $created;
+                $data['lastModified'] = date('c');
+                if (file_put_contents($eventsPath, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX) === false) {
+                    throw new RuntimeException('Could not save event draft.');
+                }
+                $response = [
+                    'contentType' => 'event',
+                    'id' => $created['id'],
+                    'hidden' => true,
+                    'publishable' => nibblyCopilotCan('publishEvent'),
+                    'adminUrl' => dashboardCopilotAdminUrl('events')
+                ];
+            } elseif ($type === 'news') {
+                $newsDir = dirname(CONTENT_PATH) . '/news/';
+                if (!is_dir($newsDir)) {
+                    mkdir($newsDir, 0755, true);
+                }
+                $filepath = $newsDir . $created['id'] . '.json';
+                if (is_file($filepath)) {
+                    throw new RuntimeException('A news post with this ID already exists.');
+                }
+                if (file_put_contents($filepath, json_encode($created, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX) === false) {
+                    throw new RuntimeException('Could not save news draft.');
+                }
+                $response = [
+                    'contentType' => 'news',
+                    'id' => $created['id'],
+                    'hidden' => true,
+                    'publishable' => nibblyCopilotCan('publishNews'),
+                    'adminUrl' => dashboardCopilotAdminUrl('news'),
+                    'publicUrl' => dashboardCopilotNewsUrl($created['id'], (string)($created['lang'] ?? (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en')))
+                ];
+            } elseif ($type === 'page') {
+                $pageName = $created['pageName'] ?? '';
+                if (!validatePageName($pageName)) {
+                    throw new RuntimeException('Invalid page draft name.');
+                }
+                $filepath = CONTENT_PATH . $pageName . '.json';
+                if (is_file($filepath)) {
+                    throw new RuntimeException('A page with this slug already exists.');
+                }
+                if (file_put_contents($filepath, json_encode($created['content'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX) === false) {
+                    throw new RuntimeException('Could not save page draft.');
+                }
+                $response = [
+                    'contentType' => 'page',
+                    'id' => $pageName,
+                    'private' => true,
+                    'publishable' => nibblyCopilotCan('publishPage'),
+                    'adminUrl' => dashboardCopilotAdminUrl('page/' . $pageName),
+                    'publicUrl' => dashboardCopilotPageUrl($pageName)
+                ];
+            } else {
+                throw new RuntimeException('Unsupported content type.');
+            }
+            nibblyAiAudit('copilot-create-content', true, $response);
+            jsonResponse(true, $response, 'AI content draft created');
+        } catch (Throwable $e) {
+            nibblyAiAudit('copilot-create-content', false, ['message' => $e->getMessage()]);
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-copilot-publish-content':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        if (!dashboardCopilotConfirmed()) {
+            jsonResponse(false, null, 'AI publish action requires explicit confirmation');
+        }
+        try {
+            nibblyCopilotAssertBurstLimit('publish-content', 15, 300);
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        $type = trim((string)($_POST['contentType'] ?? ''));
+        $id = trim((string)($_POST['id'] ?? ''));
+        if (!in_array($type, ['page', 'news', 'event'], true) || $id === '') {
+            jsonResponse(false, null, 'Invalid publish target');
+        }
+        $permissionMap = ['page' => 'publishPage', 'news' => 'publishNews', 'event' => 'publishEvent'];
+        if (!nibblyCopilotCan($permissionMap[$type])) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        try {
+            if ($type === 'page') {
+                if (!validatePageName($id)) {
+                    throw new RuntimeException('Invalid page name.');
+                }
+                $filepath = CONTENT_PATH . $id . '.json';
+                if (!is_file($filepath)) {
+                    throw new RuntimeException('Page not found.');
+                }
+                $backupName = dashboardCopilotCreatePageBackup($id);
+                $data = json_decode((string)file_get_contents($filepath), true);
+                if (!is_array($data)) {
+                    throw new RuntimeException('Invalid page JSON.');
+                }
+                $data = nibblyCopilotPublishPageData($data);
+                if (file_put_contents($filepath, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX) === false) {
+                    throw new RuntimeException('Could not publish page.');
+                }
+                $response = [
+                    'contentType' => 'page',
+                    'id' => $id,
+                    'private' => false,
+                    'published' => true,
+                    'backup' => $backupName,
+                    'adminUrl' => dashboardCopilotAdminUrl('page/' . $id),
+                    'publicUrl' => dashboardCopilotPageUrl($id)
+                ];
+            } elseif ($type === 'news') {
+                if (!preg_match('/^[a-z0-9][a-z0-9-]*$/', $id)) {
+                    throw new RuntimeException('Invalid news ID.');
+                }
+                $newsDir = dirname(CONTENT_PATH) . '/news/';
+                $filepath = $newsDir . $id . '.json';
+                if (!is_file($filepath)) {
+                    throw new RuntimeException('News post not found.');
+                }
+                $backupPath = BACKUP_PATH . 'news_' . $id . '_' . date('Y-m-d_His') . '.json';
+                copy($filepath, $backupPath);
+                $post = json_decode((string)file_get_contents($filepath), true);
+                if (!is_array($post)) {
+                    throw new RuntimeException('Invalid news JSON.');
+                }
+                $post = nibblyCopilotPublishNewsData($post);
+                if (file_put_contents($filepath, json_encode($post, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX) === false) {
+                    throw new RuntimeException('Could not publish news post.');
+                }
+                $response = [
+                    'contentType' => 'news',
+                    'id' => $id,
+                    'hidden' => false,
+                    'published' => true,
+                    'adminUrl' => dashboardCopilotAdminUrl('news'),
+                    'publicUrl' => dashboardCopilotNewsUrl($id, (string)($post['lang'] ?? (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en')))
+                ];
+            } else {
+                $eventsPath = defined('EVENTS_PATH') ? EVENTS_PATH : dirname(CONTENT_PATH) . '/events.json';
+                if (!is_file($eventsPath)) {
+                    throw new RuntimeException('Events file not found.');
+                }
+                $data = json_decode((string)file_get_contents($eventsPath), true);
+                if (!is_array($data) || !is_array($data['events'] ?? null)) {
+                    throw new RuntimeException('Invalid events JSON.');
+                }
+                $timestamp = date('Y-m-d_His');
+                copy($eventsPath, BACKUP_PATH . 'events_' . $timestamp . '.json');
+                $data = nibblyCopilotPublishEventData($data, $id);
+                if (file_put_contents($eventsPath, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX) === false) {
+                    throw new RuntimeException('Could not publish event.');
+                }
+                $response = [
+                    'contentType' => 'event',
+                    'id' => $id,
+                    'hidden' => false,
+                    'published' => true,
+                    'adminUrl' => dashboardCopilotAdminUrl('events')
+                ];
+            }
+            nibblyAiAudit('copilot-publish-content', true, $response);
+            jsonResponse(true, $response, 'AI-created content published');
+        } catch (Throwable $e) {
+            nibblyAiAudit('copilot-publish-content', false, ['message' => $e->getMessage(), 'contentType' => $type, 'id' => $id]);
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-copilot-generate-image':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!nibblyCopilotCan('generateImage')) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        try {
+            nibblyCopilotAssertBurstLimit('generate-image', 6, 300);
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        $contentPage = trim((string)($_POST['contentPage'] ?? ''));
+        $fieldRef = trim((string)($_POST['fieldRef'] ?? ''));
+        $instruction = trim((string)($_POST['instruction'] ?? ''));
+        $imageMode = trim((string)($_POST['imageMode'] ?? ''));
+        if (!in_array($imageMode, ['generate', 'edit'], true)) {
+            $imageMode = !empty($_POST['useCurrentAsReference']) ? 'edit' : 'generate';
+        }
+        $useCurrentAsReference = $imageMode === 'edit' && !empty($_POST['useCurrentAsReference']);
+        if ($contentPage === '' || $fieldRef === '' || $instruction === '') {
+            jsonResponse(false, null, 'Content page, image field, and prompt are required');
+        }
+        try {
+            $settings = nibblyAiLoadSettings(false);
+            nibblyAiEnsureEnabled($settings);
+            nibblyAiEnsureFeature($settings, 'imageGeneration');
+            if (trim((string)($settings['imageModel'] ?? '')) === '') {
+                throw new RuntimeException('Image model is missing.');
+            }
+
+            $publicSettings = nibblyAiLoadSettings(true);
+            $context = nibblyCopilotBuildContext($contentPage, $publicSettings);
+            if (empty($context['page']['exists'])) {
+                jsonResponse(false, null, 'Content page not found');
+            }
+            $fields = nibblyCopilotAllowedImageFields($context, $fieldRef);
+            if (!$fields) {
+                jsonResponse(false, null, 'Target field does not accept AI image generation.');
+            }
+            $field = $fields[0];
+            $pageData = nibblyCopilotLoadPageData($contentPage);
+            $current = getNestedValue($pageData, $field['path']);
+            $currentPath = is_array($current) ? (string)($current['src'] ?? '') : (string)$current;
+            $referenceMediaPaths = [];
+            $referenceImagePaths = [];
+            $referenceImageNames = [];
+            $temporaryReferencePaths = [];
+            if ($useCurrentAsReference && trim($currentPath) !== '') {
+                if (nibblyCopilotIsExternalImageUrl($currentPath)) {
+                    $externalReference = nibblyCopilotDownloadExternalReferenceImage($currentPath);
+                    $referenceImagePaths[] = $externalReference;
+                    $referenceImageNames[] = basename(parse_url($currentPath, PHP_URL_PATH) ?: 'external-reference-image');
+                    $temporaryReferencePaths[] = $externalReference;
+                } else {
+                    $referenceMediaPaths[] = nibblyCopilotNormalizeImagePath($currentPath);
+                }
+            }
+            $size = trim((string)($_POST['size'] ?? 'auto'));
+            if (!in_array($size, ['auto', '1024x1024', '1536x1024', '1024x1536'], true)) {
+                $size = 'auto';
+            }
+            $count = max(1, min(4, (int)($_POST['count'] ?? 3)));
+            $outputFormat = strtolower(trim((string)($_POST['outputFormat'] ?? 'webp')));
+            if (!in_array($outputFormat, ['webp', 'png', 'jpeg', 'jpg'], true)) {
+                $outputFormat = 'webp';
+            }
+            if ($outputFormat === 'jpg') {
+                $outputFormat = 'jpeg';
+            }
+            $quality = strtolower(trim((string)($_POST['quality'] ?? 'auto')));
+            if (!in_array($quality, ['auto', 'low', 'medium', 'high'], true)) {
+                $quality = 'auto';
+            }
+            $prompt = nibblyCopilotBuildImagePrompt($context, $field, substr($instruction, 0, 1800), $imageMode);
+            $job = nibblyAiCreateImageJob('copilot', [
+                'contentPage' => $contentPage,
+                'fieldRef' => $field['id'],
+                'instruction' => $instruction,
+                'prompt' => $prompt,
+                'imageMode' => $imageMode,
+                'options' => [
+                    'size' => $size,
+                    'aspectRatio' => 'auto',
+                    'imageScale' => $_POST['imageScale'] ?? 2048,
+                    'count' => $count,
+                    'outputFormat' => $outputFormat,
+                    'quality' => $quality,
+                    'moderation' => 'auto',
+                    'outputCompression' => $_POST['outputCompression'] ?? 100,
+                    'referenceImagePaths' => $referenceImagePaths,
+                    'referenceImageNames' => $referenceImageNames,
+                    'referenceMediaPaths' => $referenceMediaPaths,
+                    'filenameHint' => nibblyCopilotSlugify($context['page']['slug'] . '-' . $field['path'], 'copilot-image')
+                ]
+            ]);
+            try {
+                nibblyAiAudit('copilot-generate-image-queued', true, [
+                    'jobId' => $job['id'],
+                    'contentPage' => $contentPage,
+                    'path' => $field['path'],
+                    'imageMode' => $imageMode,
+                    'requestedCount' => $count
+                ]);
+                jsonResponse(true, [
+                    'job' => $job,
+                    'context' => $context
+                ], 'Image generation queued');
+            } finally {
+                foreach ($temporaryReferencePaths as $temporaryReferencePath) {
+                    @unlink($temporaryReferencePath);
+                }
+            }
+        } catch (Throwable $e) {
+            nibblyAiAudit('copilot-generate-image', false, ['message' => $e->getMessage(), 'contentPage' => $contentPage, 'fieldRef' => $fieldRef]);
             jsonResponse(false, null, $e->getMessage());
         }
         break;
@@ -1364,7 +3159,7 @@ switch ($action) {
         $fieldInstruction = $field === 'all'
             ? 'Fill every JSON field.'
             : 'Fill only the JSON field "' . $field . '" and still return a JSON object with that single key.';
-        $prompt = "Create practical SEO/AEO metadata for this Nibbly CMS page.\n"
+        $prompt = "Create practical SEO/AEO metadata for this nibbly CMS page.\n"
             . "Return strict JSON only, no Markdown and no prose.\n"
             . "Allowed keys: title, description, answerSummary, ogTitle, ogDescription.\n"
             . "Constraints: title <= 70 characters; description <= 160 characters; answerSummary <= 320 characters; ogTitle <= 70 characters; ogDescription <= 180 characters.\n"
@@ -1405,6 +3200,155 @@ switch ($action) {
             jsonResponse(true, ['fields' => $clean, 'limits' => $result['limits'] ?? null]);
         } catch (Throwable $e) {
             nibblyAiAudit('seo-generate', false, ['message' => $e->getMessage(), 'field' => $field]);
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-openrouter-models':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        try {
+            jsonResponse(true, nibblyApiOpenRouterModels(!empty($_POST['refresh']) || !empty($_GET['refresh'])));
+        } catch (Throwable $e) {
+            jsonResponse(false, null, 'Could not load the OpenRouter model list: ' . $e->getMessage());
+        }
+        break;
+
+    case 'ai-content-audit':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        $rows = [];
+        foreach (glob(rtrim(CONTENT_PATH, '/') . '/*.json') ?: [] as $file) {
+            $name = pathinfo($file, PATHINFO_FILENAME);
+            if (!preg_match('/^[a-z]{2}_[a-z0-9]+(?:-[a-z0-9]+)*$/', $name)) {
+                continue;
+            }
+            $data = dashboardReadJsonFile($file);
+            if (!$data) {
+                continue;
+            }
+            $description = trim((string)(($data['seo']['description'] ?? '') ?: ($data['description'] ?? '')));
+            $rows[] = [
+                'contentPage' => $name,
+                'lang' => (string)($data['lang'] ?? substr($name, 0, 2)),
+                'title' => substr((string)($data['title'] ?? $name), 0, 120),
+                'descriptionStatus' => nibblyAuditDescriptionStatus($description),
+                'descriptionLength' => function_exists('mb_strlen') ? mb_strlen($description, 'UTF-8') : strlen($description),
+                'missingAlt' => nibblyAuditCountMissingAlt($data['sections'] ?? [])
+            ];
+        }
+        usort($rows, function (array $a, array $b): int {
+            $rank = fn(array $row): int => ($row['descriptionStatus'] === 'ok' ? 0 : 2) + ($row['missingAlt'] > 0 ? 1 : 0);
+            return $rank($b) <=> $rank($a) ?: strcmp($a['contentPage'], $b['contentPage']);
+        });
+        jsonResponse(true, ['pages' => $rows]);
+        break;
+
+    case 'ai-content-audit-suggest':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        $contentPage = trim((string)($_POST['contentPage'] ?? ''));
+        if (!preg_match('/^[a-z]{2}_[a-z0-9]+(?:-[a-z0-9]+)*$/', $contentPage)) {
+            jsonResponse(false, null, 'Invalid content page');
+        }
+        $data = dashboardReadJsonFile(CONTENT_PATH . $contentPage . '.json');
+        if (!$data) {
+            jsonResponse(false, null, 'Content page not found');
+        }
+        try {
+            $lang = (string)($data['lang'] ?? substr($contentPage, 0, 2));
+            $prompt = "Write one SEO meta description (45-160 characters) in the language \"{$lang}\" for this website page.\n"
+                . "Return only the description text without quotes, labels, or Markdown.\n"
+                . "Do not invent facts, names, offers, prices, certifications, or locations that are not implied by the content.\n\n"
+                . 'Page title: ' . (string)($data['title'] ?? $contentPage) . "\n"
+                . "Page content:\n" . nibblyAuditPageText($data);
+            $result = nibblyAiGenerateText($prompt, [
+                'feature' => 'seoTextGeneration',
+                'maxOutputTokens' => 220,
+                'temperature' => 0.3
+            ]);
+            $description = trim((string)($result['text'] ?? ''), " \t\n\r\0\x0B\"'");
+            $description = substr(preg_replace('/\s+/', ' ', strip_tags($description)) ?? '', 0, 300);
+            if ($description === '') {
+                throw new RuntimeException('AI returned no description.');
+            }
+            jsonResponse(true, [
+                'contentPage' => $contentPage,
+                'description' => $description,
+                'limits' => $result['limits'] ?? null
+            ]);
+        } catch (Throwable $e) {
+            nibblyAiAudit('content-audit-suggest', false, ['contentPage' => $contentPage, 'message' => $e->getMessage()]);
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-content-audit-apply':
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        if (!dashboardCopilotConfirmed()) {
+            jsonResponse(false, null, 'AI write action requires explicit confirmation');
+        }
+        $contentPage = trim((string)($_POST['contentPage'] ?? ''));
+        if (!preg_match('/^[a-z]{2}_[a-z0-9]+(?:-[a-z0-9]+)*$/', $contentPage)) {
+            jsonResponse(false, null, 'Invalid content page');
+        }
+        $description = trim((string)($_POST['description'] ?? ''));
+        $description = substr(preg_replace('/[\x00-\x1F\x7F]/', ' ', strip_tags($description)) ?? '', 0, 300);
+        if ($description === '') {
+            jsonResponse(false, null, 'Description is required');
+        }
+        try {
+            $filepath = CONTENT_PATH . $contentPage . '.json';
+            $data = dashboardReadJsonFile($filepath);
+            if (!$data) {
+                jsonResponse(false, null, 'Content page not found');
+            }
+            $backup = dashboardCopilotCreatePageBackup($contentPage);
+            $data['description'] = $description;
+            if (is_array($data['seo'] ?? null) && array_key_exists('description', $data['seo'])) {
+                $data['seo']['description'] = $description;
+            }
+            $data['lastModified'] = date('c');
+            if (file_put_contents($filepath, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX) === false) {
+                throw new RuntimeException('Could not save the page.');
+            }
+            nibblyAiAudit('content-audit-apply', true, [
+                'contentPage' => $contentPage,
+                'backup' => $backup,
+                'descriptionHash' => hash('sha256', $description)
+            ]);
+            jsonResponse(true, ['contentPage' => $contentPage, 'backup' => $backup]);
+        } catch (Throwable $e) {
+            nibblyAiAudit('content-audit-apply', false, ['contentPage' => $contentPage, 'message' => $e->getMessage()]);
             jsonResponse(false, null, $e->getMessage());
         }
         break;
@@ -1450,8 +3394,16 @@ switch ($action) {
                 'referenceMediaPaths' => $referenceMediaPaths,
                 'filenameHint' => $_POST['filenameHint'] ?? 'ai-image'
             ];
-            $result = nibblyAiGenerateImage($prompt, $imageOptions);
-            jsonResponse(true, $result);
+            $job = nibblyAiCreateImageJob('dashboard', [
+                'prompt' => $prompt,
+                'options' => $imageOptions
+            ]);
+            nibblyAiAudit('image-queued', true, [
+                'jobId' => $job['id'],
+                'model' => (string)($imageOptions['model'] ?? ''),
+                'count' => (int)($imageOptions['count'] ?? 1)
+            ]);
+            jsonResponse(true, ['job' => $job], 'Image generation queued');
         } catch (Throwable $e) {
             nibblyAiAudit('image', false, ['message' => $e->getMessage()]);
             $settings = nibblyAiLoadSettings(false);
@@ -2612,8 +4564,14 @@ switch ($action) {
             jsonResponse(false, null, 'Folder not found');
         }
         $contents = array_values(array_diff(scandir($path) ?: [], ['.', '..']));
-        if (count($contents) > 0) {
+        // OS metadata files do not count as content and are removed with the folder.
+        $junkFiles = ['.DS_Store', 'Thumbs.db', 'desktop.ini'];
+        $realContents = array_values(array_diff($contents, $junkFiles));
+        if (count($realContents) > 0) {
             jsonResponse(false, null, 'Folder must be empty before it can be deleted');
+        }
+        foreach (array_intersect($contents, $junkFiles) as $junkFile) {
+            @unlink($path . '/' . $junkFile);
         }
         if (rmdir($path)) {
             jsonResponse(true, ['folder' => $folder], 'Folder deleted');
@@ -3389,11 +5347,53 @@ switch ($action) {
     case 'load-mails':
         $mailsFile = dirname(CONTENT_PATH) . '/mails.json';
         if (!file_exists($mailsFile)) {
-            jsonResponse(true, []);
+            jsonResponse(true, ['mails' => [], 'forms' => nibblyFormsList()]);
         }
 
         $mails = json_decode(file_get_contents($mailsFile), true) ?: [];
-        jsonResponse(true, $mails);
+        foreach ($mails as &$mail) {
+            $mail['formId'] = $mail['formId'] ?? 'contact';
+            $mail['formLabel'] = $mail['formLabel'] ?? 'Kontaktformular';
+        }
+        unset($mail);
+        jsonResponse(true, ['mails' => $mails, 'forms' => nibblyFormsList()]);
+        break;
+
+    case 'list-forms':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        jsonResponse(true, nibblyFormsList());
+        break;
+
+    case 'load-form':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        $formId = $_GET['form_id'] ?? $_POST['form_id'] ?? '';
+        if ($formId === '') {
+            jsonResponse(false, null, 'Form ID missing');
+        }
+        $form = nibblyFormLoad($formId);
+        if (!$form) {
+            jsonResponse(false, null, 'Form not found');
+        }
+        jsonResponse(true, $form);
+        break;
+
+    case 'save-form':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        $payload = json_decode((string)($_POST['form'] ?? ''), true);
+        if (!is_array($payload)) {
+            jsonResponse(false, null, 'Invalid form JSON');
+        }
+        $savedForm = nibblyFormSave($payload);
+        jsonResponse(true, $savedForm, 'Form saved');
         break;
 
     case 'mark-mail-read':
@@ -3642,8 +5642,8 @@ switch ($action) {
             ],
             'theme' => [
                 'adminTheme' => 'dark',
-                'primaryColor' => '#2563eb',
-                'accentColor' => '#60a5fa',
+                'primaryColor' => '#3858e9',
+                'accentColor' => '#b45309',
                 'sidebarBg' => '',
                 'darkPrimaryColor' => '',
                 'darkAccentColor' => '',
@@ -3654,6 +5654,7 @@ switch ($action) {
             'email' => [
                 'method' => 'inactive',
                 'recipientEmail' => '',
+                'bccEmail' => '',
                 'fromEmail' => '',
                 'fromName' => defined('SITE_NAME') ? SITE_NAME : '',
                 'smtpHost' => '',
@@ -3745,9 +5746,9 @@ switch ($action) {
         // Whitelist allowed keys
         $allowed = [
             'branding' => ['logo', 'logoDark', 'adminLogo', 'name', 'showBranding', 'logoDisplay', 'logoSize'],
-            'theme' => ['adminTheme', 'primaryColor', 'accentColor', 'sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg', 'buttonGlow', 'buttonRadius'],
+            'theme' => ['adminTheme', 'publicDefault', 'primaryColor', 'accentColor', 'sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg', 'buttonGlow', 'buttonRadius'],
             'general' => ['adminLanguage', 'frontendLoginRedirect'],
-            'email' => ['method', 'recipientEmail', 'fromEmail', 'fromName', 'smtpHost', 'smtpPort', 'smtpUsername', 'smtpPassword', 'smtpEncryption'],
+            'email' => ['method', 'recipientEmail', 'bccEmail', 'fromEmail', 'fromName', 'smtpHost', 'smtpPort', 'smtpUsername', 'smtpPassword', 'smtpEncryption'],
             'seo' => ['defaultOgImage']
         ];
 
@@ -3777,8 +5778,8 @@ switch ($action) {
                         }
                     }
 
-                    // Validate adminTheme
-                    if ($key === 'adminTheme' && !in_array($value, ['light', 'dark', 'system'])) {
+                    // Validate theme choices
+                    if (in_array($key, ['adminTheme', 'publicDefault'], true) && !in_array($value, ['light', 'dark', 'system'], true)) {
                         jsonResponse(false, null, 'Invalid theme value');
                     }
 
@@ -3859,7 +5860,16 @@ switch ($action) {
                         if ($key === 'method' && !in_array($value, ['smtp', 'sendmail', 'inactive'])) {
                             $value = 'smtp';
                         }
-                        if (in_array($key, ['recipientEmail', 'fromEmail']) && $value !== '' && !filter_var($value, FILTER_VALIDATE_EMAIL)) {
+                        if (in_array($key, ['recipientEmail', 'bccEmail'], true)) {
+                            if (!nibblyValidateEmailList($value)) {
+                                jsonResponse(false, null, 'Invalid email address list for ' . $key);
+                            }
+                            $value = nibblyNormalizeEmailList($value);
+                        }
+                        if ($key === 'fromEmail') {
+                            $value = trim((string)$value);
+                        }
+                        if ($key === 'fromEmail' && $value !== '' && !filter_var($value, FILTER_VALIDATE_EMAIL)) {
                             jsonResponse(false, null, 'Invalid email address for ' . $key);
                         }
                         if ($key === 'smtpPort') {
@@ -3868,7 +5878,7 @@ switch ($action) {
                         if ($key === 'smtpEncryption' && !in_array($value, ['tls', 'ssl', 'none'])) {
                             $value = 'tls';
                         }
-                        if (in_array($key, ['smtpHost', 'smtpUsername', 'fromName', 'fromEmail', 'recipientEmail'])) {
+                        if (in_array($key, ['smtpHost', 'smtpUsername', 'fromName'])) {
                             $value = trim((string)$value);
                         }
                         // smtpPassword: allow empty (means "keep existing")
@@ -3903,6 +5913,10 @@ switch ($action) {
                 }
             }
             $sanitized[$scalarKey] = $value;
+        }
+
+        if (!empty($sanitized['theme']) && is_array($sanitized['theme'])) {
+            $sanitized['theme'] = nibblySanitizeThemeContrast($sanitized['theme']);
         }
 
         $contentDir = dirname(SETTINGS_PATH);
@@ -3959,11 +5973,27 @@ switch ($action) {
             jsonResponse(false, null, 'Recipient email is required');
         }
 
-        $testTo = $testConfig['recipientEmail'];
-        $testFrom = $testConfig['fromEmail'] ?: $testTo;
-        $testFromName = $testConfig['fromName'] ?: 'Nibbly CMS';
-        $testSubject = 'Nibbly CMS — Test Email';
-        $testBody = "This is a test email from Nibbly CMS.\n\nIf you can read this, your email settings are working correctly.\n\nTimestamp: " . date('Y-m-d H:i:s');
+        if (!nibblyValidateEmailList($testConfig['recipientEmail'] ?? '')) {
+            jsonResponse(false, null, 'Invalid email address list for recipientEmail');
+        }
+        if (!nibblyValidateEmailList($testConfig['bccEmail'] ?? '')) {
+            jsonResponse(false, null, 'Invalid email address list for bccEmail');
+        }
+
+        $testToRecipients = nibblyParseEmailList($testConfig['recipientEmail'] ?? '');
+        $testBccRecipients = nibblyParseEmailList($testConfig['bccEmail'] ?? '');
+        if (empty($testToRecipients)) {
+            jsonResponse(false, null, 'Recipient email is required');
+        }
+
+        $testTo = implode(', ', $testToRecipients);
+        $testFrom = trim((string)($testConfig['fromEmail'] ?? '')) ?: $testToRecipients[0];
+        if (!filter_var($testFrom, FILTER_VALIDATE_EMAIL)) {
+            jsonResponse(false, null, 'Invalid email address for fromEmail');
+        }
+        $testFromName = $testConfig['fromName'] ?: 'nibbly CMS';
+        $testSubject = 'nibbly CMS — Test Email';
+        $testBody = "This is a test email from nibbly CMS.\n\nIf you can read this, your email settings are working correctly.\n\nTimestamp: " . date('Y-m-d H:i:s');
 
         $testMethod = $testConfig['method'] ?? 'smtp';
         $testSent = false;
@@ -3992,7 +6022,7 @@ switch ($action) {
                     );
                 }
             }
-            $testSent = $mailer->send($testTo, $testSubject, $testBody, $testFrom, $testFromName);
+            $testSent = $mailer->send($testToRecipients, $testSubject, $testBody, $testFrom, $testFromName, '', $testBccRecipients);
             if (!$testSent) {
                 $testError = $mailer->getLastError();
             }
@@ -4000,8 +6030,11 @@ switch ($action) {
             $headers = [];
             $headers[] = 'From: ' . ($testFromName ? "=?UTF-8?B?" . base64_encode($testFromName) . "?= <$testFrom>" : $testFrom);
             $headers[] = 'Content-Type: text/plain; charset=UTF-8';
-            $headers[] = 'X-Mailer: Nibbly CMS';
+            $headers[] = 'X-Mailer: nibbly CMS';
             $testSent = @mail($testTo, '=?UTF-8?B?' . base64_encode($testSubject) . '?=', $testBody, implode("\r\n", $headers));
+            foreach ($testBccRecipients as $bccRecipient) {
+                $testSent = @mail($bccRecipient, '=?UTF-8?B?' . base64_encode($testSubject) . '?=', $testBody, implode("\r\n", $headers)) && $testSent;
+            }
             if (!$testSent) {
                 $testError = 'PHP mail() returned false. Check server mail configuration.';
             }
@@ -4298,7 +6331,7 @@ switch ($action) {
             }
         }
 
-        // Structure checks: required Nibbly files must be present
+        // Structure checks: required nibbly files must be present
         $requiredFiles = [
             'admin/api.php',
             'admin/dashboard.php',
@@ -4318,11 +6351,11 @@ switch ($action) {
         }
         if (!empty($missingFiles)) {
             $zip->close();
-            jsonResponse(false, null, 'Not a valid Nibbly backup. Missing: ' . implode(', ', $missingFiles));
+            jsonResponse(false, null, 'Not a valid nibbly backup. Missing: ' . implode(', ', $missingFiles));
         }
         if (!$hasContentPage) {
             $zip->close();
-            jsonResponse(false, null, 'Not a valid Nibbly backup. No content pages found.');
+            jsonResponse(false, null, 'Not a valid nibbly backup. No content pages found.');
         }
 
         // Allowed PHP locations (security: reject PHP files in unexpected places)
@@ -4689,7 +6722,7 @@ switch ($action) {
         }
         if (!is_dir(BACKUP_PATH)) @mkdir(BACKUP_PATH, 0755, true);
         $testFile = BACKUP_PATH . 'nibbly-remote-test-' . date('Ymd-His') . '.txt';
-        file_put_contents($testFile, "Nibbly remote backup test\n" . date('c') . "\n");
+        file_put_contents($testFile, "nibbly remote backup test\n" . date('c') . "\n");
         try {
             backupRemoteRefreshTarget($target);
             $result = backupRemoteUpload($testFile, $target);
@@ -4846,7 +6879,7 @@ switch ($action) {
         $config['remote_targets'][$targetIndex] = $target;
         backupSaveConfig(['remote_targets' => $config['remote_targets']]);
         unset($_SESSION['backup_dropbox_oauth']);
-        redirectHtml('Dropbox connected', 'You can close this tab and return to Nibbly.', 'dashboard');
+        redirectHtml('Dropbox connected', 'You can close this tab and return to nibbly.', 'dashboard');
 
     case 'backup-dropbox-broker-callback':
         if (!isAdmin()) redirectHtml('Dropbox connection failed', 'Your admin session is no longer active.');
@@ -4909,7 +6942,7 @@ switch ($action) {
         $config['remote_targets'][$targetIndex] = $target;
         backupSaveConfig(['remote_targets' => $config['remote_targets']]);
         unset($_SESSION['backup_dropbox_broker_oauth']);
-        redirectHtml('Dropbox connected', 'You can close this tab and return to Nibbly.', 'dashboard');
+        redirectHtml('Dropbox connected', 'You can close this tab and return to nibbly.', 'dashboard');
 
     case 'backup-google-oauth-start':
     case 'backup-onedrive-oauth-start':
@@ -5067,7 +7100,7 @@ switch ($action) {
         $config['remote_targets'][$targetIndex] = $target;
         backupSaveConfig(['remote_targets' => $config['remote_targets']]);
         unset($_SESSION[$sessionKey]);
-        redirectHtml("$label connected", 'You can close this tab and return to Nibbly.', 'dashboard');
+        redirectHtml("$label connected", 'You can close this tab and return to nibbly.', 'dashboard');
 
     case 'backup-google-oauth-callback':
     case 'backup-onedrive-oauth-callback':
@@ -5154,7 +7187,7 @@ switch ($action) {
         $config['remote_targets'][$targetIndex] = $target;
         backupSaveConfig(['remote_targets' => $config['remote_targets']]);
         unset($_SESSION['backup_oauth']);
-        redirectHtml("$label connected", 'You can close this tab and return to Nibbly.', 'dashboard');
+        redirectHtml("$label connected", 'You can close this tab and return to nibbly.', 'dashboard');
 
     case 'backup-prepare-download':
         // Issues a one-time token for downloading an existing backup

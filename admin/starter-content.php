@@ -1,6 +1,6 @@
 <?php
 /**
- * Nibbly CMS — Starter Content Generator
+ * nibbly CMS — Starter Content Generator
  *
  * Called by setup.php to generate demo pages after initial installation.
  * Contains all i18n strings (en/de/es) and content generators for:
@@ -39,12 +39,12 @@ function getStarterI18n($siteName) {
             'home_card_3_title' => 'For Developers',
             'home_card_3_desc' => 'Plain PHP templates, JSON content files, CSS custom properties. No framework, no build step, no magic.',
             'home_card_4_title' => 'For AI Workflows',
-            'home_card_4_desc' => 'Tell your AI to build with Nibbly — the result is a working CMS, not a prototype that needs a backend.',
+            'home_card_4_desc' => 'Tell your AI to build with nibbly — the result is a working CMS, not a prototype that needs a backend.',
 
             // About page
             'about_title' => 'About',
             'about_heading' => 'About Us',
-            'about_intro' => '<p>This is an example page to show how a typical content page looks in Nibbly. It uses only standard block types — heading, text, image, quote — rendered automatically from a JSON file.</p>',
+            'about_intro' => '<p>This is an example page to show how a typical content page looks in nibbly. It uses only standard block types — heading, text, image, quote — rendered automatically from a JSON file.</p>',
             'about_mission_title' => 'Our Mission',
             'about_mission' => '<p>We believe websites should be simple to build and even simpler to maintain. No databases, no complex deployments, no vendor lock-in. Just files on a server that you own and control.</p><p>Every piece of content on this site is stored as a plain JSON file. You can open it in any text editor, back it up by copying a folder, and deploy by uploading files.</p>',
             'about_quote' => 'Simplicity is the ultimate sophistication.',
@@ -59,7 +59,7 @@ function getStarterI18n($siteName) {
             // Block types demo
             'blocks_title' => 'Block Types',
             'blocks_heading' => 'All Block Types',
-            'blocks_intro' => '<p>This page demonstrates every content block available in Nibbly. Each section uses a different <code>type</code> value in the JSON content file. You can mix and match them freely when building pages.</p>',
+            'blocks_intro' => '<p>This page demonstrates every content block available in nibbly. Each section uses a different <code>type</code> value in the JSON content file. You can mix and match them freely when building pages.</p>',
             'blocks_text_heading' => 'Text Block',
             'blocks_text_title' => 'Rich Text Content',
             'blocks_text_content' => '<p>The text block is the most versatile block type. It supports <strong>bold</strong>, <em>italic</em>, <a href="#">links</a>, and other HTML formatting. Use it for paragraphs, articles, or any free-form content.</p><p>Each text block can have an optional title that appears as a heading above the content. The title field is great for section headings that belong to a specific text block.</p>',
@@ -84,7 +84,7 @@ function getStarterI18n($siteName) {
             'blocks_card_4_title' => 'Fourth Card',
             'blocks_card_4_desc' => 'Cards automatically form a 2×2 or 4×1 grid depending on screen width. Add as many as you need.',
             'blocks_media_heading' => 'Media Blocks',
-            'blocks_media_text' => '<p>Nibbly also supports <strong>YouTube</strong>, <strong>SoundCloud</strong>, and <strong>audio</strong> embeds. These blocks accept a video/track ID or audio file path and render the appropriate player.</p><p>Below is an example YouTube embed:</p>',
+            'blocks_media_text' => '<p>nibbly also supports <strong>YouTube</strong>, <strong>SoundCloud</strong>, and <strong>audio</strong> embeds. These blocks accept a video/track ID or audio file path and render the appropriate player.</p><p>Below is an example YouTube embed:</p>',
             'blocks_layout_heading' => 'Layout Blocks',
             'blocks_layout_text' => '<p>Two layout blocks help structure your page: <strong>Divider</strong> adds a horizontal line, and <strong>Spacer</strong> adds vertical space (sm, md, lg, or xl). You\'ve seen both used throughout this page.</p>',
             'blocks_closing' => '<p>All these block types can be added to any page via the admin dashboard or by editing the JSON content file directly. See the <a href="components">Components page</a> for interactive widgets like FAQ accordions, pricing tables, and more.</p>',
@@ -92,7 +92,7 @@ function getStarterI18n($siteName) {
             // Components page
             'comp_title' => 'Components',
             'comp_heading' => 'Interactive Components',
-            'comp_intro' => 'Beyond basic content blocks, Nibbly includes ready-made components for common website patterns. Each component is rendered by a PHP function and populated from JSON data.',
+            'comp_intro' => 'Beyond basic content blocks, nibbly includes ready-made components for common website patterns. Each component is rendered by a PHP function and populated from JSON data.',
             'comp_features_heading' => 'Feature Grid',
             'comp_features_desc' => 'Icon-driven feature cards arranged in a responsive grid.',
             'comp_feat_1_title' => 'No Database',
@@ -149,9 +149,9 @@ function getStarterI18n($siteName) {
             'comp_faq_2_q' => 'Can I use my own design?',
             'comp_faq_2_a' => 'Yes. Edit the CSS custom properties in css/style.css to set your colors, fonts, and spacing. For deeper customization, create a PHP template file in your language directory.',
             'comp_faq_3_q' => 'How do backups work?',
-            'comp_faq_3_a' => 'Every time you save content, Nibbly creates a timestamped copy of the JSON file in the backups/ directory. You can restore any previous version from the admin dashboard.',
+            'comp_faq_3_a' => 'Every time you save content, nibbly creates a timestamped copy of the JSON file in the backups/ directory. You can restore any previous version from the admin dashboard.',
             'comp_faq_4_q' => 'Is there a build step?',
-            'comp_faq_4_a' => 'No. Nibbly is plain PHP — edit a file and the change is live. No compilation, no bundling, no deployment pipeline.',
+            'comp_faq_4_a' => 'No. nibbly is plain PHP — edit a file and the change is live. No compilation, no bundling, no deployment pipeline.',
             'comp_buttons_heading' => 'Buttons & Links',
             'comp_buttons_desc' => 'Three call-to-action styles for different emphasis levels. Each is an editable link — click while in edit mode to change text and target.',
             'comp_btn_primary' => 'Primary button',
@@ -161,7 +161,7 @@ function getStarterI18n($siteName) {
             'comp_timeline_desc' => 'A vertical changelog for milestones or version history.',
             'comp_tl_1_date' => 'Today',
             'comp_tl_1_title' => 'Installation Complete',
-            'comp_tl_1_desc' => 'Nibbly is installed and ready to use. Start editing content directly in the browser.',
+            'comp_tl_1_desc' => 'nibbly is installed and ready to use. Start editing content directly in the browser.',
             'comp_tl_1_version' => 'v1.0',
             'comp_tl_2_date' => 'Next',
             'comp_tl_2_title' => 'Customize Your Site',
@@ -171,7 +171,7 @@ function getStarterI18n($siteName) {
             'comp_tl_3_title' => 'Go Live',
             'comp_tl_3_desc' => 'Upload to your server and share with the world. Any PHP hosting works.',
             'comp_tl_3_version' => 'Step 3',
-            'comp_closing' => '<p>These examples use Nibbly\'s structured component helpers: <code>renderFeatureGrid()</code>, <code>renderStats()</code>, <code>renderTestimonials()</code>, <code>renderTeamGrid()</code>, <code>renderFaqAccordion()</code>, <code>renderTimeline()</code>, and <code>renderEventList()</code>. Standard page content is still handled by <code>renderAllSections()</code> and the individual block renderers.</p>',
+            'comp_closing' => '<p>These examples use nibbly\'s structured component helpers: <code>renderFeatureGrid()</code>, <code>renderStats()</code>, <code>renderTestimonials()</code>, <code>renderTeamGrid()</code>, <code>renderFaqAccordion()</code>, <code>renderTimeline()</code>, and <code>renderEventList()</code>. Standard page content is still handled by <code>renderAllSections()</code> and the individual block renderers.</p>',
 
             // News
             'news_title' => 'News',
@@ -179,13 +179,13 @@ function getStarterI18n($siteName) {
             'news_intro' => 'Latest updates and announcements.',
             'news_back' => '&larr; Back to News',
             'news_post_1_title' => 'Welcome to Your New Website',
-            'news_post_1_excerpt' => 'Your Nibbly CMS is installed and ready to go. Here\'s a quick overview of what you can do.',
+            'news_post_1_excerpt' => 'Your nibbly CMS is installed and ready to go. Here\'s a quick overview of what you can do.',
             'news_post_1_content' => '<p>Congratulations — your website is up and running! This is an example news post to show you how the blog system works.</p><h2>What are news posts?</h2><p>News posts are stored as individual JSON files in the <code>content/news/</code> directory. Each post has a title, date, author, excerpt, optional cover image, and full HTML content.</p><h2>Managing posts</h2><p>You can create, edit, and delete posts from the <a href="admin/">admin dashboard</a>. Posts support rich text editing, image uploads, and a draft/published toggle.</p><p>This demo post can be deleted at any time. Replace it with your own content when you\'re ready.</p>',
-            'news_post_1_author' => 'Nibbly CMS',
+            'news_post_1_author' => 'nibbly CMS',
             'news_post_2_title' => 'Getting Started with Content Editing',
             'news_post_2_excerpt' => 'A quick guide to inline editing, the admin dashboard, and how content is stored.',
-            'news_post_2_content' => '<p>Nibbly makes content editing simple. Here are the three main ways to work with your content:</p><h2>1. Inline Editing</h2><p>Log in and click <strong>Edit Page</strong> in the toolbar. Now you can click on any text, image, or link on the page to edit it directly. Changes are saved to JSON files automatically.</p><h2>2. Admin Dashboard</h2><p>The <a href="admin/">admin dashboard</a> gives you an overview of all pages, news posts, images, and site settings. Create new pages, manage media files, and configure your site from one place.</p><h2>3. Direct File Editing</h2><p>Since all content is stored as JSON files, you can also edit them directly in any text editor. This is useful for developers or for bulk changes. Content files live in <code>content/pages/</code> and <code>content/news/</code>.</p>',
-            'news_post_2_author' => 'Nibbly CMS',
+            'news_post_2_content' => '<p>nibbly makes content editing simple. Here are the three main ways to work with your content:</p><h2>1. Inline Editing</h2><p>Log in and click <strong>Edit Page</strong> in the toolbar. Now you can click on any text, image, or link on the page to edit it directly. Changes are saved to JSON files automatically.</p><h2>2. Admin Dashboard</h2><p>The <a href="admin/">admin dashboard</a> gives you an overview of all pages, news posts, images, and site settings. Create new pages, manage media files, and configure your site from one place.</p><h2>3. Direct File Editing</h2><p>Since all content is stored as JSON files, you can also edit them directly in any text editor. This is useful for developers or for bulk changes. Content files live in <code>content/pages/</code> and <code>content/news/</code>.</p>',
+            'news_post_2_author' => 'nibbly CMS',
 
             // Nav labels
             'nav_home' => 'Home',
@@ -218,12 +218,12 @@ function getStarterI18n($siteName) {
             'home_card_3_title' => 'Für Entwickler',
             'home_card_3_desc' => 'Einfache PHP-Templates, JSON-Dateien, CSS Custom Properties. Kein Framework, kein Build-Step, keine Magie.',
             'home_card_4_title' => 'Für KI-Workflows',
-            'home_card_4_desc' => 'Lass deine KI mit Nibbly bauen — das Ergebnis ist ein fertiges CMS, kein Prototyp der noch ein Backend braucht.',
+            'home_card_4_desc' => 'Lass deine KI mit nibbly bauen — das Ergebnis ist ein fertiges CMS, kein Prototyp der noch ein Backend braucht.',
 
             // About page
             'about_title' => 'Über uns',
             'about_heading' => 'Über uns',
-            'about_intro' => '<p>Dies ist eine Beispielseite, die zeigt, wie eine typische Inhaltsseite in Nibbly aussieht. Sie verwendet nur Standard-Block-Typen — Überschrift, Text, Bild, Zitat — automatisch aus einer JSON-Datei gerendert.</p>',
+            'about_intro' => '<p>Dies ist eine Beispielseite, die zeigt, wie eine typische Inhaltsseite in nibbly aussieht. Sie verwendet nur Standard-Block-Typen — Überschrift, Text, Bild, Zitat — automatisch aus einer JSON-Datei gerendert.</p>',
             'about_mission_title' => 'Unsere Mission',
             'about_mission' => '<p>Wir glauben, dass Websites einfach zu erstellen und noch einfacher zu pflegen sein sollten. Keine Datenbanken, keine komplexen Deployments, kein Vendor-Lock-in. Nur Dateien auf einem Server, den du besitzt und kontrollierst.</p><p>Jeder Inhalt auf dieser Seite wird als einfache JSON-Datei gespeichert. Du kannst sie in jedem Texteditor öffnen, per Ordnerkopie sichern und per Datei-Upload deployen.</p>',
             'about_quote' => 'Einfachheit ist die höchste Stufe der Vollendung.',
@@ -238,7 +238,7 @@ function getStarterI18n($siteName) {
             // Block types demo
             'blocks_title' => 'Block-Typen',
             'blocks_heading' => 'Alle Block-Typen',
-            'blocks_intro' => '<p>Diese Seite zeigt jeden verfügbaren Content-Block in Nibbly. Jeder Abschnitt verwendet einen anderen <code>type</code>-Wert in der JSON-Datei. Du kannst sie frei kombinieren, wenn du Seiten erstellst.</p>',
+            'blocks_intro' => '<p>Diese Seite zeigt jeden verfügbaren Content-Block in nibbly. Jeder Abschnitt verwendet einen anderen <code>type</code>-Wert in der JSON-Datei. Du kannst sie frei kombinieren, wenn du Seiten erstellst.</p>',
             'blocks_text_heading' => 'Text-Block',
             'blocks_text_title' => 'Rich-Text-Inhalt',
             'blocks_text_content' => '<p>Der Text-Block ist der vielseitigste Block-Typ. Er unterstützt <strong>fett</strong>, <em>kursiv</em>, <a href="#">Links</a> und andere HTML-Formatierungen. Verwende ihn für Absätze, Artikel oder beliebige Freitextinhalte.</p><p>Jeder Text-Block kann einen optionalen Titel haben, der als Überschrift über dem Inhalt erscheint. Das Titelfeld eignet sich gut für Abschnittsüberschriften.</p>',
@@ -263,7 +263,7 @@ function getStarterI18n($siteName) {
             'blocks_card_4_title' => 'Vierte Karte',
             'blocks_card_4_desc' => 'Karten bilden je nach Bildschirmbreite ein 2×2- oder 4×1-Raster. Füge so viele hinzu wie du brauchst.',
             'blocks_media_heading' => 'Medien-Blöcke',
-            'blocks_media_text' => '<p>Nibbly unterstützt auch <strong>YouTube</strong>-, <strong>SoundCloud</strong>- und <strong>Audio</strong>-Einbettungen. Diese Blöcke akzeptieren eine Video-/Track-ID oder einen Dateipfad und rendern den passenden Player.</p><p>Unten ist ein Beispiel für eine YouTube-Einbettung:</p>',
+            'blocks_media_text' => '<p>nibbly unterstützt auch <strong>YouTube</strong>-, <strong>SoundCloud</strong>- und <strong>Audio</strong>-Einbettungen. Diese Blöcke akzeptieren eine Video-/Track-ID oder einen Dateipfad und rendern den passenden Player.</p><p>Unten ist ein Beispiel für eine YouTube-Einbettung:</p>',
             'blocks_layout_heading' => 'Layout-Blöcke',
             'blocks_layout_text' => '<p>Zwei Layout-Blöcke helfen bei der Seitenstruktur: <strong>Trennlinie</strong> fügt eine horizontale Linie ein, und <strong>Abstand</strong> fügt vertikalen Raum hinzu (sm, md, lg oder xl). Beide wurden auf dieser Seite bereits verwendet.</p>',
             'blocks_closing' => '<p>Alle diese Block-Typen können über das Admin-Dashboard oder durch direktes Bearbeiten der JSON-Datei zu jeder Seite hinzugefügt werden. Siehe die <a href="components">Komponenten-Seite</a> für interaktive Widgets wie FAQ-Akkordeons, Preistabellen und mehr.</p>',
@@ -271,7 +271,7 @@ function getStarterI18n($siteName) {
             // Components page
             'comp_title' => 'Komponenten',
             'comp_heading' => 'Interaktive Komponenten',
-            'comp_intro' => 'Neben den grundlegenden Content-Blöcken bietet Nibbly fertige Komponenten für häufige Website-Muster. Jede Komponente wird durch eine PHP-Funktion gerendert und aus JSON-Daten befüllt.',
+            'comp_intro' => 'Neben den grundlegenden Content-Blöcken bietet nibbly fertige Komponenten für häufige Website-Muster. Jede Komponente wird durch eine PHP-Funktion gerendert und aus JSON-Daten befüllt.',
             'comp_features_heading' => 'Feature-Raster',
             'comp_features_desc' => 'Icon-basierte Feature-Karten in einem responsiven Raster.',
             'comp_feat_1_title' => 'Keine Datenbank',
@@ -328,9 +328,9 @@ function getStarterI18n($siteName) {
             'comp_faq_2_q' => 'Kann ich mein eigenes Design verwenden?',
             'comp_faq_2_a' => 'Ja. Bearbeite die CSS Custom Properties in css/style.css für Farben, Schriften und Abstände. Für tiefere Anpassungen erstelle eine PHP-Template-Datei in deinem Sprachverzeichnis.',
             'comp_faq_3_q' => 'Wie funktionieren Backups?',
-            'comp_faq_3_a' => 'Bei jedem Speichern erstellt Nibbly eine Kopie der JSON-Datei mit Zeitstempel im backups/-Verzeichnis. Du kannst jede frühere Version über das Admin-Dashboard wiederherstellen.',
+            'comp_faq_3_a' => 'Bei jedem Speichern erstellt nibbly eine Kopie der JSON-Datei mit Zeitstempel im backups/-Verzeichnis. Du kannst jede frühere Version über das Admin-Dashboard wiederherstellen.',
             'comp_faq_4_q' => 'Gibt es einen Build-Step?',
-            'comp_faq_4_a' => 'Nein. Nibbly ist reines PHP — bearbeite eine Datei und die Änderung ist sofort live. Keine Kompilierung, kein Bundling, keine Deployment-Pipeline.',
+            'comp_faq_4_a' => 'Nein. nibbly ist reines PHP — bearbeite eine Datei und die Änderung ist sofort live. Keine Kompilierung, kein Bundling, keine Deployment-Pipeline.',
             'comp_buttons_heading' => 'Buttons & Links',
             'comp_buttons_desc' => 'Drei Call-to-Action-Stile für unterschiedliche Gewichtung. Jeder ist ein bearbeitbarer Link — im Edit-Modus anklicken, um Text und Ziel zu ändern.',
             'comp_btn_primary' => 'Primärer Button',
@@ -340,7 +340,7 @@ function getStarterI18n($siteName) {
             'comp_timeline_desc' => 'Ein vertikaler Zeitstrahl für Meilensteine oder Versionshistorie.',
             'comp_tl_1_date' => 'Heute',
             'comp_tl_1_title' => 'Installation abgeschlossen',
-            'comp_tl_1_desc' => 'Nibbly ist installiert und einsatzbereit. Beginne mit der Bearbeitung direkt im Browser.',
+            'comp_tl_1_desc' => 'nibbly ist installiert und einsatzbereit. Beginne mit der Bearbeitung direkt im Browser.',
             'comp_tl_1_version' => 'v1.0',
             'comp_tl_2_date' => 'Als Nächstes',
             'comp_tl_2_title' => 'Website anpassen',
@@ -350,7 +350,7 @@ function getStarterI18n($siteName) {
             'comp_tl_3_title' => 'Online gehen',
             'comp_tl_3_desc' => 'Lade die Dateien auf deinen Server und teile die Seite mit der Welt. Jedes PHP-Hosting funktioniert.',
             'comp_tl_3_version' => 'Schritt 3',
-            'comp_closing' => '<p>Diese Beispiele nutzen Nibblys strukturierte Komponenten-Helper: <code>renderFeatureGrid()</code>, <code>renderStats()</code>, <code>renderTestimonials()</code>, <code>renderTeamGrid()</code>, <code>renderFaqAccordion()</code>, <code>renderTimeline()</code> und <code>renderEventList()</code>. Standard-Seiteninhalte laufen weiterhin über <code>renderAllSections()</code> und die einzelnen Block-Renderer.</p>',
+            'comp_closing' => '<p>Diese Beispiele nutzen nibblys strukturierte Komponenten-Helper: <code>renderFeatureGrid()</code>, <code>renderStats()</code>, <code>renderTestimonials()</code>, <code>renderTeamGrid()</code>, <code>renderFaqAccordion()</code>, <code>renderTimeline()</code> und <code>renderEventList()</code>. Standard-Seiteninhalte laufen weiterhin über <code>renderAllSections()</code> und die einzelnen Block-Renderer.</p>',
 
             // News
             'news_title' => 'Neuigkeiten',
@@ -358,13 +358,13 @@ function getStarterI18n($siteName) {
             'news_intro' => 'Aktuelle Meldungen und Ankündigungen.',
             'news_back' => '&larr; Zurück zu Neuigkeiten',
             'news_post_1_title' => 'Willkommen auf deiner neuen Website',
-            'news_post_1_excerpt' => 'Dein Nibbly CMS ist installiert und einsatzbereit. Hier ein kurzer Überblick, was du tun kannst.',
+            'news_post_1_excerpt' => 'Dein nibbly CMS ist installiert und einsatzbereit. Hier ein kurzer Überblick, was du tun kannst.',
             'news_post_1_content' => '<p>Herzlichen Glückwunsch — deine Website läuft! Dies ist ein Beispiel-Newsbeitrag, der zeigt, wie das Blog-System funktioniert.</p><h2>Was sind News-Beiträge?</h2><p>News-Beiträge werden als einzelne JSON-Dateien im Verzeichnis <code>content/news/</code> gespeichert. Jeder Beitrag hat einen Titel, ein Datum, einen Autor, eine Kurzfassung, ein optionales Titelbild und HTML-Inhalt.</p><h2>Beiträge verwalten</h2><p>Du kannst Beiträge im <a href="admin/">Admin-Dashboard</a> erstellen, bearbeiten und löschen. Beiträge unterstützen Rich-Text-Bearbeitung, Bild-Upload und einen Entwurf/Veröffentlicht-Schalter.</p><p>Dieser Demo-Beitrag kann jederzeit gelöscht werden. Ersetze ihn durch deine eigenen Inhalte.</p>',
-            'news_post_1_author' => 'Nibbly CMS',
+            'news_post_1_author' => 'nibbly CMS',
             'news_post_2_title' => 'Erste Schritte mit der Inhaltsbearbeitung',
             'news_post_2_excerpt' => 'Eine kurze Anleitung zu Inline-Bearbeitung, Admin-Dashboard und Inhaltsspeicherung.',
-            'news_post_2_content' => '<p>Nibbly macht die Inhaltsbearbeitung einfach. Hier sind die drei wichtigsten Wege, mit deinen Inhalten zu arbeiten:</p><h2>1. Inline-Bearbeitung</h2><p>Logge dich ein und klicke auf <strong>Seite bearbeiten</strong> in der Toolbar. Jetzt kannst du jeden Text, jedes Bild oder jeden Link auf der Seite direkt bearbeiten. Änderungen werden automatisch in JSON-Dateien gespeichert.</p><h2>2. Admin-Dashboard</h2><p>Das <a href="admin/">Admin-Dashboard</a> gibt dir einen Überblick über alle Seiten, News-Beiträge, Bilder und Website-Einstellungen. Erstelle neue Seiten, verwalte Mediendateien und konfiguriere deine Website an einem Ort.</p><h2>3. Direkte Dateibearbeitung</h2><p>Da alle Inhalte als JSON-Dateien gespeichert sind, kannst du sie auch direkt in einem Texteditor bearbeiten. Das ist nützlich für Entwickler oder Massenänderungen. Inhaltsdateien liegen in <code>content/pages/</code> und <code>content/news/</code>.</p>',
-            'news_post_2_author' => 'Nibbly CMS',
+            'news_post_2_content' => '<p>nibbly macht die Inhaltsbearbeitung einfach. Hier sind die drei wichtigsten Wege, mit deinen Inhalten zu arbeiten:</p><h2>1. Inline-Bearbeitung</h2><p>Logge dich ein und klicke auf <strong>Seite bearbeiten</strong> in der Toolbar. Jetzt kannst du jeden Text, jedes Bild oder jeden Link auf der Seite direkt bearbeiten. Änderungen werden automatisch in JSON-Dateien gespeichert.</p><h2>2. Admin-Dashboard</h2><p>Das <a href="admin/">Admin-Dashboard</a> gibt dir einen Überblick über alle Seiten, News-Beiträge, Bilder und Website-Einstellungen. Erstelle neue Seiten, verwalte Mediendateien und konfiguriere deine Website an einem Ort.</p><h2>3. Direkte Dateibearbeitung</h2><p>Da alle Inhalte als JSON-Dateien gespeichert sind, kannst du sie auch direkt in einem Texteditor bearbeiten. Das ist nützlich für Entwickler oder Massenänderungen. Inhaltsdateien liegen in <code>content/pages/</code> und <code>content/news/</code>.</p>',
+            'news_post_2_author' => 'nibbly CMS',
 
             // Nav labels
             'nav_home' => 'Startseite',
@@ -397,12 +397,12 @@ function getStarterI18n($siteName) {
             'home_card_3_title' => 'Para desarrolladores',
             'home_card_3_desc' => 'Templates PHP, archivos JSON, CSS Custom Properties. Sin framework, sin build step, sin magia.',
             'home_card_4_title' => 'Para flujos con IA',
-            'home_card_4_desc' => 'Dile a tu IA que construya con Nibbly — el resultado es un CMS funcional, no un prototipo que necesita backend.',
+            'home_card_4_desc' => 'Dile a tu IA que construya con nibbly — el resultado es un CMS funcional, no un prototipo que necesita backend.',
 
             // About page
             'about_title' => 'Acerca de',
             'about_heading' => 'Acerca de nosotros',
-            'about_intro' => '<p>Esta es una página de ejemplo que muestra cómo se ve una página de contenido típica en Nibbly. Usa solo tipos de bloque estándar — encabezado, texto, imagen, cita — renderizados automáticamente desde un archivo JSON.</p>',
+            'about_intro' => '<p>Esta es una página de ejemplo que muestra cómo se ve una página de contenido típica en nibbly. Usa solo tipos de bloque estándar — encabezado, texto, imagen, cita — renderizados automáticamente desde un archivo JSON.</p>',
             'about_mission_title' => 'Nuestra misión',
             'about_mission' => '<p>Creemos que los sitios web deben ser fáciles de construir y aún más fáciles de mantener. Sin bases de datos, sin despliegues complejos, sin dependencia de proveedores. Solo archivos en un servidor que tú controlas.</p><p>Cada contenido de este sitio se almacena como un archivo JSON plano. Puedes abrirlo en cualquier editor de texto, hacer backup copiando una carpeta y desplegar subiendo archivos.</p>',
             'about_quote' => 'La simplicidad es la sofisticación suprema.',
@@ -417,7 +417,7 @@ function getStarterI18n($siteName) {
             // Block types demo
             'blocks_title' => 'Tipos de bloque',
             'blocks_heading' => 'Todos los tipos de bloque',
-            'blocks_intro' => '<p>Esta página demuestra cada bloque de contenido disponible en Nibbly. Cada sección usa un valor <code>type</code> diferente en el archivo JSON. Puedes combinarlos libremente al crear páginas.</p>',
+            'blocks_intro' => '<p>Esta página demuestra cada bloque de contenido disponible en nibbly. Cada sección usa un valor <code>type</code> diferente en el archivo JSON. Puedes combinarlos libremente al crear páginas.</p>',
             'blocks_text_heading' => 'Bloque de texto',
             'blocks_text_title' => 'Contenido con formato',
             'blocks_text_content' => '<p>El bloque de texto es el tipo más versátil. Soporta <strong>negrita</strong>, <em>cursiva</em>, <a href="#">enlaces</a> y otros formatos HTML. Úsalo para párrafos, artículos o cualquier contenido libre.</p><p>Cada bloque de texto puede tener un título opcional que aparece como encabezado sobre el contenido.</p>',
@@ -442,7 +442,7 @@ function getStarterI18n($siteName) {
             'blocks_card_4_title' => 'Cuarta tarjeta',
             'blocks_card_4_desc' => 'Las tarjetas forman una cuadrícula 2×2 o 4×1 según el ancho de pantalla. Añade tantas como necesites.',
             'blocks_media_heading' => 'Bloques de medios',
-            'blocks_media_text' => '<p>Nibbly también soporta incrustaciones de <strong>YouTube</strong>, <strong>SoundCloud</strong> y <strong>audio</strong>. Estos bloques aceptan un ID de video/pista o una ruta de archivo y renderizan el reproductor adecuado.</p><p>Abajo hay un ejemplo de incrustación de YouTube:</p>',
+            'blocks_media_text' => '<p>nibbly también soporta incrustaciones de <strong>YouTube</strong>, <strong>SoundCloud</strong> y <strong>audio</strong>. Estos bloques aceptan un ID de video/pista o una ruta de archivo y renderizan el reproductor adecuado.</p><p>Abajo hay un ejemplo de incrustación de YouTube:</p>',
             'blocks_layout_heading' => 'Bloques de diseño',
             'blocks_layout_text' => '<p>Dos bloques de diseño ayudan a estructurar tu página: <strong>Separador</strong> añade una línea horizontal, y <strong>Espaciador</strong> añade espacio vertical (sm, md, lg o xl). Ambos se han usado a lo largo de esta página.</p>',
             'blocks_closing' => '<p>Todos estos tipos de bloque se pueden añadir a cualquier página desde el dashboard o editando directamente el archivo JSON. Ve la página de <a href="components">Componentes</a> para widgets interactivos como acordeones FAQ, tablas de precios y más.</p>',
@@ -450,7 +450,7 @@ function getStarterI18n($siteName) {
             // Components page
             'comp_title' => 'Componentes',
             'comp_heading' => 'Componentes interactivos',
-            'comp_intro' => 'Además de los bloques de contenido básicos, Nibbly incluye componentes listos para usar en patrones web comunes. Cada componente se renderiza con una función PHP y se alimenta de datos JSON.',
+            'comp_intro' => 'Además de los bloques de contenido básicos, nibbly incluye componentes listos para usar en patrones web comunes. Cada componente se renderiza con una función PHP y se alimenta de datos JSON.',
             'comp_features_heading' => 'Cuadrícula de características',
             'comp_features_desc' => 'Tarjetas con iconos en una cuadrícula responsiva.',
             'comp_feat_1_title' => 'Sin base de datos',
@@ -507,9 +507,9 @@ function getStarterI18n($siteName) {
             'comp_faq_2_q' => '¿Puedo usar mi propio diseño?',
             'comp_faq_2_a' => 'Sí. Edita las CSS Custom Properties en css/style.css para colores, fuentes y espaciado. Para personalización profunda, crea un archivo de template PHP en tu directorio de idioma.',
             'comp_faq_3_q' => '¿Cómo funcionan los backups?',
-            'comp_faq_3_a' => 'Cada vez que guardas, Nibbly crea una copia con marca de tiempo en el directorio backups/. Puedes restaurar cualquier versión anterior desde el dashboard.',
+            'comp_faq_3_a' => 'Cada vez que guardas, nibbly crea una copia con marca de tiempo en el directorio backups/. Puedes restaurar cualquier versión anterior desde el dashboard.',
             'comp_faq_4_q' => '¿Hay un paso de compilación?',
-            'comp_faq_4_a' => 'No. Nibbly es PHP puro — edita un archivo y el cambio está en vivo. Sin compilación, sin bundling, sin pipeline de despliegue.',
+            'comp_faq_4_a' => 'No. nibbly es PHP puro — edita un archivo y el cambio está en vivo. Sin compilación, sin bundling, sin pipeline de despliegue.',
             'comp_buttons_heading' => 'Botones y enlaces',
             'comp_buttons_desc' => 'Tres estilos de llamada a la acción para diferentes niveles de énfasis. Cada uno es un enlace editable — haz clic en modo edición para cambiar el texto y el destino.',
             'comp_btn_primary' => 'Botón principal',
@@ -519,7 +519,7 @@ function getStarterI18n($siteName) {
             'comp_timeline_desc' => 'Una línea de tiempo vertical para hitos o historial de versiones.',
             'comp_tl_1_date' => 'Hoy',
             'comp_tl_1_title' => 'Instalación completada',
-            'comp_tl_1_desc' => 'Nibbly está instalado y listo. Comienza a editar contenido directamente en el navegador.',
+            'comp_tl_1_desc' => 'nibbly está instalado y listo. Comienza a editar contenido directamente en el navegador.',
             'comp_tl_1_version' => 'v1.0',
             'comp_tl_2_date' => 'Siguiente',
             'comp_tl_2_title' => 'Personaliza tu sitio',
@@ -529,7 +529,7 @@ function getStarterI18n($siteName) {
             'comp_tl_3_title' => 'Publicar',
             'comp_tl_3_desc' => 'Sube los archivos a tu servidor y compártelo con el mundo. Cualquier hosting PHP funciona.',
             'comp_tl_3_version' => 'Paso 3',
-            'comp_closing' => '<p>Estos ejemplos usan los helpers de componentes estructurados de Nibbly: <code>renderFeatureGrid()</code>, <code>renderStats()</code>, <code>renderTestimonials()</code>, <code>renderTeamGrid()</code>, <code>renderFaqAccordion()</code>, <code>renderTimeline()</code> y <code>renderEventList()</code>. El contenido estándar de página sigue usando <code>renderAllSections()</code> y los renderers de bloque individuales.</p>',
+            'comp_closing' => '<p>Estos ejemplos usan los helpers de componentes estructurados de nibbly: <code>renderFeatureGrid()</code>, <code>renderStats()</code>, <code>renderTestimonials()</code>, <code>renderTeamGrid()</code>, <code>renderFaqAccordion()</code>, <code>renderTimeline()</code> y <code>renderEventList()</code>. El contenido estándar de página sigue usando <code>renderAllSections()</code> y los renderers de bloque individuales.</p>',
 
             // News
             'news_title' => 'Noticias',
@@ -537,13 +537,13 @@ function getStarterI18n($siteName) {
             'news_intro' => 'Últimas novedades y anuncios.',
             'news_back' => '&larr; Volver a Noticias',
             'news_post_1_title' => 'Bienvenido a tu nuevo sitio web',
-            'news_post_1_excerpt' => 'Tu Nibbly CMS está instalado y listo. Aquí tienes un resumen de lo que puedes hacer.',
+            'news_post_1_excerpt' => 'Tu nibbly CMS está instalado y listo. Aquí tienes un resumen de lo que puedes hacer.',
             'news_post_1_content' => '<p>¡Felicidades — tu sitio web está funcionando! Esta es una publicación de ejemplo para mostrarte cómo funciona el sistema de blog.</p><h2>¿Qué son las publicaciones?</h2><p>Las publicaciones se almacenan como archivos JSON individuales en el directorio <code>content/news/</code>. Cada publicación tiene título, fecha, autor, extracto, imagen de portada opcional y contenido HTML.</p><h2>Gestionar publicaciones</h2><p>Puedes crear, editar y eliminar publicaciones desde el <a href="admin/">panel de administración</a>. Las publicaciones soportan edición de texto enriquecido, subida de imágenes y un interruptor de borrador/publicado.</p><p>Esta publicación demo se puede eliminar en cualquier momento. Reemplázala con tu propio contenido.</p>',
-            'news_post_1_author' => 'Nibbly CMS',
+            'news_post_1_author' => 'nibbly CMS',
             'news_post_2_title' => 'Primeros pasos con la edición de contenido',
             'news_post_2_excerpt' => 'Una guía rápida sobre edición inline, el dashboard y cómo se almacena el contenido.',
-            'news_post_2_content' => '<p>Nibbly hace que la edición de contenido sea simple. Aquí están las tres formas principales de trabajar con tu contenido:</p><h2>1. Edición inline</h2><p>Inicia sesión y haz clic en <strong>Editar página</strong> en la barra de herramientas. Ahora puedes hacer clic en cualquier texto, imagen o enlace para editarlo directamente. Los cambios se guardan automáticamente en archivos JSON.</p><h2>2. Panel de administración</h2><p>El <a href="admin/">panel de administración</a> te da una vista general de todas las páginas, publicaciones, imágenes y configuración del sitio.</p><h2>3. Edición directa de archivos</h2><p>Como todo el contenido se almacena en JSON, también puedes editarlo directamente en cualquier editor de texto. Los archivos de contenido están en <code>content/pages/</code> y <code>content/news/</code>.</p>',
-            'news_post_2_author' => 'Nibbly CMS',
+            'news_post_2_content' => '<p>nibbly hace que la edición de contenido sea simple. Aquí están las tres formas principales de trabajar con tu contenido:</p><h2>1. Edición inline</h2><p>Inicia sesión y haz clic en <strong>Editar página</strong> en la barra de herramientas. Ahora puedes hacer clic en cualquier texto, imagen o enlace para editarlo directamente. Los cambios se guardan automáticamente en archivos JSON.</p><h2>2. Panel de administración</h2><p>El <a href="admin/">panel de administración</a> te da una vista general de todas las páginas, publicaciones, imágenes y configuración del sitio.</p><h2>3. Edición directa de archivos</h2><p>Como todo el contenido se almacena en JSON, también puedes editarlo directamente en cualquier editor de texto. Los archivos de contenido están en <code>content/pages/</code> y <code>content/news/</code>.</p>',
+            'news_post_2_author' => 'nibbly CMS',
 
             // Nav labels
             'nav_home' => 'Inicio',
@@ -1185,92 +1185,8 @@ function getNewsPostTemplate($lang, $backLabel) {
     return <<<'PHPTPL'
 <?php
 $currentLang = '{LANG}';
-$currentPage = 'news';
 if (!isset($basePath)) $basePath = '../';
-
-$_includeBase = dirname(__DIR__) . '/';
-
-include $_includeBase . 'includes/content-loader.php';
-
-$slug = $_GET['slug'] ?? '';
-if (empty($slug) || !preg_match('/^[a-z0-9-]+$/', $slug)) {
-    header('Location: ' . $basePath . '{NEWS_PATH}');
-    exit;
-}
-
-$post = null;
-$newsDir = $_includeBase . 'content/news/';
-$_defaultLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
-if (is_dir($newsDir)) {
-    foreach (glob($newsDir . '*.json') as $file) {
-        $p = json_decode(file_get_contents($file), true);
-        if (!is_array($p)) continue;
-        if (($p['slug'] ?? '') !== $slug) continue;
-        if (!empty($p['hidden'])) continue;
-        $postLang = $p['lang'] ?? $_defaultLang;
-        if ($postLang !== $currentLang) continue;
-        $post = $p;
-        break;
-    }
-}
-
-if (!$post) {
-    header('HTTP/1.0 404 Not Found');
-    $pageTitle = 'Not Found';
-    $pageDescription = '';
-    include $_includeBase . 'includes/header.php';
-    echo '<main class="main-content"><div class="content-inner"><h1>Not found</h1><p><a href="' . $basePath . '{NEWS_PATH}">{BACK_LABEL}</a></p></div></main>';
-    include $_includeBase . 'includes/footer.php';
-    exit;
-}
-
-$pageTitle = htmlspecialchars($post['title']);
-$pageDescription = htmlspecialchars($post['excerpt'] ?? '');
-
-if (session_status() === PHP_SESSION_NONE) session_start();
-$_isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
-$newsPostJson = $_isAdmin ? json_encode($post, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '';
-
-include $_includeBase . 'includes/header.php';
-
-$dateObj = new DateTime($post['date']);
-$formattedDate = $dateObj->format('F j, Y');
-?>
-
-    <main class="main-content">
-        <div class="content-inner">
-            <article class="news-post-page" data-news-post="<?php echo htmlspecialchars($post['id']); ?>">
-                <a href="<?php echo $basePath; ?>{NEWS_PATH}" class="news-post-page__back">{BACK_LABEL}</a>
-
-                <?php if (!empty($post['image'])): ?>
-                <div class="news-post-page__hero">
-                    <img src="<?php echo htmlspecialchars($post['image']); ?>" alt="<?php echo htmlspecialchars($post['title']); ?>">
-                </div>
-                <?php endif; ?>
-
-                <header class="news-post-page__header">
-                    <time class="news-post-page__date" datetime="<?php echo htmlspecialchars($post['date']); ?>"><?php echo $formattedDate; ?></time>
-                    <h1 class="news-post-page__title"><?php echo htmlspecialchars($post['title']); ?></h1>
-                    <?php if (!empty($post['author'])): ?>
-                    <span class="news-post-page__author"><?php echo htmlspecialchars($post['author']); ?></span>
-                    <?php endif; ?>
-                </header>
-
-                <div class="news-post-page__content">
-                    <?php echo $post['content']; ?>
-                </div>
-
-                <footer class="news-post-page__footer">
-                    <a href="<?php echo $basePath; ?>{NEWS_PATH}" class="news-post-page__back">{BACK_LABEL}</a>
-                </footer>
-            </article>
-        </div>
-    </main>
-
-<?php if (!empty($newsPostJson)): ?>
-<script>window.__cmsNewsPost = <?php echo $newsPostJson; ?>;</script>
-<?php endif; ?>
-<?php include $_includeBase . 'includes/footer.php'; ?>
+include dirname(__DIR__) . '/includes/news-post.php';
 PHPTPL;
 }
 
@@ -1436,7 +1352,7 @@ function getStarterEvents($languages) {
         'url' => 'https://example.com/demo',
         'title' => buildLangMap($languages,
             'Nibbling Symposium (fictional)',
-            'Nibbly-Symposium (fiktiv)',
+            'nibbly-Symposium (fiktiv)',
             'Simposio Nibbling (ficticio)'
         ),
         'location' => buildLangMap($languages, 'Imagineland', 'Fantasialand', 'Tierra imaginaria'),

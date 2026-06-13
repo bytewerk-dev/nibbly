@@ -131,6 +131,10 @@ if (file_exists($_settingsPath)) {
     if (!empty($_settings['favicon_png'])) $_faviconPng = ltrim($_settings['favicon_png'], '/');
 }
 $_rememberPublicTheme = !isset($_settings['privacy']['rememberPublicTheme']) || !empty($_settings['privacy']['rememberPublicTheme']);
+$_publicThemeDefault = $_settings['theme']['publicDefault'] ?? 'system';
+if (!in_array($_publicThemeDefault, ['light', 'dark', 'system'], true)) {
+    $_publicThemeDefault = 'system';
+}
 $_editorFlat = isset($_settings['theme']['buttonGlow']) && !$_settings['theme']['buttonGlow'];
 $_seoContext = nibblySeoContext([
     'contentPage' => $contentPage ?? null,
@@ -154,7 +158,7 @@ nibblyStartEmailObfuscation();
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="<?php echo htmlspecialchars($_seoContext['description']); ?>">
     <meta name="robots" content="<?php echo htmlspecialchars($_seoContext['robots']); ?>">
-    <meta name="generator" content="Nibbly <?php echo htmlspecialchars(nibblyVersion(), ENT_QUOTES, 'UTF-8'); ?>">
+    <meta name="generator" content="nibbly <?php echo htmlspecialchars(nibblyVersion(), ENT_QUOTES, 'UTF-8'); ?>">
     <?php if (!empty($_seoContext['canonical'])): ?>
     <link rel="canonical" href="<?php echo htmlspecialchars($_seoContext['canonical']); ?>">
     <?php endif; ?>
@@ -194,7 +198,7 @@ nibblyStartEmailObfuscation();
     <meta name="twitter:description" content="<?php echo htmlspecialchars($_seoContext['ogDescription']); ?>">
 
     <title><?php echo htmlspecialchars($_seoContext['title'] ?: 'Website'); ?></title>
-    <script type="application/ld+json"><?php echo json_encode($_seoJsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?></script>
+    <script type="application/ld+json"><?php echo json_encode($_seoJsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?></script>
 
     <?php echo nibblyCoreStyles($basePath); ?>
     <?php if (file_exists(__DIR__ . '/../css/website.css')): ?>
@@ -245,7 +249,7 @@ nibblyStartEmailObfuscation();
 
     <!-- Prevent FOUC: apply public theme preference before paint -->
     <script>
-    (function(){var remember=<?php echo $_rememberPublicTheme ? 'true' : 'false'; ?>;try{var t=remember?localStorage.getItem('site-theme'):null;if(t==='system')t=null;if(t!=='dark'&&t!=='light')t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','light');}})();
+    (function(){var remember=<?php echo $_rememberPublicTheme ? 'true' : 'false'; ?>;var fallback=<?php echo json_encode($_publicThemeDefault); ?>;try{var t=remember?localStorage.getItem('site-theme'):null;if(t==='system')t=null;if(t!=='dark'&&t!=='light')t=(fallback==='dark'||fallback==='light')?fallback:(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme',(fallback==='dark'||fallback==='light')?fallback:'light');}})();
     </script>
 </head>
 <body class="<?php echo $isHomepage ? 'page-home' : 'page-subpage'; ?><?php echo isset($pageClass) ? ' ' . $pageClass : ''; ?><?php echo $_nibblyDevLogin ? ' has-dev-login' : ''; ?>"<?php echo $_nibblyDevLogin ? ' data-dev-login="true"' : ''; ?>>

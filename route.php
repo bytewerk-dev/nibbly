@@ -66,22 +66,18 @@ if ($cleanUri === '') {
 // News post URLs: /{lang}/news/{slug} or /news/{slug}
 // ------------------------------------------------------------------
 if (preg_match('#^([a-z]{2})/news/([a-z0-9-]+)$#', $cleanUri, $m)) {
-    $newsFile = __DIR__ . '/' . $m[1] . '/news-post.php';
-    if (is_file($newsFile)) {
-        $_GET['slug'] = $m[2];
-        $basePath = '../../';
-        include $newsFile;
-        exit;
-    }
+    $currentLang = $m[1];
+    $_GET['slug'] = $m[2];
+    $basePath = '../../';
+    include __DIR__ . '/includes/news-post.php';
+    exit;
 }
 if (preg_match('#^news/([a-z0-9-]+)$#', $cleanUri, $m)) {
-    $newsFile = __DIR__ . '/' . $primaryLang . '/news-post.php';
-    if (is_file($newsFile)) {
-        $_GET['slug'] = $m[1];
-        $basePath = '../';
-        include $newsFile;
-        exit;
-    }
+    $currentLang = $primaryLang;
+    $_GET['slug'] = $m[1];
+    $basePath = '../';
+    include __DIR__ . '/includes/news-post.php';
+    exit;
 }
 
 // ------------------------------------------------------------------

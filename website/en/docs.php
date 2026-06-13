@@ -1,6 +1,6 @@
 <?php
-$pageTitle = 'Documentation — Nibbly CMS';
-$pageDescription = 'Technical documentation for Nibbly CMS: project structure, JSON content format, section types, inline editing, and template system.';
+$pageTitle = 'Documentation — nibbly CMS';
+$pageDescription = 'Technical documentation for nibbly CMS: project structure, JSON content format, AI tools, licensing, section types, inline editing, and template system.';
 $currentLang = 'en';
 $currentPage = 'docs';
 $contentPage = 'en_docs';
@@ -32,12 +32,15 @@ include $_includeBase . 'includes/header.php';
                         <li><a href="#css-system">CSS &amp; Design System</a></li>
                         <li><a href="#showcase">Showcase Page</a></li>
                         <li><a href="#backups">Backups</a></li>
+                        <li><a href="#ai-tools">AI Tools</a></li>
                         <li><a href="#admin">Admin Dashboard</a></li>
                         <li><a href="#accessibility">Accessibility</a></li>
                         <li><a href="#access-controls">Access Controls</a></li>
                         <li><a href="#local-dev">Local Development</a></li>
                         <li><a href="#protected-forms">Bot-Protected Forms</a></li>
+                        <li><a href="#email-delivery">Email Delivery</a></li>
                         <li><a href="#security">Security</a></li>
+                        <li><a href="#licensing">Licensing &amp; Releases</a></li>
                     </ul>
                 </nav>
             </aside>
@@ -48,7 +51,7 @@ include $_includeBase . 'includes/header.php';
                 <!-- Project Structure -->
                 <section class="docs-section" id="project-structure">
                     <h1>Project Structure</h1>
-                    <p>Nibbly is a flat-file CMS — everything lives in a single directory. No database, no build tools, no package manager.</p>
+                    <p>nibbly is a flat-file CMS — everything lives in a single directory. No database, no build tools, no package manager.</p>
 
                     <div class="docs-tree">
                         <pre><code>nibbly/
@@ -65,6 +68,7 @@ include $_includeBase . 'includes/header.php';
 │   ├── header.php          HTML head + header + navigation
 │   ├── footer.php          Footer + scripts
 │   ├── access-guard.php    Maintenance mode + private pages
+│   ├── ai/                 Server-side AI gateway and provider handling
 │   ├── backup-helper.php   Full-site backups, retention, remote uploads
 │   ├── content-loader.php  Section rendering + events + editable fields
 │   ├── block-renderers/    One PHP file per block type
@@ -72,12 +76,16 @@ include $_includeBase . 'includes/header.php';
 │   ├── nav-config.php      Navigation items &amp; language mapping
 │   └── page.php            Front controller for JSON-based pages
 ├── cli/
-│   ├── convert.php         HTML-to-Nibbly converter
+│   ├── convert.php         HTML-to-nibbly converter
 │   ├── make.php            Page scaffolding tool
 │   └── backup.php          Cron-friendly full-site backup runner
 ├── content/
 │   ├── events.json         Shared event data (multilingual)
 │   ├── settings.json       Site settings (branding, theme, favicon)
+│   ├── ai-settings.json    AI provider settings and feature flags
+│   ├── ai-usage.json       AI usage counters
+│   ├── ai-audit/           AI request audit logs
+│   ├── ai-image-history.json Generated image history
 │   └── pages/              JSON content files
 │       ├── en_home.json    English homepage content
 │       ├── de_home.json    German homepage content
@@ -98,6 +106,8 @@ include $_includeBase . 'includes/header.php';
 ├── .htaccess               Security rules + routes to route.php (Apache)
 ├── route.php               Front controller (all routing logic)
 ├── router.php              Dev server router (php -S localhost:3000 router.php)
+├── includes/version.php    Core version metadata
+├── LICENSE                 Project license
 └── index.php               Homepage entry point</code></pre>
                     </div>
                 </section>
@@ -282,7 +292,7 @@ include $_includeBase . 'includes/content-loader.php';
                 <!-- Shared Content -->
                 <section class="docs-section" id="shared-content">
                     <h2>Shared Content</h2>
-                    <p>Nibbly uses two patterns for multilingual content:</p>
+                    <p>nibbly uses two patterns for multilingual content:</p>
                     <table class="docs-table">
                         <thead><tr><th>Pattern</th><th>Use Case</th><th>Example</th></tr></thead>
                         <tbody>
@@ -304,7 +314,7 @@ include $_includeBase . 'includes/content-loader.php';
                     <div class="docs-code">
                         <div class="docs-code-header">content/pages/footer.json</div>
                         <pre><code>{
-    "tagline":  { "en": "Nibbly CMS", "de": "Nibbly CMS", "es": "Nibbly CMS" },
+    "tagline":  { "en": "nibbly CMS", "de": "nibbly CMS", "es": "nibbly CMS" },
     "services": { "en": "Lightweight Content Management", "de": "Leichtgewichtiges Content Management", "es": "Gestión de contenidos ligera" },
     "contact":  { "phone": "+43 1 234 567", "email": "info@example.com" },
     "credit":   { "text": "Made by", "link": "https://...", "linkText": "..." }
@@ -356,7 +366,7 @@ include $_includeBase . 'includes/content-loader.php';
                 <!-- Section Types -->
                 <section class="docs-section" id="section-types">
                     <h2>Section Types</h2>
-                    <p>Nibbly supports 11 built-in section types for standard pages. Each type has its own renderer in <code>includes/block-renderers/</code>.</p>
+                    <p>nibbly supports 11 built-in section types for standard pages. Each type has its own renderer in <code>includes/block-renderers/</code>.</p>
 
                     <table class="docs-table">
                         <thead><tr><th>Type</th><th>Category</th><th>Key Fields</th></tr></thead>
@@ -571,7 +581,7 @@ include $_includeBase . 'includes/content-loader.php';
                 <!-- Auto-Write -->
                 <section class="docs-section" id="auto-write">
                     <h2>Auto-Write</h2>
-                    <p>When an admin browses a page, every <code>editableText()</code>, <code>editableHtml()</code>, <code>editableImage()</code>, and <code>editableLink()</code> call checks whether its key exists in the JSON. If the key is missing, Nibbly <strong>automatically writes the fallback value to the JSON file</strong>.</p>
+                    <p>When an admin browses a page, every <code>editableText()</code>, <code>editableHtml()</code>, <code>editableImage()</code>, and <code>editableLink()</code> call checks whether its key exists in the JSON. If the key is missing, nibbly <strong>automatically writes the fallback value to the JSON file</strong>.</p>
 
                     <p>This means you can focus on the PHP template — the JSON is populated on first admin page view. A toast notification tells the admin how many fields were auto-generated.</p>
 
@@ -598,7 +608,7 @@ include $_includeBase . 'includes/content-loader.php';
                 <!-- Template System -->
                 <section class="docs-section" id="templates">
                     <h2>Template System</h2>
-                    <p>Nibbly uses a simple include-based template system. Every page includes three files in order:</p>
+                    <p>nibbly uses a simple include-based template system. Every page includes three files in order:</p>
 
                     <div class="docs-code">
                         <pre><code>$_includeBase = dirname(__DIR__) . '/';
@@ -663,8 +673,8 @@ php cli/make.php --slug=about --lang=en --type=custom --title="About Us"</code><
                     </div>
                     <p>Options: <code>--type=standard|custom</code> (default: standard), <code>--force</code> (overwrite existing).</p>
 
-                    <h3>HTML-to-Nibbly Converter</h3>
-                    <p>Convert any static HTML page into an editable Nibbly template + JSON + CSS:</p>
+                    <h3>HTML-to-nibbly Converter</h3>
+                    <p>Convert any static HTML page into an editable nibbly template + JSON + CSS:</p>
                     <div class="docs-code">
                         <pre><code>php cli/convert.php landing.html --slug=home --lang=en --dry-run
 php cli/convert.php about.html --slug=about --lang=en --force</code></pre>
@@ -748,7 +758,7 @@ php cli/convert.php about.html --slug=about --lang=en --force</code></pre>
                 <!-- Showcase Page -->
                 <section class="docs-section" id="showcase">
                     <h2>Showcase Page</h2>
-                    <p>The showcase page demonstrates all content types and components Nibbly supports. It uses a custom layout with <code>editableText()</code> fields rather than <code>renderAllSections()</code>, and is available in all configured languages.</p>
+                    <p>The showcase page demonstrates all content types and components nibbly supports. It uses a custom layout with <code>editableText()</code> fields rather than <code>renderAllSections()</code>, and is available in all configured languages.</p>
 
                     <h3>Page Structure</h3>
                     <p>The showcase page consists of these components, top to bottom:</p>
@@ -808,7 +818,7 @@ php cli/convert.php about.html --slug=about --lang=en --force</code></pre>
                 <!-- Backups -->
                 <section class="docs-section" id="backups">
                     <h2>Backups</h2>
-                    <p>Nibbly has three backup layers: automatic per-page JSON history, manual full-site ZIP snapshots, and scheduled full-site backups that can be copied to external storage.</p>
+                    <p>nibbly has three backup layers: automatic per-page JSON history, manual full-site ZIP snapshots, and scheduled full-site backups that can be copied to external storage.</p>
 
                     <h3>Per-Page History</h3>
                     <p>Every save in the inline editor or dashboard stores the previous page JSON in <code>backups/</code>. This is meant for quick content rollback: restore one page without touching templates, images, or the rest of the site.</p>
@@ -827,7 +837,7 @@ Shell cron:  php /path/to/site/cli/backup.php --action=run</code></pre>
                     <p>The default retention follows a grandfather-father-son pattern: daily, weekly, monthly, and yearly tiers. A hard storage limit can additionally evict the oldest non-manual ZIPs when the backup pool grows too large.</p>
 
                     <h3>Remote Backup Targets</h3>
-                    <p>After a scheduled ZIP is created locally, Nibbly can upload it to external storage. New ZIP files include the site domain in the filename, and remote uploads are placed in a per-site subfolder below the configured remote path so multiple sites can use the same storage account without mixing files. Supported target types:</p>
+                    <p>After a scheduled ZIP is created locally, nibbly can upload it to external storage. New ZIP files include the site domain in the filename, and remote uploads are placed in a per-site subfolder below the configured remote path so multiple sites can use the same storage account without mixing files. Supported target types:</p>
                     <ul>
                         <li><strong>Dropbox</strong> — browser-based OAuth connection with refresh token support</li>
                         <li><strong>Google Drive</strong> — OAuth connection using the Drive <code>drive.file</code> scope</li>
@@ -861,12 +871,49 @@ Shell cron:  php /path/to/site/cli/backup.php --action=run</code></pre>
                 </section>
 
                 <!-- Admin Dashboard -->
+                <section class="docs-section" id="ai-tools">
+                    <h2>AI Tools</h2>
+                    <p>nibbly includes optional AI-assisted tools for admins: assistant chat, text generation, prompt improvement, image generation, image-to-image workflows, generated image history, usage limits, and audit logging. AI features are routed through a server-side gateway so API keys are never exposed to the browser.</p>
+
+                    <h3>Provider Gateway</h3>
+                    <p>Core AI requests go through <code>includes/ai/ai-helper.php</code>. The gateway reads provider settings from <code>content/ai-settings.json</code>, supports OpenAI-compatible endpoints, and keeps provider credentials server-side.</p>
+                    <table class="docs-table">
+                        <thead><tr><th>File</th><th>Purpose</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>content/ai-settings.json</code></td><td>Provider credentials, model choices, feature flags, quotas, and token/image limits</td></tr>
+                            <tr><td><code>content/ai-usage.json</code></td><td>Daily/monthly usage counters and approximate cost tracking</td></tr>
+                            <tr><td><code>content/ai-audit/YYYY-MM-DD.jsonl</code></td><td>Append-only audit events for AI requests</td></tr>
+                            <tr><td><code>content/ai-image-history.json</code></td><td>Generated image metadata and dashboard history</td></tr>
+                            <tr><td><code>assets/images/generated/</code></td><td>Locally stored generated images</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Supported Workflows</h3>
+                    <ul>
+                        <li><strong>Assistant chat</strong> for admin-side content and site editing support.</li>
+                        <li><strong>Text generation</strong> for drafts, page copy, SEO snippets, and structured field suggestions.</li>
+                        <li><strong>Prompt improvement</strong> before image generation.</li>
+                        <li><strong>Image generation</strong> with selectable models, resolution/orientation controls, and local media storage.</li>
+                        <li><strong>Image-to-image</strong> workflows with multiple reference images where the selected provider supports them.</li>
+                        <li><strong>Multilingual editor translation</strong> inside localized editor dialogs when the AI module is enabled.</li>
+                    </ul>
+
+                    <h3>Security and Privacy Defaults</h3>
+                    <ul>
+                        <li>API keys are saved on the server and are not returned by <code>load-ai-settings</code>.</li>
+                        <li>Browser code calls nibbly's admin API, not the AI provider directly.</li>
+                        <li>Local/private provider URLs require an explicit local-provider setting before they are accepted.</li>
+                        <li>Feature flags can disable AI tools globally or per capability.</li>
+                        <li>Usage counters and audit logs are flat files, keeping the no-database architecture intact.</li>
+                    </ul>
+                </section>
+
                 <section class="docs-section" id="admin">
                     <h2>Admin Dashboard</h2>
                     <p>Access the admin panel by double-clicking the year in the footer copyright, or go directly to <code>/admin/</code>.</p>
 
                     <h3>Hidden Admin Access via Footer</h3>
-                    <p>Nibbly hides the login behind a double-click on a designated footer element — by default the year inside the copyright line. The element is marked up via the <code>[id="adminAccess"]…[/id]</code> shortcode in <code>content/pages/footer.json</code>:</p>
+                    <p>nibbly hides the login behind a double-click on a designated footer element — by default the year inside the copyright line. The element is marked up via the <code>[id="adminAccess"]…[/id]</code> shortcode in <code>content/pages/footer.json</code>:</p>
                     <div class="docs-code">
                         <div class="docs-code-header">content/pages/footer.json</div>
                         <pre><code>"copyright": "&amp;copy; [id=\"adminAccess\"]2026[/id] Your Company"</code></pre>
@@ -898,7 +945,7 @@ Shell cron:  php /path/to/site/cli/backup.php --action=run</code></pre>
                             <tr><td><strong>News</strong></td><td>Create, edit, publish, and unpublish news posts</td></tr>
                             <tr><td><strong>Events</strong></td><td>Manage events with multilingual fields</td></tr>
                             <tr><td><strong>Messages</strong></td><td>View, read, and delete contact form submissions</td></tr>
-                            <tr><td><strong>Settings</strong></td><td>Branding, theme, language, <strong>login behaviour</strong>, access controls, email, menus, users, password, and danger zone</td></tr>
+                            <tr><td><strong>Settings</strong></td><td>Branding, theme, language, modules, <strong>login behaviour</strong>, access controls, email, AI providers, menus, users, password, and danger zone</td></tr>
                         </tbody>
                     </table>
 
@@ -915,6 +962,11 @@ Shell cron:  php /path/to/site/cli/backup.php --action=run</code></pre>
                             <tr><td><code>backup-update-settings</code></td><td>POST</td><td>Save scheduled backup and remote target settings</td></tr>
                             <tr><td><code>backup-test-remote</code></td><td>POST</td><td>Test a remote backup target</td></tr>
                             <tr><td><code>backup-*-oauth-start</code></td><td>GET</td><td>Start Dropbox, Google Drive, or OneDrive OAuth connection</td></tr>
+                            <tr><td><code>ai-chat</code></td><td>POST</td><td>Send an assistant chat request through the server-side AI gateway</td></tr>
+                            <tr><td><code>ai-generate-text</code></td><td>POST</td><td>Generate text with the configured provider and limits</td></tr>
+                            <tr><td><code>ai-generate-image</code></td><td>POST</td><td>Generate or edit images and store them locally</td></tr>
+                            <tr><td><code>load-ai-settings</code></td><td>GET</td><td>Load AI settings metadata without exposing API keys</td></tr>
+                            <tr><td><code>save-ai-settings</code></td><td>POST</td><td>Save provider, model, feature flag, and quota settings</td></tr>
                             <tr><td><code>load-events</code></td><td>GET</td><td>Load all events</td></tr>
                             <tr><td><code>save-event</code></td><td>POST</td><td>Create or update an event</td></tr>
                             <tr><td><code>delete-event</code></td><td>POST</td><td>Delete an event</td></tr>
@@ -929,7 +981,7 @@ Shell cron:  php /path/to/site/cli/backup.php --action=run</code></pre>
                 <!-- Accessibility -->
                 <section class="docs-section" id="accessibility">
                     <h2>Accessibility Best Practices</h2>
-                    <p>Nibbly includes accessibility foundations for public websites and admin editing workflows. The goal is not to replace a project-specific audit, but to make the default output easier to navigate with keyboard, screen readers, reduced-motion settings, and robust semantics.</p>
+                    <p>nibbly includes accessibility foundations for public websites and admin editing workflows. The goal is not to replace a project-specific audit, but to make the default output easier to navigate with keyboard, screen readers, reduced-motion settings, and robust semantics.</p>
 
                     <h3>What Core Provides</h3>
                     <ul>
@@ -967,7 +1019,7 @@ Shell cron:  php /path/to/site/cli/backup.php --action=run</code></pre>
                 <!-- Access Controls -->
                 <section class="docs-section" id="access-controls">
                     <h2>Access Controls</h2>
-                    <p>Nibbly can temporarily lock a whole site for maintenance and protect individual pages with a password. Both features are flat-file friendly: configuration stays in JSON, passwords and bypass secrets are hashed, and no database is required.</p>
+                    <p>nibbly can temporarily lock a whole site for maintenance and protect individual pages with a password. Both features are flat-file friendly: configuration stays in JSON, passwords and bypass secrets are hashed, and no database is required.</p>
 
                     <h3>Maintenance Mode</h3>
                     <p>Enable maintenance mode in <strong>Dashboard → Settings → Access</strong>. The visitor-facing lock page can use one of three modes: regular maintenance, back-soon messaging, or launch countdown. Each mode supports custom title/text, an optional unavailable-until time, and an optional countdown.</p>
@@ -1039,7 +1091,7 @@ Shell cron:  php /path/to/site/cli/backup.php --action=run</code></pre>
                 <!-- Bot-Protected Forms -->
                 <section class="docs-section" id="protected-forms">
                     <h2>Bot-Protected Forms</h2>
-                    <p>Nibbly's public contact forms are protected without Google reCAPTCHA or other third-party tracking services. The protection is designed for simple PHP hosting and flat-file projects: no database, no external account, no consent banner just for spam prevention.</p>
+                    <p>nibbly's public contact forms are protected without Google reCAPTCHA or other third-party tracking services. The protection is designed for simple PHP hosting and flat-file projects: no database, no external account, no consent banner just for spam prevention.</p>
 
                     <h3>How It Works</h3>
                     <ul>
@@ -1076,6 +1128,38 @@ echo nibblyLazyFormPlaceholder('contact', [
                     <p>The lazy endpoint intentionally only renders known forms. If a project adds a new public form, register it deliberately in <code>api/form.php</code> instead of including arbitrary PHP files from request parameters.</p>
                 </section>
 
+                <!-- Email Delivery -->
+                <section class="docs-section" id="email-delivery">
+                    <h2>Email Delivery</h2>
+                    <p>Contact form messages are always stored locally before delivery is attempted. Email sending can be disabled, handled by PHP <code>mail()</code>, or sent through SMTP.</p>
+
+                    <h3>Settings</h3>
+                    <p>Configure mail delivery in <strong>Dashboard → Settings → Email</strong>. The settings are stored in <code>content/settings.json</code>:</p>
+                    <div class="docs-code">
+                        <pre><code>"email": {
+  "method": "smtp",
+  "recipientEmail": "info@example.com, team@example.com",
+  "bccEmail": "archive@example.com",
+  "fromEmail": "noreply@example.com",
+  "fromName": "nibbly Website",
+  "smtpHost": "smtp.example.com",
+  "smtpPort": 587,
+  "smtpUsername": "noreply@example.com",
+  "smtpPassword": "...",
+  "smtpEncryption": "tls"
+}</code></pre>
+                    </div>
+
+                    <h3>Multiple Recipients and BCC</h3>
+                    <p>Primary recipients and BCC recipients accept comma-separated address lists. nibbly normalizes the list, removes duplicates, rejects invalid addresses, and keeps BCC recipients out of visible message headers.</p>
+                    <ul>
+                        <li><code>recipientEmail</code> may contain one or more primary recipients.</li>
+                        <li><code>bccEmail</code> may contain optional archive, CRM, or team-copy recipients.</li>
+                        <li>SMTP delivery sends each recipient as its own envelope recipient.</li>
+                        <li>The PHP mail fallback sends BCC copies separately to avoid exposing blind-copy recipients.</li>
+                    </ul>
+                </section>
+
                 <!-- Security -->
                 <section class="docs-section" id="security">
                     <h2>Security</h2>
@@ -1107,6 +1191,34 @@ echo nibblyLazyFormPlaceholder('contact', [
 
                     <h3>Password Requirements</h3>
                     <p>Minimum 8 characters with at least one uppercase letter, one lowercase letter, one digit, and one special character. A warning banner appears after login if the current password doesn't meet these requirements.</p>
+                </section>
+
+                <!-- Licensing -->
+                <section class="docs-section" id="licensing">
+                    <h2>Licensing &amp; Releases</h2>
+                    <p>nibbly is licensed under the <strong>Mozilla Public License 2.0</strong> starting with version <strong>1.4.0</strong>. Earlier releases up to and including <strong>1.3.2</strong> were published under the MIT License.</p>
+
+                    <h3>What MPL-2.0 Means for nibbly</h3>
+                    <ul>
+                        <li>You may use nibbly for personal, agency, client, and commercial projects.</li>
+                        <li>You may combine nibbly with project-specific templates, assets, content, and site code under your own terms.</li>
+                        <li>If you distribute modified nibbly Core files, those modified Core files must remain available under MPL-2.0.</li>
+                        <li>The license applies to code; project branding, the nibbly name, and logos are separate from the software license.</li>
+                    </ul>
+
+                    <h3>Versioning</h3>
+                    <p>nibbly follows Semantic Versioning:</p>
+                    <table class="docs-table">
+                        <thead><tr><th>Version Part</th><th>Used For</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>MAJOR</code></td><td>Incompatible Core/API/content model changes</td></tr>
+                            <tr><td><code>MINOR</code></td><td>Compatible new features, such as AI tools or new dashboard modules</td></tr>
+                            <tr><td><code>PATCH</code></td><td>Bug fixes, polish, documentation, and safe maintenance updates</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Release Availability</h3>
+                    <p>Published versions are intended to be tagged on GitHub so older source archives remain available. The Changelog records what changed in each release, while GitHub tags and releases make the exact historical code state downloadable.</p>
                 </section>
 
             </div>

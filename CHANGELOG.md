@@ -3,6 +3,194 @@
 All notable changes to Nibbly are documented in this file. The project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] — 2026-06-13
+
+### Added
+- **Frontend AI Assistant (Copilot)**: logged-in editors get a page-aware chat
+  widget in the visual editor and dashboard. It builds a safe, server-generated
+  page context, proposes structured field changes, and applies them only after
+  explicit confirmation. The AI is treated as untrusted: every write runs
+  through server-side validation, HMAC-signed proposals, a strict HTML/link
+  allowlist, per-user chat history, role permissions, burst limits, and audit
+  logging. New API actions cover context, chat, suggestions, HTML formatting,
+  visibility toggles, apply/undo, content drafting/creation/publishing, and
+  image generation (`ai-copilot-*`).
+- **Streaming Copilot chat**: assistant replies stream token-by-token over
+  Server-Sent Events (`ai-copilot-chat-stream`), with an automatic fallback to
+  the buffered JSON endpoint when streaming is unavailable.
+- **Anthropic (Claude) provider**: AI settings add Anthropic alongside the
+  OpenAI-compatible and OpenRouter providers. Requests are translated to and
+  from the Messages API, including streaming; image generation remains on the
+  image-capable providers.
+- **Per-feature model routing**: full content drafts use the quality chat model
+  while field suggestions and SEO text can use a cheaper, faster text model;
+  the AI settings hint explains the split.
+- **Live OpenRouter model list**: a server-side, 24h-cached `ai-openrouter-models`
+  action feeds the model suggestions and image-model options, and can pre-fill
+  the cost-estimate fields from real OpenRouter pricing.
+- **Translate field action**: the Copilot can translate a page into another
+  configured language (`ai-copilot-translate`), detecting the target language
+  from the instruction and proposing signed, reviewable field updates on the
+  counterpart page.
+- **Content audit**: a dashboard tool scans all pages for missing/weak SEO
+  descriptions and images without alt text, then offers AI-suggested
+  descriptions that are applied with a backup
+  (`ai-content-audit`, `-suggest`, `-apply`).
+- **Background image jobs**: AI image generation runs as tracked jobs
+  (`ai-image-jobs`, `ai-image-job-run`) and detaches via
+  `fastcgi_finish_request()` where available, so generation survives page
+  navigation without requiring server cron; it falls back to synchronous
+  execution otherwise.
+- **AI usage panel**: AI settings show this month's requests, estimated cost,
+  token totals, and a monthly-budget progress bar.
+- **Finder-style media library**: the media manager gains a folder sidebar that
+  drives both grid and list views consistently, with per-folder counts and
+  inline folder create/delete; an in-app folder-name prompt replaces the native
+  browser prompt so it also works in embedded webviews.
+- **Custom select component (`nb-select`)**: native `<select>` dropdowns across
+  the dashboard and visual editor are progressively enhanced into token-styled,
+  keyboard-accessible comboboxes that render identically in all browsers,
+  including Safari and embedded webviews.
+- **Test suite**: added smoke tests for the Copilot API surface, Copilot JS,
+  Copilot i18n coverage, the i18n catalog, and the media manager (`tests/`).
+
+### Changed
+- **License file**: the `LICENSE` file now contains the Mozilla Public License
+  2.0 text. The relicensing was announced in the 1.4.0 notes; this release ships
+  the actual license file.
+- **Self-healing AI requests**: the gateway reassembles unexpected streaming
+  (SSE) responses into the expected JSON and retries once instead of failing,
+  so a provider that ignores `stream:false` no longer breaks a request.
+- **Reference image handling**: AI image generation passes uploaded/library
+  reference images to OpenRouter in the documented `image_url` data-URL format,
+  and reinforces the requested aspect ratio (both via `image_config` and a
+  prompt instruction) so the user's selection is respected over the reference's
+  framing.
+- **Admin UI consistency**: unified control heights (40px in forms, 36px in
+  modal rows, 32px in the media toolbar, 30px in list headers and the editor
+  topbar), provider settings that wrap cleanly on narrow viewports, list-row
+  action icons grouped as a tidy grid, dropdown options spaced so hover states
+  do not merge, and SEO tooltips fixed for dark mode.
+
+### Fixed
+- **News post `</script>` breakout**: admin-only inline news JSON and the public
+  JSON-LD block are encoded with `JSON_HEX_TAG`/`JSON_HEX_AMP` so content cannot
+  terminate the surrounding script tag.
+- **Leaked cURL handle**: the streaming provider request now closes its cURL
+  handle on every retry iteration.
+- **Empty media folder deletion**: folders containing only OS metadata files
+  (`.DS_Store`, `Thumbs.db`, `desktop.ini`) can be deleted; the metadata is
+  cleaned up with the folder.
+- **Media folder filtering**: selecting a folder now filters both grid and list
+  views, and the "Main folder" (root) option is no longer coerced to "All".
+
+## [1.4.1] — 2026-06-02
+
+### Added
+- **JSON-backed forms**: public form definitions can now live in
+  `content/forms/*.json`, render through `includes/forms.php`, lazy-load through
+  `api/form.php`, and submit through the new `api/form-submit.php` endpoint.
+- **Forms settings panel**: admins can manage simple forms under
+  **Settings -> Forms**, including label, description, active state, local
+  storage, email notification, subject template, success text, field type, key,
+  label, placeholder, required state, width, and select/radio options.
+- **Multiple form inbox support**: messages now carry `formId`, `formLabel`, and
+  structured `fields[]` metadata; the inbox can filter by form and shows the
+  source form in the list and detail view.
+- **Admin UX documentation**: README, architecture reference, AI agent guide,
+  and skills docs now describe JSON forms and the recent dashboard interaction
+  patterns.
+
+### Changed
+- **Legacy contact submissions**: `api/contact.php` now stores compatible form
+  metadata so old and new submissions can be shown consistently in the inbox.
+- **Form lazy endpoint**: `api/form.php` renders JSON forms when a matching
+  definition exists before falling back to whitelisted legacy form partials.
+- **Admin forms UI**: the Forms panel now uses a clear select control for form
+  switching, compact non-overflowing field rows, normal label casing, aligned
+  checkboxes, and consistent delete icon buttons.
+- **Admin stylesheet loading**: `admin/dashboard.php` cache-busts
+  `admin/style.css` with `filemtime()` so CSS fixes appear after reload.
+- **Content editor usability**: the sections jump menu is sticky, wraps/clamps
+  long labels, supports search/type filtering, greys out filtered items, and
+  keeps keyboard section navigation more stable.
+- **Dashboard and settings polish**: branding/media transparent previews are
+  easier to see in dark mode, primary-button preview shows the configured glow,
+  dashboard analytics numbers align at the bottom of cards, and the messages
+  page explains that entries come from public forms.
+- **AI dashboard visibility**: disabled AI features no longer show inactive
+  tools; unconfigured/disabled AI can be represented by a small dismissible
+  notice instead of a full unusable panel.
+
+### Fixed
+- **Forms reload state**: directly loading or refreshing
+  `#settings/forms` keeps the selected form and its field rows visible.
+- **Filtered section inserts**: filtering section types no longer leaves
+  unrelated insert controls taking space between visible blocks.
+
+## [1.4.0] — 2026-05-23
+
+### Added
+- **Multiple contact recipients**: contact form delivery now accepts comma-separated
+  recipient lists for primary recipients.
+- **BCC contact recipients**: email settings include optional blind-copy
+  recipients, with matching SMTP and PHP mail delivery support.
+- **Shared news post renderer**: language news detail pages now use a single
+  reusable Core renderer instead of duplicating post template logic into every
+  generated language wrapper.
+
+### Changed
+- **Project license**: Nibbly is now licensed under the Mozilla Public License
+  2.0 starting with this release. Earlier releases up to and including 1.3.2
+  remain available under the MIT License.
+- **News routing**: Apache and the PHP development router now route news detail
+  URLs through the shared renderer before language-local listing templates can
+  intercept them.
+- **Email settings validation**: recipient and BCC fields now normalize
+  comma-separated address lists, reject invalid addresses, and keep the sender
+  address validation separate.
+- **Starter content**: generated news-post wrappers now delegate to the shared
+  Core renderer, reducing duplicated update-sensitive code in site templates.
+
+### Fixed
+- **SMTP delivery**: the SMTP mailer now sends one envelope recipient per
+  primary/BCC address and omits BCC recipients from message headers.
+- **Sendmail BCC fallback**: PHP mail delivery now sends configured BCC copies
+  alongside the primary contact form message.
+- **Admin footer dependencies**: logged-in admin pages now load block rendering
+  helpers when the footer needs editor metadata.
+
+### Migration notes
+- Existing `admin/config.php` files keep their current `NIBBLY_VERSION` value
+  until manually updated or regenerated by setup.
+- Existing releases through 1.3.2 remain MIT licensed. From 1.4.0 onward,
+  modified Nibbly Core files distributed by third parties must follow MPL-2.0.
+- Existing single-recipient email settings remain valid. Multiple primary and
+  BCC recipients can be added as comma-separated lists.
+- Existing generated language news-post wrappers continue to work, but newly
+  generated wrappers delegate to `includes/news-post.php`.
+
+### Changed files
+- `.htaccess`
+- `CHANGELOG.md`
+- `LICENSE`
+- `README.md`
+- `admin/api.php`
+- `admin/config.example.php`
+- `admin/dashboard.php`
+- `admin/lang/*.json`
+- `admin/setup.php`
+- `admin/starter-content.php`
+- `api/SmtpMailer.php`
+- `api/contact.php`
+- `includes/footer.php`
+- `includes/news-post.php`
+- `includes/version.php`
+- `route.php`
+- `router.php`
+- `website/content/news/*.json`
+- `website/en/docs.php`
+
 ## [1.3.2] — 2026-05-22
 
 ### Added

@@ -2,11 +2,18 @@
 // Footer Template
 $basePath = $basePath ?? '';
 $currentLang = $currentLang ?? (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en');
+$defaultLang = $defaultLang ?? (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en');
+$PAGE_MAPPING = $PAGE_MAPPING ?? [];
+$langLinks = $langLinks ?? [];
 
 // Check if admin is logged in
 require_once __DIR__ . '/access-guard.php';
 $isAdminLoggedIn = nibblyAccessIsLoggedIn();
 $csrfToken = $isAdminLoggedIn ? ($_SESSION['csrf_token'] ?? '') : '';
+
+if ($isAdminLoggedIn && !function_exists('getBlockTypes')) {
+    require_once __DIR__ . '/content-loader.php';
+}
 
 // Load footer content from JSON
 $footerData = [];
@@ -55,70 +62,64 @@ function parseFooterShortcodes($text) {
 }
 
 $copyrightHtml = parseFooterShortcodes($copyrightRaw);
+$_footerGithub = 'https://github.com/bytewerk-dev/nibbly';
+$_adminAccessBase = ($basePath === '' ? '/admin/' : rtrim($basePath, '/') . '/admin/');
+$_footerLabels = [
+    'docs' => ['en' => 'Docs', 'de' => 'Dokumentation', 'es' => 'Docs'],
+    'privacy' => ['en' => 'Privacy', 'de' => 'Datenschutz', 'es' => 'Privacidad'],
+    'imprint' => ['en' => 'Imprint', 'de' => 'Impressum', 'es' => 'Aviso legal'],
+    'language' => ['en' => 'Language selection', 'de' => 'Sprachauswahl', 'es' => 'Selección de idioma'],
+];
+$_footerPageHref = function (string $page) use ($basePath, $currentLang, $PAGE_MAPPING, $defaultLang): string {
+    if (isset($PAGE_MAPPING[$page][$currentLang])) {
+        return $basePath . $PAGE_MAPPING[$page][$currentLang];
+    }
+    if (isset($PAGE_MAPPING[$page][$defaultLang])) {
+        return $basePath . $PAGE_MAPPING[$page][$defaultLang];
+    }
+    return $basePath . $page;
+};
+$_footerSummary = [
+    'en' => 'nibbly is a flat-file CMS written in PHP.<br>Small. Friendly. Open source.',
+    'de' => 'nibbly ist ein Flat-File-CMS in PHP.<br>Klein. Freundlich. Open Source.',
+    'es' => 'nibbly es un CMS flat-file escrito en PHP.<br>Pequeño. Amable. Open source.',
+];
 ?>
     <!-- Footer -->
     <footer class="footer"<?php if ($isAdminLoggedIn): ?> data-content-page="footer"<?php endif; ?>>
         <div class="footer-accent"></div>
-        <div class="footer-inner">
-            <div class="footer-col footer-col--brand">
-                <a href="<?php echo $basePath; ?>." class="footer-logo" aria-label="Home">
-                    <?php
-                    $_footerLogo = $_favicon ?? ltrim(defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg', '/');
-                    echo nibblyIconOrImg($basePath . $_footerLogo, '', ['width' => 40, 'height' => 40, 'class' => 'site-logo-img']);
-                    ?>
-                </a>
-                <?php if ($siteName): ?>
-                <p class="footer-brand-name"><?php echo htmlspecialchars($siteName); ?></p>
-                <?php endif; ?>
-                <?php if ($creditText || $creditLinkText): ?>
-                <p class="footer-credit"><span class="<?php echo $isAdminLoggedIn ? 'editable-footer-field' : ''; ?>" data-field="credit.text"><?php echo htmlspecialchars($creditText); ?></span><?php if ($creditLinkText): ?> <a href="<?php echo htmlspecialchars($creditLink); ?>" target="_blank" rel="noopener" class="<?php echo $isAdminLoggedIn ? 'editable-footer-field' : ''; ?>" data-field="credit.link" data-link-href="<?php echo htmlspecialchars($creditLink); ?>"><?php echo htmlspecialchars($creditLinkText); ?></a><?php endif; ?></p>
-                <?php endif; ?>
+        <div class="footer-inner footer-product-bar">
+            <div class="footer-brand-block">
+                <a href="<?php echo $basePath; ?>." class="footer-wordmark" aria-label="Home"><?php echo htmlspecialchars($siteName ?: 'nibbly'); ?></a>
+                <p class="footer-copyright<?php echo $isAdminLoggedIn ? ' editable-footer-field' : ''; ?>"<?php if ($isAdminLoggedIn): ?> data-field="copyright"<?php endif; ?>><?php echo $copyrightHtml; ?></p>
+                <p class="footer-credit">
+                    by <a href="https://bytewerk.dev" target="_blank" rel="noopener">bytewerk</a>
+                </p>
             </div>
 
-            <div class="footer-col footer-col--about">
-                <?php if ($tagline): ?>
-                <p class="footer-tagline<?php echo $isAdminLoggedIn ? ' editable-footer-field' : ''; ?>" data-field="tagline" data-lang="<?php echo $currentLang; ?>"><?php echo htmlspecialchars($tagline); ?></p>
-                <?php endif; ?>
-                <?php if ($services): ?>
-                <p class="footer-services<?php echo $isAdminLoggedIn ? ' editable-footer-field' : ''; ?>" data-field="services" data-lang="<?php echo $currentLang; ?>"><?php echo htmlspecialchars($services); ?></p>
-                <?php endif; ?>
-                <?php if ($claim): ?>
-                <p class="footer-claim<?php echo $isAdminLoggedIn ? ' editable-footer-field' : ''; ?>" data-field="claim" data-lang="<?php echo $currentLang; ?>"><?php echo htmlspecialchars($claim); ?></p>
-                <?php endif; ?>
+            <div class="footer-summary">
+                <p><?php echo $_footerSummary[$currentLang] ?? $_footerSummary['en']; ?></p>
             </div>
 
-            <?php
-            // Footer nav columns — driven by menu registry (all menus except header)
-            require_once __DIR__ . '/menu-helpers.php';
-            $_footerMenuIds = array_filter(getRegisteredMenuIds(), fn($id) => $id !== 'header');
-            $_footerAllNavItems = $NAV_ITEMS[$currentLang] ?? [];
-            foreach ($_footerMenuIds as $_menuId):
-                $_menuItems = getMenuItems($_menuId, $currentLang, $basePath, $_footerAllNavItems);
-                // Flatten children for footer (no dropdowns)
-                $_flat = [];
-                foreach ($_menuItems as $_mi) {
-                    if (!empty($_mi['children'])) {
-                        foreach ($_mi['children'] as $_child) $_flat[] = $_child;
-                    } else {
-                        $_flat[] = $_mi;
-                    }
-                }
-                $_menuItems = $_flat;
-                if (!$_menuItems) continue;
-            ?>
-            <div class="footer-col footer-col--nav">
-                <p class="footer-col-heading"><?php echo htmlspecialchars(getMenuLabel($_menuId, $currentLang)); ?></p>
-                <nav class="meta-links" aria-label="<?php echo htmlspecialchars(getMenuLabel($_menuId, $currentLang)); ?>">
-                    <?php foreach ($_menuItems as $navItem): ?>
-                    <a href="<?php echo $basePath . htmlspecialchars($navItem['href']); ?>"><?php echo htmlspecialchars($navItem['label']); ?></a>
-                    <?php endforeach; ?>
+            <div class="footer-actions">
+                <nav class="footer-links" aria-label="Footer">
+                    <a href="<?php echo htmlspecialchars($_footerPageHref('docs')); ?>"><?php echo htmlspecialchars($_footerLabels['docs'][$currentLang] ?? $_footerLabels['docs']['en']); ?></a>
+                    <a href="<?php echo htmlspecialchars($_footerGithub); ?>" target="_blank" rel="noopener">GitHub</a>
+                    <a href="<?php echo htmlspecialchars($_footerPageHref('privacy')); ?>"><?php echo htmlspecialchars($_footerLabels['privacy'][$currentLang] ?? $_footerLabels['privacy']['en']); ?></a>
+                    <a href="<?php echo htmlspecialchars($_footerPageHref('legal-notice')); ?>"><?php echo htmlspecialchars($_footerLabels['imprint'][$currentLang] ?? $_footerLabels['imprint']['en']); ?></a>
                 </nav>
-            </div>
-            <?php endforeach; ?>
-        </div>
 
-        <div class="footer-bottom">
-            <p class="footer-copyright<?php echo $isAdminLoggedIn ? ' editable-footer-field' : ''; ?>" data-field="copyright"><?php echo $copyrightHtml; ?></p>
+                <?php if (!empty($langLinks) && count($langLinks) > 1): ?>
+                <div class="footer-lang" aria-label="<?php echo htmlspecialchars($_footerLabels['language'][$currentLang] ?? $_footerLabels['language']['en']); ?>">
+                    <span class="footer-lang-globe" aria-hidden="true"></span>
+                    <?php $footerLangCodes = array_keys($langLinks); ?>
+                    <?php foreach ($footerLangCodes as $i => $code): ?>
+                        <?php if ($i > 0): ?><span class="footer-lang-separator">|</span><?php endif; ?>
+                        <a href="<?php echo htmlspecialchars($langLinks[$code]); ?>" class="<?php echo ($code === $currentLang) ? 'active' : ''; ?>"<?php echo ($code === $currentLang) ? ' aria-current="true"' : ''; ?>><?php echo htmlspecialchars(strtoupper($code)); ?></a>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+            </div>
         </div>
     </footer>
 
@@ -386,6 +387,13 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
         // ============================================================
         (function initThemeToggle() {
             var REMEMBER_PUBLIC_THEME = <?php echo (!isset($_settings['privacy']['rememberPublicTheme']) || !empty($_settings['privacy']['rememberPublicTheme'])) ? 'true' : 'false'; ?>;
+            var PUBLIC_THEME_DEFAULT = <?php
+                $_footerPublicThemeDefault = $_settings['theme']['publicDefault'] ?? 'system';
+                if (!in_array($_footerPublicThemeDefault, ['light', 'dark', 'system'], true)) {
+                    $_footerPublicThemeDefault = 'system';
+                }
+                echo json_encode($_footerPublicThemeDefault);
+            ?>;
             var STORAGE_KEY = 'site-theme';
             var CYCLE = ['dark', 'light'];
             var THEME_FAVICON_COLORS = { light: '#0a0a0a', dark: '#e5e5e5' };
@@ -395,9 +403,13 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
                 return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
             }
 
+            function getDefaultTheme() {
+                return CYCLE.indexOf(PUBLIC_THEME_DEFAULT) !== -1 ? PUBLIC_THEME_DEFAULT : getSystemTheme();
+            }
+
             function getInitialTheme() {
                 if (!REMEMBER_PUBLIC_THEME) {
-                    return getSystemTheme();
+                    return getDefaultTheme();
                 }
                 try {
                     var stored = localStorage.getItem(STORAGE_KEY);
@@ -406,7 +418,7 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
                         return stored;
                     }
                 } catch(e) {}
-                return getSystemTheme();
+                return getDefaultTheme();
             }
 
             function updateBrowserFavicon(theme) {
@@ -483,15 +495,30 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
         // ============================================================
         // HIDDEN ADMIN ACCESS (double-click on year)
         // ============================================================
-        const adminAccess = document.getElementById('adminAccess');
-        if (adminAccess) {
-            adminAccess.addEventListener('dblclick', function() {
-                // Pass current path as ?redirect=... so the admin can route the user
-                // back to the page they were viewing (subject to validateRedirectUrl).
-                const here = window.location.pathname + window.location.search;
-                window.location.href = '<?php echo $basePath; ?>admin/?redirect=' + encodeURIComponent(here);
-            });
-        }
+        let lastAdminAccessClick = 0;
+        const openAdminAccess = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+            window.location.assign(<?php echo json_encode($_adminAccessBase, JSON_UNESCAPED_SLASHES); ?>);
+        };
+        document.addEventListener('click', function(e) {
+            const adminAccess = e.target && e.target.closest ? e.target.closest('#adminAccess') : null;
+            if (!adminAccess) return;
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+            const now = Date.now();
+            if (e.detail >= 2 || now - lastAdminAccessClick < 700) {
+                openAdminAccess(e);
+                return;
+            }
+            lastAdminAccessClick = now;
+        }, true);
+        document.addEventListener('dblclick', function(e) {
+            const adminAccess = e.target && e.target.closest ? e.target.closest('#adminAccess') : null;
+            if (adminAccess) openAdminAccess(e);
+        }, true);
 
         // ============================================================
         // CONTACT FORM AJAX SUBMISSION
@@ -651,13 +678,29 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
     $_assetsDir = __DIR__ . '/..';
     $_v = function($relPath) use ($basePath, $_assetsDir) {
         $full = $_assetsDir . '/' . ltrim($relPath, '/');
+        clearstatcache(true, $full);
         $mtime = is_file($full) ? filemtime($full) : 0;
         return $basePath . $relPath . ($mtime ? '?v=' . $mtime : '');
     };
+    $_footerModules = is_array($_settings['modules'] ?? null) ? $_settings['modules'] : [];
+    $_aiModuleEnabled = !array_key_exists('ai', $_footerModules) || !empty($_footerModules['ai']);
+    $_aiCopilotAvailable = false;
+    if ($_aiModuleEnabled && is_file(__DIR__ . '/ai/ai-helper.php')) {
+        require_once __DIR__ . '/ai/ai-helper.php';
+        $_aiPublicSettings = function_exists('nibblyAiLoadSettings') ? nibblyAiLoadSettings(true) : [];
+        $_aiCopilotAvailable = !empty($_aiPublicSettings['enabled'])
+            && !empty($_aiPublicSettings['hasApiKey'])
+            && !empty($_aiPublicSettings['features']['backendAssistant'])
+            && (!isset($_aiPublicSettings['assistantSurfaces']['visualEditor']) || !empty($_aiPublicSettings['assistantSurfaces']['visualEditor']));
+    }
     ?>
     <link rel="stylesheet" href="<?php echo $basePath; ?>css/nibbly-admin-tokens.css">
     <link rel="stylesheet" href="<?php echo $_v('css/image-manager.css'); ?>">
     <link rel="stylesheet" href="<?php echo $_v('css/inline-editor.css'); ?>">
+    <link rel="stylesheet" href="<?php echo $_v('css/nb-select.css'); ?>">
+    <?php if ($_aiCopilotAvailable && file_exists(__DIR__ . '/../css/ai-copilot.css')): ?>
+    <link rel="stylesheet" href="<?php echo $_v('css/ai-copilot.css'); ?>">
+    <?php endif; ?>
     <?php if (!empty($_editorVars)): ?>
     <style>:root{<?php echo implode(';', $_editorVars); ?>}</style>
     <?php endif; ?>
@@ -667,14 +710,14 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
     // Inject editor translations for inline-editor.js
     require_once __DIR__ . '/../admin/lang/i18n.php';
     ?>
-    window.NB_LANG = <?php echo json_encode(tEditorAll(), JSON_UNESCAPED_UNICODE); ?>;
+    window.NB_LANG = <?php echo json_encode(array_merge(tAll(), tEditorAll()), JSON_UNESCAPED_UNICODE); ?>;
     window.NB_MENUS = <?php echo json_encode(getMenuRegistry()['menus'] ?? [], JSON_UNESCAPED_UNICODE); ?>;
     window.NB_AVAILABLE_ICONS = <?php echo json_encode(function_exists('getAvailableIcons') ? getAvailableIcons() : [], JSON_UNESCAPED_UNICODE); ?>;
     window.NB_SEO_HEALTH = <?php echo json_encode($_seoHealth ?? ['status' => 'yellow', 'score' => 0, 'label' => 'SEO prüfen', 'issues' => ['SEO-Daten konnten nicht berechnet werden.']], JSON_UNESCAPED_UNICODE); ?>;
-    window.NB_AI_FEATURES_ENABLED = <?php
-        $_footerModules = is_array($_settings['modules'] ?? null) ? $_settings['modules'] : [];
-        echo json_encode(!array_key_exists('ai', $_footerModules) || !empty($_footerModules['ai']));
-    ?>;
+    window.NB_AI_FEATURES_ENABLED = <?php echo json_encode($_aiModuleEnabled); ?>;
+    window.NB_AI_COPILOT_AVAILABLE = <?php echo json_encode($_aiCopilotAvailable); ?>;
+    window.NB_AI_ASSISTANT_LANGUAGE = <?php echo json_encode(function_exists('_nbAdminLang') ? _nbAdminLang() : ($currentLang ?? (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en'))); ?>;
+    window.NB_ADMIN_API_URL = <?php echo json_encode($basePath . 'admin/api.php', JSON_UNESCAPED_SLASHES); ?>;
     <?php
     // Build lightweight page list for link picker (slug → title for current language)
     $_linkPages = [];
@@ -703,8 +746,12 @@ $copyrightHtml = parseFooterShortcodes($copyrightRaw);
         return s;
     }
     </script>
+    <script src="<?php echo $_v('js/nb-select.js'); ?>"></script>
     <script src="<?php echo $_v('js/image-manager.js'); ?>"></script>
     <script src="<?php echo $_v('js/inline-editor.js'); ?>"></script>
+    <?php if ($_aiCopilotAvailable && file_exists(__DIR__ . '/../js/ai-copilot.js')): ?>
+    <script src="<?php echo $_v('js/ai-copilot.js'); ?>"></script>
+    <?php endif; ?>
     <?php endif; ?>
 </body>
 </html>

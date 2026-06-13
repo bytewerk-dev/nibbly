@@ -20,6 +20,8 @@
         t: function (key) { return key; },
         showToast: function (msg) { console.log(msg); },
         showConfirm: null, // optional; falls back to window.confirm
+        canGenerateImages: function () { return false; },
+        openImageGenerator: null,
     };
 
     // ============================================================
@@ -91,12 +93,15 @@
         grid: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z"/></svg>',
         list: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h18v2H3zM3 11h18v2H3zM3 17h18v2H3z"/></svg>',
         eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+        download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+        ai: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.6 5.2L19 9l-5.4 1.8L12 16l-1.6-5.2L5 9l5.4-1.8L12 2z"/><path d="M19 14l.8 2.7L22 17.5l-2.2.8L19 21l-.8-2.7-2.2-.8 2.2-.8L19 14z"/><path d="M5 13l.7 2.1L8 16l-2.3.9L5 19l-.7-2.1L2 16l2.3-.9L5 13z"/></svg>',
         replace: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
         delete: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
         copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
         restore: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>',
         folder: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2.5h6.5A2.5 2.5 0 0 1 21 9v8.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/></svg>',
         folderPlus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2.5h6.5A2.5 2.5 0 0 1 21 9v8.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M12 11v6M9 14h6"/></svg>',
+        layers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5z"/><path d="m2 12 10 5 10-5M2 17l10 5 10-5"/></svg>',
         move: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h5l2 2h11v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M13 12h5M16 9l3 3-3 3"/></svg>',
         chevronRight: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>',
         chevronLeft: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>',
@@ -157,6 +162,27 @@
         return item.basename || item.name || item.path || t('media.file');
     }
 
+    function mediaDownloadUrl(item) {
+        var path = item && item.path ? String(item.path) : '';
+        if (!path) return '#';
+        return path.charAt(0) === '/' ? '..' + path : path;
+    }
+
+    function mediaDownloadActionHtml(item) {
+        if (!isImage(item)) return '';
+        return '<a class="nb-imgmgr-action-btn" data-action="download" href="' + escapeHtml(mediaDownloadUrl(item)) + '" download="' + escapeHtml(mediaDisplayName(item)) + '" title="' + escapeHtml(t('media.download_file')) + '" aria-label="' + escapeHtml(t('media.download_file')) + '">' + Icons.download + '</a>';
+    }
+
+    function canOpenImageGenerator() {
+        try {
+            return typeof config.openImageGenerator === 'function'
+                && typeof config.canGenerateImages === 'function'
+                && config.canGenerateImages() === true;
+        } catch (e) {
+            return false;
+        }
+    }
+
     function mediaNameHtml(item, className) {
         var folder = item.folder || '';
         return '<div class="' + className + '" title="' + escapeHtml(item.name || item.path || '') + '">' +
@@ -175,7 +201,9 @@
         var actionAttr = previewAction ? ' data-action="preview"' : '';
         var previewAttr = ' data-preview-path="' + escapeHtml(item.path || '') + '" data-preview-name="' + escapeHtml(mediaDisplayName(item)) + '" onclick="window.NbImageManager && NbImageManager.preview(this.dataset.previewPath, this.dataset.previewName); return false;"';
         if (isImage(item)) {
-            return '<button type="button" class="' + className + ' nb-imgmgr-thumb-btn" style="background-image:url(\'' + escapeHtml(item.path) + '\')"' + actionAttr + previewAttr + ' aria-label="' + escapeHtml(t('image_preview')) + '"></button>';
+            return '<button type="button" class="' + className + ' nb-imgmgr-thumb-btn nb-imgmgr-thumb-btn--image"' + actionAttr + previewAttr + ' aria-label="' + escapeHtml(t('image_preview')) + '">' +
+                '<span class="nb-imgmgr-thumb-surface"><img src="' + escapeHtml(item.path) + '" alt="" loading="lazy"></span>' +
+            '</button>';
         }
         return '<button type="button" class="' + className + ' nb-imgmgr-thumb-btn nb-imgmgr-media-icon nb-imgmgr-media-icon--' + escapeHtml(item.type || 'document') + '"' + actionAttr + previewAttr + ' aria-label="' + escapeHtml(t('image_preview')) + '">' + mediaIcon(item) + '</button>';
     }
@@ -203,11 +231,6 @@
                         '<button type="button" class="nb-imgmgr-mode-btn nb-imgmgr-mode-btn--active" data-mode="library" aria-pressed="true">' + escapeHtml(t('image.library')) + '</button>' +
                         '<button type="button" class="nb-imgmgr-mode-btn" data-mode="trash" aria-pressed="false">' + escapeHtml(t('image.trash')) + '</button>' +
                     '</div>' +
-                    '<div class="nb-imgmgr-folder-tools">' +
-                        '<select class="nb-imgmgr-folder-filter" aria-label="' + escapeHtml(t('media.folder')) + '"></select>' +
-                        '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-folder-create" data-action="create-folder" title="' + escapeHtml(t('media.folder_create')) + '" aria-label="' + escapeHtml(t('media.folder_create')) + '">' + Icons.folderPlus + '</button>' +
-                        '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-folder-delete" data-action="delete-folder" title="' + escapeHtml(t('media.folder_delete')) + '" aria-label="' + escapeHtml(t('media.folder_delete')) + '">' + Icons.delete + '</button>' +
-                    '</div>' +
                     '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--secondary nb-imgmgr-empty-trash-btn" data-action="empty-trash" hidden>' + escapeHtml(t('image.empty_trash')) + '</button>' +
                     '<span class="nb-imgmgr-spacer"></span>' +
                     '<input type="text" class="nb-imgmgr-search" aria-label="' + escapeHtml(t('image.search')) + '" placeholder="' + escapeHtml(t('image.search')) + '">' +
@@ -217,27 +240,41 @@
                     '</div>' +
                 '</div>' +
                 '<div class="nb-imgmgr-body">' +
-                    '<div class="nb-imgmgr-grid" role="list"></div>' +
-                    '<div class="nb-imgmgr-list">' +
-                        '<div class="nb-imgmgr-list-header">' +
-                            '<div class="nb-imgmgr-list-header-col"></div>' +
-                            '<div class="nb-imgmgr-list-header-col"></div>' +
-                            '<div class="nb-imgmgr-list-header-col sortable" data-sort="name">' + escapeHtml(t('image.col_filename')) + '</div>' +
-                            '<div class="nb-imgmgr-list-header-col sortable" data-sort="size">' + escapeHtml(t('image.col_size')) + '</div>' +
-                            '<div class="nb-imgmgr-list-header-col sortable" data-sort="date">' + escapeHtml(t('image.col_date')) + '</div>' +
-                            '<div class="nb-imgmgr-list-header-col"></div>' +
+                    '<aside class="nb-imgmgr-sidebar" aria-label="' + escapeHtml(t('media.folder')) + '">' +
+                        '<div class="nb-imgmgr-sidebar-head">' +
+                            '<span class="nb-imgmgr-sidebar-title">' + escapeHtml(t('media.folders')) + '</span>' +
+                            '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-folder-create" title="' + escapeHtml(t('media.folder_create')) + '" aria-label="' + escapeHtml(t('media.folder_create')) + '">' + Icons.folderPlus + '</button>' +
                         '</div>' +
-                        '<div class="nb-imgmgr-list-body"></div>' +
+                        '<div class="nb-imgmgr-folder-list" role="listbox" aria-label="' + escapeHtml(t('media.folders')) + '"></div>' +
+                    '</aside>' +
+                    '<div class="nb-imgmgr-content">' +
+                        '<div class="nb-imgmgr-grid" role="list"></div>' +
+                        '<div class="nb-imgmgr-list">' +
+                            '<div class="nb-imgmgr-list-header">' +
+                                '<div class="nb-imgmgr-list-header-col"></div>' +
+                                '<div class="nb-imgmgr-list-header-col"></div>' +
+                                '<div class="nb-imgmgr-list-header-col sortable" data-sort="name">' + escapeHtml(t('image.col_filename')) + '</div>' +
+                                '<div class="nb-imgmgr-list-header-col sortable" data-sort="size">' + escapeHtml(t('image.col_size')) + '</div>' +
+                                '<div class="nb-imgmgr-list-header-col sortable" data-sort="date">' + escapeHtml(t('image.col_date')) + '</div>' +
+                                '<div class="nb-imgmgr-list-header-col"></div>' +
+                            '</div>' +
+                            '<div class="nb-imgmgr-list-body"></div>' +
+                        '</div>' +
                     '</div>' +
                 '</div>' +
                 '<div class="nb-imgmgr-dropzone">' +
-                    '<span class="nb-imgmgr-dropzone-text">' + escapeHtml(t('image.drop_files')) + '</span>' +
-                    '<span class="nb-imgmgr-dropzone-or">' + escapeHtml(t('image.or')) + '</span>' +
-                    '<select class="nb-imgmgr-upload-type"></select>' +
-                    '<label class="nb-imgmgr-upload-btn">' +
-                        Icons.upload + ' <span>' + escapeHtml(t('image.upload')) + '</span>' +
-                        '<input type="file" class="nb-imgmgr-upload-input" accept=".jpg,.jpeg,.png,.webp">' +
-                    '</label>' +
+                    '<button type="button" class="nb-imgmgr-ai-generator-btn" data-action="ai-generator" hidden>' +
+                        Icons.ai + '<span>' + escapeHtml(t('ai.image_generator')) + '</span>' +
+                    '</button>' +
+                    '<div class="nb-imgmgr-dropzone-upload">' +
+                        '<span class="nb-imgmgr-dropzone-text">' + escapeHtml(t('image.drop_files')) + '</span>' +
+                        '<span class="nb-imgmgr-dropzone-or">' + escapeHtml(t('image.or')) + '</span>' +
+                        '<select class="nb-imgmgr-upload-type"></select>' +
+                        '<label class="nb-imgmgr-upload-btn">' +
+                            Icons.upload + ' <span>' + escapeHtml(t('image.upload')) + '</span>' +
+                            '<input type="file" class="nb-imgmgr-upload-input" accept=".jpg,.jpeg,.png,.webp">' +
+                        '</label>' +
+                    '</div>' +
                 '</div>' +
                 '<div class="nb-imgmgr-footer">' +
                     '<div class="nb-imgmgr-selection-info"></div>' +
@@ -258,6 +295,10 @@
         modal.querySelector('[data-action="empty-trash"]').addEventListener('click', emptyImageTrash);
 
         modal.querySelector('.nb-imgmgr-upload-input').addEventListener('change', handleUpload);
+        modal.querySelector('.nb-imgmgr-ai-generator-btn').addEventListener('click', function () {
+            if (!canOpenImageGenerator()) return;
+            config.openImageGenerator('', 'auto');
+        });
         modal.addEventListener('click', function (e) {
             var thumb = e.target.closest && e.target.closest('.nb-imgmgr-thumb-btn');
             if (!thumb || !modal.contains(thumb)) return;
@@ -270,9 +311,28 @@
             openLightbox(image);
         }, true);
         modal.querySelector('.nb-imgmgr-folder-create').addEventListener('click', createMediaFolder);
-        modal.querySelector('.nb-imgmgr-folder-delete').addEventListener('click', deleteCurrentMediaFolder);
-        modal.querySelector('.nb-imgmgr-folder-filter').addEventListener('change', function(e) {
-            state.folderFilter = e.target.value || 'all';
+        var folderListEl = modal.querySelector('.nb-imgmgr-folder-list');
+        folderListEl.addEventListener('click', function(e) {
+            var entry = e.target.closest('.nb-imgmgr-folder-item');
+            if (!entry || !modal.contains(entry)) return;
+            var deleteBtn = e.target.closest('.nb-imgmgr-folder-item-delete');
+            if (deleteBtn) {
+                e.stopPropagation();
+                deleteMediaFolder(entry.getAttribute('data-folder') || '');
+                return;
+            }
+            // Root folder uses an empty-string value, which is falsy — read the
+            // attribute directly so "Main folder" is not coerced to "all".
+            state.folderFilter = entry.getAttribute('data-folder') || '';
+            filterAndRender();
+            updateFolderUI();
+        });
+        folderListEl.addEventListener('keydown', function(e) {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            var entry = e.target.closest('.nb-imgmgr-folder-item');
+            if (!entry) return;
+            e.preventDefault();
+            state.folderFilter = entry.getAttribute('data-folder') || '';
             filterAndRender();
             updateFolderUI();
         });
@@ -533,34 +593,66 @@
         formats.textContent = t(typeConfig.formatsKey);
         var title = modal.querySelector('.nb-imgmgr-header h3');
         if (title) title.textContent = t(isImageOnlyPicker() ? 'image_manager' : 'media_manager');
+        updateGeneratorButton();
         updateFolderUI();
+    }
+
+    function updateGeneratorButton() {
+        var modal = document.getElementById('nb-imgmgr-modal');
+        if (!modal) return;
+        var button = modal.querySelector('.nb-imgmgr-ai-generator-btn');
+        var dropzone = modal.querySelector('.nb-imgmgr-dropzone');
+        if (!button || !dropzone) return;
+        var visible = !state.isPicker && state.mode !== 'trash' && getActiveUploadType() === 'image' && canOpenImageGenerator();
+        button.hidden = !visible;
+        dropzone.classList.toggle('nb-imgmgr-dropzone--with-ai', visible);
+    }
+
+    function folderItemCount(folderValue) {
+        return state.data.reduce(function(total, item) {
+            return total + ((item.folder || '') === folderValue ? 1 : 0);
+        }, 0);
     }
 
     function updateFolderUI() {
         var modal = document.getElementById('nb-imgmgr-modal');
         if (!modal) return;
-        var tools = modal.querySelector('.nb-imgmgr-folder-tools');
-        var select = modal.querySelector('.nb-imgmgr-folder-filter');
-        var deleteBtn = modal.querySelector('.nb-imgmgr-folder-delete');
-        if (!tools || !select || !deleteBtn) return;
+        var sidebar = modal.querySelector('.nb-imgmgr-sidebar');
+        var list = modal.querySelector('.nb-imgmgr-folder-list');
+        if (!sidebar || !list) return;
 
+        // The folder sidebar is a library-only concept; hide it in trash mode.
         var isLibrary = state.mode === 'library';
-        tools.hidden = !isLibrary;
+        sidebar.hidden = !isLibrary;
         if (!isLibrary) return;
 
         var current = state.folderFilter || 'all';
-        select.innerHTML =
-            '<option value="all">' + escapeHtml(t('media.folder_all')) + '</option>' +
-            '<option value="">' + escapeHtml(t('media.folder_root')) + '</option>' +
-            state.folders.map(function(folder) {
-                return '<option value="' + escapeHtml(folder) + '">' + escapeHtml(folder) + '</option>';
-            }).join('');
         if (current !== 'all' && current !== '' && state.folders.indexOf(current) === -1) {
             current = 'all';
             state.folderFilter = current;
         }
-        select.value = current;
-        deleteBtn.disabled = current === 'all' || current === '';
+
+        var entries = [
+            { value: 'all', label: t('media.folder_all'), icon: Icons.layers || Icons.folder, deletable: false },
+            { value: '', label: t('media.folder_root'), icon: Icons.folder, deletable: false }
+        ].concat(state.folders.map(function(folder) {
+            return { value: folder, label: folder, icon: Icons.folder, deletable: true };
+        }));
+
+        list.innerHTML = entries.map(function(entry) {
+            var active = entry.value === current;
+            var count = entry.value === 'all' ? state.data.length : folderItemCount(entry.value);
+            return '<div class="nb-imgmgr-folder-item' + (active ? ' is-active' : '') + '"' +
+                ' role="option" tabindex="0" aria-selected="' + (active ? 'true' : 'false') + '"' +
+                ' data-folder="' + escapeHtml(entry.value) + '">' +
+                '<span class="nb-imgmgr-folder-item-icon">' + (entry.icon || '') + '</span>' +
+                '<span class="nb-imgmgr-folder-item-label">' + escapeHtml(entry.label) + '</span>' +
+                '<span class="nb-imgmgr-folder-item-count">' + count + '</span>' +
+                (entry.deletable
+                    ? '<button type="button" class="nb-imgmgr-folder-item-delete" title="' + escapeHtml(t('media.folder_delete')) + '" aria-label="' + escapeHtml(t('media.folder_delete')) + '">' + Icons.delete + '</button>'
+                    : '') +
+                '</div>';
+        }).join('');
     }
 
     // ============================================================
@@ -684,6 +776,7 @@
                 mediaNameHtml(image, 'nb-imgmgr-name') +
                 '<div class="nb-imgmgr-actions">' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '" aria-label="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
+                    mediaDownloadActionHtml(image) +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="copy" title="' + escapeHtml(t('image.copy_path')) + '" aria-label="' + escapeHtml(t('image.copy_path')) + '">' + Icons.copy + '</button>' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="move" title="' + escapeHtml(t('media.move_file')) + '" aria-label="' + escapeHtml(t('media.move_file')) + '">' + Icons.move + '</button>' +
                     (isImage(image) ? '<button type="button" class="nb-imgmgr-action-btn" data-action="replace" title="' + escapeHtml(t('image.replace')) + '" aria-label="' + escapeHtml(t('image.replace')) + '">' + Icons.replace + '</button>' : '') +
@@ -710,11 +803,6 @@
         }
 
         listBody.innerHTML = '';
-        if (state.mode !== 'trash' && state.folderFilter === 'all' && !state.search) {
-            renderListGrouped(listBody);
-            return;
-        }
-
         state.filtered.forEach(function (image) {
             appendMediaRow(listBody, image);
         });
@@ -746,6 +834,7 @@
                 '<div class="nb-imgmgr-list-date">' + escapeHtml(image.dateFormatted || '-') + '</div>' +
                 '<div class="nb-imgmgr-list-actions">' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '" aria-label="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
+                    mediaDownloadActionHtml(image) +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="copy" title="' + escapeHtml(t('image.copy_path')) + '" aria-label="' + escapeHtml(t('image.copy_path')) + '">' + Icons.copy + '</button>' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="move" title="' + escapeHtml(t('media.move_file')) + '" aria-label="' + escapeHtml(t('media.move_file')) + '">' + Icons.move + '</button>' +
                     (isImage(image) ? '<button type="button" class="nb-imgmgr-action-btn" data-action="replace" title="' + escapeHtml(t('image.replace')) + '" aria-label="' + escapeHtml(t('image.replace')) + '">' + Icons.replace + '</button>' : '') +
@@ -756,40 +845,6 @@
             }
             listBody.appendChild(row);
             attachItemEvents(row, image);
-    }
-
-    function renderListGrouped(listBody) {
-        var rootItems = state.filtered.filter(function(item) { return !(item.folder || ''); });
-        var folders = state.folders.slice();
-
-        rootItems.forEach(function(image) {
-            appendMediaRow(listBody, image);
-        });
-
-        folders.forEach(function(folder) {
-            var children = state.filtered.filter(function(item) { return (item.folder || '') === folder; });
-            var row = document.createElement('button');
-            var expanded = state.expandedFolders[folder] === true;
-            row.type = 'button';
-            row.className = 'nb-imgmgr-folder-row';
-            row.dataset.folder = folder;
-            row.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-            row.innerHTML =
-                '<span class="nb-imgmgr-folder-disclosure">' + (expanded ? Icons.chevronRight : Icons.chevronRight) + '</span>' +
-                '<span class="nb-imgmgr-folder-icon">' + Icons.folder + '</span>' +
-                '<span class="nb-imgmgr-folder-label">' + escapeHtml(folder) + '</span>' +
-                '<span class="nb-imgmgr-folder-count">' + children.length + '</span>';
-            row.addEventListener('click', function() {
-                state.expandedFolders[folder] = !expanded;
-                renderList();
-            });
-            listBody.appendChild(row);
-            if (expanded) {
-                children.forEach(function(image) {
-                    appendMediaRow(listBody, image);
-                });
-            }
-        });
     }
 
     function attachItemEvents(element, image) {
@@ -815,6 +870,7 @@
                 e.stopPropagation();
                 var action = actionEl.dataset.action;
                 if (action === 'preview') openLightbox(image);
+                else if (action === 'download') return;
                 else if (action === 'copy') copyPath(image.path);
                 else if (action === 'move') openMoveDialog(image);
                 else if (action === 'replace') openReplaceDialog(image.name, image.path);
@@ -907,6 +963,7 @@
         var emptyBtn = modal.querySelector('.nb-imgmgr-empty-trash-btn');
         if (dropzone) dropzone.hidden = state.mode === 'trash';
         if (emptyBtn) emptyBtn.hidden = state.mode !== 'trash';
+        updateGeneratorButton();
 
         if (state.mode === 'trash') {
             state.selectedPath = null;
@@ -1069,13 +1126,56 @@
         );
     }
 
+    // In-app name prompt: window.prompt() is unavailable in embedded
+    // webviews (Electron/VS Code) and clashes with the UI style anyway.
+    function promptFolderName(onSubmit) {
+        var existing = document.getElementById('nb-imgmgr-folder-prompt');
+        if (existing) existing.remove();
+        var dialog = document.createElement('div');
+        dialog.id = 'nb-imgmgr-folder-prompt';
+        dialog.className = 'nb-imgmgr-move active';
+        dialog.innerHTML =
+            '<div class="nb-imgmgr-move-backdrop"></div>' +
+            '<div class="nb-imgmgr-move-dialog">' +
+                '<div class="nb-imgmgr-move-header">' +
+                    '<h3>' + escapeHtml(t('media.folder_create')) + '</h3>' +
+                    '<button type="button" class="nb-imgmgr-close" aria-label="Close">&times;</button>' +
+                '</div>' +
+                '<div class="nb-imgmgr-move-body">' +
+                    '<label>' + escapeHtml(t('media.folder_create_prompt')) + '</label>' +
+                    '<input type="text" class="nb-imgmgr-folder-name-input" maxlength="60" spellcheck="false">' +
+                '</div>' +
+                '<div class="nb-imgmgr-move-footer">' +
+                    '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--secondary" data-action="cancel">' + escapeHtml(t('cancel')) + '</button>' +
+                    '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--primary" data-action="submit">' + escapeHtml(t('media.folder_create')) + '</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(dialog);
+        var input = dialog.querySelector('.nb-imgmgr-folder-name-input');
+        var close = function () { dialog.remove(); };
+        var submit = function () {
+            var name = input.value.trim();
+            if (!name) { input.focus(); return; }
+            close();
+            onSubmit(name);
+        };
+        dialog.querySelector('.nb-imgmgr-move-backdrop').addEventListener('click', close);
+        dialog.querySelector('.nb-imgmgr-close').addEventListener('click', close);
+        dialog.querySelector('[data-action="cancel"]').addEventListener('click', close);
+        dialog.querySelector('[data-action="submit"]').addEventListener('click', submit);
+        input.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') { event.preventDefault(); submit(); }
+            if (event.key === 'Escape') { event.stopPropagation(); close(); }
+        });
+        input.focus();
+    }
+
     function createMediaFolder() {
         if (state.mode !== 'library') return;
-        var name = window.prompt(t('media.folder_create_prompt'));
-        if (name == null) return;
-        name = name.trim();
-        if (!name) return;
+        promptFolderName(submitCreateMediaFolder);
+    }
 
+    function submitCreateMediaFolder(name) {
         var formData = new FormData();
         formData.append('action', 'create-media-folder');
         formData.append('type', getActiveUploadType());
@@ -1099,9 +1199,9 @@
             });
     }
 
-    function deleteCurrentMediaFolder() {
-        if (state.mode !== 'library' || !state.folderFilter || state.folderFilter === 'all') return;
-        var folder = state.folderFilter;
+    function deleteMediaFolder(folder) {
+        folder = (folder || '').trim();
+        if (state.mode !== 'library' || !folder || folder === 'all') return;
         confirmAction(
             t('media.folder_delete'),
             t('media.folder_delete_confirm', { folder: folder }),
@@ -1118,7 +1218,7 @@
                         if (result.success) {
                             config.showToast(t('media.folder_deleted'), 'success');
                             delete state.expandedFolders[folder];
-                            state.folderFilter = 'all';
+                            if (state.folderFilter === folder) state.folderFilter = 'all';
                             loadImages();
                         } else {
                             config.showToast(result.message || t('toast.error'), 'error');
@@ -1305,6 +1405,7 @@
         if (!lb) { createLightbox(); lb = document.getElementById('nb-imgmgr-lightbox'); }
         var stage = lb.querySelector('.nb-imgmgr-lightbox-stage');
         var label = mediaDisplayName(item);
+        stage.classList.toggle('nb-imgmgr-lightbox-stage--image', isImage(item));
         if (isImage(item)) {
             stage.innerHTML = '<img alt="" src="' + escapeHtml(item.path) + '">';
         } else if (isAudio(item)) {
@@ -1589,5 +1690,9 @@
         },
         close: close,
         confirmSelection: confirmSelection,
+        refresh: function () {
+            updateModeUI();
+            updateTypeUI();
+        },
     };
 })();

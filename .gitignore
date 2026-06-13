@@ -8,6 +8,13 @@ content/settings.json
 website/
 auth.nibbly.dev/
 
+# Local working material / scratch (not part of the distributable core)
+relaunch/
+handoff.md
+ADMIN-UI-SYSTEM-CONCEPT.md
+AI-COPILOT-GOAL.md
+.DS_Store
+
 # Backup (local reference only)
 nibbly-backup/
 nibbly-alt/
