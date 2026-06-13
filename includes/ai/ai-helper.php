@@ -662,15 +662,16 @@ function nibblyAiGenerateImage(string $prompt, array $options = []): array {
             'paths' => $paths,
             'durationMs' => (int)round((microtime(true) - $started) * 1000)
         ]);
+        $actualMeta = nibblyAiActualImageMeta($paths);
         $historyItem = nibblyAiRecordImageHistory([
             'status' => 'success',
             'model' => $model,
             'prompt' => $prompt,
             'revisedPrompt' => implode("\n\n", array_values(array_unique(array_filter($revisedPrompts)))),
-            'size' => $size,
+            'size' => $actualMeta['size'] ?? $size,
             'aspectRatio' => $aspectRatio,
             'quality' => $quality,
-            'format' => $outputFormat,
+            'format' => $actualMeta['format'] ?? $outputFormat,
             'moderation' => $moderation,
             'compression' => $outputCompression,
             'count' => count($paths),
@@ -752,15 +753,16 @@ function nibblyAiGenerateImage(string $prompt, array $options = []): array {
         'paths' => $paths,
         'durationMs' => (int)round((microtime(true) - $started) * 1000)
     ]);
+    $actualMeta = nibblyAiActualImageMeta($paths);
     $historyItem = nibblyAiRecordImageHistory([
         'status' => 'success',
         'model' => $body['model'],
         'prompt' => $prompt,
         'revisedPrompt' => implode("\n\n", array_values(array_unique(array_filter($revisedPrompts)))),
-        'size' => $size,
+        'size' => $actualMeta['size'] ?? $size,
         'aspectRatio' => $aspectRatio,
         'quality' => $quality,
-        'format' => $outputFormat,
+        'format' => $actualMeta['format'] ?? $outputFormat,
         'moderation' => $moderation,
         'compression' => $outputCompression,
         'count' => count($paths),
@@ -1901,6 +1903,42 @@ function nibblyAiStoreGeneratedImage(string $binary, string $hint, string $size 
         throw new RuntimeException('Could not save generated image.');
     }
     return '/assets/images/generated/' . $filename;
+}
+
+/**
+ * Inspect the actually-stored output images and return their real dimensions
+ * and format, so history reflects what the provider delivered rather than what
+ * was requested (providers may ignore the requested size/format, e.g.
+ * OpenRouter returning PNG at provider-chosen pixel dimensions).
+ */
+function nibblyAiActualImageMeta(array $publicPaths): array {
+    $root = dirname(__DIR__, 2);
+    foreach ($publicPaths as $publicPath) {
+        $publicPath = (string)$publicPath;
+        if ($publicPath === '') {
+            continue;
+        }
+        $file = $root . '/' . ltrim($publicPath, '/');
+        if (!is_file($file)) {
+            continue;
+        }
+        $info = @getimagesize($file);
+        if ($info === false) {
+            continue;
+        }
+        $format = match ($info[2]) {
+            IMAGETYPE_JPEG => 'jpeg',
+            IMAGETYPE_PNG => 'png',
+            IMAGETYPE_WEBP => 'webp',
+            IMAGETYPE_GIF => 'gif',
+            default => strtolower((string)pathinfo($file, PATHINFO_EXTENSION))
+        };
+        return [
+            'size' => (int)$info[0] . 'x' . (int)$info[1],
+            'format' => $format
+        ];
+    }
+    return [];
 }
 
 function nibblyAiDownloadProviderImage(string $url): string {
