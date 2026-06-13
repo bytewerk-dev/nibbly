@@ -10305,7 +10305,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     ? '<button type="button" class="ai-image-history-card__thumb" data-ai-preview="' + escapeHtml(firstOutput) + '" data-ai-preview-name="' + escapeHtml(firstOutput.split('/').pop()) + '"><img src="' + escapeHtml(firstOutput) + '" alt=""></button>'
                     : '<div class="ai-image-history-card__thumb ai-image-history-card__thumb--empty">' + escapeHtml(t('ai.image_history_error')) + '</div>';
                 var ratioMeta = item.aspectRatio && item.aspectRatio !== 'auto' ? item.aspectRatio : '';
-                var meta = [item.model, ratioMeta, item.size, item.format, item.quality].filter(Boolean).join(' · ');
+                // Display pixel dimensions with a proper multiplication sign (e.g. 2560×1440).
+                var sizeMeta = /^\d+x\d+$/.test(String(item.size || '')) ? String(item.size).replace('x', '×') : (item.size || '');
+                var formatMeta = item.format ? String(item.format).toUpperCase() : '';
+                var meta = [item.model, ratioMeta, sizeMeta, formatMeta, item.quality].filter(Boolean).join(' · ');
                 var html =
                     '<article class="ai-image-history-card ai-image-history-card--' + status + '">' +
                         thumb +
