@@ -917,6 +917,7 @@
     "ai.image_size": "Auflösung / Orientierung",
     "ai.image_size_auto": "Auto",
     "ai.image_scale": "Auflösung",
+    "ai.image_cost_per_image": "Geschätzte Kosten pro Bild: {cost}",
     "ai.image_size_note": "Berechnete Bildgröße: {size}.",
     "ai.image_size_note_auto": "Der Provider wählt die Bildgröße automatisch.",
     "ai.image_orientation_square": "Quadratisch",

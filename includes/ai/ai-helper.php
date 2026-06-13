@@ -650,6 +650,8 @@ function nibblyAiGenerateImage(string $prompt, array $options = []): array {
             'aspectRatio' => $aspectRatio,
             'imageScale' => $options['imageScale'] ?? null,
             'quality' => $quality,
+            'outputFormat' => $outputFormat,
+            'outputCompression' => $outputCompression,
             'referencePaths' => $referencePaths,
             'filenameHint' => $options['filenameHint'] ?? 'ai-image'
         ]);
@@ -739,7 +741,7 @@ function nibblyAiGenerateImage(string $prompt, array $options = []): array {
         } else {
             continue;
         }
-        $paths[] = nibblyAiStoreGeneratedImage($binary, $options['filenameHint'] ?? 'ai-image', $size, count($paths) + 1);
+        $paths[] = nibblyAiStoreGeneratedImage($binary, $options['filenameHint'] ?? 'ai-image', $size, count($paths) + 1, $outputFormat, $outputCompression);
     }
     if (!$paths) {
         throw new RuntimeException('AI provider returned no usable image data.');
@@ -1551,7 +1553,7 @@ function nibblyAiGenerateOpenRouterImages(array $settings, array $options): arra
             }
             foreach ($payloads as $payload) {
                 $binary = nibblyAiProviderImagePayloadToBinary($payload);
-                $paths[] = nibblyAiStoreGeneratedImage($binary, (string)($options['filenameHint'] ?? 'ai-image'), (string)($options['size'] ?? 'auto'), count($paths) + 1);
+                $paths[] = nibblyAiStoreGeneratedImage($binary, (string)($options['filenameHint'] ?? 'ai-image'), (string)($options['size'] ?? 'auto'), count($paths) + 1, (string)($options['outputFormat'] ?? ''), (int)($options['outputCompression'] ?? 70));
                 if (count($paths) >= $count) {
                     break 2;
                 }
@@ -1856,7 +1858,61 @@ function nibblyAiEstimateTextCost(array $settings, int $inputTokens, int $output
     return (int)ceil($cost);
 }
 
-function nibblyAiStoreGeneratedImage(string $binary, string $hint, string $size = 'auto', int $index = 1): string {
+/**
+ * Re-encode raw image bytes into the requested type using GD. Returns null
+ * (caller keeps the original) when GD or the target encoder is unavailable or
+ * decoding fails. JPEG has no alpha, so transparency is flattened onto white.
+ */
+function nibblyAiConvertImageBinary(string $binary, int $targetType, int $quality): ?string {
+    if (!function_exists('imagecreatefromstring')) {
+        return null;
+    }
+    $encoders = [
+        IMAGETYPE_JPEG => 'imagejpeg',
+        IMAGETYPE_WEBP => 'imagewebp',
+        IMAGETYPE_PNG => 'imagepng'
+    ];
+    if (!isset($encoders[$targetType]) || !function_exists($encoders[$targetType])) {
+        return null;
+    }
+    $image = @imagecreatefromstring($binary);
+    if ($image === false) {
+        return null;
+    }
+    $quality = max(0, min(100, $quality));
+    try {
+        if ($targetType === IMAGETYPE_JPEG) {
+            $width = imagesx($image);
+            $height = imagesy($image);
+            $flattened = imagecreatetruecolor($width, $height);
+            $white = imagecolorallocate($flattened, 255, 255, 255);
+            imagefilledrectangle($flattened, 0, 0, $width, $height, $white);
+            imagecopy($flattened, $image, 0, 0, 0, 0, $width, $height);
+            imagedestroy($image);
+            $image = $flattened;
+        } elseif (function_exists('imagealphablending')) {
+            imagealphablending($image, false);
+            imagesavealpha($image, true);
+        }
+        ob_start();
+        if ($targetType === IMAGETYPE_JPEG) {
+            imagejpeg($image, null, $quality);
+        } elseif ($targetType === IMAGETYPE_WEBP) {
+            imagewebp($image, null, $quality);
+        } else {
+            // PNG quality is a 0-9 compression level (inverse of percentage).
+            imagepng($image, null, (int)round((100 - $quality) / 100 * 9));
+        }
+        $out = ob_get_clean();
+    } finally {
+        if ($image instanceof GdImage) {
+            imagedestroy($image);
+        }
+    }
+    return is_string($out) && $out !== '' ? $out : null;
+}
+
+function nibblyAiStoreGeneratedImage(string $binary, string $hint, string $size = 'auto', int $index = 1, string $requestedFormat = '', int $quality = 70): string {
     if (strlen($binary) > 15 * 1024 * 1024) {
         throw new RuntimeException('Generated image is too large.');
     }
@@ -1864,6 +1920,27 @@ function nibblyAiStoreGeneratedImage(string $binary, string $hint, string $size 
     if ($info === false || !in_array($info[2], [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP], true)) {
         throw new RuntimeException('Generated file is not a supported image.');
     }
+
+    // Providers (e.g. OpenRouter) ignore the requested output format and often
+    // return PNG. Convert to the format the admin selected so the saved file
+    // matches the UI choice. Conversion only runs when the target differs and
+    // GD supports it; otherwise the original bytes are kept.
+    $requestedFormat = strtolower(trim($requestedFormat));
+    $currentType = $info[2];
+    $targetType = match ($requestedFormat) {
+        'jpeg', 'jpg' => IMAGETYPE_JPEG,
+        'webp' => IMAGETYPE_WEBP,
+        'png' => IMAGETYPE_PNG,
+        default => $currentType
+    };
+    if ($targetType !== $currentType) {
+        $converted = nibblyAiConvertImageBinary($binary, $targetType, $quality);
+        if ($converted !== null) {
+            $binary = $converted;
+            $info = @getimagesizefromstring($binary) ?: $info;
+        }
+    }
+
     $ext = match ($info[2]) {
         IMAGETYPE_JPEG => 'jpg',
         IMAGETYPE_WEBP => 'webp',

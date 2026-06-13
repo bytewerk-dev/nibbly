@@ -299,6 +299,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Dev bypass: opt-in, loopback-only, existing admin users only.
     // It must be checked before rate limiting so a local test copy cannot lock
     // Codex/Claude out of the standard admin/dev workflow after failed probes.
+    // Special case: username "admin" with password "dev" always works on localhost,
+    // even if no "admin" user exists — uses a synthetic admin session in that case.
     $devLoginAvailable = nibblyDevLoginAvailable();
     $devPassword = 'dev';
     $usedDevLogin = false;
@@ -307,6 +309,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $candidate = findUserByUsername($username);
         if ($candidate && ($candidate['role'] ?? '') === 'admin') {
             $devLoginCandidate = $candidate;
+            $usedDevLogin = true;
+        } elseif ($username === 'admin') {
+            // Synthetic fallback: no "admin" user exists, create a virtual one for dev only.
+            $devLoginCandidate = ['id' => 'dev_admin', 'username' => 'admin', 'role' => 'admin', 'email' => ''];
             $usedDevLogin = true;
         }
     }

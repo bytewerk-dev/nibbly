@@ -872,7 +872,11 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                                     </div>
                                     <div class="form-group">
                                         <label for="aiImageCompression"><?php echo t('ai.image_compression'); ?></label>
-                                        <input type="number" id="aiImageCompression" min="0" max="100" value="100" disabled>
+                                        <div class="fill-slider" id="aiImageCompressionSlider">
+                                            <div class="fill-slider__fill" id="aiImageCompressionFill"></div>
+                                            <span class="fill-slider__value" id="aiImageCompressionValue">70%</span>
+                                            <input type="range" id="aiImageCompression" min="0" max="100" value="70" class="fill-slider__input" aria-label="<?php echo htmlspecialchars(t('ai.image_compression'), ENT_QUOTES, 'UTF-8'); ?>" disabled>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="ai-form-actions ai-image-generate-row">
@@ -7228,6 +7232,11 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             panel.hidden = panel.dataset.aiToolPanel !== activeTool;
             panel.classList.toggle('active', panel.dataset.aiToolPanel === activeTool);
         });
+        // Opening the image tool under OpenRouter loads live image prices so
+        // the estimated per-image cost can be shown.
+        if (activeTool === 'image' && aiSavedProviderKey() === 'openrouter') {
+            loadOpenRouterModels();
+        }
     }
 
     function openAiImageGenerator(promptText, aspectRatio) {
@@ -7778,6 +7787,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             updateAiModelPlaceholders('openrouter');
             updateAiImageModelControl(currentAiSettings || {});
         }
+        // Refresh the size/cost note now that live image prices are available.
+        if (typeof updateAiImageRatioIcon === 'function') updateAiImageRatioIcon();
     }
 
     function maybeAutofillOpenRouterPricing() {
@@ -8008,6 +8019,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         updateDashboardAiPanel(settings);
         if (!AI_FEATURES_ENABLED) return;
         updateAiImageModelControl(settings);
+        // Refresh the size note so the estimated per-image cost reflects the
+        // current pricing once settings have loaded.
+        if (typeof updateAiImageRatioIcon === 'function') updateAiImageRatioIcon();
         var configured = aiProviderIsConfigured(settings);
         var enabled = !!settings.enabled;
         var usable = configured && enabled;
@@ -10301,16 +10315,26 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 var prompt = item.prompt || '';
                 var status = item.status === 'error' ? 'error' : 'success';
                 var statusLabel = status === 'error' ? t('ai.image_history_status_error') : t('ai.image_history_status_success');
-                var thumb = firstOutput
-                    ? '<button type="button" class="ai-image-history-card__thumb" data-ai-preview="' + escapeHtml(firstOutput) + '" data-ai-preview-name="' + escapeHtml(firstOutput.split('/').pop()) + '"><img src="' + escapeHtml(firstOutput) + '" alt=""></button>'
-                    : '<div class="ai-image-history-card__thumb ai-image-history-card__thumb--empty">' + escapeHtml(t('ai.image_history_error')) + '</div>';
+                var multiThumb = outputs.length > 1;
+                var thumb;
+                if (multiThumb) {
+                    thumb = '<div class="ai-image-history-card__thumbs">' +
+                        outputs.map(function(path) {
+                            return '<button type="button" class="ai-image-history-card__thumb" data-ai-preview="' + escapeHtml(path) + '" data-ai-preview-name="' + escapeHtml(path.split('/').pop()) + '"><img src="' + escapeHtml(path) + '" alt=""></button>';
+                        }).join('') +
+                        '</div>';
+                } else if (firstOutput) {
+                    thumb = '<button type="button" class="ai-image-history-card__thumb" data-ai-preview="' + escapeHtml(firstOutput) + '" data-ai-preview-name="' + escapeHtml(firstOutput.split('/').pop()) + '"><img src="' + escapeHtml(firstOutput) + '" alt=""></button>';
+                } else {
+                    thumb = '<div class="ai-image-history-card__thumb ai-image-history-card__thumb--empty">' + escapeHtml(t('ai.image_history_error')) + '</div>';
+                }
                 var ratioMeta = item.aspectRatio && item.aspectRatio !== 'auto' ? item.aspectRatio : '';
                 // Display pixel dimensions with a proper multiplication sign (e.g. 2560×1440).
                 var sizeMeta = /^\d+x\d+$/.test(String(item.size || '')) ? String(item.size).replace('x', '×') : (item.size || '');
                 var formatMeta = item.format ? String(item.format).toUpperCase() : '';
                 var meta = [item.model, ratioMeta, sizeMeta, formatMeta, item.quality].filter(Boolean).join(' · ');
                 var html =
-                    '<article class="ai-image-history-card ai-image-history-card--' + status + '">' +
+                    '<article class="ai-image-history-card ai-image-history-card--' + status + (multiThumb ? ' ai-image-history-card--multi' : '') + '">' +
                         thumb +
                         '<div class="ai-image-history-card__body">' +
                             '<div class="ai-image-history-card__top">' +
@@ -10513,9 +10537,32 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
 	    updateAiImageReferences();
 
+    // Curated per-image prices (cents) for OpenAI image models, since the
+    // OpenAI-compatible endpoint has no model price API. Declared before the
+    // size picker initialises (which computes the estimated cost on load).
+    var AI_OPENAI_IMAGE_COST_CENTS = {
+        'gpt-image-2': 4
+    };
+
     initAiImageSizePicker();
     document.getElementById('aiImageSize')?.addEventListener('change', updateAiImageRatioIcon);
     updateAiImageRatioIcon();
+
+    var aiCompressionSlider = document.getElementById('aiImageCompression');
+    var aiCompressionValue = document.getElementById('aiImageCompressionValue');
+    var aiCompressionFill = document.getElementById('aiImageCompressionFill');
+    if (aiCompressionSlider && aiCompressionValue && aiCompressionFill) {
+        var syncAiCompression = function() {
+            var pct = Math.max(0, Math.min(100, parseInt(aiCompressionSlider.value || '0', 10)));
+            aiCompressionFill.style.width = pct + '%';
+            aiCompressionValue.textContent = pct + '%';
+            // Value sits inside the filled area; below 40% the fill is too
+            // narrow, so flip the label to the empty (right) side.
+            aiCompressionValue.classList.toggle('fill-slider__value--right', pct < 40);
+        };
+        aiCompressionSlider.addEventListener('input', syncAiCompression);
+        syncAiCompression();
+    }
 
     function initAiImageSizePicker() {
         var select = document.getElementById('aiImageSize');
@@ -10610,11 +10657,72 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             });
         }
         if (note) {
-            note.textContent = computedSize.size === 'auto'
+            var sizeText = computedSize.size === 'auto'
                 ? t('ai.image_size_note_auto')
                 : t('ai.image_size_note').replace('{size}', computedSize.size.replace('x', ' × '));
+            note.textContent = sizeText + aiEstimatedImageCostSuffix();
         }
         applyAiRatioIcon(icon, computedSize.size === 'auto' ? ratioValue : computedSize.size);
+    }
+
+    // Detect the active provider from the saved settings only (not the
+    // settings-form DOM), since cost resolution runs in the image generator
+    // where the relevant provider is the configured one.
+    function aiSavedProviderKey() {
+        var settings = currentAiSettings || {};
+        var provider = String(settings.provider || '').trim();
+        var baseUrl = String(settings.baseUrl || '').trim();
+        if (provider === 'anthropic' || baseUrl.indexOf('api.anthropic.com') !== -1) return 'anthropic';
+        if (provider === 'openrouter' || baseUrl.indexOf('openrouter.ai') !== -1) return 'openrouter';
+        return 'openai-compatible';
+    }
+
+    // Resolve the estimated per-image cost for the selected provider/model.
+    // Returns { cents, estimated } or null when no figure is available.
+    function aiResolveImageCost() {
+        var settings = currentAiSettings || {};
+        var providerKey = aiSavedProviderKey();
+        if (providerKey === 'anthropic') {
+            return null; // Anthropic does not generate images.
+        }
+        var model = String(document.getElementById('aiImageModelPicker')?.value
+            || document.getElementById('aiImageModel')?.value
+            || settings.imageModel || '').trim();
+        var configuredCents = parseInt((settings.pricing && settings.pricing.imageCentsPerRequest) || 0, 10);
+
+        if (providerKey === 'openrouter') {
+            var entry = aiOpenRouterModelsCache && Array.isArray(aiOpenRouterModelsCache.imageModels)
+                ? aiOpenRouterModelsCache.imageModels.find(function(m) { return m.id === model; })
+                : null;
+            if (entry && entry.imageCostCents != null) {
+                return { cents: entry.imageCostCents, estimated: !!entry.imageCostEstimated };
+            }
+            // Catalog not loaded yet or model not found: fall back to settings.
+            return configuredCents ? { cents: configuredCents, estimated: true } : null;
+        }
+
+        // OpenAI-compatible: curated default for known models, else settings.
+        if (AI_OPENAI_IMAGE_COST_CENTS[model] != null) {
+            return { cents: AI_OPENAI_IMAGE_COST_CENTS[model], estimated: false };
+        }
+        return configuredCents ? { cents: configuredCents, estimated: false } : null;
+    }
+
+    // Format a (possibly fractional) cents value as EUR with enough precision
+    // for sub-cent image prices: 2 decimals normally, more when very small.
+    function formatAiImageCents(cents) {
+        var eur = (parseFloat(cents) || 0) / 100;
+        var decimals = eur >= 0.01 ? 2 : (eur >= 0.001 ? 3 : 4);
+        return eur.toFixed(decimals) + ' EUR';
+    }
+
+    // " · Estimated cost per image: 0.05 EUR" (with a leading ~ when the figure
+    // is an estimate). Empty when no figure is available.
+    function aiEstimatedImageCostSuffix() {
+        var cost = aiResolveImageCost();
+        if (!cost || !cost.cents) return '';
+        var amount = (cost.estimated ? '~' : '') + formatAiImageCents(cost.cents);
+        return ' · ' + t('ai.image_cost_per_image').replace('{cost}', amount);
     }
 
     function applyAiRatioIcon(icon, value) {
