@@ -1414,6 +1414,41 @@ function getIconifyAllowedSets() {
             'defaultWidth' => 16,
             'defaultHeight' => 16,
         ],
+        'ph' => [
+            'label' => 'Phosphor',
+            'license' => 'MIT',
+            'licenseUrl' => 'https://github.com/phosphor-icons/core/blob/main/LICENSE',
+            'defaultWidth' => 256,
+            'defaultHeight' => 256,
+        ],
+        'iconoir' => [
+            'label' => 'Iconoir',
+            'license' => 'MIT',
+            'licenseUrl' => 'https://github.com/iconoir-icons/iconoir/blob/main/LICENSE',
+            'defaultWidth' => 24,
+            'defaultHeight' => 24,
+        ],
+        'ion' => [
+            'label' => 'Ionicons',
+            'license' => 'MIT',
+            'licenseUrl' => 'https://github.com/ionic-team/ionicons/blob/main/LICENSE',
+            'defaultWidth' => 512,
+            'defaultHeight' => 512,
+        ],
+        'mynaui' => [
+            'label' => 'Myna UI',
+            'license' => 'MIT',
+            'licenseUrl' => 'https://github.com/MynaUI/icons/blob/main/LICENSE',
+            'defaultWidth' => 24,
+            'defaultHeight' => 24,
+        ],
+        'tdesign' => [
+            'label' => 'TDesign Icons',
+            'license' => 'MIT',
+            'licenseUrl' => 'https://github.com/Tencent/tdesign-icons/blob/main/LICENSE',
+            'defaultWidth' => 24,
+            'defaultHeight' => 24,
+        ],
     ];
 }
 

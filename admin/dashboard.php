@@ -2429,13 +2429,25 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <h3><?php echo t('icons.import_icon'); ?></h3>
             <div class="modal-form">
                 <div class="iconify-import-controls">
-                    <label class="modal-label"><?php echo t('icons.icon_set'); ?>
-                        <select id="iconifyImportSet" class="modal-input">
-                            <option value="lucide">Lucide</option>
-                            <option value="tabler">Tabler Icons</option>
-                            <option value="heroicons">Heroicons</option>
-                            <option value="bi">Bootstrap Icons</option>
-                        </select>
+                    <label class="modal-label" id="iconifyImportSetLabel"><?php echo t('icons.icon_set'); ?>
+                        <div class="icon-set-picker" id="iconifyImportSetPicker">
+                            <button type="button" class="icon-set-picker__btn modal-input" id="iconifyImportSetBtn" aria-haspopup="listbox" aria-expanded="false">
+                                <span id="iconifyImportSetLabel2">Lucide</span>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+                            </button>
+                            <ul class="icon-set-picker__list" id="iconifyImportSetList" role="listbox" hidden>
+                                <li role="option" data-value="lucide" aria-selected="true">Lucide</li>
+                                <li role="option" data-value="tabler">Tabler Icons</li>
+                                <li role="option" data-value="heroicons">Heroicons</li>
+                                <li role="option" data-value="ph">Phosphor</li>
+                                <li role="option" data-value="bi">Bootstrap Icons</li>
+                                <li role="option" data-value="iconoir">Iconoir</li>
+                                <li role="option" data-value="ion">Ionicons</li>
+                                <li role="option" data-value="mynaui">Myna UI</li>
+                                <li role="option" data-value="tdesign">TDesign Icons</li>
+                            </ul>
+                            <input type="hidden" id="iconifyImportSet" value="lucide">
+                        </div>
                     </label>
                     <label class="modal-label"><?php echo t('icons.search'); ?>
                         <input type="search" id="iconifyImportQuery" class="modal-input" placeholder="search, home, calendar">
@@ -5141,7 +5153,19 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     }
 
     // Modal
+    function closeAllComboboxes() {
+        document.querySelectorAll('.nb-combobox__list:not([hidden])').forEach(function(list) {
+            list.hidden = true;
+            var root = list.closest('.nb-combobox');
+            if (root) {
+                var input = root.querySelector('input[role="combobox"]');
+                if (input) input.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
+
     function showModal(title, text, onConfirm) {
+        closeAllComboboxes();
         document.getElementById('modalTitle').textContent = title;
         document.getElementById('modalText').textContent = text;
         document.getElementById('modalOverlay').style.display = 'flex';
@@ -5498,10 +5522,15 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     let iconManagerHighlightedKeys = new Set();
     let iconManagerHighlightTimer = null;
     const ICONIFY_IMPORT_SETS = {
-        lucide: { label: 'Lucide', license: 'ISC', licenseUrl: 'https://github.com/lucide-icons/lucide/blob/main/LICENSE' },
-        tabler: { label: 'Tabler Icons', license: 'MIT', licenseUrl: 'https://github.com/tabler/tabler-icons/blob/master/LICENSE' },
-        heroicons: { label: 'Heroicons', license: 'MIT', licenseUrl: 'https://github.com/tailwindlabs/heroicons/blob/master/LICENSE' },
-        bi: { label: 'Bootstrap Icons', license: 'MIT', licenseUrl: 'https://github.com/twbs/icons/blob/main/LICENSE.md', style: 'fill' }
+        lucide:   { label: 'Lucide',         license: 'ISC', licenseUrl: 'https://github.com/lucide-icons/lucide/blob/main/LICENSE' },
+        tabler:   { label: 'Tabler Icons',   license: 'MIT', licenseUrl: 'https://github.com/tabler/tabler-icons/blob/master/LICENSE' },
+        heroicons:{ label: 'Heroicons',      license: 'MIT', licenseUrl: 'https://github.com/tailwindlabs/heroicons/blob/master/LICENSE' },
+        ph:       { label: 'Phosphor',       license: 'MIT', licenseUrl: 'https://github.com/phosphor-icons/core/blob/main/LICENSE' },
+        bi:       { label: 'Bootstrap Icons',license: 'MIT', licenseUrl: 'https://github.com/twbs/icons/blob/main/LICENSE.md', style: 'fill' },
+        iconoir:  { label: 'Iconoir',        license: 'MIT', licenseUrl: 'https://github.com/iconoir-icons/iconoir/blob/main/LICENSE' },
+        ion:      { label: 'Ionicons',       license: 'MIT', licenseUrl: 'https://github.com/ionic-team/ionicons/blob/main/LICENSE' },
+        mynaui:   { label: 'Myna UI',        license: 'MIT', licenseUrl: 'https://github.com/MynaUI/icons/blob/main/LICENSE' },
+        tdesign:  { label: 'TDesign Icons',  license: 'MIT', licenseUrl: 'https://github.com/Tencent/tdesign-icons/blob/main/LICENSE' }
     };
 
     async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 12000) {
@@ -5770,6 +5799,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         document.getElementById('iconManagerSvg').value = isEdit ? (iconItem.svg || '') : '';
         document.getElementById('iconRenameWarning').hidden = true;
         updateIconManagerPreview();
+        closeAllComboboxes();
         document.getElementById('iconManagerModalOverlay').style.display = 'flex';
     }
 
@@ -5777,9 +5807,56 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         document.getElementById('iconManagerModalOverlay').style.display = 'none';
     }
 
+    // Custom icon-set picker (replaces native <select> to avoid modal overlay clipping)
+    (function() {
+        var picker = document.getElementById('iconifyImportSetPicker');
+        if (!picker) return;
+        var btn = document.getElementById('iconifyImportSetBtn');
+        var label = document.getElementById('iconifyImportSetLabel2');
+        var list = document.getElementById('iconifyImportSetList');
+        var hidden = document.getElementById('iconifyImportSet');
+
+        function openPicker() {
+            var rect = btn.getBoundingClientRect();
+            list.style.top = (rect.bottom + 4) + 'px';
+            list.style.left = rect.left + 'px';
+            list.style.width = rect.width + 'px';
+            list.hidden = false;
+            btn.setAttribute('aria-expanded', 'true');
+        }
+        function closePicker() {
+            list.hidden = true;
+            btn.setAttribute('aria-expanded', 'false');
+        }
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            list.hidden ? openPicker() : closePicker();
+        });
+        list.addEventListener('click', function(e) {
+            var opt = e.target.closest('[role="option"]');
+            if (!opt) return;
+            list.querySelectorAll('[role="option"]').forEach(function(o) { o.setAttribute('aria-selected', 'false'); });
+            opt.setAttribute('aria-selected', 'true');
+            hidden.value = opt.dataset.value;
+            label.textContent = opt.textContent;
+            closePicker();
+            updateIconifyImportLicense();
+        });
+        document.addEventListener('click', function(e) {
+            if (!picker.contains(e.target)) closePicker();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && !list.hidden) closePicker();
+        });
+    })();
+
     function openIconifyImportModal() {
         const overlay = document.getElementById('iconifyImportModalOverlay');
         if (!overlay) return;
+        closeAllComboboxes();
+        // Also close icon-set picker if open
+        var setList = document.getElementById('iconifyImportSetList');
+        if (setList) setList.hidden = true;
         overlay.style.display = 'flex';
         updateIconifyImportLicense();
         setTimeout(function() {
@@ -5789,6 +5866,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     function closeIconifyImportModal() {
         document.getElementById('iconifyImportModalOverlay').style.display = 'none';
+        var setList = document.getElementById('iconifyImportSetList');
+        if (setList) setList.hidden = true;
     }
 
     function updateIconifyImportLicense() {
@@ -12996,6 +13075,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         document.getElementById('userGeneratedPw').style.display = 'none';
         document.getElementById('userModalTitle').textContent = t('settings.add_user');
         document.getElementById('userFormPassword').required = true;
+        closeAllComboboxes();
         document.getElementById('userModalOverlay').style.display = 'flex';
     });
 
@@ -13033,6 +13113,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 document.getElementById('userGeneratedPw').style.display = 'none';
                 document.getElementById('userModalTitle').textContent = t('settings.edit_user');
                 document.getElementById('userFormPassword').required = false;
+                closeAllComboboxes();
                 document.getElementById('userModalOverlay').style.display = 'flex';
             });
     }
@@ -13078,6 +13159,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         document.getElementById('resetPwModalTitle').textContent = t('settings.reset_password') + ' — ' + username;
         // Reset requirement indicators
         document.querySelectorAll('#resetPwReqs .requirement').forEach(function(el) { el.classList.remove('met'); });
+        closeAllComboboxes();
         document.getElementById('resetPwModalOverlay').style.display = 'flex';
         setTimeout(function() { document.getElementById('resetPwInput').focus(); }, 100);
     }
