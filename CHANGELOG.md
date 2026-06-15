@@ -3,6 +3,21 @@
 All notable changes to Nibbly are documented in this file. The project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2] — 2026-06-15
+
+### Added
+- **More icon libraries**: Phosphor, Iconoir, Ionicons, Myna UI, and TDesign Icons
+  added to the Icon Library import dialog (all MIT-licensed, via Iconify).
+- **Custom icon-set picker**: replaced the native `<select>` in the import modal
+  with a custom dropdown so it renders correctly above the modal overlay in all
+  browsers.
+
+### Fixed
+- Icon-set dropdown was clipped by the modal's `overflow-y: auto` container;
+  now uses `position: fixed` so it is never cut off.
+- `nb-combobox__list` z-index raised to `--nb-z-dropdown` (1000); all modal
+  open calls now close any open combobox first.
+
 ## [1.5.1] — 2026-06-14
 
 ### Added
