@@ -21,7 +21,7 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 // Session timeout check
 if (time() - $_SESSION['admin_login_time'] > SESSION_LIFETIME) {
     session_destroy();
-    header('Location: index.php?timeout=1');
+    header('Location: index.php?timeout=' . time());
     exit;
 }
 
@@ -2364,7 +2364,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     <div class="modal-overlay" id="modalOverlay" style="display: none;" aria-hidden="true">
         <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalText">
             <h3 id="modalTitle"><?php echo t('btn.confirm'); ?></h3>
-            <p id="modalText"></p>
+            <div id="modalText" class="modal-text"></div>
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeModal()"><?php echo t('btn.cancel'); ?></button>
                 <button class="btn btn-danger" id="modalConfirm"><?php echo t('btn.confirm'); ?></button>
@@ -2613,7 +2613,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 const clone = response.clone();
                 const data = await clone.json();
                 if (data.session_expired) {
-                    window.location.href = 'index.php?timeout=1';
+                    window.location.href = 'index.php?timeout=' + Math.floor(Date.now() / 1000);
                     return response;
                 }
             } catch(e) {}
@@ -5081,7 +5081,16 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             const result = await response.json();
 
             if (result.success) {
-                alert('Backup content:\n\n' + JSON.stringify(result.data, null, 2));
+                showModal(
+                    t('backups.view'),
+                    '<pre class="backup-preview-modal">' + escapeHtml(JSON.stringify(result.data, null, 2)) + '</pre>',
+                    closeModal,
+                    {
+                        html: true,
+                        confirmText: 'Schließen',
+                        confirmClass: 'btn btn-primary'
+                    }
+                );
             } else {
                 showToast(result.message, 'error');
             }
@@ -5164,14 +5173,27 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         });
     }
 
-    function showModal(title, text, onConfirm) {
+    function showModal(title, text, onConfirm, options) {
+        options = options || {};
         closeAllComboboxes();
         document.getElementById('modalTitle').textContent = title;
-        document.getElementById('modalText').textContent = text;
+        var modalText = document.getElementById('modalText');
+        if (options.html) {
+            modalText.innerHTML = text;
+        } else {
+            modalText.textContent = text;
+        }
         document.getElementById('modalOverlay').style.display = 'flex';
         document.getElementById('modalOverlay').setAttribute('aria-hidden', 'false');
-        document.getElementById('modalConfirm').onclick = onConfirm;
-        setTimeout(() => document.getElementById('modalConfirm').focus(), 0);
+        var confirmBtn = document.getElementById('modalConfirm');
+        confirmBtn.onclick = onConfirm || closeModal;
+        if (options.confirmText) confirmBtn.textContent = options.confirmText;
+        if (options.confirmClass) confirmBtn.className = options.confirmClass;
+        if (options.hideConfirm) confirmBtn.style.display = 'none';
+        setTimeout(() => {
+            var focusTarget = options.focusSelector ? document.querySelector(options.focusSelector) : confirmBtn;
+            (focusTarget || confirmBtn).focus();
+        }, 0);
     }
 
     function closeModal() {
@@ -6943,11 +6965,37 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     }
 
     function newsInsertLink() {
-        const url = prompt('URL:', 'https://');
-        if (url) {
-            document.execCommand('createLink', false, url);
-            document.getElementById('newsContentWysiwyg').focus();
-        }
+        showModal(
+            'Link einfügen',
+            '<label class="modal-field-label" for="newsLinkUrlInput">URL</label>' +
+            '<input class="form-control" id="newsLinkUrlInput" type="url" value="https://" placeholder="https://...">',
+            function() {
+                const input = document.getElementById('newsLinkUrlInput');
+                const url = input ? input.value.trim() : '';
+                if (!url) return;
+                closeModal();
+                document.getElementById('newsContentWysiwyg').focus();
+                document.execCommand('createLink', false, url);
+            },
+            {
+                html: true,
+                confirmText: 'Einfügen',
+                confirmClass: 'btn btn-primary',
+                focusSelector: '#newsLinkUrlInput'
+            }
+        );
+        setTimeout(function() {
+            const input = document.getElementById('newsLinkUrlInput');
+            if (input) {
+                input.addEventListener('keydown', function(event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        document.getElementById('modalConfirm').click();
+                    }
+                });
+                input.select();
+            }
+        }, 0);
     }
 
     function newsInsertHeading() {
@@ -10028,8 +10076,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             applyButton.type = 'button';
             applyButton.className = 'btn btn-primary btn-sm';
             applyButton.textContent = t('ai.audit_apply');
-            applyButton.addEventListener('click', async function() {
-                if (!window.confirm(t('ai.audit_apply_confirm', { page: contentPage }))) return;
+            applyButton.addEventListener('click', function() {
+                showModal(t('ai.audit_apply'), t('ai.audit_apply_confirm', { page: contentPage }), async function() {
+                    closeModal();
                 applyButton.disabled = true;
                 try {
                     await aiAuditPost('ai-content-audit-apply', {
@@ -10042,6 +10091,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     applyButton.disabled = false;
                     showToast(error.message, 'error');
                 }
+                }, {
+                    confirmText: t('ai.audit_apply'),
+                    confirmClass: 'btn btn-primary'
+                });
             });
             actionsCell.appendChild(applyButton);
         } catch (error) {
@@ -10489,8 +10542,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     var aiImageHistoryClear = document.getElementById('aiImageHistoryClear');
     if (aiImageHistoryClear) {
-        aiImageHistoryClear.addEventListener('click', async function() {
-            if (!window.confirm(t('ai.image_history_clear_confirm'))) return;
+        aiImageHistoryClear.addEventListener('click', function() {
+            showModal(t('ai.image_history_clear'), t('ai.image_history_clear_confirm'), async function() {
+                closeModal();
             try {
                 var formData = new FormData();
                 formData.append('action', 'clear-ai-image-history');
@@ -10504,6 +10558,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             } catch (error) {
                 showToast(error.message, 'error');
             }
+            }, {
+                confirmText: t('ai.image_history_clear'),
+                confirmClass: 'btn btn-danger'
+            });
         });
     }
 
@@ -12129,39 +12187,55 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         }
 
         function restoreBackup(file) {
-            // Pick mode (full vs content) — same UI choice as the upload restore.
-            var mode = window.prompt(
-                t('settings.restore_full') + ' / ' + t('settings.restore_content')
-                + '\n\n[full] = ' + t('settings.restore_full_desc')
-                + '\n[content] = ' + t('settings.restore_content_desc')
-                + '\n\nType "full" or "content":', 'content');
-            if (mode !== 'full' && mode !== 'content') return;
+            showModal(
+                t('settings.restore_title'),
+                '<div class="modal-choice-list">' +
+                    '<label class="modal-choice">' +
+                        '<input type="radio" name="restoreMode" value="content" checked>' +
+                        '<span><strong>' + escapeHtml(t('settings.restore_content')) + '</strong><small>' + escapeHtml(t('settings.restore_content_desc')) + '</small></span>' +
+                    '</label>' +
+                    '<label class="modal-choice">' +
+                        '<input type="radio" name="restoreMode" value="full">' +
+                        '<span><strong>' + escapeHtml(t('settings.restore_full')) + '</strong><small>' + escapeHtml(t('settings.restore_full_desc')) + '</small></span>' +
+                    '</label>' +
+                '</div>',
+                function() {
+                    var selected = document.querySelector('input[name="restoreMode"]:checked');
+                    var mode = selected ? selected.value : 'content';
+                    closeModal();
 
-            var warningKey = mode === 'full'
-                ? 'settings.backup_restore_pool_warning_full'
-                : 'settings.backup_restore_pool_warning_content';
+                    var warningKey = mode === 'full'
+                        ? 'settings.backup_restore_pool_warning_full'
+                        : 'settings.backup_restore_pool_warning_content';
 
-            showModal(t('settings.restore_title'), t(warningKey), async function() {
-                closeModal();
-                try {
-                    var fd = new FormData();
-                    fd.append('action', 'restore-site-backup');
-                    fd.append('csrf_token', CSRF_TOKEN);
-                    fd.append('restore_mode', mode);
-                    fd.append('pool_file', file);
-                    var res = await fetch('api.php', { method: 'POST', body: fd });
-                    var json = await res.json();
-                    if (json.success) {
-                        var toastKey = mode === 'full' ? 'toast.restore_success_full' : 'toast.restore_success_content';
-                        showToast(t(toastKey, { extracted: json.data.extracted }), 'success');
-                        setTimeout(function() { location.reload(); }, 2000);
-                    } else {
-                        showToast(t('toast.restore_failed', { message: json.message }), 'error');
-                    }
-                } catch (err) {
-                    showToast(t('toast.restore_failed', { message: err.message || String(err) }), 'error');
+                    showModal(t('settings.restore_title'), t(warningKey), async function() {
+                        closeModal();
+                        try {
+                            var fd = new FormData();
+                            fd.append('action', 'restore-site-backup');
+                            fd.append('csrf_token', CSRF_TOKEN);
+                            fd.append('restore_mode', mode);
+                            fd.append('pool_file', file);
+                            var res = await fetch('api.php', { method: 'POST', body: fd });
+                            var json = await res.json();
+                            if (json.success) {
+                                var toastKey = mode === 'full' ? 'toast.restore_success_full' : 'toast.restore_success_content';
+                                showToast(t(toastKey, { extracted: json.data.extracted }), 'success');
+                                setTimeout(function() { location.reload(); }, 2000);
+                            } else {
+                                showToast(t('toast.restore_failed', { message: json.message }), 'error');
+                            }
+                        } catch (err) {
+                            showToast(t('toast.restore_failed', { message: err.message || String(err) }), 'error');
+                        }
+                    });
+                },
+                {
+                    html: true,
+                    confirmText: t('settings.restore_title'),
+                    confirmClass: 'btn btn-primary'
                 }
-            });
+            );
         }
 
         function deleteBackup(file) {

@@ -3326,6 +3326,67 @@ svg.topbar-logo {
     font-weight: 600;
 }
 
+.modal-text {
+    color: var(--nb-text);
+    line-height: 1.5;
+}
+
+.backup-preview-modal {
+    background: var(--nb-bg, #f8fafc);
+    border: 1px solid var(--nb-border, #d9e5e5);
+    border-radius: var(--nb-radius-sm, 6px);
+    color: var(--nb-text, #1f2937);
+    font-size: 0.82rem;
+    line-height: 1.45;
+    max-height: min(56vh, 520px);
+    overflow: auto;
+    padding: var(--nb-space-4, 1rem);
+    text-align: left;
+    white-space: pre-wrap;
+}
+
+.modal-field-label {
+    color: var(--nb-text, #374151);
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: var(--nb-space-2, 0.45rem);
+    text-align: left;
+}
+
+.modal-choice-list {
+    display: grid;
+    gap: var(--nb-space-3, 0.75rem);
+    text-align: left;
+}
+
+.modal-choice {
+    align-items: flex-start;
+    border: 1px solid var(--nb-border, #d9e5e5);
+    border-radius: var(--nb-radius-sm, 8px);
+    cursor: pointer;
+    display: flex;
+    gap: var(--nb-space-3, 0.75rem);
+    padding: var(--nb-space-3, 0.85rem);
+}
+
+.modal-choice input {
+    margin-top: 0.15rem;
+}
+
+.modal-choice strong {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 0.2rem;
+}
+
+.modal-choice small {
+    color: var(--nb-text-muted, #6b7280);
+    display: block;
+    font-size: 0.82rem;
+    line-height: 1.35;
+}
+
 .modal-actions {
     display: flex;
     gap: var(--nb-space-2);

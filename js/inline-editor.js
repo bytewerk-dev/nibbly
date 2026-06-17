@@ -24,7 +24,7 @@
                     const clone = response.clone();
                     const data = await clone.json();
                     if (data.session_expired) {
-                        window.location.href = '/admin/index.php?timeout=1';
+                        window.location.href = '/admin/index.php?timeout=' + Math.floor(Date.now() / 1000);
                         return response;
                     }
                 } catch(e) {}
@@ -819,6 +819,37 @@
         }
     }
 
+    function showEditorConfirm(message, onConfirm) {
+        const overlay = document.createElement('div');
+        overlay.className = 'nibbly-editor-confirm';
+        overlay.innerHTML =
+            '<div class="nibbly-editor-confirm__dialog" role="dialog" aria-modal="true">' +
+                '<h3>Bearbeitungsmodus verlassen?</h3>' +
+                '<p></p>' +
+                '<div class="nibbly-editor-confirm__actions">' +
+                    '<button type="button" class="nibbly-editor-confirm__btn nibbly-editor-confirm__btn--secondary" data-action="cancel">Abbrechen</button>' +
+                    '<button type="button" class="nibbly-editor-confirm__btn nibbly-editor-confirm__btn--primary" data-action="confirm">Fortfahren</button>' +
+                '</div>' +
+            '</div>';
+        overlay.querySelector('p').textContent = message || '';
+        const style = document.createElement('style');
+        style.textContent = '.nibbly-editor-confirm{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:rgba(17,24,39,.55);padding:20px}.nibbly-editor-confirm__dialog{width:min(430px,100%);background:#fff;border-radius:10px;box-shadow:0 18px 60px rgba(15,23,42,.25);padding:22px}.nibbly-editor-confirm__dialog h3{margin:0 0 10px;font-size:20px}.nibbly-editor-confirm__dialog p{margin:0 0 18px;color:#374151;line-height:1.45}.nibbly-editor-confirm__actions{display:flex;gap:10px;justify-content:flex-end}.nibbly-editor-confirm__btn{border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font:inherit;padding:9px 14px}.nibbly-editor-confirm__btn--primary{background:#5aa6a6;border-color:#5aa6a6;color:#fff}.nibbly-editor-confirm__btn--secondary{background:#fff;color:#111827}';
+        overlay.appendChild(style);
+        function close() {
+            overlay.remove();
+        }
+        overlay.addEventListener('click', function(event) {
+            const action = event.target && event.target.getAttribute('data-action');
+            if (action === 'cancel' || event.target === overlay) close();
+            if (action === 'confirm') {
+                close();
+                onConfirm();
+            }
+        });
+        document.body.appendChild(overlay);
+        overlay.querySelector('[data-action="confirm"]').focus();
+    }
+
     function navClickGuard(e) {
         if (!EditorConfig.editMode) return;
 
@@ -856,11 +887,11 @@
             ? t('nav.unsaved_changes')
             : t('nav.edit_mode_active');
 
-        if (confirm(message)) {
+        showEditorConfirm(message, function() {
             window.removeEventListener('beforeunload', beforeUnloadGuard);
             document.removeEventListener('click', navClickGuard, true);
             window.location.href = link.href;
-        }
+        });
     }
 
     function enterEditMode() {
@@ -3670,6 +3701,17 @@
         const sectionEl = document.querySelector('.editable-section[data-section-index="' + index + '"]');
         if (!sectionEl) return;
         const type = section.type === 'project' ? 'card' : section.type;
+        const fieldSelector = (field) => `[data-field="sections.${index}.${field}"]`;
+        const replaceHeadingTag = (fieldEl, tagName) => {
+            if (!fieldEl || !tagName) return fieldEl;
+            const current = fieldEl.parentElement;
+            if (!current || !/^H[1-6]$/.test(current.tagName) || current.tagName.toLowerCase() === tagName) return fieldEl;
+            const replacement = document.createElement(tagName);
+            replacement.innerHTML = current.innerHTML;
+            Array.from(current.attributes).forEach(attr => replacement.setAttribute(attr.name, attr.value));
+            current.replaceWith(replacement);
+            return replacement.querySelector('[data-field]') || replacement;
+        };
 
         switch (type) {
             case 'image': {
@@ -3683,17 +3725,17 @@
                 break;
             }
             case 'heading': {
-                const heading = sectionEl.querySelector('.block-heading h1, .block-heading h2, .block-heading h3, .block-heading h4, .block-heading h5, .block-heading h6');
-                if (heading && section.text) heading.textContent = section.text;
-                const sub = sectionEl.querySelector('.block-heading__subtitle');
-                if (sub) sub.textContent = section.subtitle || '';
+                const textField = replaceHeadingTag(sectionEl.querySelector(fieldSelector('text')), section.level || 'h2');
+                if (textField) textField.textContent = section.text || '';
+                const subtitleField = sectionEl.querySelector(fieldSelector('subtitle'));
+                if (subtitleField) subtitleField.textContent = section.subtitle || '';
                 break;
             }
             case 'text': {
-                const titleEl = sectionEl.querySelector('.block-text h1, .block-text h2, .block-text h3, .block-text h4');
-                if (titleEl && section.title) titleEl.textContent = section.title;
-                const contentEl = sectionEl.querySelector('.block-text__content');
-                if (contentEl && section.content !== undefined) contentEl.innerHTML = section.content;
+                const titleField = replaceHeadingTag(sectionEl.querySelector(fieldSelector('title')), section.titleTag || 'h2');
+                if (titleField) titleField.textContent = section.title || '';
+                const contentField = sectionEl.querySelector(fieldSelector('content'));
+                if (contentField && section.content !== undefined) contentField.innerHTML = section.content;
                 break;
             }
             case 'quote': {

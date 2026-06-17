@@ -138,7 +138,7 @@ input.modal-input {
 
 .nb-select__list {
     position: fixed;
-    z-index: 10010;
+    z-index: calc(var(--nb-z-modal, 20000) + 100);
     min-width: 140px;
     max-width: min(420px, calc(100vw - 24px));
     overflow-y: auto;
