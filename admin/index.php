@@ -27,6 +27,8 @@ session_start();
 
 $error = '';
 $lockoutWait = 0; // seconds remaining for countdown
+$timeoutNoticeTimestamp = isset($_GET['timeout']) ? (int)$_GET['timeout'] : 0;
+$showTimeoutNotice = $timeoutNoticeTimestamp > 0 && abs(time() - $timeoutNoticeTimestamp) <= 120;
 
 // ============================================================
 // BRUTE FORCE PROTECTION (IP-based, file-backed)
@@ -685,7 +687,7 @@ $loginBoxStyleAttr = $loginBoxVariables
 
         <?php else: ?>
             <!-- Normal Login Form -->
-            <?php if (isset($_GET['timeout'])): ?>
+            <?php if ($showTimeoutNotice): ?>
                 <div class="info-message"><?php echo t('login.session_expired'); ?></div>
             <?php endif; ?>
             <?php if ($error): ?>
@@ -740,6 +742,16 @@ $loginBoxStyleAttr = $loginBoxVariables
         }
     })();
     </script>
+    <?php if (isset($_GET['timeout'])): ?>
+    <script>
+    (function() {
+        if (!window.history || !window.history.replaceState) return;
+        var url = new URL(window.location.href);
+        url.searchParams.delete('timeout');
+        window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+    })();
+    </script>
+    <?php endif; ?>
 
     <?php if ($lockoutWait > 0): ?>
     <script>

@@ -3,6 +3,26 @@
 All notable changes to Nibbly are documented in this file. The project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.3] — 2026-06-17
+
+### Changed
+- Replaced remaining native browser `alert()`, `confirm()`, and `prompt()`
+  flows in dashboard/editor UI with Nibbly modal dialogs, including backup
+  previews, WYSIWYG link insertion, AI audit confirmation, image history
+  clearing, backup restore mode selection, image-manager confirmation fallback,
+  and the visual editor navigation guard.
+- Extended the shared dashboard confirmation modal so it can safely render
+  structured form and preview content, while preserving the existing text-only
+  confirm behavior.
+- Standard JSON pages continue to render through the shared header/footer and
+  global style pipeline so site navigation, footer, fonts, colors, and theme
+  variables stay consistent with the homepage.
+- Editor dropdowns, inline editor modal saves, editor toasts, and stale login
+  timeout notices now use the shared Nibbly UI behavior: dropdowns render above
+  modals, section edits patch the DOM immediately after modal save, toasts use
+  the top-right branded placement, and old `?timeout=...` URLs no longer show a
+  stale session-expired notice.
+
 ## [1.5.2] — 2026-06-15
 
 ### Added

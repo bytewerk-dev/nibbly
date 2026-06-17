@@ -129,9 +129,41 @@
     function confirmAction(title, message, onYes) {
         if (typeof config.showConfirm === 'function') {
             config.showConfirm(title, message, onYes);
-        } else if (window.confirm((title ? title + '\n\n' : '') + message)) {
-            onYes();
+        } else {
+            showFallbackConfirm(title, message, onYes);
         }
+    }
+
+    function showFallbackConfirm(title, message, onYes) {
+        var overlay = document.createElement('div');
+        overlay.className = 'nibbly-dialog-overlay';
+        overlay.innerHTML =
+            '<div class="nibbly-dialog" role="dialog" aria-modal="true">' +
+                '<h3></h3>' +
+                '<p></p>' +
+                '<div class="nibbly-dialog__actions">' +
+                    '<button type="button" class="nibbly-dialog__btn nibbly-dialog__btn--secondary" data-action="cancel">Abbrechen</button>' +
+                    '<button type="button" class="nibbly-dialog__btn nibbly-dialog__btn--primary" data-action="confirm">Bestätigen</button>' +
+                '</div>' +
+            '</div>';
+        overlay.querySelector('h3').textContent = title || 'Bestätigen';
+        overlay.querySelector('p').textContent = message || '';
+        var style = document.createElement('style');
+        style.textContent = '.nibbly-dialog-overlay{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:rgba(17,24,39,.55);padding:20px}.nibbly-dialog{width:min(420px,100%);background:#fff;border-radius:10px;box-shadow:0 18px 60px rgba(15,23,42,.25);padding:22px}.nibbly-dialog h3{margin:0 0 10px;font-size:20px}.nibbly-dialog p{margin:0 0 18px;color:#374151;line-height:1.45}.nibbly-dialog__actions{display:flex;gap:10px;justify-content:flex-end}.nibbly-dialog__btn{border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font:inherit;padding:9px 14px}.nibbly-dialog__btn--primary{background:#5aa6a6;border-color:#5aa6a6;color:#fff}.nibbly-dialog__btn--secondary{background:#fff;color:#111827}';
+        overlay.appendChild(style);
+        function close() {
+            overlay.remove();
+        }
+        overlay.addEventListener('click', function(event) {
+            var action = event.target && event.target.getAttribute('data-action');
+            if (action === 'cancel' || event.target === overlay) close();
+            if (action === 'confirm') {
+                close();
+                onYes();
+            }
+        });
+        document.body.appendChild(overlay);
+        overlay.querySelector('[data-action="confirm"]').focus();
     }
 
     function getActiveUploadType() {

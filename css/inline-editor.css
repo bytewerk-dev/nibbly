@@ -1328,10 +1328,10 @@ textarea.editor-html {
 
 .editor-toast {
     position: fixed;
-    bottom: 20px;
+    top: 56px;
     right: 20px;
     padding: 12px 20px;
-    border-radius: 4px;
+    border-radius: var(--editor-btn-radius, 6px);
     color: white;
     font-size: 14px;
     z-index: 30000;
@@ -1340,7 +1340,7 @@ textarea.editor-html {
 }
 
 .editor-toast-success {
-    background: var(--editor-success, #2563eb);
+    background: var(--editor-primary, var(--editor-success, #2563eb));
 }
 
 .editor-toast-error {
@@ -1349,11 +1349,11 @@ textarea.editor-html {
 
 @keyframes slideInToast {
     from {
-        transform: translateX(100%);
+        transform: translateY(-10px);
         opacity: 0;
     }
     to {
-        transform: translateX(0);
+        transform: translateY(0);
         opacity: 1;
     }
 }
