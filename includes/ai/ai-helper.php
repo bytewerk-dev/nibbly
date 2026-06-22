@@ -1579,10 +1579,12 @@ function nibblyAiGenerateOpenRouterImages(array $settings, array $options): arra
 }
 
 function nibblyAiBuildOpenRouterImageBody(array $options): array {
+    $model = nibblyAiNormalizeOpenRouterImageModel((string)$options['model']);
     $imageConfig = nibblyAiOpenRouterImageConfig(
         (string)($options['size'] ?? 'auto'),
         (string)($options['aspectRatio'] ?? 'auto'),
-        $options['imageScale'] ?? null
+        $options['imageScale'] ?? null,
+        $model
     );
     $prompt = substr((string)($options['prompt'] ?? ''), 0, 8000);
     $hasReference = !empty($options['referencePaths']);
@@ -1610,7 +1612,7 @@ function nibblyAiBuildOpenRouterImageBody(array $options): array {
     }
 
     $body = [
-        'model' => nibblyAiNormalizeOpenRouterImageModel((string)$options['model']),
+        'model' => $model,
         'messages' => [
             ['role' => 'user', 'content' => $content]
         ],
@@ -1625,13 +1627,14 @@ function nibblyAiBuildOpenRouterImageBody(array $options): array {
     return $body;
 }
 
-function nibblyAiOpenRouterImageConfig(string $size, string $aspectRatio = 'auto', $imageScale = null): array {
+function nibblyAiOpenRouterImageConfig(string $size, string $aspectRatio = 'auto', $imageScale = null, string $model = ''): array {
     $config = [];
     $aspectRatio = nibblyAiCleanAspectRatio($aspectRatio);
+    $maxImageScale = nibblyAiOpenRouterImageModelMaxScale($model);
     if ($aspectRatio !== 'auto') {
         [$rw, $rh] = array_map('intval', explode(':', $aspectRatio, 2));
         $config['aspect_ratio'] = nibblyAiNearestOpenRouterAspectRatio($rw, $rh);
-        $scale = nibblyAiClampInt($imageScale ?? 2048, 1024, 3840);
+        $scale = nibblyAiClampInt($imageScale ?? 2048, 1024, $maxImageScale);
         $config['image_size'] = $scale <= 1024 ? '1K' : ($scale <= 2048 ? '2K' : '4K');
         return $config;
     }
@@ -1640,10 +1643,18 @@ function nibblyAiOpenRouterImageConfig(string $size, string $aspectRatio = 'auto
         $height = max(1, (int)$m[2]);
         $gcd = nibblyAiGcd($width, $height);
         $config['aspect_ratio'] = nibblyAiNearestOpenRouterAspectRatio((int)($width / $gcd), (int)($height / $gcd));
-        $longEdge = max($width, $height);
+        $longEdge = min(max($width, $height), $maxImageScale);
         $config['image_size'] = $longEdge <= 1024 ? '1K' : ($longEdge <= 2048 ? '2K' : '4K');
     }
     return $config;
+}
+
+function nibblyAiOpenRouterImageModelMaxScale(string $model): int {
+    $model = nibblyAiNormalizeOpenRouterImageModel($model);
+    if (preg_match('/(^|\/)gpt-5\.4-image-2(?:$|-)|^gpt-image-2(?:$|-)/i', $model)) {
+        return 2048;
+    }
+    return 3840;
 }
 
 function nibblyAiCleanAspectRatio(string $ratio): string {

@@ -64,6 +64,7 @@ function parseFooterShortcodes($text) {
 $copyrightHtml = parseFooterShortcodes($copyrightRaw);
 $_footerGithub = 'https://github.com/bytewerk-dev/nibbly';
 $_adminAccessBase = ($basePath === '' ? '/admin/' : rtrim($basePath, '/') . '/admin/');
+$_adminAccessBaseJson = json_encode($_adminAccessBase, JSON_UNESCAPED_SLASHES);
 $_footerLabels = [
     'docs' => ['en' => 'Docs', 'de' => 'Dokumentation', 'es' => 'Docs'],
     'privacy' => ['en' => 'Privacy', 'de' => 'Datenschutz', 'es' => 'Privacidad'],
@@ -500,7 +501,9 @@ $_footerSummary = [
             e.preventDefault();
             e.stopPropagation();
             if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
-            window.location.assign(<?php echo json_encode($_adminAccessBase, JSON_UNESCAPED_SLASHES); ?>);
+            const adminUrl = new URL(<?php echo $_adminAccessBaseJson; ?>, window.location.origin);
+            adminUrl.searchParams.set('redirect', window.location.pathname + window.location.search + window.location.hash);
+            window.location.assign(adminUrl.toString());
         };
         document.addEventListener('click', function(e) {
             const adminAccess = e.target && e.target.closest ? e.target.closest('#adminAccess') : null;
@@ -718,6 +721,7 @@ $_footerSummary = [
     window.NB_AI_COPILOT_AVAILABLE = <?php echo json_encode($_aiCopilotAvailable); ?>;
     window.NB_AI_ASSISTANT_LANGUAGE = <?php echo json_encode(function_exists('_nbAdminLang') ? _nbAdminLang() : ($currentLang ?? (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en'))); ?>;
     window.NB_ADMIN_API_URL = <?php echo json_encode($basePath . 'admin/api.php', JSON_UNESCAPED_SLASHES); ?>;
+    window.NB_ADMIN_BASE_URL = <?php echo $_adminAccessBaseJson; ?>;
     <?php
     // Build lightweight page list for link picker (slug → title for current language)
     $_linkPages = [];

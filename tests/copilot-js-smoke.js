@@ -203,7 +203,9 @@ assertContains(footer, '!empty($_aiPublicSettings[\'hasApiKey\'])', 'Footer shou
 assertContains(footer, '!empty($_aiPublicSettings[\'features\'][\'backendAssistant\'])', 'Footer should require backendAssistant before loading Copilot.');
 assertContains(footer, "$_aiPublicSettings['assistantSurfaces']['visualEditor']", 'Footer should respect the Visual Editor Assistant visibility setting.');
 assertContains(footer, "document.addEventListener('click', function(e) {\n            const adminAccess = e.target && e.target.closest ? e.target.closest('#adminAccess') : null;", 'Footer hidden admin access should use delegated click handling so inline-editor rerenders do not lose the handler.');
-assertContains(footer, "window.location.assign(<?php echo json_encode($_adminAccessBase", 'Footer hidden admin access should go directly to /admin/ without redirecting back to the current page.');
+assertContains(footer, "adminUrl.searchParams.set('redirect', window.location.pathname + window.location.search + window.location.hash);", 'Footer hidden admin access should preserve the source page for post-login redirects.');
+assertContains(footer, 'window.NB_ADMIN_BASE_URL', 'Footer should expose a base-path-aware admin base URL.');
+assertContains(inlineEditor, "logoutUrl.searchParams.set('redirect', window.location.pathname + window.location.search + window.location.hash);", 'Frontend admin bar logout should preserve the current page.');
 assertContains(footer, 'window.NB_AI_FEATURES_ENABLED', 'Footer should expose AI module availability to JS.');
 assertContains(footer, 'window.NB_AI_COPILOT_AVAILABLE', 'Footer should expose Copilot availability to JS.');
 assertContains(footer, 'window.NB_AI_ASSISTANT_LANGUAGE', 'Footer should expose the active admin language to the Assistant.');

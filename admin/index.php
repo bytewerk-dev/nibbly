@@ -227,6 +227,9 @@ function validateRedirectUrl($url) {
     }
 
     $parsed = parse_url($url);
+    if ($parsed === false) {
+        return '/';
+    }
 
     // Only allow relative URLs or URLs to own domain
     if (isset($parsed['host'])) {
@@ -237,7 +240,8 @@ function validateRedirectUrl($url) {
     }
 
     // Don't redirect back to admin area
-    if (strpos($url, '/admin/') !== false) {
+    $path = $parsed['path'] ?? '';
+    if ($path === '/admin' || strpos($path, '/admin/') === 0) {
         return '/';
     }
 
@@ -249,7 +253,7 @@ function validateRedirectUrl($url) {
 // ============================================================
 
 if (isset($_GET['logout'])) {
-    $redirect = validateRedirectUrl($_SERVER['HTTP_REFERER'] ?? '/');
+    $redirect = validateRedirectUrl($_GET['redirect'] ?? ($_SERVER['HTTP_REFERER'] ?? '/'));
     session_destroy();
     header('Location: ' . $redirect);
     exit;
