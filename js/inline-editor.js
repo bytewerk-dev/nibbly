@@ -715,6 +715,10 @@
         const contentEditorHref = EditorConfig.isNewsPost
             ? '/admin/dashboard.php?tab=news&post=' + encodeURIComponent(EditorConfig.newsPostId || '')
             : '/admin/dashboard#page/' + encodeURIComponent(EditorConfig.currentPage || '');
+        const adminBaseUrl = window.NB_ADMIN_BASE_URL || '/admin/';
+        const logoutUrl = new URL(adminBaseUrl, window.location.origin);
+        logoutUrl.searchParams.set('logout', '1');
+        logoutUrl.searchParams.set('redirect', window.location.pathname + window.location.search + window.location.hash);
         const seoHtml = `
             <a class="admin-bar-seo admin-bar-seo--${escHtml(seoHealth.status || 'yellow')}" href="${contentEditorHref}" aria-label="${escHtml(seoA11yLabel)}">
                 <span class="admin-bar-seo-dot" aria-hidden="true"></span>
@@ -749,6 +753,9 @@
                         <button type="button" class="admin-bar-btn admin-bar-btn-save" id="admin-btn-save">
                             ${Icons.save} ${t('save')}
                         </button>
+                        <button type="button" class="admin-bar-btn admin-bar-btn-save admin-bar-btn-save-exit" id="admin-btn-save-exit">
+                            ${Icons.save} ${t('save_exit')}
+                        </button>
                     </div>
                     <div class="admin-bar-actions">
                         <button type="button" class="admin-bar-btn admin-bar-btn-edit" id="admin-btn-edit">
@@ -761,7 +768,7 @@
                 </div>
                 <div class="admin-bar-right">
                     ${seoHtml}
-                    <a href="/admin/?logout=1" class="admin-bar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg> ${t('logout')}</a>
+                    <a href="${logoutUrl.toString()}" class="admin-bar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg> ${t('logout')}</a>
                 </div>
             </div>
         `;
@@ -770,7 +777,8 @@
 
         // Button Event Listeners
         document.getElementById('admin-btn-edit').addEventListener('click', enterEditMode);
-        document.getElementById('admin-btn-save').addEventListener('click', saveAllChanges);
+        document.getElementById('admin-btn-save').addEventListener('click', () => saveAllChanges({ exitAfterSave: false }));
+        document.getElementById('admin-btn-save-exit').addEventListener('click', () => saveAllChanges({ exitAfterSave: true }));
         document.getElementById('admin-btn-cancel').addEventListener('click', () => exitEditMode(false));
         document.getElementById('admin-btn-undo').addEventListener('click', undo);
         document.getElementById('admin-btn-redo').addEventListener('click', redo);
@@ -794,16 +802,15 @@
     function updateUndoRedoButtons() {
         const undoBtn = document.getElementById('admin-btn-undo');
         const redoBtn = document.getElementById('admin-btn-redo');
-        const saveBtn = document.getElementById('admin-btn-save');
         if (undoBtn) undoBtn.disabled = EditorConfig.undoStack.length === 0;
         if (redoBtn) redoBtn.disabled = EditorConfig.redoStack.length === 0;
-        if (saveBtn) {
+        document.querySelectorAll('#admin-btn-save, #admin-btn-save-exit').forEach(saveBtn => {
             if (EditorConfig.dirtyPages.size > 0) {
                 saveBtn.classList.add('has-changes');
             } else {
                 saveBtn.classList.remove('has-changes');
             }
-        }
+        });
     }
 
     // ============================================================
@@ -901,7 +908,7 @@
         EditorConfig.undoStack = [];
         EditorConfig.redoStack = [];
 
-        document.body.classList.add('edit-mode-active');
+        document.body.classList.add('edit-mode-active', 'visual-editing');
         updateAdminBarMode(true);
         updateUndoRedoButtons();
 
@@ -921,7 +928,7 @@
     function exitEditMode(save) {
         if (save) {
             // saveAllChanges handles the exit after successful save
-            saveAllChanges();
+            saveAllChanges({ exitAfterSave: true });
             return;
         }
 
@@ -934,7 +941,8 @@
         document.removeEventListener('keydown', handleEditModeKeyboard);
         window.removeEventListener('beforeunload', beforeUnloadGuard);
         document.removeEventListener('click', navClickGuard, true);
-        document.body.classList.remove('edit-mode-active');
+        cleanupActiveEditorState();
+        document.body.classList.remove('edit-mode-active', 'visual-editing');
         updateAdminBarMode(false);
 
         // Disable news post editing
@@ -951,7 +959,8 @@
         }
     }
 
-    async function saveAllChanges() {
+    async function saveAllChanges(options = {}) {
+        const exitAfterSave = options.exitAfterSave === true;
         flushActiveInlineEdits();
 
         // For news posts, check if the news post data is dirty
@@ -960,14 +969,23 @@
 
         if (EditorConfig.dirtyPages.size === 0) {
             showToast(t('toast.no_changes'), 'info');
-            exitEditModeClean();
+            if (exitAfterSave) {
+                exitEditModeClean();
+            } else {
+                markSavedStateClean();
+            }
             return;
         }
 
-        const saveBtn = document.getElementById('admin-btn-save');
-        if (saveBtn) {
+        const saveButtons = Array.from(document.querySelectorAll('#admin-btn-save, #admin-btn-save-exit'));
+        saveButtons.forEach(saveBtn => {
             saveBtn.disabled = true;
-            saveBtn.textContent = t('saving');
+        });
+        const activeSaveBtn = exitAfterSave
+            ? document.getElementById('admin-btn-save-exit')
+            : document.getElementById('admin-btn-save');
+        if (activeSaveBtn) {
+            activeSaveBtn.textContent = exitAfterSave ? t('saving_exit') : t('saving');
         }
 
         try {
@@ -1036,19 +1054,38 @@
 
             if (allSuccess) {
                 showToast(t('toast.saved'), 'success');
-                exitEditModeClean();
-                // Reload to ensure server-rendered HTML matches saved data
-                setTimeout(() => location.reload(), 500);
+                if (exitAfterSave) {
+                    exitEditModeClean();
+                    // Reload to ensure server-rendered HTML matches saved data
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    markSavedStateClean();
+                }
             }
         } catch (error) {
             console.error('Save all error:', error);
             showToast(t('toast.error_saving_short'), 'error');
         } finally {
-            if (saveBtn) {
+            saveButtons.forEach(saveBtn => {
                 saveBtn.disabled = false;
-                saveBtn.innerHTML = Icons.save + ' ' + t('save');
+            });
+            const keepEditingSaveBtn = document.getElementById('admin-btn-save');
+            if (keepEditingSaveBtn) {
+                keepEditingSaveBtn.innerHTML = Icons.save + ' ' + t('save');
+            }
+            const exitSaveBtn = document.getElementById('admin-btn-save-exit');
+            if (exitSaveBtn) {
+                exitSaveBtn.innerHTML = Icons.save + ' ' + t('save_exit');
             }
         }
+    }
+
+    function markSavedStateClean() {
+        EditorConfig.originalPageData = JSON.parse(JSON.stringify(EditorConfig.contentData));
+        EditorConfig.dirtyPages = new Set();
+        EditorConfig.undoStack = [];
+        EditorConfig.redoStack = [];
+        updateUndoRedoButtons();
     }
 
     function flushActiveInlineEdits() {
@@ -1073,8 +1110,30 @@
         document.removeEventListener('keydown', handleEditModeKeyboard);
         window.removeEventListener('beforeunload', beforeUnloadGuard);
         document.removeEventListener('click', navClickGuard, true);
-        document.body.classList.remove('edit-mode-active');
+        cleanupActiveEditorState();
+        document.body.classList.remove('edit-mode-active', 'visual-editing');
         updateAdminBarMode(false);
+    }
+
+    function cleanupActiveEditorState() {
+        if (activeHtmlField && activeHtmlField.isContentEditable) {
+            finishInlineHtmlEdit(activeHtmlField, activeHtmlField._originalHtml || '', false);
+        }
+        activeHtmlField = null;
+        document.querySelectorAll('.editable-field-editing').forEach(field => {
+            field.contentEditable = 'false';
+            field.classList.remove('editable-field-editing');
+        });
+        document.querySelectorAll('.is-overlay-active').forEach(el => {
+            el.classList.remove('is-overlay-active');
+        });
+        document.querySelectorAll('.nb-copilot-selected-field').forEach(el => {
+            el.classList.remove('nb-copilot-selected-field');
+        });
+        const toolbar = document.getElementById('inline-editor-toolbar');
+        if (toolbar) {
+            toolbar.hidden = true;
+        }
     }
 
     // --- Undo / Redo ---
@@ -1299,14 +1358,21 @@
     // --- Keyboard shortcuts ---
 
     function handleEditModeKeyboard(e) {
+        if (e.defaultPrevented) return;
         if (!EditorConfig.editMode) return;
-
-        // Don't intercept when in input/textarea/contenteditable
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-        if (e.target.isContentEditable) return;
 
         const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
         const ctrlKey = isMac ? e.metaKey : e.ctrlKey;
+
+        if (ctrlKey && (e.key === 's' || e.key === 'S')) {
+            e.preventDefault();
+            saveAllChanges();
+            return;
+        }
+
+        // Don't intercept undo/redo while typing in input/textarea/contenteditable.
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        if (e.target.isContentEditable) return;
 
         if (ctrlKey && !e.shiftKey && e.key === 'z') {
             e.preventDefault();
@@ -1314,9 +1380,6 @@
         } else if (ctrlKey && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
             e.preventDefault();
             redo();
-        } else if (ctrlKey && (e.key === 's' || e.key === 'S')) {
-            e.preventDefault();
-            saveAllChanges();
         }
     }
 
@@ -2925,7 +2988,7 @@
         attachListEditHandlers();
 
         if (EditorConfig.editMode) {
-            document.body.classList.add('edit-mode-active');
+            document.body.classList.add('edit-mode-active', 'visual-editing');
         }
 
         const focused = newArea.querySelectorAll('.editable-section')[focusIndex];
