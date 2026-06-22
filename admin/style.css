@@ -45,7 +45,7 @@ a:hover {
     place-items: center;
     min-height: 100vh;
     background:
-        radial-gradient(ellipse at 50% 0%, var(--nb-brand-subtle) 0%, transparent 70%),
+        radial-gradient(ellipse at 50% 0%, var(--nb-primary-subtle) 0%, transparent 70%),
         var(--nb-bg);
 }
 
@@ -6321,6 +6321,11 @@ input.color-hex-input,
     white-space: nowrap;
 }
 
+.password-requirements--compact .requirement::before {
+    content: none;
+    margin-right: 0;
+}
+
 .password-requirements--compact .requirement.met {
     background: var(--nb-success-subtle);
 }
@@ -7763,44 +7768,19 @@ input.color-hex-input,
 #aiImageForm {
     display: grid;
     grid-template-columns: minmax(320px, 1.2fr) minmax(320px, 1fr);
-    gap: 12px 18px;
+    gap: 6px 18px;
     align-items: start;
 }
 
-#aiImagePrompt,
-#aiImageForm .ai-image-command-row,
-#aiImageForm .ai-reference-list,
-#aiImageForm .ai-image-filename-group {
-    grid-column: 1;
+.ai-image-column {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 6px;
 }
 
-#aiImageForm .ai-image-model-picker-row,
-#aiImageForm .ai-image-options-grid--primary,
-#aiImageForm .ai-image-size-note,
-#aiImageForm .ai-image-options-grid--secondary,
-#aiImageForm .ai-image-generate-row,
-#aiImageForm .ai-image-model-note {
-    grid-column: 2;
-}
-
-#aiImageForm .ai-image-model-picker-row {
-    grid-row: 1;
-}
-
-#aiImageForm .ai-image-options-grid--primary {
-    grid-row: 2;
-}
-
-#aiImageForm .ai-image-size-note {
-    grid-row: 3;
-}
-
-#aiImageForm .ai-image-options-grid--secondary {
-    grid-row: 4;
-}
-
-#aiImageForm .ai-image-generate-row {
-    grid-row: 5;
+#aiImageForm .form-group {
+    margin-bottom: 0;
 }
 
 #aiAuditRun {
@@ -7811,7 +7791,7 @@ input.color-hex-input,
 .ai-image-options-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    gap: 8px 12px;
     align-items: end;
 }
 
@@ -7863,7 +7843,7 @@ input.color-hex-input,
     justify-content: space-between;
     gap: 12px;
     flex-wrap: wrap;
-    padding: 2px 0;
+    padding: 0;
 }
 
 .ai-reference-control {
@@ -8169,7 +8149,7 @@ input.color-hex-input,
 }
 
 .ai-image-size-note {
-    margin: -10px 0 2px;
+    margin: 2px 0 2px;
     color: var(--nb-text-muted, #737373);
     font-size: 0.78rem;
     line-height: 1.35;
@@ -9154,20 +9134,6 @@ input.color-hex-input,
 
     #aiImageForm {
         grid-template-columns: 1fr;
-    }
-
-    #aiImagePrompt,
-    #aiImageForm .ai-image-command-row,
-    #aiImageForm .ai-reference-list,
-    #aiImageForm .ai-image-filename-group,
-    #aiImageForm .ai-image-model-picker-row,
-    #aiImageForm .ai-image-options-grid--primary,
-    #aiImageForm .ai-image-size-note,
-    #aiImageForm .ai-image-options-grid--secondary,
-    #aiImageForm .ai-image-generate-row,
-    #aiImageForm .ai-image-model-note {
-        grid-column: 1;
-        grid-row: auto;
     }
 
     .ai-image-options-grid {

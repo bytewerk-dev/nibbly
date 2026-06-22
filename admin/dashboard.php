@@ -38,7 +38,7 @@ $isAdminUser = ($userRole === 'admin');
 
 // Load settings for theme
 $_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg';
-$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => ['adminTheme' => 'dark', 'primaryColor' => '#3858e9', 'accentColor' => '#b45309', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'buttonGlow' => true, 'buttonRadius' => 6], 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'messages' => true, 'iconManager' => true], 'dashboard' => ['itemsPerPage' => 50, 'iconManagerItemsPerPage' => 50, 'mediaItemsPerPage' => 25]];
+$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => ['adminTheme' => 'light', 'primaryColor' => '#3858e9', 'accentColor' => '#3858e9', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'buttonGlow' => true, 'buttonRadius' => 6], 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'messages' => true, 'iconManager' => true], 'dashboard' => ['itemsPerPage' => 50, 'iconManagerItemsPerPage' => 50, 'mediaItemsPerPage' => 25]];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     $loadedSettings = json_decode(file_get_contents(SETTINGS_PATH), true);
     if (is_array($loadedSettings)) {
@@ -52,7 +52,7 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
         if (!empty($loadedSettings['favicon_png'])) $siteSettings['favicon_png'] = $loadedSettings['favicon_png'];
     }
 }
-$adminTheme = $siteSettings['theme']['adminTheme'] ?? 'dark';
+$adminTheme = $siteSettings['theme']['adminTheme'] ?? 'light';
 $dashboardModules = array_replace(['news' => true, 'events' => true, 'messages' => true, 'iconManager' => true, 'ai' => true], is_array($siteSettings['modules'] ?? null) ? $siteSettings['modules'] : []);
 $aiFeaturesEnabled = !empty($dashboardModules['ai']);
 $aiDashboardVisible = $aiFeaturesEnabled || $isAdminUser;
@@ -826,106 +826,115 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
                         <div class="ai-tool-panel" id="aiImageToolPanel" data-ai-tool-panel="image" data-ai-feature="imageGeneration" role="tabpanel" hidden>
                             <form id="aiImageForm" class="ai-form">
-                                <textarea id="aiImagePrompt" rows="4" placeholder="<?php echo htmlspecialchars(t('ai.image_placeholder'), ENT_QUOTES, 'UTF-8'); ?>" disabled></textarea>
-	                                <div class="ai-image-command-row">
-	                                    <div class="ai-reference-control">
-	                                        <input type="file" id="aiImageReference" accept="image/png,image/jpeg,image/webp" multiple hidden disabled>
-	                                        <button type="button" class="btn btn-secondary btn-sm" id="aiImageReferenceUpload" disabled><?php echo t('ai.image_reference_upload'); ?></button>
-	                                        <button type="button" class="btn btn-secondary btn-sm" id="aiImageReferenceLibrary" disabled><?php echo t('ai.image_reference_library'); ?></button>
-	                                        <span class="ai-reference-name" id="aiImageReferenceName"><?php echo t('ai.image_reference_none'); ?></span>
-	                                        <button type="button" class="btn btn-secondary btn-sm ai-reference-clear" id="aiImageReferenceClear" hidden><?php echo t('btn.clear'); ?></button>
-	                                    </div>
-	                                    <button type="button" class="btn btn-secondary btn-sm" id="aiImproveImagePrompt" disabled><?php echo t('ai.improve_prompt'); ?></button>
-	                                </div>
-	                                <div class="ai-reference-list" id="aiImageReferenceList" hidden></div>
-                                <div class="ai-image-model-row ai-image-filename-group">
-                                    <div class="form-group">
-                                        <label for="aiImageFilenameHint"><?php echo t('ai.image_filename'); ?></label>
-                                        <div class="ai-image-filename-row">
-                                            <input type="text" id="aiImageFilenameHint" class="topbar-select" maxlength="90" placeholder="<?php echo htmlspecialchars(t('ai.image_filename_placeholder'), ENT_QUOTES, 'UTF-8'); ?>" disabled>
-                                            <button type="button" class="btn btn-secondary btn-sm" id="aiSuggestImageFilename" disabled><?php echo t('ai.image_filename_suggest'); ?></button>
+                                <div class="ai-image-column ai-image-column--main">
+                                    <div class="form-group ai-image-prompt-group">
+                                        <label for="aiImagePrompt"><?php echo t('ai.image_prompt'); ?></label>
+                                        <textarea id="aiImagePrompt" rows="4" placeholder="<?php echo htmlspecialchars(t('ai.image_placeholder'), ENT_QUOTES, 'UTF-8'); ?>" disabled></textarea>
+                                    </div>
+                                    <div class="ai-image-command-row">
+                                        <div class="ai-reference-control">
+                                            <input type="file" id="aiImageReference" accept="image/png,image/jpeg,image/webp" multiple hidden disabled>
+                                            <button type="button" class="btn btn-secondary btn-sm" id="aiImageReferenceUpload" disabled><?php echo t('ai.image_reference_upload'); ?></button>
+                                            <button type="button" class="btn btn-secondary btn-sm" id="aiImageReferenceLibrary" disabled><?php echo t('ai.image_reference_library'); ?></button>
+                                            <span class="ai-reference-name" id="aiImageReferenceName"><?php echo t('ai.image_reference_none'); ?></span>
+                                            <button type="button" class="btn btn-secondary btn-sm ai-reference-clear" id="aiImageReferenceClear" hidden><?php echo t('btn.clear'); ?></button>
                                         </div>
-                                        <small class="form-hint"><?php echo t('ai.image_filename_hint'); ?></small>
+                                        <button type="button" class="btn btn-secondary btn-sm" id="aiImproveImagePrompt" disabled><?php echo t('ai.improve_prompt'); ?></button>
                                     </div>
-                                </div>
-                                <div class="ai-image-model-row ai-image-model-picker-row">
-                                    <div class="form-group">
-                                        <label for="aiImageModelPicker"><?php echo t('ai.image_model'); ?></label>
-                                        <select id="aiImageModelPicker" class="topbar-select" disabled></select>
-                                    </div>
-                                </div>
-                                <div class="ai-image-options-grid ai-image-options-grid--primary">
-                                    <div class="form-group">
-                                        <label for="aiImageSize"><?php echo t('ai.image_size'); ?></label>
-                                        <div class="ai-ratio-select ai-size-picker" id="aiImageSizePicker">
-                                            <input type="hidden" id="aiImageSize" value="auto" disabled>
-                                            <input type="hidden" id="aiImageRatio" value="auto" disabled>
-                                            <button type="button" class="ai-size-trigger" id="aiImageSizeTrigger" disabled aria-haspopup="listbox" aria-expanded="false">
-                                                <span class="ai-ratio-icon" id="aiImageRatioIcon" aria-hidden="true"></span>
-                                                <span class="ai-size-trigger-label" id="aiImageSizeLabel"><?php echo t('ai.image_size_auto'); ?></span>
-                                            </button>
-                                            <div class="ai-size-menu" id="aiImageSizeMenu" role="listbox" hidden></div>
+                                    <div class="ai-reference-list" id="aiImageReferenceList" hidden></div>
+                                    <div class="ai-image-model-row ai-image-filename-group">
+                                        <div class="form-group">
+                                            <label for="aiImageFilenameHint"><?php echo t('ai.image_filename'); ?></label>
+                                            <div class="ai-image-filename-row">
+                                                <input type="text" id="aiImageFilenameHint" class="topbar-select" maxlength="90" placeholder="<?php echo htmlspecialchars(t('ai.image_filename_placeholder'), ENT_QUOTES, 'UTF-8'); ?>" disabled>
+                                                <button type="button" class="btn btn-secondary btn-sm" id="aiSuggestImageFilename" disabled><?php echo t('ai.image_filename_suggest'); ?></button>
+                                            </div>
+                                            <small class="form-hint"><?php echo t('ai.image_filename_hint'); ?></small>
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label for="aiImageScale"><?php echo t('ai.image_scale'); ?></label>
-                                        <select id="aiImageScale" class="topbar-select" disabled>
-                                            <option value="1024">1K</option>
-                                            <option value="2048" selected>2K</option>
-                                            <option value="3072">3K</option>
-                                            <option value="3840">4K</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="aiImageFormat"><?php echo t('ai.image_format'); ?></label>
-                                        <select id="aiImageFormat" class="topbar-select" disabled>
-                                            <option value="png">PNG</option>
-                                            <option value="jpeg">JPEG</option>
-                                            <option value="webp" selected>WebP</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="aiImageCompression"><?php echo t('ai.image_compression'); ?></label>
-                                        <div class="fill-slider" id="aiImageCompressionSlider">
-                                            <div class="fill-slider__fill" id="aiImageCompressionFill"></div>
-                                            <span class="fill-slider__value" id="aiImageCompressionValue">70%</span>
-                                            <input type="range" id="aiImageCompression" min="0" max="100" value="70" class="fill-slider__input" aria-label="<?php echo htmlspecialchars(t('ai.image_compression'), ENT_QUOTES, 'UTF-8'); ?>" disabled>
+                                    <div class="ai-image-options-grid ai-image-options-grid--output">
+                                        <div class="form-group">
+                                            <label for="aiImageFormat"><?php echo t('ai.image_format'); ?></label>
+                                            <select id="aiImageFormat" class="topbar-select" disabled>
+                                                <option value="png">PNG</option>
+                                                <option value="jpeg">JPEG</option>
+                                                <option value="webp" selected>WebP</option>
+                                            </select>
                                         </div>
-                                    </div>
-                                </div>
-                                <p class="ai-image-size-note" id="aiImageSizeNote"></p>
-                                <div class="ai-image-options-grid ai-image-options-grid--secondary">
-                                    <div class="form-group">
-                                        <label for="aiImageQuality"><?php echo t('ai.image_quality'); ?></label>
-                                        <select id="aiImageQuality" class="topbar-select" disabled>
-                                            <option value="auto"><?php echo t('ai.image_auto'); ?></option>
-                                            <option value="low"><?php echo t('ai.image_quality_low'); ?></option>
-                                            <option value="medium"><?php echo t('ai.image_quality_medium'); ?></option>
-                                            <option value="high"><?php echo t('ai.image_quality_high'); ?></option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="aiImageModeration"><?php echo t('ai.image_moderation'); ?></label>
-                                        <select id="aiImageModeration" class="topbar-select" disabled>
-                                            <option value="auto"><?php echo t('ai.image_moderation_standard'); ?></option>
-                                            <option value="low"><?php echo t('ai.image_moderation_low'); ?></option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="ai-form-actions ai-image-generate-row">
-                                    <div class="ai-image-count-control">
-                                        <label for="aiImageCount"><?php echo t('ai.image_count'); ?></label>
-                                        <div class="ai-count-stepper">
-                                            <input type="number" id="aiImageCount" min="1" max="10" value="1" disabled>
-                                            <div class="ai-count-stepper-buttons">
-                                                <button type="button" class="ai-count-step" id="aiImageCountUp" aria-label="<?php echo htmlspecialchars(t('ai.image_count_increase'), ENT_QUOTES, 'UTF-8'); ?>" disabled>+</button>
-                                                <button type="button" class="ai-count-step" id="aiImageCountDown" aria-label="<?php echo htmlspecialchars(t('ai.image_count_decrease'), ENT_QUOTES, 'UTF-8'); ?>" disabled>-</button>
+                                        <div class="form-group">
+                                            <label for="aiImageCompression"><?php echo t('ai.image_compression'); ?></label>
+                                            <div class="fill-slider" id="aiImageCompressionSlider">
+                                                <div class="fill-slider__fill" id="aiImageCompressionFill"></div>
+                                                <span class="fill-slider__value" id="aiImageCompressionValue">70%</span>
+                                                <input type="range" id="aiImageCompression" min="0" max="100" value="70" class="fill-slider__input" aria-label="<?php echo htmlspecialchars(t('ai.image_compression'), ENT_QUOTES, 'UTF-8'); ?>" disabled>
                                             </div>
                                         </div>
                                     </div>
-                                    <button type="submit" class="btn btn-primary" id="aiGenerateImageButton" disabled><?php echo t('ai.generate_image'); ?></button>
                                 </div>
-                                <p class="ai-image-model-note" id="aiImageModelNote" hidden><?php echo t('ai.image_model_missing_note'); ?></p>
+                                <div class="ai-image-column ai-image-column--settings">
+                                    <div class="ai-image-model-row ai-image-model-picker-row">
+                                        <div class="form-group">
+                                            <label for="aiImageModelPicker"><?php echo t('ai.image_model'); ?></label>
+                                            <select id="aiImageModelPicker" class="topbar-select" disabled></select>
+                                        </div>
+                                    </div>
+                                    <div class="ai-image-options-grid ai-image-options-grid--primary">
+                                        <div class="form-group">
+                                            <label for="aiImageSize"><?php echo t('ai.image_size'); ?></label>
+                                            <div class="ai-ratio-select ai-size-picker" id="aiImageSizePicker">
+                                                <input type="hidden" id="aiImageSize" value="auto" disabled>
+                                                <input type="hidden" id="aiImageRatio" value="auto" disabled>
+                                                <button type="button" class="ai-size-trigger" id="aiImageSizeTrigger" disabled aria-haspopup="listbox" aria-expanded="false">
+                                                    <span class="ai-ratio-icon" id="aiImageRatioIcon" aria-hidden="true"></span>
+                                                    <span class="ai-size-trigger-label" id="aiImageSizeLabel"><?php echo t('ai.image_size_auto'); ?></span>
+                                                </button>
+                                                <div class="ai-size-menu" id="aiImageSizeMenu" role="listbox" hidden></div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="aiImageScale"><?php echo t('ai.image_scale'); ?></label>
+                                            <select id="aiImageScale" class="topbar-select" disabled>
+                                                <option value="1024">1K</option>
+                                                <option value="2048" selected>2K</option>
+                                                <option value="3072">3K</option>
+                                                <option value="3840">4K</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <p class="ai-image-size-note" id="aiImageSizeNote"></p>
+                                    <div class="ai-image-options-grid ai-image-options-grid--secondary">
+                                        <div class="form-group">
+                                            <label for="aiImageQuality"><?php echo t('ai.image_quality'); ?></label>
+                                            <select id="aiImageQuality" class="topbar-select" disabled>
+                                                <option value="auto"><?php echo t('ai.image_auto'); ?></option>
+                                                <option value="low"><?php echo t('ai.image_quality_low'); ?></option>
+                                                <option value="medium"><?php echo t('ai.image_quality_medium'); ?></option>
+                                                <option value="high"><?php echo t('ai.image_quality_high'); ?></option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="aiImageModeration"><?php echo t('ai.image_moderation'); ?></label>
+                                            <select id="aiImageModeration" class="topbar-select" disabled>
+                                                <option value="auto"><?php echo t('ai.image_moderation_standard'); ?></option>
+                                                <option value="low"><?php echo t('ai.image_moderation_low'); ?></option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="ai-form-actions ai-image-generate-row">
+                                        <div class="ai-image-count-control">
+                                            <label for="aiImageCount"><?php echo t('ai.image_count'); ?></label>
+                                            <div class="ai-count-stepper">
+                                                <input type="number" id="aiImageCount" min="1" max="10" value="1" disabled>
+                                                <div class="ai-count-stepper-buttons">
+                                                    <button type="button" class="ai-count-step" id="aiImageCountUp" aria-label="<?php echo htmlspecialchars(t('ai.image_count_increase'), ENT_QUOTES, 'UTF-8'); ?>" disabled>+</button>
+                                                    <button type="button" class="ai-count-step" id="aiImageCountDown" aria-label="<?php echo htmlspecialchars(t('ai.image_count_decrease'), ENT_QUOTES, 'UTF-8'); ?>" disabled>-</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary" id="aiGenerateImageButton" disabled><?php echo t('ai.generate_image'); ?></button>
+                                    </div>
+                                    <p class="ai-image-model-note" id="aiImageModelNote" hidden><?php echo t('ai.image_model_missing_note'); ?></p>
+                                </div>
                             </form>
                             <div class="ai-image-result" id="aiImageResult"></div>
                             <section class="ai-image-history" id="aiImageHistory" hidden>
@@ -1326,8 +1335,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         <div class="form-group">
                             <label for="settingsAccentColor"><?php echo t('settings.accent_color'); ?></label>
                             <div class="color-input-group">
-                                <input type="color" id="settingsAccentColorPicker" value="#b45309" class="color-picker">
-                                <input type="text" id="settingsAccentColor" value="#b45309" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
+                                <input type="color" id="settingsAccentColorPicker" value="#3858e9" class="color-picker">
+                                <input type="text" id="settingsAccentColor" value="#3858e9" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
                             </div>
                             <small class="form-hint"><?php echo t('settings.accent_color_hint'); ?></small>
                             <small class="theme-contrast-feedback" data-contrast-for="accentColor"></small>
@@ -1362,8 +1371,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         <div class="form-group">
                             <label for="settingsDarkAccentColor"><?php echo t('settings.accent_color'); ?></label>
                             <div class="color-input-group" data-auto-field="darkAccentColor">
-                                <input type="color" id="settingsDarkAccentColorPicker" value="#b45309" class="color-picker">
-                                <input type="text" id="settingsDarkAccentColor" value="#b45309" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
+                                <input type="color" id="settingsDarkAccentColorPicker" value="#3858e9" class="color-picker">
+                                <input type="text" id="settingsDarkAccentColor" value="#3858e9" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
                                 <span class="auto-badge" data-auto-for="darkAccentColor" hidden><?php echo t('settings.auto_badge'); ?></span>
                                 <button type="button" class="auto-reset-btn" data-auto-reset="darkAccentColor" title="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>" aria-label="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>">&#x21BA;</button>
                             </div>
@@ -9261,14 +9270,14 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         }
 
         // Theme
-        document.getElementById('settingsAdminTheme').value = settings.theme.adminTheme || 'dark';
+        document.getElementById('settingsAdminTheme').value = settings.theme.adminTheme || 'light';
         document.querySelectorAll('.theme-option').forEach(function(btn) {
             btn.classList.toggle('selected', btn.dataset.theme === settings.theme.adminTheme);
         });
 
         // Colors — Light mode
         var primary = settings.theme.primaryColor || '#3858e9';
-        var accent = settings.theme.accentColor || '#b45309';
+        var accent = settings.theme.accentColor || '#3858e9';
         document.getElementById('settingsPrimaryColor').value = primary;
         document.getElementById('settingsPrimaryColorPicker').value = primary;
         document.getElementById('settingsAccentColor').value = accent;
@@ -9525,9 +9534,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     // Defaults — kept in sync with server-side ($defaults in api.php load-settings)
     var THEME_DEFAULTS = {
-        adminTheme: 'dark',
+        adminTheme: 'light',
         primaryColor: '#3858e9',
-        accentColor: '#b45309',
+        accentColor: '#3858e9',
         sidebarBg: '',
         darkPrimaryColor: '',
         darkAccentColor: '',
@@ -10341,7 +10350,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     // Apply theme live
     function applyTheme(theme) {
-        var themeValue = theme.adminTheme || 'dark';
+        var themeValue = theme.adminTheme || 'light';
         if (themeValue === 'system') {
             themeValue = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         }

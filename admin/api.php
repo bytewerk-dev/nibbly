@@ -5828,9 +5828,9 @@ switch ($action) {
                 'logoSize' => 'medium'
             ],
             'theme' => [
-                'adminTheme' => 'dark',
+                'adminTheme' => 'light',
                 'primaryColor' => '#3858e9',
-                'accentColor' => '#b45309',
+                'accentColor' => '#3858e9',
                 'sidebarBg' => '',
                 'darkPrimaryColor' => '',
                 'darkAccentColor' => '',
