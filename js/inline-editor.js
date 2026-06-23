@@ -864,6 +864,17 @@
         const link = e.target.closest('a[href]');
         if (!link) return;
         const href = link.getAttribute('href');
+
+        // Editable links must be intercepted in the capture phase. Page-level
+        // hash/smooth-scroll handlers may be registered on the link itself
+        // before the editor's direct click handler.
+        if (link.hasAttribute('data-editable-link')) {
+            e.preventDefault();
+            e.stopPropagation();
+            openLinkEditor(link);
+            return;
+        }
+
         if (!href || href === '#' || href.startsWith('#') || href.startsWith('javascript:')) return;
 
         // Don't block admin bar buttons (they have their own logic)
@@ -872,8 +883,6 @@
         if (link.closest('.editor-modal')) return;
         // Don't block footer editable fields (handled by footer editor)
         if (link.classList.contains('editable-footer-field')) return;
-        // Don't block editable links (handled by link editor)
-        if (link.hasAttribute('data-editable-link')) return;
         // Editable fields inside ordinary links must enter the editor before
         // the navigation guard can turn the click into a leave-page prompt.
         if (e.target.closest('.editable-field, .editable-field-wrapper, [data-editable-image]')) return;

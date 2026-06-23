@@ -174,6 +174,7 @@ assertContains(source, 'readableFieldLabel(state.lastApplied.path || undo.path |
 if (source.includes('input.value.trim() || state.lastInstruction')) {
     throw new Error('Copilot action shortcuts should not silently reuse the previous instruction.');
 }
+assertContains(inlineEditor, "if (link.hasAttribute('data-editable-link')) {\n            e.preventDefault();\n            e.stopPropagation();\n            openLinkEditor(link);", 'Visual Editor should intercept editable links in capture phase before smooth-scroll handlers.');
 assertContains(source, "size: ['auto', '1024x1024', '1536x1024', '1024x1536']", 'Copilot JS should allow only supported image sizes.');
 assertContains(source, "quality: ['auto', 'low', 'medium', 'high']", 'Copilot JS should allow only supported image qualities.');
 assertContains(source, 'function fieldSelector(fieldPath)', 'Copilot JS should keep data-field selector construction centralized.');
