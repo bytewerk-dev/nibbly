@@ -40,6 +40,8 @@ All notable changes to Nibbly are documented in this file. The project follows
 - Visual Editor sessions now use sliding activity refreshes and a CSRF-protected
   keepalive request so long editing sessions stay authenticated while editors
   interact with fields before saving.
+- Visual Editor repeatable lists can now add scalar string defaults without
+  converting them into character-indexed objects.
 - OpenRouter image generation now restricts GPT Image 2 models such as
   `openai/gpt-5.4-image-2-20260421` to the supported `1K`/`2K` image-size
   values in both the dashboard dropdown and server-side request config.

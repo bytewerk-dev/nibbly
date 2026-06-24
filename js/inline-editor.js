@@ -5395,6 +5395,12 @@
 
     // --- List operations (batch mode — modify in-memory, save on "Save") ---
 
+    function cloneListDefault(defaults) {
+        if (Array.isArray(defaults)) return [...defaults];
+        if (defaults && typeof defaults === 'object') return { ...defaults };
+        return defaults;
+    }
+
     function reorderListItems(page, listKey, fromIndex, toIndex) {
         pushReorderUndo('reorder-list', { page, listKey, from: fromIndex, to: toIndex });
         executeListReorder(page, listKey, fromIndex, toIndex);
@@ -5467,12 +5473,12 @@
         const items = getNestedObj(pageData, listKey) || {};
 
         if (Array.isArray(items)) {
-            items.push({ ...defaults });
+            items.push(cloneListDefault(defaults));
             setNestedObj(pageData, listKey, items);
         } else {
             const keys = Object.keys(items).map(Number).filter(k => !isNaN(k));
             const nextIndex = keys.length > 0 ? Math.max(...keys) + 1 : 0;
-            items[nextIndex.toString()] = { ...defaults };
+            items[nextIndex.toString()] = cloneListDefault(defaults);
             setNestedObj(pageData, listKey, items);
         }
         EditorConfig.dirtyPages.add(page);
@@ -5489,7 +5495,7 @@
 
         const itemsAreArray = Array.isArray(items);
         const arr = itemsAreArray ? [...items] : objectToArray(items);
-        arr.splice(afterIndex + 1, 0, { ...defaults });
+        arr.splice(afterIndex + 1, 0, cloneListDefault(defaults));
 
         setNestedObj(pageData, listKey, itemsAreArray ? arr : arrayToNumberedObject(arr));
         EditorConfig.dirtyPages.add(page);
