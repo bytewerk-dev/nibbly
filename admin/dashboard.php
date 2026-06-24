@@ -24,6 +24,7 @@ if (time() - $_SESSION['admin_login_time'] > SESSION_LIFETIME) {
     header('Location: index.php?timeout=' . time());
     exit;
 }
+$_SESSION['admin_login_time'] = time();
 
 // Logout
 if (isset($_GET['logout'])) {

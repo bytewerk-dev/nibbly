@@ -134,6 +134,41 @@
         redoStack: []
     };
 
+    const SESSION_KEEPALIVE_INTERVAL_MS = 5 * 60 * 1000;
+    const sessionKeepaliveEvents = ['pointerdown', 'keydown', 'input', 'focusin'];
+    let lastSessionKeepaliveAt = 0;
+
+    function requestSessionKeepalive(force = false) {
+        if (!EditorConfig.csrfToken || !EditorConfig.apiUrl) return;
+        const now = Date.now();
+        if (!force && now - lastSessionKeepaliveAt < SESSION_KEEPALIVE_INTERVAL_MS) return;
+        lastSessionKeepaliveAt = now;
+
+        const url = `${EditorConfig.apiUrl}?action=keepalive&csrf_token=${encodeURIComponent(EditorConfig.csrfToken)}&_=${now}`;
+        fetch(url, { credentials: 'same-origin', cache: 'no-store' })
+            .catch(error => {
+                console.warn('Session keepalive failed:', error);
+            });
+    }
+
+    function handleSessionActivity() {
+        if (!EditorConfig.editMode) return;
+        requestSessionKeepalive(false);
+    }
+
+    function startSessionKeepalive() {
+        requestSessionKeepalive(true);
+        sessionKeepaliveEvents.forEach(eventName => {
+            document.addEventListener(eventName, handleSessionActivity, true);
+        });
+    }
+
+    function stopSessionKeepalive() {
+        sessionKeepaliveEvents.forEach(eventName => {
+            document.removeEventListener(eventName, handleSessionActivity, true);
+        });
+    }
+
     // Block type registry (injected from PHP via window.BlockTypeRegistry)
     const BlockTypes = window.BlockTypeRegistry || {};
 
@@ -932,6 +967,7 @@
         // Guard against accidental navigation with unsaved changes
         window.addEventListener('beforeunload', beforeUnloadGuard);
         document.addEventListener('click', navClickGuard, true);
+        startSessionKeepalive();
     }
 
     function exitEditMode(save) {
@@ -950,6 +986,7 @@
         document.removeEventListener('keydown', handleEditModeKeyboard);
         window.removeEventListener('beforeunload', beforeUnloadGuard);
         document.removeEventListener('click', navClickGuard, true);
+        stopSessionKeepalive();
         cleanupActiveEditorState();
         document.body.classList.remove('edit-mode-active', 'visual-editing');
         updateAdminBarMode(false);
@@ -1119,6 +1156,7 @@
         document.removeEventListener('keydown', handleEditModeKeyboard);
         window.removeEventListener('beforeunload', beforeUnloadGuard);
         document.removeEventListener('click', navClickGuard, true);
+        stopSessionKeepalive();
         cleanupActiveEditorState();
         document.body.classList.remove('edit-mode-active', 'visual-editing');
         updateAdminBarMode(false);

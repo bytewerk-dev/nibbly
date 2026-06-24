@@ -45,6 +45,7 @@ function isAuthenticated() {
         }
     }
 
+    $_SESSION['admin_login_time'] = time();
     return true;
 }
 
@@ -1838,6 +1839,13 @@ function buildPageList() {
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 switch ($action) {
+
+    case 'keepalive':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        jsonResponse(true, ['time' => time()], 'Session refreshed');
+        break;
 
     case 'dashboard-overview':
         $analyticsPeriod = $_GET['analytics_period'] ?? 'days';

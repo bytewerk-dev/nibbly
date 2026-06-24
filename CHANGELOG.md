@@ -37,6 +37,9 @@ All notable changes to Nibbly are documented in this file. The project follows
 ### Fixed
 - Dashboard editor section navigation now lists top-level field groups on
   custom-layout pages that do not use a `sections[]` array.
+- Visual Editor sessions now use sliding activity refreshes and a CSRF-protected
+  keepalive request so long editing sessions stay authenticated while editors
+  interact with fields before saving.
 - OpenRouter image generation now restricts GPT Image 2 models such as
   `openai/gpt-5.4-image-2-20260421` to the supported `1K`/`2K` image-size
   values in both the dashboard dropdown and server-side request config.

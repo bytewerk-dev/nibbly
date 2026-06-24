@@ -180,6 +180,10 @@ assertContains(source, "quality: ['auto', 'low', 'medium', 'high']", 'Copilot JS
 assertContains(source, 'function fieldSelector(fieldPath)', 'Copilot JS should keep data-field selector construction centralized.');
 assertContains(source, "document.querySelectorAll('[data-page]')", 'Copilot JS should infer the content page from editable field data when page metadata is missing.');
 assertContains(inlineEditor, 'isEditMode: function() { return EditorConfig.editMode === true; }', 'Inline editor should expose read-only edit-mode state for Copilot gating.');
+assertContains(inlineEditor, 'SESSION_KEEPALIVE_INTERVAL_MS', 'Inline editor should define a session keepalive interval.');
+assertContains(inlineEditor, "action=keepalive&csrf_token=", 'Inline editor should call the keepalive API with a CSRF token.');
+assertContains(inlineEditor, 'startSessionKeepalive();', 'Inline editor should start session keepalive when edit mode begins.');
+assertContains(inlineEditor, 'stopSessionKeepalive();', 'Inline editor should stop session keepalive when edit mode ends.');
 
 if (source.includes('window.confirm(') || source.includes('window.prompt(')) {
     throw new Error('Copilot should not use native browser confirm/prompt dialogs.');
