@@ -37,10 +37,15 @@
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--editor-primary-light, var(--nb-brand, var(--editor-primary, #2563eb))) 28%, transparent);
 }
 
-.nb-copilot-selected-field {
+body.visual-editing .nb-copilot-selected-field {
     outline: 2px solid var(--editor-primary, #2563eb) !important;
     outline-offset: 3px !important;
     box-shadow: 0 0 0 5px color-mix(in srgb, var(--editor-primary, #2563eb) 16%, transparent) !important;
+}
+
+body:not(.visual-editing) .nb-copilot-selected-field {
+    outline: none !important;
+    box-shadow: none !important;
 }
 
 .nb-copilot-toggle {

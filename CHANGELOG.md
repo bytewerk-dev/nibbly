@@ -3,6 +3,49 @@
 All notable changes to Nibbly are documented in this file. The project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.4] — 2026-06-18
+
+### Added
+- Added the polished Dashboard and Visual Editor refinements from the active
+  site build: structured backup previews, a wider AI tools layout with image
+  compression grouped by output format, separate save/save-and-exit editor
+  actions, scoped visual-editing highlights, and responsive admin-bar behavior.
+- Added a live title search field to the dashboard page list so editors can
+  filter pages immediately by typing part of a page title.
+- Added `Cmd+S` / `Ctrl+S` as a save shortcut in the Visual Editor and
+  Dashboard, matching the existing save-button behavior.
+- Added an optional filename field to the AI image generator so editors can set
+  the generated media filename before running the request, with a prompt-based
+  filename suggestion button as a lightweight fallback.
+- Added Media Library file renaming with extension-safety checks, including an
+  optional JSON content scan that warns editors when the old filename appears in
+  page/content files before the rename is confirmed.
+- Added a localhost-friendly AI image job worker path for PHP's built-in
+  development server so queued image jobs can be handed off to a CLI worker
+  instead of keeping the dashboard request open for the whole generation.
+- Added dashboard list summaries and pagination for pages, news, events,
+  messages, trash views, the Icon Manager, and the Media Library, with separate
+  configurable per-page limits for regular dashboard lists, the Icon Manager,
+  and the Media Library.
+- Added multi-file uploads to the Media Library so editors can select or drop
+  several files at once.
+
+### Changed
+- Refined the Dashboard settings layout for list pagination and editor button
+  styling with grouped fieldsets and a three-column pagination settings row.
+
+### Fixed
+- Dashboard editor section navigation now lists top-level field groups on
+  custom-layout pages that do not use a `sections[]` array.
+- Visual Editor sessions now use sliding activity refreshes and a CSRF-protected
+  keepalive request so long editing sessions stay authenticated while editors
+  interact with fields before saving.
+- Visual Editor repeatable lists can now add scalar string defaults without
+  converting them into character-indexed objects.
+- OpenRouter image generation now restricts GPT Image 2 models such as
+  `openai/gpt-5.4-image-2-20260421` to the supported `1K`/`2K` image-size
+  values in both the dashboard dropdown and server-side request config.
+
 ## [1.5.3] — 2026-06-17
 
 ### Changed

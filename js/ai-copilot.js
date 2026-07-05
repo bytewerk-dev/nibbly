@@ -2212,6 +2212,7 @@
 
     function markSelectedElement(element) {
         clearSelectedElement();
+        if (!document.body.classList.contains('visual-editing')) return;
         state.selectedElement = element;
         element.classList.add('nb-copilot-selected-field');
     }

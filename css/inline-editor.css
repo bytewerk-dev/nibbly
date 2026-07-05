@@ -21,7 +21,7 @@
  * gradient-text effects break because background-clip doesn't inherit.
  * This rule makes the child span inherit the gradient text properties.
  */
-body.has-admin-bar .editable-field,
+body.visual-editing .editable-field,
 body.edit-mode-active .editable-field {
     background: inherit;
     -webkit-background-clip: inherit;
@@ -91,6 +91,7 @@ body.edit-mode-active .editable-field {
 
 .admin-bar-info {
     opacity: 0.8;
+    white-space: nowrap;
 }
 
 .admin-bar-actions {
@@ -108,6 +109,7 @@ body.edit-mode-active .editable-field {
     padding: 4px 10px;
     border-radius: 3px;
     transition: background 0.2s, color 0.2s;
+    white-space: nowrap;
 }
 
 .admin-bar-link:hover {
@@ -127,6 +129,7 @@ body.edit-mode-active .editable-field {
     cursor: pointer;
     outline: none;
     text-decoration: none;
+    white-space: nowrap;
 }
 
 .admin-bar-seo:hover {
@@ -159,6 +162,11 @@ body.edit-mode-active .editable-field {
 
 .admin-bar-seo-score {
     opacity: 0.72;
+    white-space: nowrap;
+}
+
+.admin-bar-seo-label {
+    white-space: nowrap;
 }
 
 .admin-bar-seo-popover {
@@ -166,6 +174,7 @@ body.edit-mode-active .editable-field {
     top: calc(100% + 10px);
     right: 0;
     width: min(360px, calc(100vw - 28px));
+    max-width: calc(100vw - 28px);
     padding: 14px 16px;
     border-radius: 8px;
     background: #16191d;
@@ -176,6 +185,8 @@ body.edit-mode-active .editable-field {
     transform: translateY(-4px);
     transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
     pointer-events: none;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .admin-bar-seo:hover .admin-bar-seo-popover,
@@ -197,6 +208,10 @@ body.edit-mode-active .editable-field {
 
 .admin-bar-seo-popover li + li {
     margin-top: 5px;
+}
+
+.admin-bar-seo-popover li {
+    white-space: normal;
 }
 
 body.has-admin-bar {
@@ -1386,6 +1401,7 @@ textarea.editor-html {
     font-size: 13px;
     cursor: pointer;
     transition: background-color 0.15s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+    white-space: nowrap;
 }
 
 #admin-bar .admin-bar-btn:hover,
@@ -1448,7 +1464,7 @@ textarea.editor-html {
 }
 
 #admin-bar .admin-bar-btn-save {
-    background: var(--editor-btn-bg, radial-gradient(ellipse at 50% 0%, #4580ed 0%, #2563eb 70%));
+    background: transparent;
     border-color: var(--editor-primary, #2563eb);
     font-weight: 600;
 }
@@ -1456,9 +1472,21 @@ textarea.editor-html {
 #admin-bar .admin-bar-btn-save:hover,
 #admin-bar .admin-bar-btn-save.is-hover,
 #admin-bar .admin-bar-btn-save:focus-visible {
-    background: var(--editor-btn-bg-hover, radial-gradient(ellipse at 50% 0%, #5d94ef 0%, #2563eb 70%)) !important;
+    background: rgba(255, 255, 255, 0.18) !important;
     border-color: var(--editor-primary-hover, #1d4ed8) !important;
     color: #fff !important;
+}
+
+#admin-bar .admin-bar-btn-save-exit {
+    background: var(--editor-btn-bg, radial-gradient(ellipse at 50% 0%, #4580ed 0%, #2563eb 70%));
+    border-color: var(--editor-primary, #2563eb);
+}
+
+#admin-bar .admin-bar-btn-save-exit:hover,
+#admin-bar .admin-bar-btn-save-exit.is-hover,
+#admin-bar .admin-bar-btn-save-exit:focus-visible {
+    background: var(--editor-btn-bg-hover, radial-gradient(ellipse at 50% 0%, #5d94ef 0%, #2563eb 70%)) !important;
+    border-color: var(--editor-primary-hover, #1d4ed8) !important;
 }
 
 
@@ -1836,13 +1864,32 @@ body.edit-mode-active .editable-group-active {
     cursor: pointer;
     outline: 1px solid transparent;
     outline-offset: 6px;
-    transition: outline-color 0.15s ease, background-color 0.15s ease;
+    transition: outline-color 0.15s ease;
 }
 
 body.edit-mode-active .editable-group-active:hover,
 body.edit-mode-active .editable-group-active:focus-within {
     outline-color: var(--editor-primary, #2563eb);
-    background: rgba(13, 149, 156, 0.04);
+}
+
+body:not(.visual-editing) .editable-field-active,
+body:not(.visual-editing) .editable-field-active:hover,
+body:not(.visual-editing) .editable-group-active,
+body:not(.visual-editing) .editable-group-active:hover,
+body:not(.visual-editing) .editable-group-active:focus-within {
+    cursor: inherit !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+body:not(.visual-editing) .editable-overlay,
+body:not(.visual-editing) .editable-group-overlay,
+body:not(.visual-editing) .nibbly-editor-section-overlay,
+body:not(.visual-editing) .nibbly-editor-list-overlay,
+body:not(.visual-editing) .nibbly-editor-group-overlay,
+body:not(.visual-editing) .nibbly-editor-control-btn,
+body:not(.visual-editing) .nibbly-editor-drag-handle {
+    display: none !important;
 }
 
 .editable-group-overlay {
@@ -3042,6 +3089,45 @@ body.edit-mode-active .event-card-hidden .event-hide-btn {
 /* ============================================================
    RESPONSIVE
    ============================================================ */
+
+@media (max-width: 1400px) {
+    body.visual-editing .admin-bar-inner,
+    body.edit-mode-active .admin-bar-inner {
+        max-width: none;
+        padding-inline: 12px;
+        gap: 10px;
+    }
+
+    body.visual-editing .admin-bar-info,
+    body.edit-mode-active .admin-bar-info,
+    body.visual-editing .admin-bar-seo,
+    body.edit-mode-active .admin-bar-seo {
+        display: none;
+    }
+}
+
+@media (max-width: 1200px) {
+    .admin-bar-inner {
+        max-width: none;
+        padding-inline: 10px;
+        gap: 8px;
+    }
+
+    .admin-bar-info {
+        display: none;
+    }
+
+    #admin-bar .admin-bar-btn,
+    .admin-bar-link {
+        padding-inline: 9px;
+    }
+}
+
+@media (max-width: 980px) {
+    .admin-bar-seo-score {
+        display: none;
+    }
+}
 
 @media (max-width: 768px) {
     .admin-bar-inner {

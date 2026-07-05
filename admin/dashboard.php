@@ -24,6 +24,7 @@ if (time() - $_SESSION['admin_login_time'] > SESSION_LIFETIME) {
     header('Location: index.php?timeout=' . time());
     exit;
 }
+$_SESSION['admin_login_time'] = time();
 
 // Logout
 if (isset($_GET['logout'])) {
@@ -38,7 +39,7 @@ $isAdminUser = ($userRole === 'admin');
 
 // Load settings for theme
 $_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg';
-$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => ['adminTheme' => 'dark', 'primaryColor' => '#3858e9', 'accentColor' => '#b45309', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'buttonGlow' => true, 'buttonRadius' => 6], 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'messages' => true, 'iconManager' => true]];
+$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => ['adminTheme' => 'light', 'primaryColor' => '#3858e9', 'accentColor' => '#3858e9', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'buttonGlow' => true, 'buttonRadius' => 6], 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'messages' => true, 'iconManager' => true], 'dashboard' => ['itemsPerPage' => 50, 'iconManagerItemsPerPage' => 50, 'mediaItemsPerPage' => 25]];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     $loadedSettings = json_decode(file_get_contents(SETTINGS_PATH), true);
     if (is_array($loadedSettings)) {
@@ -52,7 +53,7 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
         if (!empty($loadedSettings['favicon_png'])) $siteSettings['favicon_png'] = $loadedSettings['favicon_png'];
     }
 }
-$adminTheme = $siteSettings['theme']['adminTheme'] ?? 'dark';
+$adminTheme = $siteSettings['theme']['adminTheme'] ?? 'light';
 $dashboardModules = array_replace(['news' => true, 'events' => true, 'messages' => true, 'iconManager' => true, 'ai' => true], is_array($siteSettings['modules'] ?? null) ? $siteSettings['modules'] : []);
 $aiFeaturesEnabled = !empty($dashboardModules['ai']);
 $aiDashboardVisible = $aiFeaturesEnabled || $isAdminUser;
@@ -365,6 +366,17 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         <?php echo nbIcon('trash', 14); ?>
                         <?php echo t('pages.trash'); ?>
                     </button>
+                    <label class="page-list-search" for="pageListSearch">
+                        <span class="sr-only">Seitentitel suchen</span>
+                        <input
+                            type="search"
+                            id="pageListSearch"
+                            class="page-list-search-input"
+                            placeholder="Seitentitel suchen..."
+                            autocomplete="off"
+                            oninput="handlePageListSearch(this.value)"
+                        >
+                    </label>
                 </div>
                 <select id="pageListLang" class="topbar-select" onchange="renderPageListForLang(this.value)">
                     <?php foreach ($siteLanguages as $code => $name): ?>
@@ -372,6 +384,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     <?php endforeach; ?>
                 </select>
             </div>
+            <div class="admin-list-footer admin-list-footer--top" id="pageListFooterTop"></div>
             <div class="page-list-table-wrap">
                 <table class="page-list-table" id="pageListTable">
                     <thead>
@@ -386,6 +399,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     </tbody>
                 </table>
             </div>
+            <div class="admin-list-footer" id="pageListFooter"></div>
         </div>
 
         <!-- Trash -->
@@ -400,6 +414,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     <button class="btn btn-danger btn-sm" onclick="emptyTrash()" id="emptyTrashBtn" style="display:none;"><?php echo t('trash.empty_trash'); ?></button>
                 </div>
             </div>
+            <div class="admin-list-footer admin-list-footer--top" id="trashListFooterTop"></div>
             <div class="page-list-table-wrap">
                 <table class="page-list-table" id="trashTable">
                     <thead>
@@ -414,6 +429,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     </tbody>
                 </table>
             </div>
+            <div class="admin-list-footer" id="trashListFooter"></div>
             <p class="trash-empty-msg" id="trashEmptyMsg" style="display:none;"><?php echo t('trash.empty'); ?></p>
         </div>
 
@@ -475,6 +491,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 </div>
                 <span class="last-modified" id="eventsLastModified"></span>
             </div>
+            <div class="admin-list-footer admin-list-footer--top" id="eventsListFooterTop"></div>
             <div class="page-list-table-wrap">
                 <table class="page-list-table" id="eventsListTable">
                     <thead>
@@ -490,6 +507,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     </tbody>
                 </table>
             </div>
+            <div class="admin-list-footer" id="eventsListFooter"></div>
         </div>
 
         <!-- Events Tab — trash view -->
@@ -504,6 +522,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     <button class="btn btn-danger btn-sm" onclick="emptyEventsTrash()" id="emptyEventsTrashBtn" style="display:none;"><?php echo t('trash.empty_trash'); ?></button>
                 </div>
             </div>
+            <div class="admin-list-footer admin-list-footer--top" id="eventsTrashFooterTop"></div>
             <div class="page-list-table-wrap">
                 <table class="page-list-table" id="eventsTrashTable">
                     <thead>
@@ -518,6 +537,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     </tbody>
                 </table>
             </div>
+            <div class="admin-list-footer" id="eventsTrashFooter"></div>
             <p class="trash-empty-msg" id="eventsTrashEmptyMsg" style="display:none;"><?php echo t('trash.empty'); ?></p>
         </div>
 
@@ -555,6 +575,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     <button class="btn btn-secondary btn-sm" onclick="addNewPost()"><?php echo t('news.new_post'); ?></button>
                 </div>
             </div>
+            <div class="admin-list-footer admin-list-footer--top" id="newsListFooterTop"></div>
             <div class="page-list-table-wrap">
                 <table class="page-list-table" id="newsListTable">
                     <thead>
@@ -574,6 +595,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     </tbody>
                 </table>
             </div>
+            <div class="admin-list-footer" id="newsListFooter"></div>
         </div>
 
         <!-- News Post Editor -->
@@ -631,6 +653,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     <button class="btn btn-secondary btn-sm" id="deleteReadMailsBtn" onclick="deleteReadMails()" disabled><?php echo t('mails.delete_read'); ?></button>
                 </div>
             </div>
+            <div class="admin-list-footer admin-list-footer--top" id="mailsListFooterTop"></div>
             <div class="page-list-table-wrap">
                 <table class="page-list-table" id="mailsListTable">
                     <thead>
@@ -652,6 +675,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     </tbody>
                 </table>
             </div>
+            <div class="admin-list-footer" id="mailsListFooter"></div>
         </div>
 
         <!-- Detail view -->
@@ -803,96 +827,115 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
                         <div class="ai-tool-panel" id="aiImageToolPanel" data-ai-tool-panel="image" data-ai-feature="imageGeneration" role="tabpanel" hidden>
                             <form id="aiImageForm" class="ai-form">
-                                <textarea id="aiImagePrompt" rows="4" placeholder="<?php echo htmlspecialchars(t('ai.image_placeholder'), ENT_QUOTES, 'UTF-8'); ?>" disabled></textarea>
-	                                <div class="ai-image-command-row">
-	                                    <div class="ai-reference-control">
-	                                        <input type="file" id="aiImageReference" accept="image/png,image/jpeg,image/webp" multiple hidden disabled>
-	                                        <button type="button" class="btn btn-secondary btn-sm" id="aiImageReferenceUpload" disabled><?php echo t('ai.image_reference_upload'); ?></button>
-	                                        <button type="button" class="btn btn-secondary btn-sm" id="aiImageReferenceLibrary" disabled><?php echo t('ai.image_reference_library'); ?></button>
-	                                        <span class="ai-reference-name" id="aiImageReferenceName"><?php echo t('ai.image_reference_none'); ?></span>
-	                                        <button type="button" class="btn btn-secondary btn-sm ai-reference-clear" id="aiImageReferenceClear" hidden><?php echo t('btn.clear'); ?></button>
-	                                    </div>
-	                                    <button type="button" class="btn btn-secondary btn-sm" id="aiImproveImagePrompt" disabled><?php echo t('ai.improve_prompt'); ?></button>
-	                                </div>
-	                                <div class="ai-reference-list" id="aiImageReferenceList" hidden></div>
-                                <div class="ai-image-model-row">
-                                    <div class="form-group">
-                                        <label for="aiImageModelPicker"><?php echo t('ai.image_model'); ?></label>
-                                        <select id="aiImageModelPicker" class="topbar-select" disabled></select>
+                                <div class="ai-image-column ai-image-column--main">
+                                    <div class="form-group ai-image-prompt-group">
+                                        <label for="aiImagePrompt"><?php echo t('ai.image_prompt'); ?></label>
+                                        <textarea id="aiImagePrompt" rows="4" placeholder="<?php echo htmlspecialchars(t('ai.image_placeholder'), ENT_QUOTES, 'UTF-8'); ?>" disabled></textarea>
                                     </div>
-                                </div>
-                                <div class="ai-image-options-grid">
-                                    <div class="form-group">
-                                        <label for="aiImageSize"><?php echo t('ai.image_size'); ?></label>
-                                        <div class="ai-ratio-select ai-size-picker" id="aiImageSizePicker">
-                                            <input type="hidden" id="aiImageSize" value="auto" disabled>
-                                            <input type="hidden" id="aiImageRatio" value="auto" disabled>
-                                            <button type="button" class="ai-size-trigger" id="aiImageSizeTrigger" disabled aria-haspopup="listbox" aria-expanded="false">
-                                                <span class="ai-ratio-icon" id="aiImageRatioIcon" aria-hidden="true"></span>
-                                                <span class="ai-size-trigger-label" id="aiImageSizeLabel"><?php echo t('ai.image_size_auto'); ?></span>
-                                            </button>
-                                            <div class="ai-size-menu" id="aiImageSizeMenu" role="listbox" hidden></div>
+                                    <div class="ai-image-command-row">
+                                        <div class="ai-reference-control">
+                                            <input type="file" id="aiImageReference" accept="image/png,image/jpeg,image/webp" multiple hidden disabled>
+                                            <button type="button" class="btn btn-secondary btn-sm" id="aiImageReferenceUpload" disabled><?php echo t('ai.image_reference_upload'); ?></button>
+                                            <button type="button" class="btn btn-secondary btn-sm" id="aiImageReferenceLibrary" disabled><?php echo t('ai.image_reference_library'); ?></button>
+                                            <span class="ai-reference-name" id="aiImageReferenceName"><?php echo t('ai.image_reference_none'); ?></span>
+                                            <button type="button" class="btn btn-secondary btn-sm ai-reference-clear" id="aiImageReferenceClear" hidden><?php echo t('btn.clear'); ?></button>
+                                        </div>
+                                        <button type="button" class="btn btn-secondary btn-sm" id="aiImproveImagePrompt" disabled><?php echo t('ai.improve_prompt'); ?></button>
+                                    </div>
+                                    <div class="ai-reference-list" id="aiImageReferenceList" hidden></div>
+                                    <div class="ai-image-model-row ai-image-filename-group">
+                                        <div class="form-group">
+                                            <label for="aiImageFilenameHint"><?php echo t('ai.image_filename'); ?></label>
+                                            <div class="ai-image-filename-row">
+                                                <input type="text" id="aiImageFilenameHint" class="topbar-select" maxlength="90" placeholder="<?php echo htmlspecialchars(t('ai.image_filename_placeholder'), ENT_QUOTES, 'UTF-8'); ?>" disabled>
+                                                <button type="button" class="btn btn-secondary btn-sm" id="aiSuggestImageFilename" disabled><?php echo t('ai.image_filename_suggest'); ?></button>
+                                            </div>
+                                            <small class="form-hint"><?php echo t('ai.image_filename_hint'); ?></small>
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label for="aiImageScale"><?php echo t('ai.image_scale'); ?></label>
-                                        <select id="aiImageScale" class="topbar-select" disabled>
-                                            <option value="1024">1K</option>
-                                            <option value="2048" selected>2K</option>
-                                            <option value="3072">3K</option>
-                                            <option value="3840">4K</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="aiImageFormat"><?php echo t('ai.image_format'); ?></label>
-                                        <select id="aiImageFormat" class="topbar-select" disabled>
-                                            <option value="png">PNG</option>
-                                            <option value="jpeg">JPEG</option>
-                                            <option value="webp" selected>WebP</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <p class="ai-image-size-note" id="aiImageSizeNote"></p>
-                                <div class="ai-image-options-grid ai-image-options-grid--secondary">
-                                    <div class="form-group">
-                                        <label for="aiImageQuality"><?php echo t('ai.image_quality'); ?></label>
-                                        <select id="aiImageQuality" class="topbar-select" disabled>
-                                            <option value="auto"><?php echo t('ai.image_auto'); ?></option>
-                                            <option value="low"><?php echo t('ai.image_quality_low'); ?></option>
-                                            <option value="medium"><?php echo t('ai.image_quality_medium'); ?></option>
-                                            <option value="high"><?php echo t('ai.image_quality_high'); ?></option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="aiImageModeration"><?php echo t('ai.image_moderation'); ?></label>
-                                        <select id="aiImageModeration" class="topbar-select" disabled>
-                                            <option value="auto"><?php echo t('ai.image_moderation_standard'); ?></option>
-                                            <option value="low"><?php echo t('ai.image_moderation_low'); ?></option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="aiImageCompression"><?php echo t('ai.image_compression'); ?></label>
-                                        <div class="fill-slider" id="aiImageCompressionSlider">
-                                            <div class="fill-slider__fill" id="aiImageCompressionFill"></div>
-                                            <span class="fill-slider__value" id="aiImageCompressionValue">70%</span>
-                                            <input type="range" id="aiImageCompression" min="0" max="100" value="70" class="fill-slider__input" aria-label="<?php echo htmlspecialchars(t('ai.image_compression'), ENT_QUOTES, 'UTF-8'); ?>" disabled>
+                                    <div class="ai-image-options-grid ai-image-options-grid--output">
+                                        <div class="form-group">
+                                            <label for="aiImageFormat"><?php echo t('ai.image_format'); ?></label>
+                                            <select id="aiImageFormat" class="topbar-select" disabled>
+                                                <option value="png">PNG</option>
+                                                <option value="jpeg">JPEG</option>
+                                                <option value="webp" selected>WebP</option>
+                                            </select>
                                         </div>
-                                    </div>
-                                </div>
-                                <div class="ai-form-actions ai-image-generate-row">
-                                    <div class="ai-image-count-control">
-                                        <label for="aiImageCount"><?php echo t('ai.image_count'); ?></label>
-                                        <div class="ai-count-stepper">
-                                            <input type="number" id="aiImageCount" min="1" max="10" value="1" disabled>
-                                            <div class="ai-count-stepper-buttons">
-                                                <button type="button" class="ai-count-step" id="aiImageCountUp" aria-label="<?php echo htmlspecialchars(t('ai.image_count_increase'), ENT_QUOTES, 'UTF-8'); ?>" disabled>+</button>
-                                                <button type="button" class="ai-count-step" id="aiImageCountDown" aria-label="<?php echo htmlspecialchars(t('ai.image_count_decrease'), ENT_QUOTES, 'UTF-8'); ?>" disabled>-</button>
+                                        <div class="form-group">
+                                            <label for="aiImageCompression"><?php echo t('ai.image_compression'); ?></label>
+                                            <div class="fill-slider" id="aiImageCompressionSlider">
+                                                <div class="fill-slider__fill" id="aiImageCompressionFill"></div>
+                                                <span class="fill-slider__value" id="aiImageCompressionValue">70%</span>
+                                                <input type="range" id="aiImageCompression" min="0" max="100" value="70" class="fill-slider__input" aria-label="<?php echo htmlspecialchars(t('ai.image_compression'), ENT_QUOTES, 'UTF-8'); ?>" disabled>
                                             </div>
                                         </div>
                                     </div>
-                                    <button type="submit" class="btn btn-primary" id="aiGenerateImageButton" disabled><?php echo t('ai.generate_image'); ?></button>
                                 </div>
-                                <p class="ai-image-model-note" id="aiImageModelNote" hidden><?php echo t('ai.image_model_missing_note'); ?></p>
+                                <div class="ai-image-column ai-image-column--settings">
+                                    <div class="ai-image-model-row ai-image-model-picker-row">
+                                        <div class="form-group">
+                                            <label for="aiImageModelPicker"><?php echo t('ai.image_model'); ?></label>
+                                            <select id="aiImageModelPicker" class="topbar-select" disabled></select>
+                                        </div>
+                                    </div>
+                                    <div class="ai-image-options-grid ai-image-options-grid--primary">
+                                        <div class="form-group">
+                                            <label for="aiImageSize"><?php echo t('ai.image_size'); ?></label>
+                                            <div class="ai-ratio-select ai-size-picker" id="aiImageSizePicker">
+                                                <input type="hidden" id="aiImageSize" value="auto" disabled>
+                                                <input type="hidden" id="aiImageRatio" value="auto" disabled>
+                                                <button type="button" class="ai-size-trigger" id="aiImageSizeTrigger" disabled aria-haspopup="listbox" aria-expanded="false">
+                                                    <span class="ai-ratio-icon" id="aiImageRatioIcon" aria-hidden="true"></span>
+                                                    <span class="ai-size-trigger-label" id="aiImageSizeLabel"><?php echo t('ai.image_size_auto'); ?></span>
+                                                </button>
+                                                <div class="ai-size-menu" id="aiImageSizeMenu" role="listbox" hidden></div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="aiImageScale"><?php echo t('ai.image_scale'); ?></label>
+                                            <select id="aiImageScale" class="topbar-select" disabled>
+                                                <option value="1024">1K</option>
+                                                <option value="2048" selected>2K</option>
+                                                <option value="3072">3K</option>
+                                                <option value="3840">4K</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <p class="ai-image-size-note" id="aiImageSizeNote"></p>
+                                    <div class="ai-image-options-grid ai-image-options-grid--secondary">
+                                        <div class="form-group">
+                                            <label for="aiImageQuality"><?php echo t('ai.image_quality'); ?></label>
+                                            <select id="aiImageQuality" class="topbar-select" disabled>
+                                                <option value="auto"><?php echo t('ai.image_auto'); ?></option>
+                                                <option value="low"><?php echo t('ai.image_quality_low'); ?></option>
+                                                <option value="medium"><?php echo t('ai.image_quality_medium'); ?></option>
+                                                <option value="high"><?php echo t('ai.image_quality_high'); ?></option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="aiImageModeration"><?php echo t('ai.image_moderation'); ?></label>
+                                            <select id="aiImageModeration" class="topbar-select" disabled>
+                                                <option value="auto"><?php echo t('ai.image_moderation_standard'); ?></option>
+                                                <option value="low"><?php echo t('ai.image_moderation_low'); ?></option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="ai-form-actions ai-image-generate-row">
+                                        <div class="ai-image-count-control">
+                                            <label for="aiImageCount"><?php echo t('ai.image_count'); ?></label>
+                                            <div class="ai-count-stepper">
+                                                <input type="number" id="aiImageCount" min="1" max="10" value="1" disabled>
+                                                <div class="ai-count-stepper-buttons">
+                                                    <button type="button" class="ai-count-step" id="aiImageCountUp" aria-label="<?php echo htmlspecialchars(t('ai.image_count_increase'), ENT_QUOTES, 'UTF-8'); ?>" disabled>+</button>
+                                                    <button type="button" class="ai-count-step" id="aiImageCountDown" aria-label="<?php echo htmlspecialchars(t('ai.image_count_decrease'), ENT_QUOTES, 'UTF-8'); ?>" disabled>-</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary" id="aiGenerateImageButton" disabled><?php echo t('ai.generate_image'); ?></button>
+                                    </div>
+                                    <p class="ai-image-model-note" id="aiImageModelNote" hidden><?php echo t('ai.image_model_missing_note'); ?></p>
+                                </div>
                             </form>
                             <div class="ai-image-result" id="aiImageResult"></div>
                             <section class="ai-image-history" id="aiImageHistory" hidden>
@@ -1029,9 +1072,11 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 </label>
             </div>
             <p class="icon-manager-path" id="iconManagerPath"></p>
+            <div class="admin-list-footer admin-list-footer--top admin-list-footer--grid" id="iconManagerFooterTop"></div>
             <div class="icon-manager-grid" id="iconManagerGrid">
                 <!-- Icons inserted via JS -->
             </div>
+            <div class="admin-list-footer admin-list-footer--grid" id="iconManagerFooter"></div>
             <p class="trash-empty-msg" id="iconManagerEmpty" style="display:none;"><?php echo t('icons.empty'); ?></p>
         </div>
     </div>
@@ -1045,7 +1090,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <section class="settings-nav-group">
                 <h3><?php echo t('settings.group_site'); ?></h3>
                 <button class="settings-tab-btn active" data-settings-tab="branding"><?php echo t('settings.branding'); ?></button>
-                <button class="settings-tab-btn" data-settings-tab="theme"><?php echo t('settings.admin_theme'); ?></button>
+                <button class="settings-tab-btn" data-settings-tab="theme"><?php echo t('settings.dashboard_design'); ?></button>
                 <button class="settings-tab-btn" data-settings-tab="menus"><?php echo t('settings.menus'); ?></button>
                 <button class="settings-tab-btn" data-settings-tab="modules"><?php echo t('settings.modules_nav'); ?></button>
                 <button class="settings-tab-btn" data-settings-tab="language"><?php echo t('settings.language'); ?></button>
@@ -1291,8 +1336,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         <div class="form-group">
                             <label for="settingsAccentColor"><?php echo t('settings.accent_color'); ?></label>
                             <div class="color-input-group">
-                                <input type="color" id="settingsAccentColorPicker" value="#b45309" class="color-picker">
-                                <input type="text" id="settingsAccentColor" value="#b45309" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
+                                <input type="color" id="settingsAccentColorPicker" value="#3858e9" class="color-picker">
+                                <input type="text" id="settingsAccentColor" value="#3858e9" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
                             </div>
                             <small class="form-hint"><?php echo t('settings.accent_color_hint'); ?></small>
                             <small class="theme-contrast-feedback" data-contrast-for="accentColor"></small>
@@ -1327,8 +1372,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         <div class="form-group">
                             <label for="settingsDarkAccentColor"><?php echo t('settings.accent_color'); ?></label>
                             <div class="color-input-group" data-auto-field="darkAccentColor">
-                                <input type="color" id="settingsDarkAccentColorPicker" value="#b45309" class="color-picker">
-                                <input type="text" id="settingsDarkAccentColor" value="#b45309" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
+                                <input type="color" id="settingsDarkAccentColorPicker" value="#3858e9" class="color-picker">
+                                <input type="text" id="settingsDarkAccentColor" value="#3858e9" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
                                 <span class="auto-badge" data-auto-for="darkAccentColor" hidden><?php echo t('settings.auto_badge'); ?></span>
                                 <button type="button" class="auto-reset-btn" data-auto-reset="darkAccentColor" title="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>" aria-label="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>">&#x21BA;</button>
                             </div>
@@ -1349,8 +1394,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     </div>
                     </div>
 
-                    <div class="form-group">
-                        <label><?php echo t('settings.button_style'); ?></label>
+                    <fieldset class="settings-section settings-section--compact settings-section--button-style">
+                        <legend><?php echo t('settings.button_style'); ?></legend>
                         <div class="btn-style-row">
                             <div class="btn-style-controls">
                                 <div class="range-field btn-style-radius-field">
@@ -1376,7 +1421,28 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                                 <button type="button" class="btn-preview-secondary" id="previewBtnSecondary"><?php echo t('settings.preview_secondary'); ?></button>
                             </div>
                         </div>
-                    </div>
+                    </fieldset>
+                    <fieldset class="settings-section settings-section--compact">
+                        <legend><?php echo t('settings.list_pagination'); ?></legend>
+                        <p class="settings-description settings-description--compact"><?php echo t('settings.list_pagination_desc'); ?></p>
+                        <div class="form-group-row form-group-row--pagination">
+                            <div class="form-group">
+                                <label for="settingsItemsPerPage"><?php echo t('settings.items_per_page'); ?></label>
+                                <input type="number" id="settingsItemsPerPage" min="10" max="500" step="5" value="50" inputmode="numeric">
+                                <small class="form-hint"><?php echo t('settings.items_per_page_hint'); ?></small>
+                            </div>
+                            <div class="form-group">
+                                <label for="settingsIconItemsPerPage"><?php echo t('settings.icon_items_per_page'); ?></label>
+                                <input type="number" id="settingsIconItemsPerPage" min="10" max="500" step="5" value="50" inputmode="numeric">
+                                <small class="form-hint"><?php echo t('settings.icon_items_per_page_hint'); ?></small>
+                            </div>
+                            <div class="form-group">
+                                <label for="settingsMediaItemsPerPage"><?php echo t('settings.media_items_per_page'); ?></label>
+                                <input type="number" id="settingsMediaItemsPerPage" min="10" max="500" step="5" value="25" inputmode="numeric">
+                                <small class="form-hint"><?php echo t('settings.media_items_per_page_hint'); ?></small>
+                            </div>
+                        </div>
+                    </fieldset>
                     <div class="theme-form-actions">
                         <button type="button" class="btn btn-secondary" id="resetThemeBtn">&#x21BA; <?php echo t('settings.reset_colors'); ?></button>
                         <button type="submit" class="btn btn-primary" id="saveThemeBtn"><?php echo t('settings.save_theme'); ?></button>
@@ -2624,6 +2690,130 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     let currentPage = null;
     let currentContent = null;
     let sectionCounter = 0;
+    const DASHBOARD_LIST_DEFAULT_PAGE_SIZE = 50;
+    const dashboardListPages = {
+        pages: 1,
+        trash: 1,
+        events: 1,
+        eventsTrash: 1,
+        news: 1,
+        mails: 1,
+        icons: 1
+    };
+
+    function clampDashboardPageSize(value) {
+        const parsed = parseInt(value, 10);
+        if (!Number.isFinite(parsed)) return DASHBOARD_LIST_DEFAULT_PAGE_SIZE;
+        return Math.max(10, Math.min(500, parsed));
+    }
+
+    function clampMediaPageSize(value) {
+        const parsed = parseInt(value, 10);
+        if (!Number.isFinite(parsed)) return 25;
+        return Math.max(10, Math.min(500, parsed));
+    }
+
+    function getDashboardPageSize(kind = 'default') {
+        const dashboardSettings = currentSettings?.dashboard || {};
+        return kind === 'icons'
+            ? clampDashboardPageSize(dashboardSettings.iconManagerItemsPerPage)
+            : clampDashboardPageSize(dashboardSettings.itemsPerPage);
+    }
+
+    function pageSlice(items, pageKey, pageSize) {
+        const list = Array.isArray(items) ? items : [];
+        const pages = Math.max(1, Math.ceil(list.length / pageSize));
+        const current = Math.max(1, Math.min(dashboardListPages[pageKey] || 1, pages));
+        dashboardListPages[pageKey] = current;
+        const start = (current - 1) * pageSize;
+        return {
+            items: list.slice(start, start + pageSize),
+            total: list.length,
+            current,
+            pages,
+            from: list.length ? start + 1 : 0,
+            to: Math.min(start + pageSize, list.length)
+        };
+    }
+
+    function renderAdminListFooter(footerId, pageKey, total, pageSize, renderCallback, topFooterId = '') {
+        const bottomFooter = document.getElementById(footerId);
+        const topFooter = topFooterId ? document.getElementById(topFooterId) : null;
+        if (!bottomFooter && !topFooter) return;
+        const page = Math.max(1, Math.min(dashboardListPages[pageKey] || 1, Math.max(1, Math.ceil(total / pageSize))));
+        const pages = Math.max(1, Math.ceil(total / pageSize));
+        const from = total ? ((page - 1) * pageSize) + 1 : 0;
+        const to = total ? Math.min(page * pageSize, total) : 0;
+        const summary = total
+            ? t('lists.summary_range', {from, to, total})
+            : t('lists.summary_empty');
+        const hasPagination = total > pageSize;
+
+        function paginationIcon(direction) {
+            const path = direction === 'prev' ? 'M15 18l-6-6 6-6' : 'M9 18l6-6-6-6';
+            return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="' + path + '"/></svg>';
+        }
+
+        function addButton(nav, label, targetPage, disabled, currentPage, direction = '') {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'admin-pagination__btn' + (currentPage ? ' is-current' : '');
+            if (direction) {
+                button.classList.add('admin-pagination__btn--arrow');
+                button.innerHTML = paginationIcon(direction);
+                button.setAttribute('aria-label', direction === 'prev' ? t('lists.previous_page') : t('lists.next_page'));
+            } else {
+                button.textContent = label;
+            }
+            button.disabled = !!disabled;
+            if (currentPage) button.setAttribute('aria-current', 'page');
+            button.addEventListener('click', function() {
+                if (disabled || currentPage) return;
+                dashboardListPages[pageKey] = targetPage;
+                renderCallback();
+            });
+            nav.appendChild(button);
+        }
+
+        function buildNav() {
+            const nav = document.createElement('nav');
+            nav.className = 'admin-pagination';
+            nav.setAttribute('aria-label', t('lists.pagination'));
+            addButton(nav, '', page - 1, page <= 1, false, 'prev');
+            const pageNumbers = [];
+            for (let i = 1; i <= pages; i++) {
+                if (i === 1 || i === pages || Math.abs(i - page) <= 1) pageNumbers.push(i);
+            }
+            let previous = 0;
+            pageNumbers.forEach(number => {
+                if (previous && number - previous > 1) {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.className = 'admin-pagination__ellipsis';
+                    ellipsis.textContent = '...';
+                    nav.appendChild(ellipsis);
+                }
+                addButton(nav, String(number), number, false, number === page);
+                previous = number;
+            });
+            addButton(nav, '', page + 1, page >= pages, false, 'next');
+            return nav;
+        }
+
+        function renderFooter(footer, showOnlyWhenPaginated) {
+            if (!footer) return;
+            if (showOnlyWhenPaginated && !hasPagination) {
+                footer.innerHTML = '';
+                footer.hidden = true;
+                return;
+            }
+            footer.hidden = false;
+            footer.innerHTML = '<span class="admin-list-summary">' + escapeHtml(summary) + '</span>';
+            if (hasPagination) footer.appendChild(buildNav());
+        }
+
+        renderFooter(topFooter, true);
+        renderFooter(bottomFooter, false);
+    }
 
     // Update page dropdown from pageListCache (both desktop and mobile)
     function updatePageSelect() {
@@ -2656,6 +2846,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     // Page list
     let pageListCache = null;
     let currentSeoHealth = null;
+    let pageListSearchQuery = '';
 
     async function loadPageList() {
         try {
@@ -2669,6 +2860,23 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         }
     }
 
+    function normalizePageListSearchValue(value) {
+        return String(value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toLowerCase();
+    }
+
+    function handlePageListSearch(value) {
+        pageListSearchQuery = normalizePageListSearchValue(value);
+        dashboardListPages.pages = 1;
+        if (pageListCache) {
+            const viewLang = document.getElementById('pageListLang').value;
+            renderPageList(pageListCache, viewLang);
+        }
+    }
+
     function applyPageList(pageListData) {
         pageListCache = pageListData;
         const viewLang = document.getElementById('pageListLang').value;
@@ -2677,6 +2885,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     }
 
     function renderPageListForLang(lang) {
+        dashboardListPages.pages = 1;
         if (pageListCache) {
             renderPageList(pageListCache, lang);
         }
@@ -2714,11 +2923,24 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
         // Build rows — only show pages that exist in the view language (or are defined for it)
         tbody.innerHTML = '';
-        pages.forEach(page => {
+        const visiblePages = pages.filter(page => {
             const viewInfo = page.languages[viewLang];
             // Skip pages that have no entry at all for this language
-            if (!viewInfo) return;
+            if (!viewInfo) return false;
+            const titleText = viewInfo.title || page.slug;
+            if (pageListSearchQuery && !normalizePageListSearchValue(titleText).includes(pageListSearchQuery)) {
+                return false;
+            }
+            return true;
+        });
+        const pageSize = getDashboardPageSize();
+        const paged = pageSlice(visiblePages, 'pages', pageSize);
+        renderAdminListFooter('pageListFooter', 'pages', visiblePages.length, pageSize, function() {
+            renderPageList(data, viewLang);
+        }, 'pageListFooterTop');
 
+        paged.items.forEach(page => {
+            const viewInfo = page.languages[viewLang];
             const tr = document.createElement('tr');
             tr.className = 'page-list-row';
 
@@ -2882,6 +3104,18 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             tbody.appendChild(tr);
         });
 
+        if (visiblePages.length === 0) {
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.className = 'page-list-empty';
+            td.colSpan = 2 + otherLangs.length;
+            td.textContent = pageListSearchQuery
+                ? 'Keine Seiten mit diesem Titel gefunden.'
+                : 'Keine Seiten vorhanden.';
+            tr.appendChild(td);
+            tbody.appendChild(tr);
+        }
+
         // Update sort indicators
         updateSortIndicators();
     }
@@ -2898,7 +3132,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             pageListSortDir = 'asc';
         }
         if (pageListCache) {
-            const viewLang = document.getElementById('langSelect').value;
+            const viewLang = document.getElementById('pageListLang').value;
             // Sort the pages array in place
             pageListCache.pages.sort((a, b) => {
                 let valA, valB;
@@ -3106,6 +3340,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             table.style.display = 'none';
             emptyMsg.style.display = 'block';
             emptyBtn.style.display = 'none';
+            renderAdminListFooter('trashListFooter', 'trash', 0, getDashboardPageSize(), function() {
+                renderTrash(items);
+            }, 'trashListFooterTop');
             return;
         }
 
@@ -3113,7 +3350,13 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         emptyMsg.style.display = 'none';
         emptyBtn.style.display = '';
 
-        items.forEach(item => {
+        const pageSize = getDashboardPageSize();
+        const paged = pageSlice(items, 'trash', pageSize);
+        renderAdminListFooter('trashListFooter', 'trash', items.length, pageSize, function() {
+            renderTrash(items);
+        }, 'trashListFooterTop');
+
+        paged.items.forEach(item => {
             const tr = document.createElement('tr');
 
             const tdTitle = document.createElement('td');
@@ -3349,6 +3592,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     // Keys rendered in the dedicated "Page Settings" panel
     const PAGE_SETTINGS_KEYS = new Set(['title', 'description', 'nav', 'breadcrumb', 'visibility', 'seo']);
 
+    function isEditableTopLevelContentKey(key) {
+        return !META_KEYS.has(key) && !PAGE_SETTINGS_KEYS.has(key) && !SPECIAL_KEYS.has(key);
+    }
+
     function createEditorShell(container) {
         const shell = document.createElement('div');
         shell.className = 'ce-editor-shell';
@@ -3465,7 +3712,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <label class="ce-form-tile"><span class="ce-label-with-action">${t('editor.seo_og_title')}${AI_FEATURES_ENABLED ? `<button type="button" class="ce-ai-field-btn" onclick="generateSeoFields('ogTitle')" title="${escapeHtml(t('editor.ai_fill_field'))}" aria-label="${escapeHtml(t('editor.ai_fill_field'))}">${icon('ai', 13)}</button>` : ''}</span><input type="text" class="ce-input" id="seoOgTitle" value="${escapeHtml(seo.ogTitle || '')}"></label>
             <label class="ce-form-tile ce-form-tile--resizable"><span class="ce-label-with-action">${t('editor.seo_og_description')}${AI_FEATURES_ENABLED ? `<button type="button" class="ce-ai-field-btn" onclick="generateSeoFields('ogDescription')" title="${escapeHtml(t('editor.ai_fill_field'))}" aria-label="${escapeHtml(t('editor.ai_fill_field'))}">${icon('ai', 13)}</button>` : ''}</span><textarea class="ce-textarea ce-textarea--manual-resize" id="seoOgDescription" rows="2">${escapeHtml(seo.ogDescription || '')}</textarea><span class="ce-textarea-resize-handle" aria-hidden="true"></span></label>
             <div class="ce-form-tile ce-form-tile--wide">
-                <span>Open Graph image</span>
+                <span>${t('editor.seo_og_image')}</span>
                 <div class="ce-image-input-row">
                     <input type="text" class="ce-input" id="seoOgImage" placeholder="/assets/images/og-image.jpg" value="${escapeHtml(seo.ogImage || '')}">
                     <button type="button" class="btn btn-secondary btn-sm" onclick="browseSeoOgImage()">${t('btn.browse')}</button>
@@ -3872,16 +4119,20 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         menu.hidden = nextHidden;
     }
 
+    function getEditorSectionItems() {
+        return document.querySelectorAll('[data-editor-section-kind]');
+    }
+
     function applySectionFilter() {
         const query = (document.getElementById('sectionSearchInput')?.value || '').trim().toLowerCase();
         const type = document.getElementById('sectionTypeFilter')?.value || '';
         let visible = 0;
-        document.querySelectorAll('.section-item').forEach(item => {
+        getEditorSectionItems().forEach(item => {
             const matchesQuery = !query || (item.dataset.search || '').includes(query);
             const matchesType = !type || item.dataset.type === type;
             const show = matchesQuery && matchesType;
             item.hidden = !show;
-            const navItem = document.querySelector(`.ce-section-nav__item[data-section-index="${item.dataset.index}"]`);
+            const navItem = document.querySelector(`.ce-section-nav__item[data-editor-section-id="${item.dataset.editorSectionId}"]`);
             if (navItem) {
                 navItem.hidden = false;
                 navItem.classList.toggle('is-filtered-out', !show);
@@ -3895,8 +4146,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     }
 
     function setActiveSection(index) {
-        activeSectionIndex = Math.max(0, Math.min(index, (currentContent.sections || []).length - 1));
-        document.querySelectorAll('.section-item').forEach(item => {
+        const items = Array.from(getEditorSectionItems());
+        if (!items.length) return;
+        activeSectionIndex = Math.max(0, Math.min(index, items.length - 1));
+        items.forEach(item => {
             const isActive = Number(item.dataset.index) === activeSectionIndex;
             item.classList.toggle('is-active', isActive);
             if (sectionCompactMode && isActive) item.classList.add('is-open');
@@ -3908,7 +4161,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     function initSectionObserver() {
         if (sectionObserver) sectionObserver.disconnect();
-        const items = document.querySelectorAll('.section-item');
+        const items = getEditorSectionItems();
         if (!items.length) return;
         sectionObserver = new IntersectionObserver(entries => {
             if (sectionScrollLockIndex !== null) {
@@ -3925,7 +4178,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     }
 
     function scrollToSection(index) {
-        const target = document.getElementById(`section-${index}`);
+        const target = Array.from(getEditorSectionItems()).find(item => Number(item.dataset.index) === index);
         if (!target) return;
         sectionScrollLockIndex = index;
         if (sectionScrollLockTimer) clearTimeout(sectionScrollLockTimer);
@@ -3998,9 +4251,89 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         markDirty();
     }
 
-    function renderContentPanel(panel) {
+    function getGroupSearchText(key, value) {
+        const parts = [key];
+        const seen = new WeakSet();
+        function walk(node) {
+            if (node == null) return;
+            if (typeof node === 'string' || typeof node === 'number' || typeof node === 'boolean') {
+                parts.push(String(node));
+                return;
+            }
+            if (typeof node !== 'object' || seen.has(node)) return;
+            seen.add(node);
+            if (Array.isArray(node)) {
+                node.slice(0, 20).forEach(walk);
+                return;
+            }
+            Object.entries(node).slice(0, 30).forEach(([childKey, childValue]) => {
+                parts.push(childKey);
+                walk(childValue);
+            });
+        }
+        walk(value);
+        return parts.join(' ').toLowerCase();
+    }
+
+    function getGroupPreview(value) {
+        if (value === null || typeof value !== 'object') return '';
+        for (const key of ['title', 'heading', 'eyebrow', 'intro', 'text']) {
+            if (typeof value[key] === 'string' && value[key].trim()) {
+                return value[key].trim().slice(0, 160);
+            }
+        }
+        return getObjectPreview(value);
+    }
+
+    function createSectionNavLink({index, id, label, preview, type, draggable = false, onClick, onDragStart, onDrop}) {
+        const link = document.createElement('a');
+        link.href = `#${id}`;
+        link.className = 'ce-section-nav__item';
+        link.dataset.sectionIndex = index;
+        link.dataset.editorSectionId = id;
+        link.dataset.type = type || '';
+        if (draggable) link.setAttribute('draggable', 'true');
+        link.innerHTML = `<span>${index + 1}. ${escapeHtml(label)}</span>${preview ? `<small title="${escapeHtml(preview)}">${escapeHtml(preview)}</small>` : ''}`;
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (link.classList.contains('is-filtered-out')) return;
+            if (typeof onClick === 'function') onClick(e);
+            else scrollToSection(index);
+        });
+        if (draggable) {
+            link.addEventListener('dragstart', e => {
+                if (typeof onDragStart === 'function') onDragStart(e);
+                link.classList.add('is-dragging');
+            });
+            link.addEventListener('dragend', () => {
+                sectionDragIndex = null;
+                document.querySelectorAll('.is-dragging, .is-drop-target').forEach(el => el.classList.remove('is-dragging', 'is-drop-target'));
+            });
+            link.addEventListener('dragover', e => {
+                e.preventDefault();
+                link.classList.add('is-drop-target');
+            });
+            link.addEventListener('dragleave', () => link.classList.remove('is-drop-target'));
+            link.addEventListener('drop', e => {
+                e.preventDefault();
+                link.classList.remove('is-drop-target');
+                if (typeof onDrop === 'function') onDrop(e);
+            });
+        }
+        return link;
+    }
+
+    function renderContentPanel(panel, customContentKeys = []) {
         panel.innerHTML = '';
         const sections = Array.isArray(currentContent.sections) ? currentContent.sections : [];
+        const customGroups = customContentKeys.map(key => ({
+            key,
+            value: currentContent[key],
+            isNavigable: currentContent[key] !== null && typeof currentContent[key] === 'object'
+        }));
+        const navigableGroups = customGroups.filter(group => group.isNavigable);
+        const hasLegacySections = sections.length > 0;
+        const itemCount = hasLegacySections ? sections.length : navigableGroups.length;
 
         const layout = document.createElement('div');
         layout.className = 'ce-content-layout';
@@ -4025,6 +4358,12 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             option.textContent = getSectionTypeLabel(section);
             typeFilter.appendChild(option);
         });
+        if (!hasLegacySections && navigableGroups.length) {
+            const option = document.createElement('option');
+            option.value = 'field-group';
+            option.textContent = t('editor.field_groups');
+            typeFilter.appendChild(option);
+        }
         const navList = document.createElement('div');
         navList.className = 'ce-section-nav__list';
         nav.appendChild(navList);
@@ -4041,8 +4380,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         header.className = 'ce-section-editor__header';
         header.innerHTML = `<h3>${t('editor.sections')}</h3>
             <div class="ce-section-editor__tools">
-                <span>${t('editor.items', {count: sections.length})}</span>
-                <button type="button" class="btn btn-secondary btn-sm" id="sectionCompactToggle" aria-pressed="${sectionCompactMode ? 'true' : 'false'}" onclick="toggleCompactMode()">${t('editor.compact_mode')}</button>
+                <span>${hasLegacySections ? t('editor.items', {count: itemCount}) : t('editor.field_groups_count', {count: itemCount})}</span>
+                ${hasLegacySections ? `<button type="button" class="btn btn-secondary btn-sm" id="sectionCompactToggle" aria-pressed="${sectionCompactMode ? 'true' : 'false'}" onclick="toggleCompactMode()">${t('editor.compact_mode')}</button>` : ''}
             </div>`;
         editor.appendChild(header);
 
@@ -4059,62 +4398,75 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 legacyContainer.appendChild(renderSectionInsertControls(index + 1));
                 const typeLabel = getSectionTypeLabel(section);
                 const preview = getSectionPreview(section, 240);
-                const link = document.createElement('a');
-                link.href = `#section-${index}`;
-                link.className = 'ce-section-nav__item';
-                link.setAttribute('draggable', 'true');
-                link.dataset.sectionIndex = index;
-                link.dataset.type = section.type || '';
-                link.innerHTML = `<span>${index + 1}. ${escapeHtml(typeLabel)}</span>${preview ? `<small title="${escapeHtml(preview)}">${escapeHtml(preview)}</small>` : ''}${issues.length ? `<em title="${escapeHtml(issues.join('\n'))}">${issues.length}</em>` : ''}`;
-                link.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    if (link.classList.contains('is-filtered-out')) return;
-                    scrollToSection(index);
+                const link = createSectionNavLink({
+                    index,
+                    id: `section-${index}`,
+                    label: typeLabel,
+                    preview,
+                    type: section.type || '',
+                    draggable: true,
+                    onDragStart: e => {
+                        sectionDragIndex = index;
+                        e.dataTransfer.effectAllowed = 'move';
+                    },
+                    onDrop: () => reorderSection(sectionDragIndex, index)
                 });
-                link.addEventListener('dragstart', e => {
-                    sectionDragIndex = index;
-                    e.dataTransfer.effectAllowed = 'move';
-                    link.classList.add('is-dragging');
-                });
-                link.addEventListener('dragend', () => {
-                    sectionDragIndex = null;
-                    document.querySelectorAll('.is-dragging, .is-drop-target').forEach(el => el.classList.remove('is-dragging', 'is-drop-target'));
-                });
-                link.addEventListener('dragover', e => {
-                    e.preventDefault();
-                    link.classList.add('is-drop-target');
-                });
-                link.addEventListener('dragleave', () => link.classList.remove('is-drop-target'));
-                link.addEventListener('drop', e => {
-                    e.preventDefault();
-                    link.classList.remove('is-drop-target');
-                    reorderSection(sectionDragIndex, index);
-                });
+                if (issues.length) {
+                    link.insertAdjacentHTML('beforeend', `<em title="${escapeHtml(issues.join('\n'))}">${issues.length}</em>`);
+                }
                 navList.appendChild(link);
+            });
+        } else if (navigableGroups.length > 0) {
+            legacyContainer.hidden = true;
+            navigableGroups.forEach((group, index) => {
+                navList.appendChild(createSectionNavLink({
+                    index,
+                    id: `custom-section-${group.key}`,
+                    label: group.key,
+                    preview: getGroupPreview(group.value),
+                    type: 'field-group'
+                }));
             });
         } else {
             navList.innerHTML = `<p class="ce-section-nav__empty">${t('editor.no_sections')}</p>`;
             legacyContainer.hidden = true;
         }
 
-        const addBtns = document.createElement('div');
-        addBtns.className = 'add-section-container';
-        let addBtnsHtml = '<p>' + t('editor.add_section') + '</p><div class="add-section-buttons">';
-        if (window.BlockTypeRegistry) {
-            for (const [type, def] of Object.entries(window.BlockTypeRegistry)) {
-                addBtnsHtml += `<button class="btn btn-secondary btn-sm" onclick="addSection('${type}')">+ ${def.label}</button>`;
+        if (hasLegacySections || customGroups.length === 0) {
+            const addBtns = document.createElement('div');
+            addBtns.className = 'add-section-container';
+            let addBtnsHtml = '<p>' + t('editor.add_section') + '</p><div class="add-section-buttons">';
+            if (window.BlockTypeRegistry) {
+                for (const [type, def] of Object.entries(window.BlockTypeRegistry)) {
+                    addBtnsHtml += `<button class="btn btn-secondary btn-sm" onclick="addSection('${type}')">+ ${def.label}</button>`;
+                }
             }
+            addBtnsHtml += '</div>';
+            addBtns.innerHTML = addBtnsHtml;
+            editor.appendChild(addBtns);
         }
-        addBtnsHtml += '</div>';
-        addBtns.innerHTML = addBtnsHtml;
-        editor.appendChild(addBtns);
+
+        customGroups.forEach(group => {
+            const groupEl = renderJsonGroup(group.key, group.value, group.key);
+            if (group.isNavigable) {
+                const groupIndex = navigableGroups.findIndex(item => item.key === group.key);
+                groupEl.id = `custom-section-${group.key}`;
+                groupEl.classList.add('ce-custom-section');
+                groupEl.dataset.index = groupIndex;
+                groupEl.dataset.type = 'field-group';
+                groupEl.dataset.search = getGroupSearchText(group.key, group.value);
+                groupEl.dataset.editorSectionId = groupEl.id;
+                groupEl.dataset.editorSectionKind = 'field-group';
+            }
+            editor.appendChild(groupEl);
+        });
 
         layout.appendChild(nav);
         layout.appendChild(editor);
         panel.appendChild(layout);
         nav.querySelector('#sectionSearchInput')?.addEventListener('input', applySectionFilter);
         nav.querySelector('#sectionTypeFilter')?.addEventListener('change', applySectionFilter);
-        toggleCompactMode(sectionCompactMode);
+        if (hasLegacySections) toggleCompactMode(sectionCompactMode);
         initSectionObserver();
     }
 
@@ -4146,16 +4498,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
         const panels = createEditorShell(container);
         renderPageSettings(panels);
-        renderContentPanel(panels.content);
-
-        // Render any remaining top-level keys below the content sections.
-        for (const key of Object.keys(currentContent)) {
-            if (META_KEYS.has(key) || PAGE_SETTINGS_KEYS.has(key) || SPECIAL_KEYS.has(key)) continue;
-
-            const value = currentContent[key];
-            const group = renderJsonGroup(key, value, key);
-            panels.content.appendChild(group);
-        }
+        const customContentKeys = Object.keys(currentContent).filter(isEditableTopLevelContentKey);
+        renderContentPanel(panels.content, customContentKeys);
 
         // Auto-resize all textareas
         container.querySelectorAll('textarea.ce-textarea:not(.ce-textarea--manual-resize)').forEach(autoResizeTextarea);
@@ -4538,7 +4882,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             },
             openImageGenerator: function(prompt, aspectRatio) {
                 openAiImageGenerator(prompt || '', aspectRatio || 'auto');
-            }
+            },
+            itemsPerPage: clampMediaPageSize(currentSettings?.dashboard?.mediaItemsPerPage)
         });
     }
 
@@ -4557,13 +4902,39 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     // Backward-compat globals (in case any onclick attribute still references them)
     window.openImageManager = function() { NbImageManager.open(null, null, { types: ['image', 'audio', 'video', 'document'] }); };
     window.closeImageManager = function() { NbImageManager.close(); };
+    function normalizeOgImageInputPath(path) {
+        path = (path || '').trim();
+        if (path.startsWith('../assets/images/')) {
+            return '/assets/images/' + path.substring('../assets/images/'.length);
+        }
+        if (path.startsWith('assets/images/')) {
+            return '/' + path;
+        }
+        return path;
+    }
+    function isSupportedOgImagePath(path) {
+        path = normalizeOgImageInputPath(path);
+        if (!path) return true;
+        var cleanPath = path.split('?')[0].split('#')[0].toLowerCase();
+        return /^\/assets\/images\/.+\.(jpe?g|png)$/.test(cleanPath);
+    }
+    function setOgImageInputValue(input, path) {
+        var normalized = normalizeOgImageInputPath(path);
+        if (!isSupportedOgImagePath(normalized)) {
+            showToast(t('editor.seo_og_image_format'), 'error');
+            return false;
+        }
+        input.value = normalized;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        return true;
+    }
     window.browseSeoOgImage = function() {
         const input = document.getElementById('seoOgImage');
         if (!input) return;
         NbImageManager.open(function(path) {
-            input.value = path;
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            markDirty();
+            if (setOgImageInputValue(input, path)) {
+                markDirty();
+            }
         }, input.value || null, { types: ['image'], type: 'image' });
     };
     window.browseSectionMedia = function(btn, type) {
@@ -4650,14 +5021,73 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         updateUndoRedoButtons();
     }
 
-    // Keyboard shortcuts for undo/redo
+    function isDashboardElementVisible(el) {
+        if (!el || el.hidden) return false;
+        return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+    }
+
+    function submitDashboardForm(form) {
+        if (!form) return false;
+        const submitter = form.querySelector('button[type="submit"]:not([disabled]), input[type="submit"]:not([disabled])');
+        if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit(submitter || undefined);
+        } else {
+            form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        }
+        return true;
+    }
+
+    function triggerDashboardSaveShortcut() {
+        const pageEditor = document.getElementById('editorContainer');
+        if (currentContent && isDashboardElementVisible(pageEditor)) {
+            saveContent();
+            return true;
+        }
+
+        const newsEditor = document.getElementById('newsEditorContainer');
+        if (isDashboardElementVisible(newsEditor)) {
+            savePost();
+            return true;
+        }
+
+        const eventEditor = document.getElementById('eventsEditorView');
+        if (isDashboardElementVisible(eventEditor)) {
+            saveCurrentEvent();
+            return true;
+        }
+
+        const settingsTab = document.getElementById('settingsTab');
+        if (isDashboardElementVisible(settingsTab)) {
+            const activePanel = settingsTab.querySelector('.settings-panel.active');
+            if (!activePanel) return false;
+
+            if (activePanel.id === 'settingsPanel-menus') {
+                const menuSaveBtn = document.getElementById('saveMenuOrderBtn');
+                if (menuSaveBtn && !menuSaveBtn.disabled) {
+                    menuSaveBtn.click();
+                    return true;
+                }
+                return false;
+            }
+
+            return submitDashboardForm(activePanel.querySelector('form.settings-form'));
+        }
+
+        const iconsTab = document.getElementById('iconsTab');
+        if (isDashboardElementVisible(iconsTab)) {
+            return submitDashboardForm(document.getElementById('iconManagerForm'));
+        }
+
+        return false;
+    }
+
+    // Keyboard shortcuts for save and undo/redo
     document.addEventListener('keydown', function(e) {
         const tag = document.activeElement?.tagName;
         const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || document.activeElement?.isContentEditable;
         if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
-            if (!currentContent) return;
             e.preventDefault();
-            saveContent();
+            triggerDashboardSaveShortcut();
             return;
         }
         if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
@@ -4803,6 +5233,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         div.dataset.index = index;
         div.dataset.type = section.type;
         div.dataset.search = getSectionSearchText(section, index);
+        div.dataset.editorSectionId = div.id;
+        div.dataset.editorSectionKind = 'section';
         div.setAttribute('draggable', 'true');
 
         const def = window.BlockTypeRegistry?.[section.type];
@@ -5083,10 +5515,11 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             if (result.success) {
                 showModal(
                     t('backups.view'),
-                    '<pre class="backup-preview-modal">' + escapeHtml(JSON.stringify(result.data, null, 2)) + '</pre>',
+                    renderBackupPreview(result.data),
                     closeModal,
                     {
                         html: true,
+                        modalClass: 'modal-backup-preview',
                         confirmText: 'Schließen',
                         confirmClass: 'btn btn-primary'
                     }
@@ -5097,6 +5530,66 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         } catch (error) {
             showToast(t('toast.error_generic', {message: error.message}), 'error');
         }
+    }
+
+    function flattenBackupPreviewFields(value, prefix, rows) {
+        if (Array.isArray(value)) {
+            if (value.length === 0) {
+                rows.push({ name: prefix || '[]', value: '[]' });
+                return;
+            }
+            var allScalar = value.every(function(item) {
+                return item === null || typeof item !== 'object';
+            });
+            if (allScalar) {
+                rows.push({
+                    name: prefix || '[]',
+                    value: value.map(formatBackupPreviewValue).join(', ')
+                });
+                return;
+            }
+            value.forEach(function(item, index) {
+                flattenBackupPreviewFields(item, (prefix ? prefix : '') + '[' + index + ']', rows);
+            });
+            return;
+        }
+
+        if (value && typeof value === 'object') {
+            var keys = Object.keys(value);
+            if (keys.length === 0) {
+                rows.push({ name: prefix || '{}', value: '{}' });
+                return;
+            }
+            keys.forEach(function(key) {
+                flattenBackupPreviewFields(value[key], prefix ? prefix + '.' + key : key, rows);
+            });
+            return;
+        }
+
+        rows.push({ name: prefix || 'value', value: formatBackupPreviewValue(value) });
+    }
+
+    function formatBackupPreviewValue(value) {
+        if (value === null) return 'null';
+        if (value === undefined) return '';
+        if (typeof value === 'boolean') return value ? 'true' : 'false';
+        if (typeof value === 'number') return String(value);
+        var text = String(value);
+        return text === '' ? '—' : text;
+    }
+
+    function renderBackupPreview(data) {
+        var rows = [];
+        flattenBackupPreviewFields(data, '', rows);
+        if (!rows.length) {
+            return '<div class="backup-preview-modal"><p class="backup-preview-empty">Keine Inhalte im Backup gefunden.</p></div>';
+        }
+        return '<div class="backup-preview-modal">' + rows.map(function(row) {
+            return '<article class="backup-preview-field">' +
+                '<div class="backup-preview-field__name" title="' + escapeHtml(row.name) + '">' + escapeHtml(row.name) + '</div>' +
+                '<div class="backup-preview-field__value">' + escapeHtml(row.value) + '</div>' +
+            '</article>';
+        }).join('') + '</div>';
     }
 
     function restoreBackup(filename) {
@@ -5176,6 +5669,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     function showModal(title, text, onConfirm, options) {
         options = options || {};
         closeAllComboboxes();
+        var modalEl = document.querySelector('#modalOverlay .modal');
+        if (modalEl) {
+            modalEl.className = 'modal' + (options.modalClass ? ' ' + options.modalClass : '');
+        }
         document.getElementById('modalTitle').textContent = title;
         var modalText = document.getElementById('modalText');
         if (options.html) {
@@ -5200,6 +5697,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         const overlay = document.getElementById('modalOverlay');
         overlay.style.display = 'none';
         overlay.setAttribute('aria-hidden', 'true');
+        const modalEl = overlay.querySelector('.modal');
+        if (modalEl) modalEl.className = 'modal';
         // Reset confirm button to default state
         const btn = document.getElementById('modalConfirm');
         btn.textContent = t('btn.confirm');
@@ -5766,11 +6265,16 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         const icons = getFilteredIconManagerIcons();
         if (!icons.length) {
             if (empty) empty.style.display = '';
+            renderAdminListFooter('iconManagerFooter', 'icons', 0, getDashboardPageSize('icons'), renderIconManager, 'iconManagerFooterTop');
             return;
         }
         if (empty) empty.style.display = 'none';
 
-        icons.forEach(function(iconItem) {
+        const pageSize = getDashboardPageSize('icons');
+        const paged = pageSlice(icons, 'icons', pageSize);
+        renderAdminListFooter('iconManagerFooter', 'icons', icons.length, pageSize, renderIconManager, 'iconManagerFooterTop');
+
+        paged.items.forEach(function(iconItem) {
             const card = document.createElement('article');
             card.className = 'icon-manager-card';
             if (iconManagerHighlightedKeys.has(iconItem.key)) {
@@ -6089,10 +6593,12 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     });
     document.getElementById('iconManagerSearch')?.addEventListener('input', function() {
         iconManagerSearchTerm = this.value.trim();
+        dashboardListPages.icons = 1;
         renderIconManager();
     });
     document.getElementById('iconManagerSort')?.addEventListener('change', function() {
         iconManagerSortMode = this.value || 'alpha';
+        dashboardListPages.icons = 1;
         renderIconManager();
     });
     document.getElementById('iconifyImportQuery')?.addEventListener('keydown', function(e) {
@@ -6174,12 +6680,18 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             const tr = document.createElement('tr');
             tr.innerHTML = `<td colspan="6" style="color: var(--nb-text-muted); text-align: center; padding: var(--nb-space-6);">${escapeHtml(t('mails.no_messages'))}</td>`;
             tbody.appendChild(tr);
+            renderAdminListFooter('mailsListFooter', 'mails', 0, getDashboardPageSize(), renderMails, 'mailsListFooterTop');
             updateMailBulkActions();
             updateMailSortIndicators();
             return;
         }
 
-        getSortedMails(visibleMails).forEach(mail => {
+        const sortedMails = getSortedMails(visibleMails);
+        const pageSize = getDashboardPageSize();
+        const paged = pageSlice(sortedMails, 'mails', pageSize);
+        renderAdminListFooter('mailsListFooter', 'mails', sortedMails.length, pageSize, renderMails, 'mailsListFooterTop');
+
+        paged.items.forEach(mail => {
             const date = new Date(mail.timestamp);
             const dateStr = date.toLocaleDateString();
             const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -6305,6 +6817,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     function setMailFormFilter(value) {
         mailFormFilter = value || '';
+        dashboardListPages.mails = 1;
         renderMails();
     }
 
@@ -6341,6 +6854,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             mailSortField = field;
             mailSortDir = field === 'read' || field === 'from' || field === 'subject' || field === 'form' ? 'asc' : 'desc';
         }
+        dashboardListPages.mails = 1;
         renderMails();
     }
 
@@ -6672,6 +7186,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
         if (newsData.length === 0) {
             tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align:center;padding:2rem;">${t('news.no_posts')}</td></tr>`;
+            renderAdminListFooter('newsListFooter', 'news', 0, getDashboardPageSize(), renderNewsList, 'newsListFooterTop');
             return;
         }
 
@@ -6692,7 +7207,11 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         });
 
         tbody.innerHTML = '';
-        sortedSlugs.forEach(slug => {
+        const pageSize = getDashboardPageSize();
+        const paged = pageSlice(sortedSlugs, 'news', pageSize);
+        renderAdminListFooter('newsListFooter', 'news', sortedSlugs.length, pageSize, renderNewsList, 'newsListFooterTop');
+
+        paged.items.forEach(slug => {
             const group = slugGroups[slug];
             // Primary post = default lang or first available
             const post = group[defaultLang] || Object.values(group)[0];
@@ -8139,6 +8658,35 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             picker.value = selected;
         }
         input.value = selected;
+        updateAiImageScaleOptions();
+    }
+
+    function aiSelectedImageModelSupports4K() {
+        var model = String(document.getElementById('aiImageModelPicker')?.value || document.getElementById('aiImageModel')?.value || '').trim();
+        return !/(^|\/)gpt-5\.4-image-2(?:$|-)|^gpt-image-2(?:$|-)/i.test(model);
+    }
+
+    function updateAiImageScaleOptions() {
+        var scale = document.getElementById('aiImageScale');
+        if (!scale) return;
+        var current = parseInt(scale.value || '2048', 10) || 2048;
+        var supports4K = aiSelectedImageModelSupports4K();
+        var options = [
+            { value: '1024', label: '1K' },
+            { value: '2048', label: '2K' }
+        ];
+        if (supports4K) {
+            options.push({ value: '3072', label: '3K' }, { value: '3840', label: '4K' });
+        }
+        scale.innerHTML = options.map(function(option) {
+            return '<option value="' + option.value + '">' + option.label + '</option>';
+        }).join('');
+        var maxScale = supports4K ? 3840 : 2048;
+        scale.value = String(Math.min(current, maxScale));
+        if (!scale.value) {
+            scale.value = supports4K && current > 2048 ? '3840' : '2048';
+        }
+        if (typeof updateAiImageRatioIcon === 'function') updateAiImageRatioIcon();
     }
 
     function updateAiAvailability(settings) {
@@ -8359,6 +8907,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     document.getElementById('aiImageModelPicker')?.addEventListener('change', function() {
         var imageInput = document.getElementById('aiImageModel');
         if (imageInput) imageInput.value = this.value;
+        updateAiImageScaleOptions();
         var draft = Object.assign({}, currentAiSettings || {}, collectAiSettingsForm());
         draft.hasApiKey = !!(currentAiSettings && currentAiSettings.hasApiKey) || !!document.getElementById('aiApiKey').value.trim();
         updateAiAvailability(draft);
@@ -8748,14 +9297,14 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         }
 
         // Theme
-        document.getElementById('settingsAdminTheme').value = settings.theme.adminTheme || 'dark';
+        document.getElementById('settingsAdminTheme').value = settings.theme.adminTheme || 'light';
         document.querySelectorAll('.theme-option').forEach(function(btn) {
             btn.classList.toggle('selected', btn.dataset.theme === settings.theme.adminTheme);
         });
 
         // Colors — Light mode
         var primary = settings.theme.primaryColor || '#3858e9';
-        var accent = settings.theme.accentColor || '#b45309';
+        var accent = settings.theme.accentColor || '#3858e9';
         document.getElementById('settingsPrimaryColor').value = primary;
         document.getElementById('settingsPrimaryColorPicker').value = primary;
         document.getElementById('settingsAccentColor').value = accent;
@@ -8784,6 +9333,13 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             radiusSlider.value = radiusValue;
             document.getElementById('settingsButtonRadiusValue').textContent = radiusValue + 'px';
         }
+        var dashboardSettings = settings.dashboard || {};
+        var itemsPerPageEl = document.getElementById('settingsItemsPerPage');
+        if (itemsPerPageEl) itemsPerPageEl.value = clampDashboardPageSize(dashboardSettings.itemsPerPage);
+        var iconItemsPerPageEl = document.getElementById('settingsIconItemsPerPage');
+        if (iconItemsPerPageEl) iconItemsPerPageEl.value = clampDashboardPageSize(dashboardSettings.iconManagerItemsPerPage);
+        var mediaItemsPerPageEl = document.getElementById('settingsMediaItemsPerPage');
+        if (mediaItemsPerPageEl) mediaItemsPerPageEl.value = clampMediaPageSize(dashboardSettings.mediaItemsPerPage);
 
         // Language
         var langSelect = document.getElementById('settingsAdminLanguage');
@@ -9005,9 +9561,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     // Defaults — kept in sync with server-side ($defaults in api.php load-settings)
     var THEME_DEFAULTS = {
-        adminTheme: 'dark',
+        adminTheme: 'light',
         primaryColor: '#3858e9',
-        accentColor: '#b45309',
+        accentColor: '#3858e9',
         sidebarBg: '',
         darkPrimaryColor: '',
         darkAccentColor: '',
@@ -9508,8 +10064,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     document.getElementById('browseDefaultOgBtn').addEventListener('click', function() {
         var input = document.getElementById('settingsDefaultOgImage');
         NbImageManager.open(function(path) {
-            input.value = path;
-            input.dispatchEvent(new Event('input', { bubbles: true }));
+            setOgImageInputValue(input, path);
         }, input ? input.value : null, { types: ['image'], type: 'image' });
     });
 
@@ -9695,6 +10250,11 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             var settings = Object.assign({}, currentSettings || {});
             var contrastResult = sanitizeThemeContrast(readThemeFormState());
             settings.theme = contrastResult.theme;
+            settings.dashboard = Object.assign({}, settings.dashboard || {}, {
+                itemsPerPage: clampDashboardPageSize(document.getElementById('settingsItemsPerPage')?.value),
+                iconManagerItemsPerPage: clampDashboardPageSize(document.getElementById('settingsIconItemsPerPage')?.value),
+                mediaItemsPerPage: clampMediaPageSize(document.getElementById('settingsMediaItemsPerPage')?.value)
+            });
             syncThemeFormColors(settings.theme);
             updateThemeContrastFeedback();
 
@@ -9709,6 +10269,14 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             if (result.success) {
                 currentSettings = result.data;
                 applyTheme(currentSettings.theme);
+                if (window.NbImageManager) {
+                    NbImageManager.init({
+                        itemsPerPage: clampMediaPageSize(currentSettings?.dashboard?.mediaItemsPerPage)
+                    });
+                    if (typeof NbImageManager.refresh === 'function') {
+                        NbImageManager.refresh();
+                    }
+                }
                 var serverTheme = sanitizeThemeContrast(currentSettings.theme || {});
                 if (serverTheme.warnings.length) {
                     syncThemeFormColors(serverTheme.theme);
@@ -9808,7 +10376,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     // Apply theme live
     function applyTheme(theme) {
-        var themeValue = theme.adminTheme || 'dark';
+        var themeValue = theme.adminTheme || 'light';
         if (themeValue === 'system') {
             themeValue = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         }
@@ -10385,7 +10953,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 	                        formData.append('referenceMediaPaths[]', reference.path);
 	                    }
 	                });
-                formData.append('filenameHint', prompt.substring(0, 60));
+                formData.append('filenameHint', aiImageFilenameHintValue());
                 formData.append('csrf_token', CSRF_TOKEN);
                 var result = await fetchJsonWithTimeout('api.php', { method: 'POST', body: formData }, 45000);
                 if (!result.success) throw new Error(result.message);
@@ -10950,6 +11518,35 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             button.textContent = value === 1 ? t('ai.generate_image') : t('ai.generate_images');
         }
     }
+
+    function aiImageFilenameSlug(value) {
+        value = String(value || '').trim();
+        if (!value) return '';
+        value = value
+            .replace(/[Ä]/g, 'Ae').replace(/[Ö]/g, 'Oe').replace(/[Ü]/g, 'Ue')
+            .replace(/[ä]/g, 'ae').replace(/[ö]/g, 'oe').replace(/[ü]/g, 'ue')
+            .replace(/[ß]/g, 'ss');
+        try {
+            value = value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        } catch (error) {}
+        value = value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        return (value || 'ai-image').substring(0, 72).replace(/-+$/g, '') || 'ai-image';
+    }
+
+    function aiImageFilenameHintValue() {
+        return String(document.getElementById('aiImageFilenameHint')?.value || '')
+            .trim()
+            .replace(/\.(png|jpe?g|webp)$/i, '');
+    }
+
+    document.getElementById('aiSuggestImageFilename')?.addEventListener('click', function() {
+        var prompt = document.getElementById('aiImagePrompt')?.value || '';
+        var input = document.getElementById('aiImageFilenameHint');
+        if (!input) return;
+        input.value = aiImageFilenameSlug(prompt);
+        input.focus();
+        input.select();
+    });
 
     document.getElementById('aiImproveImagePrompt')?.addEventListener('click', async function() {
         var promptEl = document.getElementById('aiImagePrompt');
@@ -12509,15 +13106,20 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             const tr = document.createElement('tr');
             tr.innerHTML = `<td colspan="4" style="color: var(--nb-text-muted); text-align: center; padding: var(--nb-space-6);">${escapeHtml(t('events.no_events'))}</td>`;
             tbody.appendChild(tr);
+            renderAdminListFooter('eventsListFooter', 'events', 0, getDashboardPageSize(), renderEventsList, 'eventsListFooterTop');
             return;
         }
 
         // Sort by date ascending
         events.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+        const pageSize = getDashboardPageSize();
+        const paged = pageSlice(events, 'events', pageSize);
+        renderAdminListFooter('eventsListFooter', 'events', events.length, pageSize, renderEventsList, 'eventsListFooterTop');
 
         const todayStr = new Date().toISOString().split('T')[0];
 
-        events.forEach((event, index) => {
+        paged.items.forEach((event) => {
+            const index = events.indexOf(event);
             const title = event.title?.[DEFAULT_LANG] || event.title?.en || event.title?.de || t('events.untitled');
             const dateStr = event.date || '';
             const endDateStr = event['end-date'] || dateStr;
@@ -12950,6 +13552,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             table.style.display = 'none';
             emptyMsg.style.display = 'block';
             emptyBtn.style.display = 'none';
+            renderAdminListFooter('eventsTrashFooter', 'eventsTrash', 0, getDashboardPageSize(), function() {
+                renderEventsTrash(items);
+            }, 'eventsTrashFooterTop');
             return;
         }
 
@@ -12957,7 +13562,13 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         emptyMsg.style.display = 'none';
         emptyBtn.style.display = '';
 
-        items.forEach(item => {
+        const pageSize = getDashboardPageSize();
+        const paged = pageSlice(items, 'eventsTrash', pageSize);
+        renderAdminListFooter('eventsTrashFooter', 'eventsTrash', items.length, pageSize, function() {
+            renderEventsTrash(items);
+        }, 'eventsTrashFooterTop');
+
+        paged.items.forEach(item => {
             const ev = item.event || {};
             const title = ev.title?.[DEFAULT_LANG] || ev.title?.en || ev.title?.de || t('events.untitled');
             const tr = document.createElement('tr');

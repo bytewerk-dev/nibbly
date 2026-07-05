@@ -227,6 +227,9 @@ function validateRedirectUrl($url) {
     }
 
     $parsed = parse_url($url);
+    if ($parsed === false) {
+        return '/';
+    }
 
     // Only allow relative URLs or URLs to own domain
     if (isset($parsed['host'])) {
@@ -237,7 +240,8 @@ function validateRedirectUrl($url) {
     }
 
     // Don't redirect back to admin area
-    if (strpos($url, '/admin/') !== false) {
+    $path = $parsed['path'] ?? '';
+    if ($path === '/admin' || strpos($path, '/admin/') === 0) {
         return '/';
     }
 
@@ -249,7 +253,7 @@ function validateRedirectUrl($url) {
 // ============================================================
 
 if (isset($_GET['logout'])) {
-    $redirect = validateRedirectUrl($_SERVER['HTTP_REFERER'] ?? '/');
+    $redirect = validateRedirectUrl($_GET['redirect'] ?? ($_SERVER['HTTP_REFERER'] ?? '/'));
     session_destroy();
     header('Location: ' . $redirect);
     exit;
@@ -527,7 +531,7 @@ $_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : 
 $siteSettings = [
     'favicon' => $_defaultFavicon,
     'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both'],
-    'theme' => ['adminTheme' => 'dark', 'primaryColor' => '#2563eb', 'accentColor' => '#60a5fa'],
+    'theme' => ['adminTheme' => 'light', 'primaryColor' => '#3858e9', 'accentColor' => '#3858e9'],
     'login' => ['brandAsset' => 'favicon', 'image' => '', 'imageLayout' => 'none', 'overlayColor' => '', 'overlayOpacity' => 86, 'boxStyle' => 'card', 'boxColor' => '', 'boxTextColor' => '']
 ];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
@@ -542,7 +546,7 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
         if (!empty($loadedSettings['favicon'])) $siteSettings['favicon'] = $loadedSettings['favicon'];
     }
 }
-$adminTheme = $siteSettings['theme']['adminTheme'] ?? 'dark';
+$adminTheme = $siteSettings['theme']['adminTheme'] ?? 'light';
 $showBranding = $siteSettings['branding']['showBranding'] ?? true;
 // Backend uses the configured login asset, with admin logo preferred for "logo".
 $loginSettings = $siteSettings['login'] ?? [];
@@ -605,16 +609,16 @@ $loginBoxStyleAttr = $loginBoxVariables
     })();
     </script>
     <?php endif; ?>
-    <?php if ($siteSettings['theme']['primaryColor'] !== '#2563eb' || $siteSettings['theme']['accentColor'] !== '#60a5fa'): ?>
+    <?php if ($siteSettings['theme']['primaryColor'] !== '#3858e9' || $siteSettings['theme']['accentColor'] !== '#3858e9'): ?>
     <style>
     :root {
         <?php $pc = htmlspecialchars($siteSettings['theme']['primaryColor']); ?>
-        <?php if ($siteSettings['theme']['primaryColor'] !== '#2563eb'): ?>
+        <?php if ($siteSettings['theme']['primaryColor'] !== '#3858e9'): ?>
         --nb-primary: <?php echo $pc; ?>;
         --nb-primary-btn: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $pc; ?> 70%, white) 0%, <?php echo $pc; ?> 70%);
         --nb-primary-btn-hover: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $pc; ?> 50%, white) 0%, <?php echo $pc; ?> 70%);
         <?php endif; ?>
-        <?php if ($siteSettings['theme']['accentColor'] !== '#60a5fa'): ?>
+        <?php if ($siteSettings['theme']['accentColor'] !== '#3858e9'): ?>
         --nb-brand: <?php echo htmlspecialchars($siteSettings['theme']['accentColor']); ?>;
         <?php endif; ?>
     }

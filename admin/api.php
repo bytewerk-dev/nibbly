@@ -11,6 +11,7 @@ require_once __DIR__ . '/../includes/content-loader.php';
 require_once __DIR__ . '/../includes/seo-helper.php';
 require_once __DIR__ . '/../includes/ai/ai-helper.php';
 require_once __DIR__ . '/../includes/ai/copilot-context.php';
+require_once __DIR__ . '/../includes/ai/image-job-runner.php';
 require_once __DIR__ . '/../includes/analytics-helper.php';
 require_once __DIR__ . '/../includes/forms.php';
 ensureUsersFile();
@@ -44,6 +45,7 @@ function isAuthenticated() {
         }
     }
 
+    $_SESSION['admin_login_time'] = time();
     return true;
 }
 
@@ -126,89 +128,30 @@ function nibblyApiDetachResponse(array $payload): bool {
 }
 
 function nibblyApiRunImageJob(string $jobId): array {
-    $existingJob = nibblyAiLoadImageJob($jobId);
-    $existingJob = nibblyAiRefreshImageJobState($existingJob);
-    nibblyApiAssertImageJobAccess($existingJob);
-    if ((string)($existingJob['status'] ?? '') === 'running') {
-        return nibblyAiPublicImageJob($existingJob);
-    }
-    if (in_array((string)($existingJob['status'] ?? ''), ['success', 'error'], true)) {
-        return nibblyAiPublicImageJob($existingJob);
-    }
-    $job = nibblyAiMarkImageJobRunning($jobId);
-    if (in_array((string)($job['status'] ?? ''), ['success', 'error'], true)) {
-        return nibblyAiPublicImageJob($job);
-    }
+    return nibblyAiRunImageJobCore($jobId, 'nibblyApiAssertImageJobAccess');
+}
 
-    $payload = is_array($job['payload'] ?? null) ? $job['payload'] : [];
-    $options = is_array($payload['options'] ?? null) ? $payload['options'] : [];
-    $prompt = trim((string)($payload['prompt'] ?? ''));
-    $kind = (string)($job['kind'] ?? 'dashboard');
-
-    try {
-        if ($kind === 'copilot') {
-            $contentPage = trim((string)($payload['contentPage'] ?? ''));
-            $fieldRef = trim((string)($payload['fieldRef'] ?? ''));
-            $instruction = trim((string)($payload['instruction'] ?? ''));
-            if ($contentPage === '' || $fieldRef === '' || $instruction === '' || $prompt === '') {
-                throw new RuntimeException('Image job is missing required copilot data.');
-            }
-            $settings = nibblyAiLoadSettings(false);
-            nibblyAiEnsureEnabled($settings);
-            nibblyAiEnsureFeature($settings, 'imageGeneration');
-            $context = nibblyCopilotBuildContext($contentPage, nibblyAiLoadSettings(true));
-            $fields = nibblyCopilotAllowedImageFields($context, $fieldRef);
-            if (!$fields) {
-                throw new RuntimeException('Target field does not accept AI image generation.');
-            }
-            $field = $fields[0];
-            $result = nibblyAiGenerateImage($prompt, $options);
-            $proposal = nibblyCopilotImageProposal($context, $field['id'], $instruction, $result);
-            nibblyAiAudit('copilot-generate-image', true, [
-                'jobId' => $jobId,
-                'contentPage' => $contentPage,
-                'path' => $proposal['path'],
-                'imageMode' => (string)($payload['imageMode'] ?? 'generate'),
-                'requestedCount' => (int)($options['count'] ?? 1),
-                'count' => count($proposal['paths'] ?? []),
-                'proposals' => dashboardCopilotProposalAuditSummary([$proposal])
-            ]);
-            return nibblyAiFinishImageJob($jobId, [
-                'proposal' => $proposal,
-                'usage' => $result['usage'] ?? null,
-                'limits' => $result['limits'] ?? null,
-                'context' => $context
-            ]);
-        }
-
-        if ($prompt === '') {
-            throw new RuntimeException('Image job prompt is missing.');
-        }
-        $result = nibblyAiGenerateImage($prompt, $options);
-        return nibblyAiFinishImageJob($jobId, $result);
-    } catch (Throwable $e) {
-        if ($kind === 'dashboard') {
-            $settings = nibblyAiLoadSettings(false);
-            nibblyAiRecordImageHistory([
-                'status' => 'error',
-                'model' => (string)($options['model'] ?? $settings['imageModel'] ?? ''),
-                'prompt' => $prompt,
-                'size' => (string)($options['size'] ?? ''),
-                'aspectRatio' => (string)($options['aspectRatio'] ?? ''),
-                'quality' => (string)($options['quality'] ?? ''),
-                'format' => (string)($options['outputFormat'] ?? ''),
-                'moderation' => (string)($options['moderation'] ?? ''),
-                'compression' => (int)($options['outputCompression'] ?? 0),
-                'count' => (int)($options['count'] ?? 0),
-                'referenceImages' => nibblyAiPublicReferenceList($options),
-                'outputs' => [],
-                'error' => $e->getMessage(),
-                'estimatedCostCents' => 0
-            ]);
-        }
-        nibblyAiAudit($kind === 'copilot' ? 'copilot-generate-image' : 'image', false, ['jobId' => $jobId, 'message' => $e->getMessage()]);
-        return nibblyAiFailImageJob($jobId, $e->getMessage());
+function nibblyApiTrySpawnLocalImageJobWorker(string $jobId): bool {
+    if (PHP_SAPI !== 'cli-server') {
+        return false;
     }
+    if (!preg_match('/^[a-zA-Z0-9_-]+$/', $jobId)) {
+        return false;
+    }
+    $php = PHP_BINARY;
+    $script = dirname(__DIR__) . '/cli/ai-image-job-worker.php';
+    if (!is_file($script) || $php === '') {
+        return false;
+    }
+    if (stripos(PHP_OS_FAMILY, 'Windows') !== false) {
+        $command = 'start /B "" ' . escapeshellarg($php) . ' ' . escapeshellarg($script) . ' ' . escapeshellarg($jobId);
+        pclose(popen($command, 'r'));
+    } else {
+        $command = escapeshellarg($php) . ' ' . escapeshellarg($script) . ' ' . escapeshellarg($jobId) . ' > /dev/null 2>&1 &';
+        exec($command);
+    }
+    nibblyAiAudit('image-job-worker-spawned', true, ['jobId' => $jobId, 'sapi' => PHP_SAPI]);
+    return true;
 }
 
 function nibblyNormalizeHexColor(string $value): string {
@@ -814,6 +757,32 @@ function validateImageFilename(string $filename): bool {
     return in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'], true);
 }
 
+function normalizeOgImagePath(string $path): string {
+    $path = trim($path);
+    if ($path === '') return '';
+    if (str_starts_with($path, '../assets/images/')) {
+        $path = '/assets/images/' . substr($path, strlen('../assets/images/'));
+    } elseif (str_starts_with($path, 'assets/images/')) {
+        $path = '/' . $path;
+    }
+    return $path;
+}
+
+function validateOgImagePath(string $path): bool {
+    $path = normalizeOgImagePath($path);
+    if ($path === '') return true;
+    if (
+        strpos($path, '..') !== false ||
+        !str_starts_with($path, '/assets/images/') ||
+        preg_match('#[:\x00]#', $path)
+    ) {
+        return false;
+    }
+
+    $ext = strtolower(pathinfo(parse_url($path, PHP_URL_PATH) ?: '', PATHINFO_EXTENSION));
+    return in_array($ext, ['jpg', 'jpeg', 'png'], true);
+}
+
 function getMediaConfig(?string $type = null): array {
     $root = dirname(__DIR__);
     $configs = [
@@ -955,6 +924,82 @@ function uniqueMediaRelativePath(string $directory, string $relativePath): strin
     }
 
     return $targetPath;
+}
+
+function normalizeRenameExtension(string $extension): string {
+    $extension = strtolower(trim($extension));
+    return $extension === 'jpeg' ? 'jpg' : $extension;
+}
+
+function validateMediaRenameBasename(string $filename, string $type): bool {
+    if ($filename === ''
+        || strlen($filename) > 180
+        || basename($filename) !== $filename
+        || strpos($filename, '\\') !== false
+        || strpos($filename, '/') !== false
+        || str_contains($filename, '..')
+        || preg_match('/[\x00-\x1F\x7F]/', $filename)
+    ) {
+        return false;
+    }
+
+    $name = pathinfo($filename, PATHINFO_FILENAME);
+    return trim($name) !== '' && validateMediaFilename($filename, $type);
+}
+
+function findMediaJsonReferences(string $needle): array {
+    $needle = trim($needle);
+    if ($needle === '' || !is_dir(dirname(CONTENT_PATH))) {
+        return [];
+    }
+
+    $contentRoot = realpath(dirname(CONTENT_PATH));
+    if ($contentRoot === false) {
+        return [];
+    }
+
+    $matches = [];
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($contentRoot, FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::LEAVES_ONLY
+    );
+
+    foreach ($iterator as $fileInfo) {
+        if (!$fileInfo->isFile() || $fileInfo->isLink() || strtolower($fileInfo->getExtension()) !== 'json') {
+            continue;
+        }
+        $path = $fileInfo->getPathname();
+        $raw = (string)file_get_contents($path);
+        if ($raw === '' || strpos($raw, $needle) === false) {
+            continue;
+        }
+        $relative = ltrim(str_replace('\\', '/', substr($path, strlen($contentRoot))), '/');
+        $lines = preg_split('/\R/', $raw);
+        $lineMatches = [];
+        foreach ($lines as $index => $line) {
+            if (strpos($line, $needle) === false) {
+                continue;
+            }
+            $snippet = trim(preg_replace('/\s+/', ' ', $line));
+            $lineMatches[] = [
+                'line' => $index + 1,
+                'snippet' => substr($snippet, 0, 220)
+            ];
+            if (count($lineMatches) >= 5) {
+                break;
+            }
+        }
+        $matches[] = [
+            'file' => $relative,
+            'matches' => $lineMatches,
+            'count' => substr_count($raw, $needle)
+        ];
+        if (count($matches) >= 50) {
+            break;
+        }
+    }
+
+    return $matches;
 }
 
 function formatAssetSize(int $sizeBytes): string {
@@ -1133,6 +1178,22 @@ function sanitizeModuleSettings(array $settings): array {
     ];
 }
 
+function sanitizeDashboardSettings(array $settings): array {
+    if (!isset($settings['dashboard']) || !is_array($settings['dashboard'])) {
+        return [];
+    }
+    $dashboard = $settings['dashboard'];
+    $sanitizePageSize = function($value): int {
+        $value = is_numeric($value) ? (int)$value : 50;
+        return max(10, min(500, $value));
+    };
+    return [
+        'itemsPerPage' => $sanitizePageSize($dashboard['itemsPerPage'] ?? 50),
+        'iconManagerItemsPerPage' => $sanitizePageSize($dashboard['iconManagerItemsPerPage'] ?? 50),
+        'mediaItemsPerPage' => $sanitizePageSize($dashboard['mediaItemsPerPage'] ?? 25),
+    ];
+}
+
 function normalizePageVisibility(array $contentData, ?array $existingData = null): array {
     $visibility = $contentData['visibility'] ?? null;
     if (!is_array($visibility)) {
@@ -1187,6 +1248,11 @@ function normalizePageSeo(array $contentData): array {
         jsonResponse(false, null, 'Invalid canonical URL');
     }
 
+    $ogImage = normalizeOgImagePath((string)($seo['ogImage'] ?? ''));
+    if (!validateOgImagePath($ogImage)) {
+        jsonResponse(false, null, 'Open Graph image must be a JPG or PNG file from /assets/images/');
+    }
+
     $contentData['seo'] = [
         'title' => substr(trim((string)($seo['title'] ?? '')), 0, 120),
         'description' => substr(trim((string)($seo['description'] ?? '')), 0, 260),
@@ -1195,7 +1261,7 @@ function normalizePageSeo(array $contentData): array {
         'robots' => $robots,
         'ogTitle' => substr(trim((string)($seo['ogTitle'] ?? '')), 0, 120),
         'ogDescription' => substr(trim((string)($seo['ogDescription'] ?? '')), 0, 260),
-        'ogImage' => trim((string)($seo['ogImage'] ?? '')),
+        'ogImage' => $ogImage,
         'sitemap' => ($seo['sitemap'] ?? true) !== false,
     ];
 
@@ -1805,6 +1871,13 @@ $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 switch ($action) {
 
+    case 'keepalive':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        jsonResponse(true, ['time' => time()], 'Session refreshed');
+        break;
+
     case 'dashboard-overview':
         $analyticsPeriod = $_GET['analytics_period'] ?? 'days';
         $analyticsCount = isset($_GET['analytics_count']) ? (int)$_GET['analytics_count'] : 30;
@@ -1901,6 +1974,12 @@ switch ($action) {
             nibblyApiAssertImageJobAccess($pendingJob);
             if (session_status() === PHP_SESSION_ACTIVE) {
                 session_write_close();
+            }
+            if ((string)($pendingJob['status'] ?? '') === 'queued' && nibblyApiTrySpawnLocalImageJobWorker($jobId)) {
+                jsonResponse(true, [
+                    'job' => nibblyAiPublicImageJob($pendingJob),
+                    'worker' => 'cli'
+                ]);
             }
             // Detach for queued jobs so generation survives closed tabs and
             // page navigation; clients pick up the result via job polling.
@@ -4689,6 +4768,92 @@ switch ($action) {
         jsonResponse(false, null, 'Error moving media');
         break;
 
+    case 'rename-media':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $type = normalizeMediaType($_POST['type'] ?? 'image');
+        $filename = $_POST['filename'] ?? '';
+        $newName = trim((string)($_POST['newName'] ?? ''));
+        $scanReferences = ($_POST['scanReferences'] ?? '0') === '1';
+        $confirmReferences = ($_POST['confirmReferences'] ?? '0') === '1';
+        $config = getMediaConfig($type);
+        if (!$config || !validateMediaFilename($filename, $type)) {
+            jsonResponse(false, null, 'Invalid media file');
+        }
+        if (!validateMediaRenameBasename($newName, $type)) {
+            jsonResponse(false, null, 'Invalid file name');
+        }
+
+        $oldBasename = basename($filename);
+        $oldExt = normalizeRenameExtension(pathinfo($oldBasename, PATHINFO_EXTENSION));
+        $newExt = normalizeRenameExtension(pathinfo($newName, PATHINFO_EXTENSION));
+        if ($oldExt === '' || $newExt === '' || $oldExt !== $newExt) {
+            jsonResponse(false, null, 'File extension cannot be changed');
+        }
+
+        $folder = trim(str_replace('\\', '/', dirname($filename)), '.');
+        $targetRelative = ($folder !== '' ? $folder . '/' : '') . $newName;
+        if (!validateMediaFilename($targetRelative, $type)) {
+            jsonResponse(false, null, 'Invalid file name');
+        }
+        if ($targetRelative === $filename) {
+            jsonResponse(true, [
+                'type' => $type,
+                'name' => $filename,
+                'path' => $config['publicPath'] . $filename,
+                'references' => [],
+            ], 'Media already has this name');
+        }
+
+        $sourcePath = $config['path'] . $filename;
+        $targetPath = $config['path'] . $targetRelative;
+        if (!is_file($sourcePath) || is_link($sourcePath)) {
+            jsonResponse(false, null, 'File not found');
+        }
+        if (file_exists($targetPath)) {
+            jsonResponse(false, null, 'A file with this name already exists');
+        }
+
+        $references = [];
+        if ($scanReferences) {
+            $referencesByPath = [];
+            foreach ([
+                $oldBasename,
+                $filename,
+                ltrim($config['publicPath'], './') . $filename,
+                '/' . ltrim($config['publicPath'], './') . $filename,
+            ] as $needle) {
+                foreach (findMediaJsonReferences($needle) as $match) {
+                    $key = $match['file'];
+                    $referencesByPath[$key] = $match;
+                }
+            }
+            $references = array_values($referencesByPath);
+            if ($references && !$confirmReferences) {
+                jsonResponse(false, [
+                    'requiresConfirmation' => true,
+                    'references' => $references,
+                    'oldName' => $filename,
+                    'newName' => $targetRelative,
+                ], 'References found');
+            }
+        }
+
+        if (rename($sourcePath, $targetPath)) {
+            jsonResponse(true, [
+                'type' => $type,
+                'name' => $targetRelative,
+                'path' => $config['publicPath'] . $targetRelative,
+                'oldName' => $filename,
+                'references' => $references,
+            ], 'Media renamed');
+        }
+
+        jsonResponse(false, null, 'Error renaming media');
+        break;
+
     case 'delete-media':
         if (!validateCsrfToken()) {
             jsonResponse(false, null, 'Invalid CSRF token');
@@ -5702,9 +5867,9 @@ switch ($action) {
                 'logoSize' => 'medium'
             ],
             'theme' => [
-                'adminTheme' => 'dark',
+                'adminTheme' => 'light',
                 'primaryColor' => '#3858e9',
-                'accentColor' => '#b45309',
+                'accentColor' => '#3858e9',
                 'sidebarBg' => '',
                 'darkPrimaryColor' => '',
                 'darkAccentColor' => '',
@@ -5734,6 +5899,11 @@ switch ($action) {
                 'events' => true,
                 'messages' => true,
                 'iconManager' => true
+            ],
+            'dashboard' => [
+                'itemsPerPage' => 50,
+                'iconManagerItemsPerPage' => 50,
+                'mediaItemsPerPage' => 25
             ],
             'access' => [
                 'maintenance' => [
@@ -5872,13 +6042,9 @@ switch ($action) {
                     }
 
                     if ($group === 'seo' && $key === 'defaultOgImage') {
-                        $value = trim((string)$value);
-                        if ($value !== '' && (
-                            strpos($value, '..') !== false ||
-                            !str_starts_with($value, '/assets/images/') ||
-                            preg_match('#[:\x00]#', $value)
-                        )) {
-                            jsonResponse(false, null, 'Invalid default Open Graph image path');
+                        $value = normalizeOgImagePath((string)$value);
+                        if (!validateOgImagePath($value)) {
+                            jsonResponse(false, null, 'Default Open Graph image must be a JPG or PNG file from /assets/images/');
                         }
                     }
 
@@ -6005,6 +6171,10 @@ switch ($action) {
         $modulesPatch = sanitizeModuleSettings($settings);
         if ($modulesPatch) {
             $sanitized['modules'] = $modulesPatch;
+        }
+        $dashboardPatch = sanitizeDashboardSettings($settings);
+        if ($dashboardPatch) {
+            $sanitized['dashboard'] = $dashboardPatch;
         }
         $merged = array_replace_recursive($existing, $sanitized);
 

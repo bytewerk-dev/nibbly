@@ -190,7 +190,17 @@ nibblyStartEmailObfuscation();
     <meta property="og:url" content="<?php echo htmlspecialchars($_seoContext['canonical'] ?: nibblySeoCurrentUrl()); ?>">
     <?php if (!empty($_seoContext['ogImage'])): ?>
     <meta property="og:image" content="<?php echo htmlspecialchars($_seoContext['ogImage']); ?>">
+    <?php if (!empty($_seoContext['ogImageWidth'])): ?>
+    <meta property="og:image:width" content="<?php echo htmlspecialchars((string)$_seoContext['ogImageWidth']); ?>">
+    <?php endif; ?>
+    <?php if (!empty($_seoContext['ogImageHeight'])): ?>
+    <meta property="og:image:height" content="<?php echo htmlspecialchars((string)$_seoContext['ogImageHeight']); ?>">
+    <?php endif; ?>
+    <?php if (!empty($_seoContext['ogImageAlt'])): ?>
+    <meta property="og:image:alt" content="<?php echo htmlspecialchars($_seoContext['ogImageAlt']); ?>">
+    <?php endif; ?>
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="<?php echo htmlspecialchars($_seoContext['ogImage']); ?>">
     <?php else: ?>
     <meta name="twitter:card" content="summary">
     <?php endif; ?>

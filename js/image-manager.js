@@ -22,6 +22,7 @@
         showConfirm: null, // optional; falls back to window.confirm
         canGenerateImages: function () { return false; },
         openImageGenerator: null,
+        itemsPerPage: 25,
     };
 
     // ============================================================
@@ -45,10 +46,13 @@
         folderFilter: 'all',
         expandedFolders: {},
         lightboxItem: null,
+        page: 1,
     };
 
     var replaceTarget = null;
     var moveTarget = null;
+    var renameTarget = null;
+    var pendingRename = null;
     var previousFocus = null;
     var mediaTypes = {
         image: {
@@ -103,6 +107,7 @@
         folderPlus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2.5h6.5A2.5 2.5 0 0 1 21 9v8.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M12 11v6M9 14h6"/></svg>',
         layers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5z"/><path d="m2 12 10 5 10-5M2 17l10 5 10-5"/></svg>',
         move: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h5l2 2h11v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M13 12h5M16 9l3 3-3 3"/></svg>',
+        rename: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
         chevronRight: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>',
         chevronLeft: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>',
     };
@@ -124,6 +129,25 @@
             }
         }
         return s;
+    }
+
+    function clampItemsPerPage(value) {
+        var parsed = parseInt(value, 10);
+        if (!Number.isFinite(parsed)) return 25;
+        return Math.max(10, Math.min(500, parsed));
+    }
+
+    function getItemsPerPage() {
+        return clampItemsPerPage(config.itemsPerPage);
+    }
+
+    function paginationIcon(direction) {
+        return direction === 'prev' ? Icons.chevronLeft : Icons.chevronRight;
+    }
+
+    function mediaSummaryText(total, from, to) {
+        if (total <= 0) return t('lists.summary_empty');
+        return t('lists.summary_range', { from: from, to: to, total: total });
     }
 
     function confirmAction(title, message, onYes) {
@@ -280,6 +304,7 @@
                         '<div class="nb-imgmgr-folder-list" role="listbox" aria-label="' + escapeHtml(t('media.folders')) + '"></div>' +
                     '</aside>' +
                     '<div class="nb-imgmgr-content">' +
+                        '<div class="nb-imgmgr-pagination nb-imgmgr-pagination--top"></div>' +
                         '<div class="nb-imgmgr-grid" role="list"></div>' +
                         '<div class="nb-imgmgr-list">' +
                             '<div class="nb-imgmgr-list-header">' +
@@ -292,6 +317,7 @@
                             '</div>' +
                             '<div class="nb-imgmgr-list-body"></div>' +
                         '</div>' +
+                        '<div class="nb-imgmgr-pagination nb-imgmgr-pagination--bottom"></div>' +
                     '</div>' +
                 '</div>' +
                 '<div class="nb-imgmgr-dropzone">' +
@@ -304,7 +330,7 @@
                         '<select class="nb-imgmgr-upload-type"></select>' +
                         '<label class="nb-imgmgr-upload-btn">' +
                             Icons.upload + ' <span>' + escapeHtml(t('image.upload')) + '</span>' +
-                            '<input type="file" class="nb-imgmgr-upload-input" accept=".jpg,.jpeg,.png,.webp">' +
+                            '<input type="file" class="nb-imgmgr-upload-input" accept=".jpg,.jpeg,.png,.webp" multiple>' +
                         '</label>' +
                     '</div>' +
                 '</div>' +
@@ -332,6 +358,12 @@
             config.openImageGenerator('', 'auto');
         });
         modal.addEventListener('click', function (e) {
+            var pageBtn = e.target.closest && e.target.closest('.nb-imgmgr-pagination-btn[data-page]');
+            if (pageBtn && modal.contains(pageBtn)) {
+                e.preventDefault();
+                setMediaPage(pageBtn.dataset.page);
+                return;
+            }
             var thumb = e.target.closest && e.target.closest('.nb-imgmgr-thumb-btn');
             if (!thumb || !modal.contains(thumb)) return;
             var itemEl = thumb.closest('.nb-imgmgr-item, .nb-imgmgr-row');
@@ -356,6 +388,7 @@
             // Root folder uses an empty-string value, which is falsy — read the
             // attribute directly so "Main folder" is not coerced to "all".
             state.folderFilter = entry.getAttribute('data-folder') || '';
+            state.page = 1;
             filterAndRender();
             updateFolderUI();
         });
@@ -365,6 +398,7 @@
             if (!entry) return;
             e.preventDefault();
             state.folderFilter = entry.getAttribute('data-folder') || '';
+            state.page = 1;
             filterAndRender();
             updateFolderUI();
         });
@@ -386,11 +420,12 @@
         });
         dropzone.addEventListener('drop', function (e) {
             var files = e.dataTransfer && e.dataTransfer.files;
-            if (files && files.length > 0) uploadFile(files[0]);
+            uploadFiles(files);
         });
 
         modal.querySelector('.nb-imgmgr-search').addEventListener('input', function (e) {
             state.search = e.target.value.toLowerCase().trim();
+            state.page = 1;
             filterAndRender();
         });
 
@@ -408,6 +443,7 @@
 
         modal.querySelector('.nb-imgmgr-upload-type').addEventListener('change', function (e) {
             state.activeType = e.target.value;
+            state.page = 1;
             updateTypeUI();
             loadImages();
         });
@@ -424,6 +460,7 @@
             if (e.key !== 'Escape') return;
             var replaceDialog = document.getElementById('nb-imgmgr-replace');
             var moveDialog = document.getElementById('nb-imgmgr-move');
+            var renameDialog = document.getElementById('nb-imgmgr-rename');
             var lightbox = document.getElementById('nb-imgmgr-lightbox');
             if (replaceDialog && replaceDialog.classList.contains('active')) {
                 e.stopPropagation();
@@ -433,6 +470,10 @@
                 e.stopPropagation();
                 e.preventDefault();
                 closeMoveDialog();
+            } else if (renameDialog && renameDialog.classList.contains('active')) {
+                e.stopPropagation();
+                e.preventDefault();
+                closeRenameDialog();
             } else if (lightbox && lightbox.classList.contains('active')) {
                 e.stopPropagation();
                 e.preventDefault();
@@ -447,6 +488,7 @@
         createLightbox();
         createReplaceDialog();
         createMoveDialog();
+        createRenameDialog();
     }
 
     // ============================================================
@@ -474,6 +516,7 @@
         state.search = '';
         state.mode = 'library';
         state.folderFilter = 'all';
+        state.page = 1;
 
         modal.querySelector('.nb-imgmgr-search').value = '';
         renderTypeControls();
@@ -513,6 +556,7 @@
         state.search = '';
         state.mode = 'library';
         state.folderFilter = 'all';
+        state.page = 1;
 
         modal.querySelector('.nb-imgmgr-search').value = '';
         renderTypeControls();
@@ -585,6 +629,7 @@
         typeToggle.querySelectorAll('.nb-imgmgr-type-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 state.activeType = btn.dataset.type;
+                state.page = 1;
                 updateTypeUI();
                 loadImages();
             });
@@ -723,6 +768,8 @@
                 } else {
                     state.data = [];
                     state.filtered = [];
+                    state.page = 1;
+                    renderPagination();
                     var emptyKey = state.mode === 'trash' ? (isImageOnlyPicker() ? 'image.trash_empty' : 'media.trash_empty') : 'media.no_files';
                     var empty = '<p class="nb-imgmgr-empty">' + escapeHtml(t(emptyKey)) + '</p>';
                     gridEl.innerHTML = empty;
@@ -767,12 +814,70 @@
             var matchesSearch = !state.search || ((img.name || '') + ' ' + (img.basename || '') + ' ' + folder).toLowerCase().indexOf(state.search) !== -1;
             return matchesFolder && matchesSearch;
         });
+        var pageSize = getItemsPerPage();
+        var pages = Math.max(1, Math.ceil(state.filtered.length / pageSize));
+        state.page = Math.max(1, Math.min(state.page || 1, pages));
         render();
     }
 
     function render() {
+        renderPagination();
         if (state.view === 'grid') renderGrid();
         else renderList();
+    }
+
+    function currentPageItems() {
+        var pageSize = getItemsPerPage();
+        var current = Math.max(1, state.page || 1);
+        var start = (current - 1) * pageSize;
+        return state.filtered.slice(start, start + pageSize);
+    }
+
+    function renderPagination() {
+        var modal = document.getElementById('nb-imgmgr-modal');
+        if (!modal) return;
+        var pageSize = getItemsPerPage();
+        var total = state.filtered.length;
+        var pageCount = Math.max(1, Math.ceil(total / pageSize));
+        var current = Math.max(1, Math.min(state.page || 1, pageCount));
+        state.page = current;
+        var from = total === 0 ? 0 : ((current - 1) * pageSize) + 1;
+        var to = Math.min(total, current * pageSize);
+        var summary = mediaSummaryText(total, from, to);
+        var showPager = total > pageSize;
+        var html = '<div class="nb-imgmgr-pagination-inner">' +
+            '<span class="nb-imgmgr-pagination-summary">' + escapeHtml(summary) + '</span>';
+
+        if (showPager) {
+            var nav = [];
+            var addPage = function(page) {
+                nav.push('<button type="button" class="nb-imgmgr-pagination-btn' + (page === current ? ' is-active' : '') + '" data-page="' + page + '" aria-current="' + (page === current ? 'page' : 'false') + '">' + page + '</button>');
+            };
+            nav.push('<button type="button" class="nb-imgmgr-pagination-btn nb-imgmgr-pagination-btn--arrow" data-page="' + Math.max(1, current - 1) + '" aria-label="' + escapeHtml(t('lists.previous_page')) + '"' + (current === 1 ? ' disabled' : '') + '>' + paginationIcon('prev') + '</button>');
+            addPage(1);
+            if (current > 3) nav.push('<span class="nb-imgmgr-pagination-ellipsis">...</span>');
+            for (var page = Math.max(2, current - 1); page <= Math.min(pageCount - 1, current + 1); page += 1) {
+                addPage(page);
+            }
+            if (current < pageCount - 2) nav.push('<span class="nb-imgmgr-pagination-ellipsis">...</span>');
+            if (pageCount > 1) addPage(pageCount);
+            nav.push('<button type="button" class="nb-imgmgr-pagination-btn nb-imgmgr-pagination-btn--arrow" data-page="' + Math.min(pageCount, current + 1) + '" aria-label="' + escapeHtml(t('lists.next_page')) + '"' + (current === pageCount ? ' disabled' : '') + '>' + paginationIcon('next') + '</button>');
+            html += '<nav class="nb-imgmgr-pagination-nav" aria-label="' + escapeHtml(t('lists.pagination')) + '">' + nav.join('') + '</nav>';
+        }
+
+        html += '</div>';
+        modal.querySelectorAll('.nb-imgmgr-pagination').forEach(function (footer) {
+            var isTop = footer.classList.contains('nb-imgmgr-pagination--top');
+            footer.hidden = isTop && !showPager;
+            footer.innerHTML = isTop && !showPager ? '' : html;
+        });
+    }
+
+    function setMediaPage(page) {
+        var pageSize = getItemsPerPage();
+        var pages = Math.max(1, Math.ceil(state.filtered.length / pageSize));
+        state.page = Math.max(1, Math.min(parseInt(page, 10) || 1, pages));
+        render();
     }
 
     function renderGrid() {
@@ -788,7 +893,7 @@
         }
 
         gridEl.innerHTML = '';
-        state.filtered.forEach(function (image) {
+        currentPageItems().forEach(function (image) {
             var item = document.createElement('div');
             var isSelected = state.isPicker && isSelectedPath(image.path);
             item.className = 'nb-imgmgr-item' + (isSelected ? ' selected' : '');
@@ -811,6 +916,7 @@
                     mediaDownloadActionHtml(image) +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="copy" title="' + escapeHtml(t('image.copy_path')) + '" aria-label="' + escapeHtml(t('image.copy_path')) + '">' + Icons.copy + '</button>' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="move" title="' + escapeHtml(t('media.move_file')) + '" aria-label="' + escapeHtml(t('media.move_file')) + '">' + Icons.move + '</button>' +
+                    '<button type="button" class="nb-imgmgr-action-btn" data-action="rename" title="' + escapeHtml(t('media.rename_file')) + '" aria-label="' + escapeHtml(t('media.rename_file')) + '">' + Icons.rename + '</button>' +
                     (isImage(image) ? '<button type="button" class="nb-imgmgr-action-btn" data-action="replace" title="' + escapeHtml(t('image.replace')) + '" aria-label="' + escapeHtml(t('image.replace')) + '">' + Icons.replace + '</button>' : '') +
                     '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete" title="' + escapeHtml(t('delete')) + '" aria-label="' + escapeHtml(t('delete')) + '">' + Icons.delete + '</button>' +
                 '</div>';
@@ -830,12 +936,12 @@
             var msg = state.search
                 ? t('image.no_search_results', { term: state.search })
                 : t('media.no_files');
-            listBody.innerHTML = '<p class="nb-imgmgr-empty">' + escapeHtml(msg) + '</p>';
+        listBody.innerHTML = '<p class="nb-imgmgr-empty">' + escapeHtml(msg) + '</p>';
             return;
         }
 
         listBody.innerHTML = '';
-        state.filtered.forEach(function (image) {
+        currentPageItems().forEach(function (image) {
             appendMediaRow(listBody, image);
         });
     }
@@ -869,6 +975,7 @@
                     mediaDownloadActionHtml(image) +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="copy" title="' + escapeHtml(t('image.copy_path')) + '" aria-label="' + escapeHtml(t('image.copy_path')) + '">' + Icons.copy + '</button>' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="move" title="' + escapeHtml(t('media.move_file')) + '" aria-label="' + escapeHtml(t('media.move_file')) + '">' + Icons.move + '</button>' +
+                    '<button type="button" class="nb-imgmgr-action-btn" data-action="rename" title="' + escapeHtml(t('media.rename_file')) + '" aria-label="' + escapeHtml(t('media.rename_file')) + '">' + Icons.rename + '</button>' +
                     (isImage(image) ? '<button type="button" class="nb-imgmgr-action-btn" data-action="replace" title="' + escapeHtml(t('image.replace')) + '" aria-label="' + escapeHtml(t('image.replace')) + '">' + Icons.replace + '</button>' : '') +
                     '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete" title="' + escapeHtml(t('delete')) + '" aria-label="' + escapeHtml(t('delete')) + '">' + Icons.delete + '</button>' +
                 '</div>';
@@ -905,6 +1012,7 @@
                 else if (action === 'download') return;
                 else if (action === 'copy') copyPath(image.path);
                 else if (action === 'move') openMoveDialog(image);
+                else if (action === 'rename') openRenameDialog(image);
                 else if (action === 'replace') openReplaceDialog(image.name, image.path);
                 else if (action === 'delete') deleteMedia(image);
                 else if (action === 'restore') restoreMedia(image);
@@ -1015,6 +1123,7 @@
 
         state.mode = mode;
         state.search = '';
+        state.page = 1;
         var modal = document.getElementById('nb-imgmgr-modal');
         modal.querySelector('.nb-imgmgr-search').value = '';
         updateModeUI();
@@ -1049,6 +1158,7 @@
         }
         updateSortHeaderClasses();
         applySortOrder();
+        state.page = 1;
         filterAndRender();
     }
 
@@ -1324,24 +1434,60 @@
     }
 
     function handleUpload(e) {
-        var file = e.target.files[0];
-        uploadFile(file);
+        uploadFiles(e.target.files);
         e.target.value = '';
     }
 
-    function uploadFile(file) {
-        if (!file) return;
+    function uploadFiles(files) {
+        var queue = Array.prototype.slice.call(files || []).filter(Boolean);
+        if (queue.length === 0) return;
+
+        if (queue.length === 1) {
+            uploadFile(queue[0]);
+            return;
+        }
+
+        var uploaded = 0;
+        var total = queue.length;
+        config.showToast(t('media.uploading_multiple'), 'info');
+
+        queue.reduce(function (chain, file) {
+            return chain.then(function () {
+                return uploadFile(file, {
+                    deferReload: true,
+                    quietProgress: true,
+                    quietSuccess: true
+                }).then(function (success) {
+                    if (success) uploaded += 1;
+                });
+            });
+        }, Promise.resolve()).then(function () {
+            if (uploaded > 0) {
+                config.showToast(t(uploaded === total ? 'media.uploaded_multiple' : 'media.upload_partial', {
+                    uploaded: uploaded,
+                    total: total,
+                    count: uploaded
+                }), uploaded === total ? 'success' : 'info');
+                loadImages();
+                setTimeout(updateSelectionUI, 300);
+            }
+        });
+    }
+
+    function uploadFile(file, options) {
+        options = options || {};
+        if (!file) return Promise.resolve(false);
 
         var type = getActiveUploadType();
         var typeConfig = mediaTypes[type] || mediaTypes.image;
         var ext = (file.name.split('.').pop() || '').toLowerCase();
         if (typeConfig.extensions.indexOf(ext) === -1) {
             config.showToast(t(type === 'image' ? 'image.format_error' : 'media.format_error'), 'error');
-            return;
+            return Promise.resolve(false);
         }
         if (file.size > typeConfig.maxSize) {
             config.showToast(t(type === 'image' ? 'image.size_error' : 'media.size_error'), 'error');
-            return;
+            return Promise.resolve(false);
         }
 
         var formData = new FormData();
@@ -1353,18 +1499,24 @@
         }
         formData.append('csrf_token', config.csrfToken);
 
-        config.showToast(t('image.uploading'), 'info');
+        if (!options.quietProgress) {
+            config.showToast(t('image.uploading'), 'info');
+        }
 
-        fetch(config.apiUrl, { method: 'POST', body: formData })
+        return fetch(config.apiUrl, { method: 'POST', body: formData })
             .then(function (r) { return r.json(); })
             .then(function (result) {
                 if (result.success) {
-                    config.showToast(t('image.uploaded'), 'success');
+                    if (!options.quietSuccess) {
+                        config.showToast(t('image.uploaded'), 'success');
+                    }
                     state.sort = { field: 'date', dir: 'desc' };
                     if (state.isPicker) {
                         state.activeType = type;
                     }
-                    loadImages();
+                    if (!options.deferReload) {
+                        loadImages();
+                    }
                     if (result.data && result.data.path) {
                         var uploadedPath = result.data.path.replace(/^\.\.\//, '/');
                         if (state.multiplePicker) {
@@ -1372,14 +1524,19 @@
                         } else {
                             state.selectedPath = uploadedPath;
                         }
-                        setTimeout(updateSelectionUI, 300);
+                        if (!options.deferReload) {
+                            setTimeout(updateSelectionUI, 300);
+                        }
                     }
+                    return true;
                 } else {
                     config.showToast(result.message || t('toast.error'), 'error');
+                    return false;
                 }
             })
             .catch(function (err) {
                 config.showToast(err.message || t('toast.error'), 'error');
+                return false;
             });
     }
 
@@ -1708,6 +1865,161 @@
     }
 
     // ============================================================
+    // RENAME DIALOG
+    // ============================================================
+    function createRenameDialog() {
+        if (document.getElementById('nb-imgmgr-rename')) return;
+
+        var dialog = document.createElement('div');
+        dialog.id = 'nb-imgmgr-rename';
+        dialog.className = 'nb-imgmgr-move';
+        dialog.innerHTML =
+            '<div class="nb-imgmgr-move-backdrop"></div>' +
+            '<div class="nb-imgmgr-move-dialog nb-imgmgr-rename-dialog">' +
+                '<div class="nb-imgmgr-move-header">' +
+                    '<h3>' + escapeHtml(t('media.rename_file')) + '</h3>' +
+                    '<button type="button" class="nb-imgmgr-close" aria-label="Close">&times;</button>' +
+                '</div>' +
+                '<div class="nb-imgmgr-move-body">' +
+                    '<p class="nb-imgmgr-move-filename"></p>' +
+                    '<label>' + escapeHtml(t('media.rename_new_name')) + '</label>' +
+                    '<input type="text" class="nb-imgmgr-rename-input" maxlength="180" spellcheck="false">' +
+                    '<label class="nb-imgmgr-rename-check">' +
+                        '<input type="checkbox" class="nb-imgmgr-rename-scan" checked> ' +
+                        '<span>' + escapeHtml(t('media.rename_scan_references')) + '</span>' +
+                    '</label>' +
+                    '<p class="nb-imgmgr-rename-hint">' + escapeHtml(t('media.rename_extension_hint')) + '</p>' +
+                    '<div class="nb-imgmgr-rename-references" hidden></div>' +
+                '</div>' +
+                '<div class="nb-imgmgr-move-footer">' +
+                    '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--secondary" data-action="cancel">' + escapeHtml(t('cancel')) + '</button>' +
+                    '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--primary" data-action="submit">' + escapeHtml(t('media.rename_file')) + '</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(dialog);
+
+        dialog.querySelector('.nb-imgmgr-move-backdrop').addEventListener('click', closeRenameDialog);
+        dialog.querySelector('.nb-imgmgr-close').addEventListener('click', closeRenameDialog);
+        dialog.querySelector('[data-action="cancel"]').addEventListener('click', closeRenameDialog);
+        dialog.querySelector('[data-action="submit"]').addEventListener('click', function () {
+            submitRename(false);
+        });
+        dialog.querySelector('.nb-imgmgr-rename-input').addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                submitRename(false);
+            }
+        });
+    }
+
+    function openRenameDialog(item) {
+        if (!item || !item.name || state.mode !== 'library') return;
+        renameTarget = item;
+        pendingRename = null;
+        var dialog = document.getElementById('nb-imgmgr-rename');
+        if (!dialog) { createRenameDialog(); dialog = document.getElementById('nb-imgmgr-rename'); }
+        dialog.querySelector('.nb-imgmgr-move-filename').textContent = item.name;
+        dialog.querySelector('.nb-imgmgr-rename-input').value = mediaDisplayName(item);
+        dialog.querySelector('.nb-imgmgr-rename-scan').checked = true;
+        var refs = dialog.querySelector('.nb-imgmgr-rename-references');
+        refs.hidden = true;
+        refs.innerHTML = '';
+        dialog.classList.add('active');
+        dialog.querySelector('.nb-imgmgr-rename-input').focus();
+        dialog.querySelector('.nb-imgmgr-rename-input').select();
+    }
+
+    function closeRenameDialog() {
+        var dialog = document.getElementById('nb-imgmgr-rename');
+        if (dialog) dialog.classList.remove('active');
+        renameTarget = null;
+        pendingRename = null;
+    }
+
+    function renderRenameReferences(references) {
+        var dialog = document.getElementById('nb-imgmgr-rename');
+        if (!dialog) return;
+        var box = dialog.querySelector('.nb-imgmgr-rename-references');
+        references = Array.isArray(references) ? references : [];
+        if (!references.length) {
+            box.hidden = true;
+            box.innerHTML = '';
+            return;
+        }
+        var count = references.reduce(function(total, item) {
+            return total + (parseInt(item.count || 0, 10) || 0);
+        }, 0);
+        box.hidden = false;
+        box.innerHTML =
+            '<strong>' + escapeHtml(t('media.rename_references_found', { count: count })) + '</strong>' +
+            '<ul>' + references.slice(0, 10).map(function(ref) {
+                var first = ref.matches && ref.matches[0] ? ref.matches[0] : null;
+                var line = first && first.line ? ':' + first.line : '';
+                var snippet = first && first.snippet ? '<small>' + escapeHtml(first.snippet) + '</small>' : '';
+                return '<li><span>' + escapeHtml(ref.file + line) + '</span>' + snippet + '</li>';
+            }).join('') + '</ul>' +
+            '<p>' + escapeHtml(t('media.rename_references_confirm')) + '</p>' +
+            '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--primary" data-action="confirm-rename">' + escapeHtml(t('media.rename_confirm_anyway')) + '</button>';
+        box.querySelector('[data-action="confirm-rename"]').addEventListener('click', function () {
+            submitRename(true);
+        });
+    }
+
+    function submitRename(confirmReferences) {
+        if (!renameTarget || !renameTarget.name) return;
+        var dialog = document.getElementById('nb-imgmgr-rename');
+        var input = dialog.querySelector('.nb-imgmgr-rename-input');
+        var submit = dialog.querySelector('[data-action="submit"]');
+        var newName = (input.value || '').trim();
+        if (!newName) {
+            input.focus();
+            return;
+        }
+
+        var formData = new FormData();
+        formData.append('action', 'rename-media');
+        formData.append('type', renameTarget.type || 'image');
+        formData.append('filename', renameTarget.name);
+        formData.append('newName', newName);
+        formData.append('scanReferences', dialog.querySelector('.nb-imgmgr-rename-scan').checked ? '1' : '0');
+        formData.append('confirmReferences', confirmReferences ? '1' : '0');
+        formData.append('csrf_token', config.csrfToken);
+
+        submit.disabled = true;
+        fetch(config.apiUrl, { method: 'POST', body: formData })
+            .then(function (r) { return r.json(); })
+            .then(function (result) {
+                if (result.success) {
+                    var oldPath = renameTarget.path;
+                    config.showToast(t('media.file_renamed'), 'success');
+                    if (state.selectedPath === renameTarget.path && result.data && result.data.path) {
+                        state.selectedPath = result.data.path.replace(/^\.\.\//, '/');
+                    }
+                    state.selectedPaths = state.selectedPaths.map(function(path) {
+                        return path === oldPath && result.data && result.data.path
+                            ? result.data.path.replace(/^\.\.\//, '/')
+                            : path;
+                    });
+                    closeRenameDialog();
+                    loadImages();
+                    return;
+                }
+                if (result.data && result.data.requiresConfirmation) {
+                    pendingRename = result.data;
+                    renderRenameReferences(result.data.references || []);
+                    return;
+                }
+                config.showToast(result.message || t('toast.error'), 'error');
+            })
+            .catch(function (err) {
+                config.showToast(err.message || t('toast.error'), 'error');
+            })
+            .finally(function () {
+                submit.disabled = false;
+            });
+    }
+
+    // ============================================================
     // PUBLIC API
     // ============================================================
     window.NbImageManager = {
@@ -1723,8 +2035,10 @@
         close: close,
         confirmSelection: confirmSelection,
         refresh: function () {
+            if (!document.getElementById('nb-imgmgr-modal')) return;
             updateModeUI();
             updateTypeUI();
+            filterAndRender();
         },
     };
 })();

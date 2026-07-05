@@ -48,11 +48,15 @@ const actions = [
 ];
 
 const blocks = Object.fromEntries(actions.map(action => [action, blockFor(action)]));
+const keepaliveBlock = blockFor('keepalive');
 
 for (const [action, block] of Object.entries(blocks)) {
     assertContains(block, 'dashboardAiModuleEnabled()', action + ' should respect the global AI module gate.');
     assertContains(block, 'validateCsrfToken()', action + ' should require CSRF validation.');
 }
+assertContains(source, "$_SESSION['admin_login_time'] = time();", 'Authenticated API requests should refresh session activity.');
+assertContains(keepaliveBlock, 'validateCsrfToken()', 'Keepalive should require CSRF validation.');
+assertContains(keepaliveBlock, "jsonResponse(true, ['time' => time()]", 'Keepalive should return a successful timestamp response.');
 
 for (const action of ['ai-copilot-history-list', 'ai-copilot-history-load', 'ai-copilot-history-save', 'ai-copilot-history-delete', 'ai-copilot-chat', 'ai-copilot-suggest', 'ai-copilot-format-html', 'ai-copilot-visibility', 'ai-copilot-apply', 'ai-copilot-apply-visibility', 'ai-copilot-undo', 'ai-copilot-draft-content', 'ai-copilot-create-content', 'ai-copilot-publish-content', 'ai-copilot-generate-image']) {
     assertContains(blocks[action], 'nibblyCopilotAssertBurstLimit(', action + ' should enforce a Copilot burst limit.');

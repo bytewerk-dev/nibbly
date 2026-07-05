@@ -57,6 +57,11 @@ $setupLanguages = [
     'ar' => 'العربية',
 ];
 
+$selectedSecondaryLang = $_POST['secondary_lang'] ?? 'de';
+if ($selectedSecondaryLang !== '' && !isset($setupLanguages[$selectedSecondaryLang])) {
+    $selectedSecondaryLang = 'de';
+}
+
 /**
  * Generate starter site files after config is created.
  * Creates: language dirs, homepage + demo page templates, starter content,
@@ -224,9 +229,9 @@ PHPTPL;
             'logoDisplay' => 'both',
         ],
         'theme' => [
-            'adminTheme' => 'dark',
-            'primaryColor' => '#2563eb',
-            'accentColor' => '#60a5fa',
+            'adminTheme' => 'light',
+            'primaryColor' => '#3858e9',
+            'accentColor' => '#3858e9',
         ],
         'email' => [
             'method' => 'inactive',
@@ -428,7 +433,9 @@ CONFIGTPL;
     <div class="login-container setup-container">
         <?php if ($success): ?>
             <div class="login-logo">
-                <img src="../assets/images/favicon.svg" alt="" width="40" height="40">
+                <svg viewBox="0 0 512 512" aria-hidden="true" focusable="false">
+                    <path fill="currentColor" d="M320.651,322.407V512H192.336V322.564c1.453-34.984,39.059-62.298,73.259-56.514 C296.351,271.252,320.384,295.232,320.651,322.407z M0,40v432c0,22.091,17.909,40,40,40h67.365V326.434 c-0.024-70.202,51.86-130.778,123.397-144.037c46.41-8.745,94.693,5.947,128.83,39.209c28.14,27.213,44.142,63.684,45.059,102.694 c0.11,0.272-0.231,187.421-0.155,187.7H472c22.091,0,40-17.909,40-40V40c0-22.091-17.909-40-40-40H40C17.909,0,0,17.909,0,40z"/>
+                </svg>
             </div>
             <h1><?php echo t('setup.complete_title'); ?></h1>
             <div class="success-message">
@@ -440,7 +447,9 @@ CONFIGTPL;
             <a href="index.php" class="btn btn-primary btn-block"><?php echo t('setup.go_to_login'); ?></a>
         <?php else: ?>
             <div class="login-logo">
-                <img src="../assets/images/favicon.svg" alt="" width="40" height="40">
+                <svg viewBox="0 0 512 512" aria-hidden="true" focusable="false">
+                    <path fill="currentColor" d="M320.651,322.407V512H192.336V322.564c1.453-34.984,39.059-62.298,73.259-56.514 C296.351,271.252,320.384,295.232,320.651,322.407z M0,40v432c0,22.091,17.909,40,40,40h67.365V326.434 c-0.024-70.202,51.86-130.778,123.397-144.037c46.41-8.745,94.693,5.947,128.83,39.209c28.14,27.213,44.142,63.684,45.059,102.694 c0.11,0.272-0.231,187.421-0.155,187.7H472c22.091,0,40-17.909,40-40V40c0-22.091-17.909-40-40-40H40C17.909,0,0,17.909,0,40z"/>
+                </svg>
             </div>
             <h1><?php echo t('setup.title'); ?></h1>
             <p class="site-name"><?php echo t('setup.subtitle'); ?></p>
@@ -475,12 +484,12 @@ CONFIGTPL;
                         <select id="secondary_lang" name="secondary_lang">
                             <option value=""><?php echo t('setup.additional_language_none'); ?></option>
                             <?php foreach ($setupLanguages as $code => $name): ?>
-                            <option value="<?php echo $code; ?>"<?php echo ($code === ($_POST['secondary_lang'] ?? 'de')) ? ' selected' : ''; ?>>
+                            <option value="<?php echo $code; ?>"<?php echo ($code === $selectedSecondaryLang) ? ' selected' : ''; ?>>
                                 <?php echo htmlspecialchars($name); ?> (<?php echo $code; ?>)
                             </option>
                             <?php endforeach; ?>
                         </select>
-                        <small class="form-hint"><?php echo t('setup.additional_language_hint'); ?></small>
+                        <small class="form-hint" id="secondaryLangHint" data-template="<?php echo htmlspecialchars(t('setup.additional_language_hint'), ENT_QUOTES); ?>"><?php echo $selectedSecondaryLang !== '' ? t('setup.additional_language_hint', ['code' => $selectedSecondaryLang]) : ''; ?></small>
                     </div>
                 </div>
 
@@ -542,6 +551,17 @@ CONFIGTPL;
         var secondaryLang = document.getElementById('secondary_lang');
 
         if (primaryLang && secondaryLang) {
+            var secondaryLangHint = document.getElementById('secondaryLangHint');
+
+            function updateSecondaryHint() {
+                if (!secondaryLangHint) return;
+                if (!secondaryLang.value) {
+                    secondaryLangHint.textContent = '';
+                    return;
+                }
+                secondaryLangHint.textContent = secondaryLangHint.dataset.template.replace('{code}', secondaryLang.value);
+            }
+
             function updateSecondaryOptions() {
                 var primaryVal = primaryLang.value;
                 var options = secondaryLang.querySelectorAll('option');
@@ -552,8 +572,10 @@ CONFIGTPL;
                 if (secondaryLang.value === primaryVal) {
                     secondaryLang.value = '';
                 }
+                updateSecondaryHint();
             }
             primaryLang.addEventListener('change', updateSecondaryOptions);
+            secondaryLang.addEventListener('change', updateSecondaryHint);
             updateSecondaryOptions();
         }
 

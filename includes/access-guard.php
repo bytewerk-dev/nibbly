@@ -50,6 +50,7 @@ function nibblyAccessIsLoggedIn(): bool {
             return false;
         }
     }
+    $_SESSION['admin_login_time'] = time();
     return true;
 }
 

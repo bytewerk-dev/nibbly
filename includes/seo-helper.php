@@ -71,15 +71,68 @@ function nibblySeoFirstImage(array $data): string {
     };
     $walk($data);
     foreach ($candidates as $candidate) {
-        if ($candidate !== '' && !str_starts_with($candidate, 'data:')) return $candidate;
+        if ($candidate !== '' && !str_starts_with($candidate, 'data:') && nibblySeoIsSupportedOgImage($candidate)) return $candidate;
     }
     return '';
 }
 
+function nibblySeoIsSupportedOgImage(string $path): bool {
+    $path = trim($path);
+    if ($path === '') return false;
+    $urlPath = parse_url($path, PHP_URL_PATH);
+    if (!is_string($urlPath) || $urlPath === '') return false;
+    $ext = strtolower(pathinfo($urlPath, PATHINFO_EXTENSION));
+    return in_array($ext, ['jpg', 'jpeg', 'png'], true);
+}
+
+function nibblySeoNormalizeAssetPath(string $path): string {
+    $path = trim($path);
+    if (str_starts_with($path, '../assets/images/')) {
+        return '/assets/images/' . substr($path, strlen('../assets/images/'));
+    }
+    if (str_starts_with($path, 'assets/images/')) {
+        return '/' . $path;
+    }
+    return $path;
+}
+
 function nibblySeoAbsoluteAssetUrl(string $path): string {
+    $path = nibblySeoNormalizeAssetPath($path);
     if ($path === '') return '';
     if (preg_match('#^https?://#i', $path)) return $path;
     return rtrim(nibblySeoBaseUrl(), '/') . '/' . ltrim($path, '/');
+}
+
+function nibblySeoLocalAssetPath(string $path): string {
+    $path = nibblySeoNormalizeAssetPath($path);
+    if (!str_starts_with($path, '/assets/images/')) return '';
+    $relative = substr($path, strlen('/assets/images/'));
+    if ($relative === '' || str_contains($relative, '..') || str_contains($relative, "\0")) return '';
+    return nibblySeoRoot() . '/assets/images/' . $relative;
+}
+
+function nibblySeoOgImageMeta(string $path, string $alt = ''): array {
+    if (!nibblySeoIsSupportedOgImage($path)) {
+        return ['url' => '', 'width' => null, 'height' => null, 'alt' => ''];
+    }
+
+    $meta = [
+        'url' => nibblySeoAbsoluteAssetUrl($path),
+        'width' => null,
+        'height' => null,
+        'alt' => nibblySeoTextFromHtml($alt),
+    ];
+
+    $localPath = nibblySeoLocalAssetPath($path);
+    if ($localPath !== '' && is_file($localPath)) {
+        $size = @getimagesize($localPath);
+        if (is_array($size)) {
+            $meta['width'] = (int)($size[0] ?? 0) ?: null;
+            $meta['height'] = (int)($size[1] ?? 0) ?: null;
+        }
+    }
+
+    return $meta;
 }
 
 function nibblySeoRobots(array $seo, array $visibility = []): string {
@@ -109,6 +162,7 @@ function nibblySeoContext(array $args): array {
     $settings = nibblySeoSettings();
     $defaultOgImage = trim((string)($settings['seo']['defaultOgImage'] ?? ''));
     $ogImage = trim((string)($seo['ogImage'] ?? '')) ?: ($defaultOgImage ?: nibblySeoFirstImage($data));
+    $ogImageMeta = nibblySeoOgImageMeta($ogImage, $ogTitle);
 
     return [
         'title' => $title,
@@ -117,7 +171,10 @@ function nibblySeoContext(array $args): array {
         'canonical' => $canonical,
         'ogTitle' => $ogTitle,
         'ogDescription' => $ogDescription,
-        'ogImage' => nibblySeoAbsoluteAssetUrl($ogImage),
+        'ogImage' => $ogImageMeta['url'],
+        'ogImageWidth' => $ogImageMeta['width'],
+        'ogImageHeight' => $ogImageMeta['height'],
+        'ogImageAlt' => $ogImageMeta['alt'],
         'lang' => $lang,
         'slug' => $slug,
         'data' => $data,

@@ -174,11 +174,16 @@ assertContains(source, 'readableFieldLabel(state.lastApplied.path || undo.path |
 if (source.includes('input.value.trim() || state.lastInstruction')) {
     throw new Error('Copilot action shortcuts should not silently reuse the previous instruction.');
 }
+assertContains(inlineEditor, "if (link.hasAttribute('data-editable-link')) {\n            e.preventDefault();\n            e.stopPropagation();\n            openLinkEditor(link);", 'Visual Editor should intercept editable links in capture phase before smooth-scroll handlers.');
 assertContains(source, "size: ['auto', '1024x1024', '1536x1024', '1024x1536']", 'Copilot JS should allow only supported image sizes.');
 assertContains(source, "quality: ['auto', 'low', 'medium', 'high']", 'Copilot JS should allow only supported image qualities.');
 assertContains(source, 'function fieldSelector(fieldPath)', 'Copilot JS should keep data-field selector construction centralized.');
 assertContains(source, "document.querySelectorAll('[data-page]')", 'Copilot JS should infer the content page from editable field data when page metadata is missing.');
 assertContains(inlineEditor, 'isEditMode: function() { return EditorConfig.editMode === true; }', 'Inline editor should expose read-only edit-mode state for Copilot gating.');
+assertContains(inlineEditor, 'SESSION_KEEPALIVE_INTERVAL_MS', 'Inline editor should define a session keepalive interval.');
+assertContains(inlineEditor, "action=keepalive&csrf_token=", 'Inline editor should call the keepalive API with a CSRF token.');
+assertContains(inlineEditor, 'startSessionKeepalive();', 'Inline editor should start session keepalive when edit mode begins.');
+assertContains(inlineEditor, 'stopSessionKeepalive();', 'Inline editor should stop session keepalive when edit mode ends.');
 
 if (source.includes('window.confirm(') || source.includes('window.prompt(')) {
     throw new Error('Copilot should not use native browser confirm/prompt dialogs.');
@@ -203,7 +208,9 @@ assertContains(footer, '!empty($_aiPublicSettings[\'hasApiKey\'])', 'Footer shou
 assertContains(footer, '!empty($_aiPublicSettings[\'features\'][\'backendAssistant\'])', 'Footer should require backendAssistant before loading Copilot.');
 assertContains(footer, "$_aiPublicSettings['assistantSurfaces']['visualEditor']", 'Footer should respect the Visual Editor Assistant visibility setting.');
 assertContains(footer, "document.addEventListener('click', function(e) {\n            const adminAccess = e.target && e.target.closest ? e.target.closest('#adminAccess') : null;", 'Footer hidden admin access should use delegated click handling so inline-editor rerenders do not lose the handler.');
-assertContains(footer, "window.location.assign(<?php echo json_encode($_adminAccessBase", 'Footer hidden admin access should go directly to /admin/ without redirecting back to the current page.');
+assertContains(footer, "adminUrl.searchParams.set('redirect', window.location.pathname + window.location.search + window.location.hash);", 'Footer hidden admin access should preserve the source page for post-login redirects.');
+assertContains(footer, 'window.NB_ADMIN_BASE_URL', 'Footer should expose a base-path-aware admin base URL.');
+assertContains(inlineEditor, "logoutUrl.searchParams.set('redirect', window.location.pathname + window.location.search + window.location.hash);", 'Frontend admin bar logout should preserve the current page.');
 assertContains(footer, 'window.NB_AI_FEATURES_ENABLED', 'Footer should expose AI module availability to JS.');
 assertContains(footer, 'window.NB_AI_COPILOT_AVAILABLE', 'Footer should expose Copilot availability to JS.');
 assertContains(footer, 'window.NB_AI_ASSISTANT_LANGUAGE', 'Footer should expose the active admin language to the Assistant.');
