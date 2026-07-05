@@ -3712,7 +3712,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <label class="ce-form-tile"><span class="ce-label-with-action">${t('editor.seo_og_title')}${AI_FEATURES_ENABLED ? `<button type="button" class="ce-ai-field-btn" onclick="generateSeoFields('ogTitle')" title="${escapeHtml(t('editor.ai_fill_field'))}" aria-label="${escapeHtml(t('editor.ai_fill_field'))}">${icon('ai', 13)}</button>` : ''}</span><input type="text" class="ce-input" id="seoOgTitle" value="${escapeHtml(seo.ogTitle || '')}"></label>
             <label class="ce-form-tile ce-form-tile--resizable"><span class="ce-label-with-action">${t('editor.seo_og_description')}${AI_FEATURES_ENABLED ? `<button type="button" class="ce-ai-field-btn" onclick="generateSeoFields('ogDescription')" title="${escapeHtml(t('editor.ai_fill_field'))}" aria-label="${escapeHtml(t('editor.ai_fill_field'))}">${icon('ai', 13)}</button>` : ''}</span><textarea class="ce-textarea ce-textarea--manual-resize" id="seoOgDescription" rows="2">${escapeHtml(seo.ogDescription || '')}</textarea><span class="ce-textarea-resize-handle" aria-hidden="true"></span></label>
             <div class="ce-form-tile ce-form-tile--wide">
-                <span>Open Graph image</span>
+                <span>${t('editor.seo_og_image')}</span>
                 <div class="ce-image-input-row">
                     <input type="text" class="ce-input" id="seoOgImage" placeholder="/assets/images/og-image.jpg" value="${escapeHtml(seo.ogImage || '')}">
                     <button type="button" class="btn btn-secondary btn-sm" onclick="browseSeoOgImage()">${t('btn.browse')}</button>
@@ -4902,13 +4902,39 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     // Backward-compat globals (in case any onclick attribute still references them)
     window.openImageManager = function() { NbImageManager.open(null, null, { types: ['image', 'audio', 'video', 'document'] }); };
     window.closeImageManager = function() { NbImageManager.close(); };
+    function normalizeOgImageInputPath(path) {
+        path = (path || '').trim();
+        if (path.startsWith('../assets/images/')) {
+            return '/assets/images/' + path.substring('../assets/images/'.length);
+        }
+        if (path.startsWith('assets/images/')) {
+            return '/' + path;
+        }
+        return path;
+    }
+    function isSupportedOgImagePath(path) {
+        path = normalizeOgImageInputPath(path);
+        if (!path) return true;
+        var cleanPath = path.split('?')[0].split('#')[0].toLowerCase();
+        return /^\/assets\/images\/.+\.(jpe?g|png)$/.test(cleanPath);
+    }
+    function setOgImageInputValue(input, path) {
+        var normalized = normalizeOgImageInputPath(path);
+        if (!isSupportedOgImagePath(normalized)) {
+            showToast(t('editor.seo_og_image_format'), 'error');
+            return false;
+        }
+        input.value = normalized;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        return true;
+    }
     window.browseSeoOgImage = function() {
         const input = document.getElementById('seoOgImage');
         if (!input) return;
         NbImageManager.open(function(path) {
-            input.value = path;
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            markDirty();
+            if (setOgImageInputValue(input, path)) {
+                markDirty();
+            }
         }, input.value || null, { types: ['image'], type: 'image' });
     };
     window.browseSectionMedia = function(btn, type) {
@@ -10038,8 +10064,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     document.getElementById('browseDefaultOgBtn').addEventListener('click', function() {
         var input = document.getElementById('settingsDefaultOgImage');
         NbImageManager.open(function(path) {
-            input.value = path;
-            input.dispatchEvent(new Event('input', { bubbles: true }));
+            setOgImageInputValue(input, path);
         }, input ? input.value : null, { types: ['image'], type: 'image' });
     });
 

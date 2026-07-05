@@ -757,6 +757,32 @@ function validateImageFilename(string $filename): bool {
     return in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'], true);
 }
 
+function normalizeOgImagePath(string $path): string {
+    $path = trim($path);
+    if ($path === '') return '';
+    if (str_starts_with($path, '../assets/images/')) {
+        $path = '/assets/images/' . substr($path, strlen('../assets/images/'));
+    } elseif (str_starts_with($path, 'assets/images/')) {
+        $path = '/' . $path;
+    }
+    return $path;
+}
+
+function validateOgImagePath(string $path): bool {
+    $path = normalizeOgImagePath($path);
+    if ($path === '') return true;
+    if (
+        strpos($path, '..') !== false ||
+        !str_starts_with($path, '/assets/images/') ||
+        preg_match('#[:\x00]#', $path)
+    ) {
+        return false;
+    }
+
+    $ext = strtolower(pathinfo(parse_url($path, PHP_URL_PATH) ?: '', PATHINFO_EXTENSION));
+    return in_array($ext, ['jpg', 'jpeg', 'png'], true);
+}
+
 function getMediaConfig(?string $type = null): array {
     $root = dirname(__DIR__);
     $configs = [
@@ -1222,6 +1248,11 @@ function normalizePageSeo(array $contentData): array {
         jsonResponse(false, null, 'Invalid canonical URL');
     }
 
+    $ogImage = normalizeOgImagePath((string)($seo['ogImage'] ?? ''));
+    if (!validateOgImagePath($ogImage)) {
+        jsonResponse(false, null, 'Open Graph image must be a JPG or PNG file from /assets/images/');
+    }
+
     $contentData['seo'] = [
         'title' => substr(trim((string)($seo['title'] ?? '')), 0, 120),
         'description' => substr(trim((string)($seo['description'] ?? '')), 0, 260),
@@ -1230,7 +1261,7 @@ function normalizePageSeo(array $contentData): array {
         'robots' => $robots,
         'ogTitle' => substr(trim((string)($seo['ogTitle'] ?? '')), 0, 120),
         'ogDescription' => substr(trim((string)($seo['ogDescription'] ?? '')), 0, 260),
-        'ogImage' => trim((string)($seo['ogImage'] ?? '')),
+        'ogImage' => $ogImage,
         'sitemap' => ($seo['sitemap'] ?? true) !== false,
     ];
 
@@ -6011,13 +6042,9 @@ switch ($action) {
                     }
 
                     if ($group === 'seo' && $key === 'defaultOgImage') {
-                        $value = trim((string)$value);
-                        if ($value !== '' && (
-                            strpos($value, '..') !== false ||
-                            !str_starts_with($value, '/assets/images/') ||
-                            preg_match('#[:\x00]#', $value)
-                        )) {
-                            jsonResponse(false, null, 'Invalid default Open Graph image path');
+                        $value = normalizeOgImagePath((string)$value);
+                        if (!validateOgImagePath($value)) {
+                            jsonResponse(false, null, 'Default Open Graph image must be a JPG or PNG file from /assets/images/');
                         }
                     }
 

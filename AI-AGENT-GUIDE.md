@@ -476,6 +476,31 @@ To create the JSON manually instead:
 }
 ```
 
+SEO and social sharing metadata live in the optional top-level `seo` object.
+`includes/header.php` renders these fields as the visitor-facing meta tags,
+Open Graph tags, Twitter card tags, canonical URL, robots meta, and JSON-LD.
+Open Graph images must be JPG or PNG files under `/assets/images/`; do not use
+WebP for social previews because common sharing crawlers do not reliably render
+it. If no page-specific `seo.ogImage` is set, Nibbly falls back to
+`content/settings.json` → `seo.defaultOgImage`, then to the first JPG/PNG image
+found in the page content.
+
+```json
+{
+  "seo": {
+    "title": "SEO title",
+    "description": "Meta description",
+    "answerSummary": "Short answer for answer engines.",
+    "canonical": "",
+    "robots": "index, follow",
+    "ogTitle": "Open Graph title",
+    "ogDescription": "Open Graph description",
+    "ogImage": "/assets/images/og-image.jpg",
+    "sitemap": true
+  }
+}
+```
+
 To control navigation order, labels, or dropdown grouping, edit `includes/nav-config.php` (`$PAGE_MAPPING` and `$NAV_ITEMS`). Pages listed there take priority; auto-discovered pages are appended after. Nav items support `children` for dropdown menus and an optional `'nav'` key to control which locations they appear in.
 
 ## How to Create a Custom Layout Page
