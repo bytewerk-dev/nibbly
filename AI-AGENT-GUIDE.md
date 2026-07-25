@@ -563,11 +563,60 @@ These types are available in `sections[]` arrays for standard pages:
 
 **This is what Nibbly does.** You take any existing HTML page — hand-built, designed in Figma, or vibe-coded with AI — and make it editable by swapping hardcoded content for Nibbly's PHP helper functions. Each function injects `data-*` attributes that the inline editor JavaScript discovers. Logged-in admins click to edit text, swap images, and change links directly on the page. Content gets stored in JSON files. Visitors see clean HTML with zero editor markup. No database, no migration, no complex setup — just a PHP include and a few function calls turn a static page into a CMS.
 
+**Existing-site rule: preserve, do not rebuild.** When converting an existing
+site, treat the source HTML/CSS/JS/assets as the visual source of truth. Copy
+local stylesheets, scripts, media, fonts, class names, layout wrappers,
+animation hooks, and responsive rules before adding Nibbly fields. Do not
+recreate the design with new tokens, new grids, new cards, simplified markup,
+or approximate CSS. Nibbly conversion is a surgical content edit: keep the
+rendered page visually identical, then make its text, images, links, and
+repeaters editable.
+
 The pattern is always the same:
 1. **Wrap your content** in an editable function call instead of hardcoding text
 2. **The function outputs `data-*` attributes** for admins (e.g. `data-page`, `data-field`, `data-editable-image`)
 3. **Content is stored in JSON** — the function reads from and writes to `content/pages/{lang}_{slug}.json`
 4. **Visitors see plain HTML** — no attributes, no editor UI
+
+For a pre-existing designed page, these steps happen inside the original
+structure. Preserve the same element hierarchy wherever possible. If an
+editable helper introduces a wrapper that affects CSS selectors or spacing, add
+the smallest site-owned compatibility rule in `css/website.css` or
+`css/page-{slug}.css`; do not rewrite the component.
+
+### Visual-Preserving Migration Checklist
+
+Use this checklist before and after converting any existing site:
+
+1. Start the original page locally and capture reference screenshots for the
+   hero, every section, footer, key hover/open states, scroll-pinned or animated
+   areas, and mobile breakpoints.
+2. Copy original local CSS, JS, assets, fonts, favicon files, and media paths
+   into the Nibbly project. Keep source class names and data attributes that
+   scripts rely on.
+3. Convert by replacing hardcoded text, images, links, and repeatable data with
+   editable helpers. Do not change layout wrappers, grid structure, animation
+   containers, or CSS selectors unless the helper API makes it unavoidable.
+4. Keep original public styles site-owned: use `css/website.css` for shared
+   site CSS and `css/page-{slug}.css` for page-specific CSS. Nibbly core files
+   (`css/style.css`, `css/components.css`, core JS) should not absorb customer
+   design rules.
+5. Run the converted page locally and capture the same screenshots. Compare
+   section by section against the reference. Check computed styles for fragile
+   details such as header transparency, backdrop filters, font weights,
+   gradients, border radii, image crop/object-position, padding, card sizes,
+   z-index, and scroll animation backgrounds.
+6. Treat visual drift as a bug. Only accept a design difference when the user
+   explicitly requested a redesign or approved the tradeoff.
+
+Anti-patterns for existing-site migrations:
+
+- Rebuilding the stylesheet from memory or screenshots instead of copying it.
+- Replacing original page CSS with Nibbly theme variables unless it is a
+  deliberate, reviewed refactor.
+- Changing cards, wrappers, or layout grids to "fit" an editable abstraction.
+- Simplifying scroll/animation sections, canvas/WebGL scenes, or hover states.
+- Guessing font weights, spacing, gradients, image crops, or breakpoint rules.
 
 ### Example: Before and After
 
@@ -1183,6 +1232,13 @@ The converter parses the HTML, identifies sections, headings, text, images, link
 - External CDN stylesheets (e.g. Google Fonts) are referenced via `$pageExternalStyles` and auto-loaded by `header.php`
 
 The generated template sets `$pageStylesheet` so `header.php` automatically links the extracted CSS file.
+
+For existing designed sites, the converter is a starting point, not permission
+to redesign. Preserve the source visual system exactly: keep local CSS/JS/assets
+and original class names, then use editable helpers in place. If generated CSS
+or markup differs from the original layout, repair the conversion toward the
+source page, not toward a new Nibbly-styled approximation. Finish with a
+section-by-section screenshot comparison against the original page.
 
 See `cli/README.md` for full options (`--dry-run`, `--json-only`, `--no-css`, `--force`, etc.).
 

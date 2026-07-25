@@ -31,10 +31,32 @@ All notable changes to Nibbly are documented in this file. The project follows
   several files at once.
 
 ### Changed
+- Replaced the Dashboard's wrapping status pills with a responsive segmented
+  status strip. Labels and values now use a clearer hierarchy, recent edits get
+  additional width, and long titles truncate cleanly with their full value
+  available as a tooltip.
+- Clarified the mutually exclusive backup restore modes with an explicit choice
+  prompt, visible radio/check indicators, a stronger selected state, and a
+  single-column mobile layout.
+- Centralized release metadata in the root `VERSION` file. Runtime displays now
+  read through `includes/version.php`, and setup/config templates no longer
+  define their own release numbers.
+- Cleaned up Markdown documentation: removed duplicate local front-end agent
+  rules from `.claude/CLAUDE.md` and clarified which root documents are
+  canonical.
 - Refined the Dashboard settings layout for list pagination and editor button
   styling with grouped fieldsets and a three-column pagination settings row.
+- Added stronger agent and converter documentation for existing-site
+  migrations: preserve the original visual system, keep CSS/JS/assets/class
+  hooks intact, and verify converted pages section by section with screenshots
+  or computed-style comparisons.
 
 ### Fixed
+- Backup restore now accepts production archives that omit the development-only
+  `router.php`, allows documented site template locations, and restores all
+  site-owned templates, styles, and navigation files in content-only mode.
+- Corrected the core version metadata so the Dashboard and login screen report
+  1.5.4 instead of the stale 1.5.2 value.
 - Dashboard editor section navigation now lists top-level field groups on
   custom-layout pages that do not use a `sections[]` array.
 - Visual Editor sessions now use sliding activity refreshes and a CSRF-protected

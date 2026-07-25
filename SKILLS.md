@@ -4,6 +4,8 @@ Machine-readable instructions for common tasks. Each skill describes what to do,
 
 **What Nibbly does:** Nibbly turns any HTML or PHP page into an editable website — no database required. You take an existing page (hand-crafted, designed in Figma, or vibe-coded with AI), replace hardcoded text, images, and links with PHP helper functions (`editableText()`, `editableImage()`, `editableLink()`), and get a fully functional CMS with inline editing. The helpers inject `data-*` attributes that the inline editor JavaScript discovers. Admins click to edit directly on the page. Content is stored as JSON files. Visitors see clean HTML. See `AI-AGENT-GUIDE.md` → "How Inline Editing Works" for the full attribute reference.
 
+**Existing-site rule:** When converting an existing website, preserve the visual system first and only add editability around it. Keep the original CSS, JS, assets, fonts, class names, markup hierarchy, animation hooks, dimensions, spacing, colors, and responsive behavior unless the user explicitly requests a redesign. A visually different converted site is a migration bug, even when all fields are technically editable.
+
 ---
 
 ## Skill: make-page-editable
@@ -11,12 +13,16 @@ Machine-readable instructions for common tasks. Each skill describes what to do,
 ### Description
 This is Nibbly's primary use case. Take any existing HTML or PHP page — hand-built, designed in Figma and exported, or vibe-coded with AI — and turn it into a fully editable CMS page. Replace hardcoded text, images, and links with Nibbly's PHP helpers. The result: admins can edit everything directly on the page, content is stored in JSON, and visitors see clean HTML. No database, no complex migration.
 
+Before changing code, capture or inspect the source page section by section. After conversion, compare the Nibbly page against the original at desktop and mobile widths. Header transparency, scroll states, gradients, accent lines, image masks, type weights, paddings, backgrounds, and animations must match unless intentionally changed.
+
 ### Automated Option
 Run the converter tool to do this automatically:
 ```bash
 php cli/convert.php my-page.html --slug=my-page --lang=en --dry-run
 ```
 This parses the HTML, detects sections/headings/images/links/repeating patterns, and generates the PHP template + JSON file. Review the output with `--dry-run` first, then run without it to write files. See `cli/README.md` for all options.
+
+The converter is a starter pass, not a license to rebuild the design. If the output drifts visually, repair the template and styles toward the source page instead of normalizing it to generic Nibbly markup.
 
 ### Manual Steps (Prerequisites)
 - Read `AI-AGENT-GUIDE.md` → "How Inline Editing Works" for the data-attribute system
