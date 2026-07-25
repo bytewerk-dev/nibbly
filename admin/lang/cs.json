@@ -464,6 +464,7 @@
     "toast.backup_site_failed": "Záloha selhala: {message}",
     "settings.restore_title": "Obnovení ze zálohy",
     "settings.restore_desc": "Nahraj dříve stažený ZIP zálohy nibbly pro obnovení webu.",
+    "settings.restore_mode_prompt": "Typ obnovení — vyber jednu možnost",
     "settings.restore_full": "Úplné obnovení",
     "settings.restore_full_desc": "Nahradí vše — soubory CMS, obsah, obrázky a konfiguraci. Záloha aktuálního stavu se vytvoří automaticky před obnovením.",
     "settings.restore_content": "Pouze obsah",

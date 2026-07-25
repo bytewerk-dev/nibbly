@@ -6563,17 +6563,7 @@ switch ($action) {
         }
 
         // Structure checks: required nibbly files must be present
-        $requiredFiles = [
-            'admin/api.php',
-            'admin/dashboard.php',
-            'admin/config.php',
-            'includes/content-loader.php',
-            'includes/header.php',
-            'includes/footer.php',
-            'router.php',
-            'index.php',
-            'css/style.css',
-        ];
+        $requiredFiles = backupRestoreRequiredFiles();
         $missingFiles = [];
         foreach ($requiredFiles as $req) {
             if ($zip->locateName($req) === false) {
@@ -6588,12 +6578,6 @@ switch ($action) {
             $zip->close();
             jsonResponse(false, null, 'Not a valid nibbly backup. No content pages found.');
         }
-
-        // Allowed PHP locations (security: reject PHP files in unexpected places)
-        // Root-level PHP files that are allowed
-        $allowedRootPhp = ['index.php', 'router.php', 'route.php', '404.php', 'sitemap.php'];
-        // Directories where PHP files are allowed
-        $allowedPhpDirs = ['admin/', 'includes/', 'api/', 'cli/', 'examples/'];
 
         // File extension whitelist
         $allowedExtensions = [
@@ -6612,30 +6596,8 @@ switch ($action) {
             $ext = strtolower(pathinfo($entry, PATHINFO_EXTENSION));
 
             // Check PHP files are in allowed locations
-            if ($ext === 'php') {
-                $isAllowed = false;
-
-                // Check if it's an allowed root file
-                if (!str_contains($entry, '/') && in_array($entry, $allowedRootPhp)) {
-                    $isAllowed = true;
-                }
-
-                // Check if it's in an allowed directory
-                foreach ($allowedPhpDirs as $dir) {
-                    if (str_starts_with($entry, $dir)) {
-                        $isAllowed = true;
-                        break;
-                    }
-                }
-
-                // Check if it's in a language directory (2-letter code)
-                if (preg_match('#^[a-z]{2}/#', $entry)) {
-                    $isAllowed = true;
-                }
-
-                if (!$isAllowed) {
-                    $rejectedPhpFiles[] = $entry;
-                }
+            if ($ext === 'php' && !backupRestorePhpEntryAllowed($entry)) {
+                $rejectedPhpFiles[] = $entry;
             }
 
             // Check file extension whitelist (skip dirs)
@@ -6720,26 +6682,9 @@ switch ($action) {
             }
 
             // In content-only mode, filter to user-data paths
-            if ($mode === 'content') {
-                $isContentFile = false;
-
-                // content/ directory (all JSON files)
-                if (str_starts_with($entry, 'content/')) $isContentFile = true;
-                // assets/ (images, audio, fonts)
-                if (str_starts_with($entry, 'assets/')) $isContentFile = true;
-                // css/fonts.css
-                if ($entry === 'css/fonts.css') $isContentFile = true;
-                // Language template directories (2-letter code)
-                if (preg_match('#^[a-z]{2}/#', $entry)) $isContentFile = true;
-                // nav-config.php
-                if ($entry === 'includes/nav-config.php') $isContentFile = true;
-                // backups/ (JSON only, not ZIPs)
-                if (str_starts_with($entry, 'backups/') && str_ends_with($entry, '.json')) $isContentFile = true;
-
-                if (!$isContentFile) {
-                    $skipped++;
-                    continue;
-                }
+            if ($mode === 'content' && !backupRestoreContentEntryAllowed($entry)) {
+                $skipped++;
+                continue;
             }
 
             // Extract this file

@@ -2,7 +2,7 @@
 
 A flat-file CMS built on PHP with no database. Content lives in JSON files, pages are PHP templates, and an inline editor lets you edit everything directly on the page. Zero dependencies, zero build steps.
 
-**Version 1.5.0** — Examples and full documentation at [nibbly.dev](https://nibbly.dev/).
+**Current release:** tracked in [`VERSION`](VERSION). Examples and full documentation at [nibbly.dev](https://nibbly.dev/).
 
 ## Features
 
@@ -51,6 +51,7 @@ Nibbly ships with structured documentation designed for AI coding agents:
 
 - **`AI-AGENT-GUIDE.md`** -- tool-neutral agent guide with block types, template API, and step-by-step instructions for creating pages.
 - **`AGENTS.md` / `CLAUDE.md`** -- short entry points for tools that auto-load those filenames; both point to the shared guide.
+- **`SKILLS.md`** -- task-oriented workflows for common agent jobs.
 - **`architecture.md`** -- full technical reference covering JSON schemas, every PHP function signature, API endpoints, and the inline editor system.
 
 An AI agent can create a new page, build a custom layout, add content blocks, and style components without asking you how things work. The documentation gives it everything it needs.

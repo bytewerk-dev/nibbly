@@ -464,6 +464,7 @@
     "toast.backup_site_failed": "Backup failed: {message}",
     "settings.restore_title": "Restore from Backup",
     "settings.restore_desc": "Upload a previously downloaded nibbly backup ZIP to restore your site.",
+    "settings.restore_mode_prompt": "Restore type — choose one option",
     "settings.restore_full": "Full Restore",
     "settings.restore_full_desc": "Replaces everything — CMS files, content, images, and configuration. A backup of the current state is created automatically before restoring.",
     "settings.restore_content": "Content Only",

@@ -19,6 +19,10 @@ This distinction matters because site changes should survive Nibbly updates, whi
 
 When adapting a customer/site project that runs on Nibbly:
 
+- For existing-site migrations, preserve the source visual design exactly. Copy
+  the original local CSS, JavaScript, assets, class names, layout wrappers, and
+  animation hooks first; then replace only hardcoded content with editable
+  helpers. Do not redesign, simplify, reinterpret, or rebuild the CSS.
 - Avoid modifying Nibbly-Core directories and files: `admin/`, `api/`, `cli/`, most of `includes/`, core `css/`, and core `js/`.
 - Put editable content in `content/pages/*.json`, `content/news/*.json`, `content/events.json`, or other content JSON files.
 - Put custom layouts in language/page templates such as `en/about.php` or `de/services.php`.
@@ -26,6 +30,9 @@ When adapting a customer/site project that runs on Nibbly:
 - Use documented extension points such as `includes/site-page-hook.php`.
 - Use `$basePath` for asset and link paths.
 - Set `$contentPage` before including `includes/header.php` so the admin bar works.
+- Before finishing an existing-site migration, run the original and converted
+  pages locally and compare screenshots section by section, including mobile
+  breakpoints and scroll/animation states. Treat visual drift as a bug.
 
 ## Core Development Rules
 

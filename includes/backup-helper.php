@@ -1578,6 +1578,87 @@ function backupSaveRemoteTarget(array $target) {
 }
 
 /**
+ * Files that identify a complete production Nibbly archive.
+ * router.php is intentionally not required because it is only used by PHP's
+ * built-in development server and may be excluded from production deploys.
+ */
+function backupRestoreRequiredFiles(): array {
+    return [
+        'admin/api.php',
+        'admin/dashboard.php',
+        'admin/config.php',
+        'includes/content-loader.php',
+        'includes/header.php',
+        'includes/footer.php',
+        'route.php',
+        'index.php',
+        'css/style.css',
+    ];
+}
+
+function backupRestoreIsLanguageEntry(string $entry): bool {
+    return !str_starts_with($entry, 'js/')
+        && (bool)preg_match('#^[a-z]{2}/#', $entry);
+}
+
+/**
+ * Restrict executable PHP files to Nibbly core and documented site-owned
+ * template locations.
+ */
+function backupRestorePhpEntryAllowed(string $entry): bool {
+    $allowedRootPhp = [
+        'index.php',
+        'router.php',
+        'route.php',
+        '404.php',
+        '410.php',
+        'error.php',
+        'sitemap.php',
+    ];
+    if (!str_contains($entry, '/') && in_array($entry, $allowedRootPhp, true)) {
+        return true;
+    }
+
+    foreach (['admin/', 'includes/', 'api/', 'cli/', 'examples/', 'templates/'] as $dir) {
+        if (str_starts_with($entry, $dir)) {
+            return true;
+        }
+    }
+
+    return backupRestoreIsLanguageEntry($entry);
+}
+
+/**
+ * Site-owned files restored by the "content only" mode.
+ */
+function backupRestoreContentEntryAllowed(string $entry): bool {
+    if (str_starts_with($entry, 'content/')
+        || str_starts_with($entry, 'assets/')
+        || str_starts_with($entry, 'templates/')
+        || backupRestoreIsLanguageEntry($entry)) {
+        return true;
+    }
+
+    if (in_array($entry, [
+        'includes/header.php',
+        'includes/footer.php',
+        'includes/nav-config.php',
+        'includes/site-page-hook.php',
+        'css/fonts.css',
+        'css/website.css',
+        'js/main.js',
+    ], true)) {
+        return true;
+    }
+
+    if (preg_match('#^css/page-[^/]+\.css$#i', $entry)) {
+        return true;
+    }
+
+    return str_starts_with($entry, 'backups/') && str_ends_with($entry, '.json');
+}
+
+/**
  * Build a fresh full-site ZIP and write it to BACKUP_PATH.
  * Returns ['ok' => bool, 'file' => ..., 'size' => ..., 'message' => ...].
  */

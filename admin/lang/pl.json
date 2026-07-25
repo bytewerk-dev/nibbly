@@ -464,6 +464,7 @@
     "toast.backup_site_failed": "Backup nie powiódł się: {message}",
     "settings.restore_title": "Przywracanie z backupu",
     "settings.restore_desc": "Prześlij wcześniej pobrany backup ZIP nibbly, aby przywrócić swoją stronę.",
+    "settings.restore_mode_prompt": "Typ przywracania — wybierz jedną opcję",
     "settings.restore_full": "Pełne przywracanie",
     "settings.restore_full_desc": "Zastępuje wszystko — pliki CMS, treść, obrazy i konfigurację. Backup obecnego stanu jest tworzony automatycznie przed przywróceniem.",
     "settings.restore_content": "Tylko treść",

@@ -2221,21 +2221,30 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         <span class="restore-filename" id="restoreFilename" style="display: none;"></span>
                     </div>
 
-                    <div class="restore-mode-selector" id="restoreModeSelector" style="display: none;">
-                        <label class="restore-mode-option">
-                            <input type="radio" name="restore_mode" value="content" checked>
-                            <div class="restore-mode-card">
-                                <strong><?php echo t('settings.restore_content'); ?></strong>
-                                <span><?php echo t('settings.restore_content_desc'); ?></span>
-                            </div>
-                        </label>
-                        <label class="restore-mode-option">
-                            <input type="radio" name="restore_mode" value="full">
-                            <div class="restore-mode-card">
-                                <strong><?php echo t('settings.restore_full'); ?></strong>
-                                <span><?php echo t('settings.restore_full_desc'); ?></span>
-                            </div>
-                        </label>
+                    <div class="restore-mode-block" id="restoreModeSelector" style="display: none;">
+                        <p class="restore-mode-heading"><?php echo t('settings.restore_mode_prompt'); ?></p>
+                        <div class="restore-mode-selector">
+                            <label class="restore-mode-option">
+                                <input type="radio" name="restore_mode" value="content" checked>
+                                <div class="restore-mode-card">
+                                    <div class="restore-mode-card__header">
+                                        <strong><?php echo t('settings.restore_content'); ?></strong>
+                                        <span class="restore-mode-indicator" aria-hidden="true"></span>
+                                    </div>
+                                    <span><?php echo t('settings.restore_content_desc'); ?></span>
+                                </div>
+                            </label>
+                            <label class="restore-mode-option">
+                                <input type="radio" name="restore_mode" value="full">
+                                <div class="restore-mode-card">
+                                    <div class="restore-mode-card__header">
+                                        <strong><?php echo t('settings.restore_full'); ?></strong>
+                                        <span class="restore-mode-indicator" aria-hidden="true"></span>
+                                    </div>
+                                    <span><?php echo t('settings.restore_full_desc'); ?></span>
+                                </div>
+                            </label>
+                        </div>
                     </div>
 
                     <div class="restore-actions" id="restoreActions" style="display: none;">
@@ -8018,22 +8027,23 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
         if (isDashboardModuleEnabled('mails')) {
             var unreadCount = status.messages?.unread || 0;
-            chips.push('<button type="button" class="dashboard-status-chip' + (unreadCount > 0 ? ' dashboard-status-chip--accent' : '') + '" onclick="switchTab(&quot;mails&quot;)"><span>' + escapeHtml(t('dashboard_home.unread_messages')) + '</span><strong>' + unreadCount + '</strong></button>');
+            chips.push('<button type="button" class="dashboard-status-chip' + (unreadCount > 0 ? ' dashboard-status-chip--accent' : '') + '" onclick="switchTab(&quot;mails&quot;)"><span class="dashboard-status-chip__label">' + escapeHtml(t('dashboard_home.unread_messages')) + '</span><strong class="dashboard-status-chip__value">' + unreadCount + '</strong></button>');
         }
 
         var backupText = backup.newest ? formatDashboardDate(backup.newest) : t('dashboard_home.no_backup');
         if (VALID_DASHBOARD_TABS.indexOf('backup') !== -1) {
-            chips.push('<button type="button" class="dashboard-status-chip" onclick="switchTab(&quot;backup&quot;)"><span>' + escapeHtml(t('dashboard_home.backup_status')) + '</span><strong>' + escapeHtml(backupText) + '</strong></button>');
+            chips.push('<button type="button" class="dashboard-status-chip" onclick="switchTab(&quot;backup&quot;)"><span class="dashboard-status-chip__label">' + escapeHtml(t('dashboard_home.backup_status')) + '</span><strong class="dashboard-status-chip__value">' + escapeHtml(backupText) + '</strong></button>');
 
-            chips.push('<button type="button" class="dashboard-status-chip" onclick="switchTab(&quot;backup&quot;)"><span>' + escapeHtml(t('dashboard_home.auto_backup')) + '</span><strong>' + escapeHtml(backup.enabled ? t('dashboard_home.active') : t('dashboard_home.inactive')) + '</strong></button>');
+            chips.push('<button type="button" class="dashboard-status-chip" onclick="switchTab(&quot;backup&quot;)"><span class="dashboard-status-chip__label">' + escapeHtml(t('dashboard_home.auto_backup')) + '</span><strong class="dashboard-status-chip__value">' + escapeHtml(backup.enabled ? t('dashboard_home.active') : t('dashboard_home.inactive')) + '</strong></button>');
         }
 
         if (recent) {
-            chips.push('<button type="button" class="dashboard-status-chip dashboard-status-chip--wide" onclick="openDashboardRecentEdit(window.dashboardRecentStatusItems[0])"><span>' + escapeHtml(t('dashboard_home.recent_edit')) + '</span><strong>' + escapeHtml(recent.title || recent.id || '') + '</strong></button>');
+            var recentTitle = recent.title || recent.id || '';
+            chips.push('<button type="button" class="dashboard-status-chip dashboard-status-chip--wide" title="' + escapeHtml(recentTitle) + '" onclick="openDashboardRecentEdit(window.dashboardRecentStatusItems[0])"><span class="dashboard-status-chip__label">' + escapeHtml(t('dashboard_home.recent_edit')) + '</span><strong class="dashboard-status-chip__value">' + escapeHtml(recentTitle) + '</strong></button>');
         }
 
         if (currentUser.username) {
-            chips.push('<button type="button" class="dashboard-status-chip" onclick="switchTab(&quot;settings&quot;, {settingsTab: &quot;users&quot;});"><span>' + escapeHtml(t('dashboard_home.current_user')) + '</span><strong>' + escapeHtml(currentUser.username) + '</strong></button>');
+            chips.push('<button type="button" class="dashboard-status-chip" onclick="switchTab(&quot;settings&quot;, {settingsTab: &quot;users&quot;});"><span class="dashboard-status-chip__label">' + escapeHtml(t('dashboard_home.current_user')) + '</span><strong class="dashboard-status-chip__value">' + escapeHtml(currentUser.username) + '</strong></button>');
         }
 
         target.innerHTML = chips.join('');

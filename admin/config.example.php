@@ -5,12 +5,6 @@
  * User accounts are managed in content/users.json (created by the setup wizard).
  */
 
-// ============================================================
-// VERSION
-// ============================================================
-
-define('NIBBLY_VERSION', '1.5.0');
-
 // Default favicon path used as fallback by the admin UI before settings.json
 // values are applied. Override in settings.json -> "favicon".
 define('NIBBLY_DEFAULT_FAVICON', '/assets/images/favicon.svg');

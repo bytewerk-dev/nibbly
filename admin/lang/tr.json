@@ -464,6 +464,7 @@
     "toast.backup_site_failed": "Backup başarısız: {message}",
     "settings.restore_title": "Backup'tan Geri Yükle",
     "settings.restore_desc": "Siteni geri yüklemek için daha önce indirilen bir nibbly backup ZIP'i yükle.",
+    "settings.restore_mode_prompt": "Geri yükleme türü — bir seçenek seç",
     "settings.restore_full": "Tam Geri Yükleme",
     "settings.restore_full_desc": "Her şeyi değiştirir — CMS dosyaları, içerik, görseller ve yapılandırma. Geri yüklemeden önce mevcut durumun bir yedeği otomatik olarak oluşturulur.",
     "settings.restore_content": "Yalnızca İçerik",

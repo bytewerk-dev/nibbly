@@ -57,6 +57,12 @@ php cli/make.php --slug=terms --lang=en --hide-nav
 
 Converts a static HTML page into a Nibbly-editable PHP template + JSON content file.
 
+The converter's job is to preserve the source page and make content editable.
+For an existing designed page, do not use conversion as a redesign pass: keep
+the original CSS, JavaScript, assets, class names, layout wrappers, animation
+hooks, and responsive behavior, then replace only text, images, links, and
+repeaters with Nibbly helpers.
+
 ### Usage
 
 ```bash
@@ -113,10 +119,20 @@ The converter preserves the visual design of the source HTML by extracting all C
 
 The extracted CSS is saved to `css/page-{slug}.css` and automatically linked via the `$pageStylesheet` variable in the generated template.
 
-**After conversion**, review the CSS file and:
-- Replace hardcoded colors with CSS custom properties from `css/style.css`
-- Replace hardcoded spacing values with `--spacing-*` tokens
-- Merge duplicate rules or rename `.converted-style-*` classes to semantic names
+**After conversion**, review the CSS file against the original page. For
+customer/site migrations, preserving the original visual behavior comes before
+tokenization or cleanup:
+
+- Keep original local stylesheets verbatim when possible, especially for
+  hand-tuned layouts, animations, image crops, gradients, and responsive rules.
+- Put site-owned CSS in `css/website.css` or `css/page-{slug}.css`; do not move
+  customer design rules into Nibbly core `css/style.css` or `css/components.css`.
+- Add only minimal compatibility CSS when editable helper wrappers affect
+  existing selectors or spacing.
+- Rename `.converted-style-*` classes or replace hardcoded values only after
+  screenshot comparison confirms the page still matches the source.
+- Do not replace the original design system with Nibbly theme variables unless
+  the user explicitly requested that refactor.
 
 ### After conversion
 
@@ -124,6 +140,9 @@ The extracted CSS is saved to `css/page-{slug}.css` and automatically linked via
 2. The page appears in navigation automatically via auto-discovery. To control ordering or labels, add it to `includes/nav-config.php` (`$PAGE_MAPPING` + `$NAV_ITEMS`)
 3. Copy images to `assets/images/` and update paths if needed
 4. Test with `php -S localhost:3000 router.php`
+5. Run the original and converted pages locally and compare screenshots for the
+   hero, every section, footer, mobile breakpoints, hover/open states, and
+   scroll/animation states. Treat visual drift as a conversion bug.
 
 ---
 

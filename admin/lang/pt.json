@@ -464,6 +464,7 @@
     "toast.backup_site_failed": "Falha no backup: {message}",
     "settings.restore_title": "Restaurar a partir do Backup",
     "settings.restore_desc": "Envie um arquivo ZIP de backup do nibbly baixado anteriormente para restaurar seu site.",
+    "settings.restore_mode_prompt": "Tipo de restauração — escolha uma opção",
     "settings.restore_full": "Restauração Completa",
     "settings.restore_full_desc": "Substitui tudo — arquivos do CMS, conteúdo, imagens e configuração. Um backup do estado atual é criado automaticamente antes da restauração.",
     "settings.restore_content": "Somente Conteúdo",
