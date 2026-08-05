@@ -8,6 +8,7 @@ require_once 'config.php';
 require_once __DIR__ . '/users.php';
 require_once __DIR__ . '/lang/i18n.php';
 require_once __DIR__ . '/../includes/content-loader.php';
+require_once __DIR__ . '/../includes/page-path.php';
 require_once __DIR__ . '/../includes/seo-helper.php';
 require_once __DIR__ . '/../includes/ai/ai-helper.php';
 require_once __DIR__ . '/../includes/ai/copilot-context.php';
@@ -268,7 +269,7 @@ function redirectHtml($title, $message, $url = 'dashboard') {
 
 // Validate page name (lang_slug format, e.g. de_home, en_example)
 function validatePageName($page) {
-    return preg_match('/^[a-z]{2}_[a-z0-9]+(?:-[a-z0-9]+)*$/', $page) || in_array($page, ['sidebar', 'footer']);
+    return nibblyPageIsValidContentKey((string)$page) || in_array($page, ['sidebar', 'footer']);
 }
 
 function dashboardCopilotAdminUrl(string $hash = ''): string {
@@ -277,10 +278,11 @@ function dashboardCopilotAdminUrl(string $hash = ''): string {
 }
 
 function dashboardCopilotPageUrl(string $pageName): string {
-    if (!preg_match('/^([a-z]{2})_([a-z0-9]+(?:-[a-z0-9]+)*)$/', $pageName, $matches)) {
+    $page = nibblyPageParseContentKey($pageName);
+    if ($page === null) {
         return '';
     }
-    return nibblySeoPageUrl($matches[1], $matches[2]);
+    return nibblySeoPageUrl($page['lang'], $page['path']);
 }
 
 function dashboardCopilotNewsUrl(string $id, string $lang): string {
@@ -632,7 +634,8 @@ function dashboardCopilotLoadOwnedHistory(string $id): array {
 
 // Validate backup filename
 function validateBackupName($backup) {
-    return preg_match('/^([a-z]{2}_[a-z0-9]+(?:-[a-z0-9]+)*|sidebar|footer)_\d{4}-\d{2}-\d{2}_\d{6}\.json$/', $backup);
+    if (!preg_match('/^(.+)_\d{4}-\d{2}-\d{2}_\d{6}\.json$/', (string)$backup, $matches)) return false;
+    return validatePageName($matches[1]);
 }
 
 function dashboardReadJsonFile(string $path): array {
@@ -1787,7 +1790,7 @@ function buildPageSeoHealth($lang, $slug, array $data) {
     }
 
     return nibblySeoHealth(nibblySeoContext([
-        'contentPage' => $lang . '_' . $slug,
+        'contentPage' => nibblyPageContentKey($lang, $slug),
         'currentLang' => $lang,
         'currentPage' => $slug,
         'pageTitle' => $data['title'] ?? '',
@@ -1807,11 +1810,12 @@ function buildPageList() {
     foreach ($files as $file) {
         $basename = basename($file, '.json');
         // Only match {2-letter-lang}_{slug} pattern
-        if (!preg_match('/^([a-z]{2})_([a-z0-9]+(?:-[a-z0-9]+)*)$/', $basename, $m)) {
+        $page = nibblyPageParseContentKey($basename);
+        if ($page === null) {
             continue;
         }
-        $lang = $m[1];
-        $slug = $m[2];
+        $lang = $page['lang'];
+        $slug = $page['path'];
         // Only include languages defined in config
         if (!isset($SITE_LANGUAGES[$lang])) {
             continue;
@@ -2659,7 +2663,7 @@ switch ($action) {
             if ($filepath === '') {
                 throw new RuntimeException('Unsupported AI field update target.');
             }
-            $backupName = preg_match('/^[a-z]{2}_[a-z0-9]+(?:-[a-z0-9]+)*$/', $contentPage)
+            $backupName = nibblyPageIsValidContentKey($contentPage)
                 ? dashboardCopilotCreatePageBackup($contentPage)
                 : '';
             $written = file_put_contents(
@@ -2692,8 +2696,8 @@ switch ($action) {
                     'undoSignature' => dashboardCopilotUndoSignature($contentPage, $backupName, $path)
                 ];
             }
-            if (preg_match('/^([a-z]{2})_([a-z0-9]+(?:-[a-z0-9]+)*)$/', $contentPage, $pageParts)) {
-                $response['seoHealth'] = buildPageSeoHealth($pageParts[1], $pageParts[2], $applied['data']);
+            if (($pageParts = nibblyPageParseContentKey($contentPage)) !== null) {
+                $response['seoHealth'] = buildPageSeoHealth($pageParts['lang'], $pageParts['path'], $applied['data']);
             }
             jsonResponse(true, $response, 'AI field update applied');
         } catch (Throwable $e) {
@@ -2829,8 +2833,8 @@ switch ($action) {
                 'backup' => $backup,
                 'lastModified' => $restored['lastModified'] ?? null
             ];
-            if (preg_match('/^([a-z]{2})_([a-z0-9]+(?:-[a-z0-9]+)*)$/', $contentPage, $pageParts)) {
-                $response['seoHealth'] = buildPageSeoHealth($pageParts[1], $pageParts[2], $restored);
+            if (($pageParts = nibblyPageParseContentKey($contentPage)) !== null) {
+                $response['seoHealth'] = buildPageSeoHealth($pageParts['lang'], $pageParts['path'], $restored);
             }
             jsonResponse(true, $response, 'AI change restored from backup');
         } catch (Throwable $e) {
@@ -3374,7 +3378,7 @@ switch ($action) {
         $rows = [];
         foreach (glob(rtrim(CONTENT_PATH, '/') . '/*.json') ?: [] as $file) {
             $name = pathinfo($file, PATHINFO_FILENAME);
-            if (!preg_match('/^[a-z]{2}_[a-z0-9]+(?:-[a-z0-9]+)*$/', $name)) {
+            if (!nibblyPageIsValidContentKey($name)) {
                 continue;
             }
             $data = dashboardReadJsonFile($file);
@@ -3409,7 +3413,7 @@ switch ($action) {
             jsonResponse(false, null, 'Invalid CSRF token');
         }
         $contentPage = trim((string)($_POST['contentPage'] ?? ''));
-        if (!preg_match('/^[a-z]{2}_[a-z0-9]+(?:-[a-z0-9]+)*$/', $contentPage)) {
+        if (!nibblyPageIsValidContentKey($contentPage)) {
             jsonResponse(false, null, 'Invalid content page');
         }
         $data = dashboardReadJsonFile(CONTENT_PATH . $contentPage . '.json');
@@ -3458,7 +3462,7 @@ switch ($action) {
             jsonResponse(false, null, 'AI write action requires explicit confirmation');
         }
         $contentPage = trim((string)($_POST['contentPage'] ?? ''));
-        if (!preg_match('/^[a-z]{2}_[a-z0-9]+(?:-[a-z0-9]+)*$/', $contentPage)) {
+        if (!nibblyPageIsValidContentKey($contentPage)) {
             jsonResponse(false, null, 'Invalid content page');
         }
         $description = trim((string)($_POST['description'] ?? ''));
@@ -3701,14 +3705,14 @@ switch ($action) {
         if (empty($title)) {
             jsonResponse(false, null, 'Title is required');
         }
-        if (!preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slug)) {
-            jsonResponse(false, null, 'Invalid slug (lowercase letters, numbers, hyphens only)');
+        if (!nibblyPageIsValidPath($slug)) {
+            jsonResponse(false, null, 'Invalid path (use lowercase URL segments separated by slashes)');
         }
         if (!preg_match('/^[a-z]{2}$/', $lang)) {
             jsonResponse(false, null, 'Invalid language');
         }
 
-        $pageName = $lang . '_' . $slug;
+        $pageName = nibblyPageContentKey($lang, $slug);
         $filepath = CONTENT_PATH . $pageName . '.json';
         if (file_exists($filepath)) {
             jsonResponse(false, null, 'A page with this slug already exists');
@@ -3716,6 +3720,7 @@ switch ($action) {
 
         $content = [
             'page' => $pageName,
+            'path' => $slug,
             'lang' => $lang,
             'title' => $title,
             'description' => '',
@@ -3775,7 +3780,7 @@ switch ($action) {
         if (!preg_match('/^[a-z]{2}$/', $targetLang)) {
             jsonResponse(false, null, 'Invalid target language');
         }
-        if (!preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slug)) {
+        if (!nibblyPageIsValidPath($slug)) {
             jsonResponse(false, null, 'Invalid slug');
         }
 
@@ -3784,7 +3789,7 @@ switch ($action) {
             jsonResponse(false, null, 'Source page does not exist');
         }
 
-        $targetPage = $targetLang . '_' . $slug;
+        $targetPage = nibblyPageContentKey($targetLang, $slug);
         $targetFile = CONTENT_PATH . $targetPage . '.json';
         if (file_exists($targetFile)) {
             jsonResponse(false, null, 'Target page already exists');
@@ -3797,6 +3802,7 @@ switch ($action) {
 
         // Update metadata for the new language
         $content['page'] = $targetPage;
+        $content['path'] = $slug;
         $content['lang'] = $targetLang;
         $content['lastModified'] = date('c');
 
@@ -3865,18 +3871,19 @@ switch ($action) {
 
         $copySlug = $slug . '-copy';
         $counter = 2;
-        while (file_exists(CONTENT_PATH . $lang . '_' . $copySlug . '.json')) {
+        while (file_exists(CONTENT_PATH . nibblyPageContentKey($lang, $copySlug) . '.json')) {
             $copySlug = $slug . '-copy-' . $counter;
             $counter++;
         }
 
-        $newPage = $lang . '_' . $copySlug;
+        $newPage = nibblyPageContentKey($lang, $copySlug);
         $content = json_decode(file_get_contents($sourceFile), true);
         if ($content === null) {
             jsonResponse(false, null, 'Error reading source page');
         }
 
         $content['page'] = $newPage;
+        $content['path'] = $copySlug;
         if (isset($content['title'])) {
             $content['title'] .= ' (Copy)';
         }
@@ -3909,7 +3916,7 @@ switch ($action) {
         foreach ($files as $file) {
             $filename = basename($file, '.json');
             // Parse: {lang}_{slug}_{date}_{time}
-            if (!preg_match('/^([a-z]{2}_[a-z0-9]+(?:-[a-z0-9]+)*)_(\d{4}-\d{2}-\d{2})_(\d{6})$/', $filename, $m)) {
+            if (!preg_match('/^(.+)_(\d{4}-\d{2}-\d{2})_(\d{6})$/', $filename, $m) || !validatePageName($m[1])) {
                 continue;
             }
             $pageName = $m[1];
@@ -3941,7 +3948,7 @@ switch ($action) {
         }
 
         $trashFile = $_POST['filename'] ?? '';
-        if (empty($trashFile) || !preg_match('/^[a-z]{2}_[a-z0-9]+(?:-[a-z0-9]+)*_\d{4}-\d{2}-\d{2}_\d{6}\.json$/', $trashFile)) {
+        if (empty($trashFile) || !validateBackupName($trashFile)) {
             jsonResponse(false, null, 'Invalid trash filename');
         }
 
@@ -3972,7 +3979,7 @@ switch ($action) {
         }
 
         $trashFile = $_POST['filename'] ?? '';
-        if (empty($trashFile) || !preg_match('/^[a-z]{2}_[a-z0-9]+(?:-[a-z0-9]+)*_\d{4}-\d{2}-\d{2}_\d{6}\.json$/', $trashFile)) {
+        if (empty($trashFile) || !validateBackupName($trashFile)) {
             jsonResponse(false, null, 'Invalid trash filename');
         }
 
@@ -4069,8 +4076,8 @@ switch ($action) {
         }
 
         $responseData = ['lastModified' => $contentData['lastModified']];
-        if (preg_match('/^([a-z]{2})_([a-z0-9]+(?:-[a-z0-9]+)*)$/', $page, $pageParts)) {
-            $responseData['seoHealth'] = buildPageSeoHealth($pageParts[1], $pageParts[2], $contentData);
+        if (($pageParts = nibblyPageParseContentKey($page)) !== null) {
+            $responseData['seoHealth'] = buildPageSeoHealth($pageParts['lang'], $pageParts['path'], $contentData);
         }
 
         // Optional: re-render the full sections list so the client can patch
@@ -5933,7 +5940,10 @@ switch ($action) {
                 'boxTextColor' => ''
             ],
             'seo' => [
-                'defaultOgImage' => ''
+                'siteUrl' => '',
+                'organizationName' => '',
+                'defaultOgImage' => '',
+                'noindexSite' => false
             ]
         ];
 
@@ -5980,7 +5990,7 @@ switch ($action) {
             'theme' => ['adminTheme', 'publicDefault', 'primaryColor', 'accentColor', 'sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg', 'buttonGlow', 'buttonRadius'],
             'general' => ['adminLanguage', 'frontendLoginRedirect'],
             'email' => ['method', 'recipientEmail', 'bccEmail', 'fromEmail', 'fromName', 'smtpHost', 'smtpPort', 'smtpUsername', 'smtpPassword', 'smtpEncryption'],
-            'seo' => ['defaultOgImage']
+            'seo' => ['siteUrl', 'organizationName', 'defaultOgImage', 'noindexSite']
         ];
 
         // Top-level scalar settings (not nested under a group)
@@ -6046,6 +6056,21 @@ switch ($action) {
                         if (!validateOgImagePath($value)) {
                             jsonResponse(false, null, 'Default Open Graph image must be a JPG or PNG file from /assets/images/');
                         }
+                    }
+
+                    if ($group === 'seo' && $key === 'siteUrl') {
+                        $value = rtrim(trim((string)$value), '/');
+                        if ($value !== '' && filter_var($value, FILTER_VALIDATE_URL) === false) {
+                            jsonResponse(false, null, 'Invalid SEO site URL');
+                        }
+                    }
+
+                    if ($group === 'seo' && $key === 'organizationName') {
+                        $value = trim((string)$value);
+                    }
+
+                    if ($group === 'seo' && $key === 'noindexSite') {
+                        $value = (bool)$value;
                     }
 
                     // Validate logoDisplay (3-way selector)
@@ -7655,7 +7680,7 @@ switch ($action) {
         }
 
         // Sanitize: only allow valid slug characters
-        $order = array_values(array_filter($order, fn($s) => is_string($s) && preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $s)));
+        $order = array_values(array_filter($order, fn($s) => is_string($s) && nibblyPageIsValidPath($s)));
 
         $menusPath = __DIR__ . '/../content/menus.json';
         $registry = file_exists($menusPath) ? json_decode(file_get_contents($menusPath), true) : ['menus' => []];

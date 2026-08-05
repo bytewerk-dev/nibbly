@@ -10,6 +10,81 @@ $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $root = __DIR__;
 $filePath = $root . $uri;
 
+require_once $root . '/includes/page-path.php';
+
+/**
+ * PHP's built-in server does not reliably honor byte-range requests for media.
+ * Scroll-scrubbed videos need ranges so the browser can seek to an arbitrary
+ * frame without downloading the entire file first.
+ */
+function _routerServeSeekableMedia(string $filePath): bool {
+    $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+    $mimeTypes = [
+        'mp4' => 'video/mp4',
+        'webm' => 'video/webm',
+        'mp3' => 'audio/mpeg',
+        'm4a' => 'audio/mp4',
+        'ogg' => 'audio/ogg',
+        'wav' => 'audio/wav',
+    ];
+    if (!isset($mimeTypes[$extension])) return false;
+
+    $size = filesize($filePath);
+    if ($size === false || $size < 1) return false;
+
+    $start = 0;
+    $end = $size - 1;
+    $status = 200;
+    $range = trim((string)($_SERVER['HTTP_RANGE'] ?? ''));
+
+    if ($range !== '') {
+        if (!preg_match('/^bytes=(\d*)-(\d*)$/', $range, $matches)) {
+            header('Content-Range: bytes */' . $size);
+            http_response_code(416);
+            return true;
+        }
+
+        if ($matches[1] === '' && $matches[2] !== '') {
+            $suffixLength = min((int)$matches[2], $size);
+            $start = $size - $suffixLength;
+        } else {
+            $start = (int)$matches[1];
+            if ($matches[2] !== '') $end = min((int)$matches[2], $end);
+        }
+
+        if ($start < 0 || $start > $end || $start >= $size) {
+            header('Content-Range: bytes */' . $size);
+            http_response_code(416);
+            return true;
+        }
+        $status = 206;
+    }
+
+    $length = $end - $start + 1;
+    http_response_code($status);
+    header('Content-Type: ' . $mimeTypes[$extension]);
+    header('Accept-Ranges: bytes');
+    header('Content-Length: ' . $length);
+    if ($status === 206) header('Content-Range: bytes ' . $start . '-' . $end . '/' . $size);
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'HEAD') return true;
+
+    $handle = fopen($filePath, 'rb');
+    if ($handle === false) {
+        http_response_code(500);
+        return true;
+    }
+    fseek($handle, $start);
+    $remaining = $length;
+    while ($remaining > 0 && !feof($handle)) {
+        $chunk = fread($handle, min(8192, $remaining));
+        if ($chunk === false || $chunk === '') break;
+        echo $chunk;
+        $remaining -= strlen($chunk);
+    }
+    fclose($handle);
+    return true;
+}
+
 
 // Block access to sensitive paths BEFORE serving any files
 if (preg_match('#^/(content|backups)/|-trash/#', $uri)) {
@@ -25,6 +100,7 @@ if (preg_match('#/(config|smtp-config)\.php$#', $uri)) {
 
 // Serve existing files directly (CSS, JS, images, etc.)
 if ($uri !== '/' && is_file($filePath)) {
+    if (_routerServeSeekableMedia($filePath)) return true;
     return false;
 }
 
@@ -98,47 +174,50 @@ if (preg_match('#^news/([a-z0-9-]+)$#', $cleanUri, $m)) {
     return true;
 }
 
-// Language-prefixed URL: /en/slug or /de/slug
-if (preg_match('#^([a-z]{2})/([a-zA-Z0-9_-]+)$#', $cleanUri, $m)) {
+// Language-prefixed URL: /en/path/to/page or /de/path/to/page
+if (preg_match('#^([a-z]{2})/(' . nibblyPagePathPattern() . ')$#', $cleanUri, $m)) {
     $lang = $m[1];
     $slug = $m[2];
+    $contentPage = nibblyPageContentKey($lang, $slug);
 
     // 1. Physical PHP file has priority
-    $langFile = $root . '/' . $lang . '/' . $slug . '.php';
+    $langFile = nibblyPageTemplatePath($root, $lang, $slug);
     if (is_file($langFile)) {
-        nibblyAccessEnforceCurrentTemplatePage($lang . '_' . $slug);
+        $basePath = nibblyPageBasePath($slug, true);
+        nibblyAccessEnforceCurrentTemplatePage($contentPage);
         include $langFile;
         return true;
     }
 
     // 2. JSON content file → front controller
-    $jsonFile = $root . '/content/pages/' . $lang . '_' . $slug . '.json';
+    $jsonFile = nibblyPageJsonPath($root, $lang, $slug);
     if (is_file($jsonFile)) {
-        $basePath = '../';
+        $basePath = nibblyPageBasePath($slug, true);
         include $root . '/includes/page.php';
         return true;
     }
 }
 
-// Root-level URL: /slug → primary language
-if (preg_match('#^[a-zA-Z0-9_-]+$#', $cleanUri)) {
+// Root-level URL: /path/to/page → primary language
+if (preg_match('#^' . nibblyPagePathPattern() . '$#', $cleanUri)) {
     $primaryLang = _routerGetPrimaryLang();
+    $lang = $primaryLang;
     $slug = $cleanUri;
+    $contentPage = nibblyPageContentKey($lang, $slug);
 
     // 1. Physical PHP file has priority
-    $langFile = $root . '/' . $primaryLang . '/' . $slug . '.php';
+    $langFile = nibblyPageTemplatePath($root, $lang, $slug);
     if (is_file($langFile)) {
-        $basePath = '';
-        nibblyAccessEnforceCurrentTemplatePage($primaryLang . '_' . $slug);
+        $basePath = nibblyPageBasePath($slug, false);
+        nibblyAccessEnforceCurrentTemplatePage($contentPage);
         include $langFile;
         return true;
     }
 
     // 2. JSON content file → front controller
-    $jsonFile = $root . '/content/pages/' . $primaryLang . '_' . $slug . '.json';
+    $jsonFile = nibblyPageJsonPath($root, $lang, $slug);
     if (is_file($jsonFile)) {
-        $lang = $primaryLang;
-        $basePath = '';
+        $basePath = nibblyPageBasePath($slug, false);
         include $root . '/includes/page.php';
         return true;
     }

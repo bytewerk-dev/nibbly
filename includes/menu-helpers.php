@@ -102,6 +102,7 @@ function navItemInLocation(array $item, string $location): bool {
  * @return array               Array of nav items: ['href' => ..., 'label' => ..., 'page' => ..., 'children' => [...]]
  */
 function getMenuItems(string $menuId, string $lang, string $basePath, array $allNavItems): array {
+    require_once __DIR__ . '/page-path.php';
     $defaultLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
 
     // 1. Filter manual nav items to this menu location
@@ -122,7 +123,9 @@ function getMenuItems(string $menuId, string $lang, string $basePath, array $all
     $pageFiles = glob($contentPath . $lang . '_*.json');
     if ($pageFiles) {
         foreach ($pageFiles as $pf) {
-            $slug = substr(basename($pf, '.json'), strlen($lang) + 1);
+            $page = nibblyPageParseContentKey(basename($pf, '.json'));
+            if ($page === null || $page['lang'] !== $lang) continue;
+            $slug = $page['path'];
 
             // Skip system partials
             if (in_array($slug, ['home', 'footer', 'sidebar', 'header'])) continue;
@@ -132,7 +135,7 @@ function getMenuItems(string $menuId, string $lang, string $basePath, array $all
                 $locations = getNavLocations($data ?: []);
                 if ($data && in_array($menuId, $locations)) {
                     $title = $data['title'] ?? ucfirst(str_replace('-', ' ', $slug));
-                    $href = ($lang === $defaultLang) ? $slug : $lang . '/' . $slug;
+                    $href = ltrim(nibblyPageUrlPath($lang, $slug, $defaultLang), '/');
                     $items[] = ['href' => $href, 'label' => $title, 'page' => $slug];
                 }
             }

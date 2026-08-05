@@ -5,6 +5,7 @@ $currentLang = $currentLang ?? (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT
 $defaultLang = $defaultLang ?? (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en');
 $PAGE_MAPPING = $PAGE_MAPPING ?? [];
 $langLinks = $langLinks ?? [];
+require_once __DIR__ . '/page-path.php';
 
 // Check if admin is logged in
 require_once __DIR__ . '/access-guard.php';
@@ -728,10 +729,12 @@ $_footerSummary = [
     $_linkLang = $currentLang ?? (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en');
     $_linkDefaultLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
     foreach (glob(__DIR__ . '/../content/pages/' . $_linkLang . '_*.json') as $_pf) {
-        $_slug = preg_replace('/^' . $_linkLang . '_/', '', basename($_pf, '.json'));
+        $_page = nibblyPageParseContentKey(basename($_pf, '.json'));
+        if ($_page === null || $_page['lang'] !== $_linkLang) continue;
+        $_slug = $_page['path'];
         $_pd = json_decode(file_get_contents($_pf), true);
         $_title = $_pd['title'] ?? ucfirst(str_replace('-', ' ', $_slug));
-        $_href = $_slug === 'home' ? '/' : ($_linkLang === $_linkDefaultLang ? '/' . $_slug : '/' . $_linkLang . '/' . $_slug);
+        $_href = nibblyPageUrlPath($_linkLang, $_slug, $_linkDefaultLang);
         $_linkPages[] = ['slug' => $_slug, 'title' => $_title, 'href' => $_href];
     }
     usort($_linkPages, function($a, $b) { return strcasecmp($a['title'], $b['title']); });

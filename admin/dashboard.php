@@ -2857,6 +2857,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     let currentSeoHealth = null;
     let pageListSearchQuery = '';
 
+    function pageContentKey(lang, path) {
+        return lang + '_' + String(path || '').replaceAll('/', '__');
+    }
+
     async function loadPageList() {
         try {
             const response = await fetch('api.php?action=list-pages&_=' + Date.now());
@@ -3042,7 +3046,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 trashLink.innerHTML = icon('trash', 12, '2') + ' ' + t('pages.trash');
                 trashLink.onclick = async (e) => {
                     e.preventDefault();
-                    const pageName = viewLang + '_' + page.slug;
+                    const pageName = pageContentKey(viewLang, page.slug);
                     try {
                         const result = await deletePage(pageName);
                         showToast(t('toast.page_trashed'), 'success');
@@ -3239,7 +3243,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         const formData = new FormData();
         formData.append('action', 'copy-page');
         formData.append('csrf_token', CSRF_TOKEN);
-        formData.append('source', sourceLang + '_' + sourceSlug);
+        formData.append('source', pageContentKey(sourceLang, sourceSlug));
         formData.append('targetLang', targetLang);
         formData.append('slug', targetSlug);
 
@@ -3255,7 +3259,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         const formData = new FormData();
         formData.append('action', 'duplicate-page');
         formData.append('csrf_token', CSRF_TOKEN);
-        formData.append('source', lang + '_' + slug);
+        formData.append('source', pageContentKey(lang, slug));
 
         const response = await fetch('api.php', { method: 'POST', body: formData });
         const result = await response.json();
@@ -3508,7 +3512,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             const pageTitle = titleInput.value.trim();
             const pageSlug = slugInput.value.trim();
             if (!pageTitle) { titleInput.focus(); return; }
-            if (!pageSlug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(pageSlug)) {
+            if (!pageSlug || !/^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*$/.test(pageSlug)) {
                 slugInput.focus();
                 return;
             }
@@ -3550,7 +3554,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     async function loadContent(pushHistory = true) {
         const lang = document.getElementById('langSelect').value;
         const page = document.getElementById('pageSelect').value;
-        currentPage = lang + '_' + page;
+        currentPage = pageContentKey(lang, page);
 
         try {
             const response = await fetch(`api.php?action=load&page=${currentPage}`);

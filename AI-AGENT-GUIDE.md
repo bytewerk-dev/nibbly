@@ -459,6 +459,23 @@ php cli/make.php --slug=about --lang=en --title="About Us"
 
 This creates `content/pages/en_about.json` with a heading and text section. The router + front controller (`includes/page.php`) will automatically serve `/about` or `/en/about` using `renderAllSections()`. No PHP template file needed.
 
+### Nested Page Paths
+
+Use slash-separated slugs when an information architecture or an existing SEO
+URL must be preserved:
+
+```bash
+php cli/make.php --slug=products/vitamin-d --lang=en --title="Vitamin D"
+```
+
+The public path remains `/products/vitamin-d` (or
+`/{lang}/products/vitamin-d` for a non-default language). Content remains in a
+flat directory: Nibbly reserves `__` as the path separator in page identifiers,
+so the example is stored as `content/pages/en_products__vitamin-d.json` with
+`"path": "products/vitamin-d"`. Never expose the encoded identifier in links,
+Canonicals, hreflang URLs, redirects, or sitemap entries. Custom templates use
+nested directories, for example `en/products/vitamin-d.php`.
+
 The page appears in header navigation automatically via auto-discovery. To control which menus a page appears in, use `--nav=header,footer-pages` or set `"nav": ["header", "footer-pages"]` in the JSON. Use `--nav=none` to hide from all menus.
 
 To create the JSON manually instead:

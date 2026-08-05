@@ -3,6 +3,8 @@
  * SEO/AEO/GEO helpers for public metadata, sitemaps, robots, and health checks.
  */
 
+require_once __DIR__ . '/page-path.php';
+
 function nibblySeoRoot(): string {
     return dirname(__DIR__);
 }
@@ -32,10 +34,10 @@ function nibblySeoBaseUrl(): string {
 
 function nibblySeoPageUrl(string $lang, string $slug): string {
     $base = nibblySeoBaseUrl();
-    $defaultLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
-    $path = $slug === 'home'
-        ? ($lang === $defaultLang ? '/' : '/' . $lang . '/')
-        : ($lang === $defaultLang ? '/' . $slug : '/' . $lang . '/' . $slug);
+    $path = nibblyPageUrlPath($lang, $slug);
+    if ($path !== '/') {
+        $path = rtrim($path, '/') . '/';
+    }
     return $base . $path;
 }
 
@@ -46,7 +48,7 @@ function nibblySeoCurrentUrl(): string {
 }
 
 function nibblySeoLoadPageData(?string $contentPage): array {
-    if (!$contentPage || !preg_match('/^[a-z]{2}_[a-z0-9]+(?:-[a-z0-9]+)*$/', $contentPage)) {
+    if (!$contentPage || !nibblyPageIsValidContentKey($contentPage)) {
         return [];
     }
     $path = nibblySeoRoot() . '/content/pages/' . $contentPage . '.json';
@@ -150,7 +152,10 @@ function nibblySeoContext(array $args): array {
     $visibility = is_array($data['visibility'] ?? null) ? $data['visibility'] : [];
     $lang = $args['currentLang'] ?? ($data['lang'] ?? (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en'));
     $slug = $args['currentPage'] ?? '';
-    if ($slug === '' && $contentPage && preg_match('/^[a-z]{2}_(.+)$/', $contentPage, $m)) $slug = $m[1];
+    if ($slug === '' && $contentPage) {
+        $page = nibblyPageParseContentKey((string)$contentPage);
+        if ($page !== null) $slug = $page['path'];
+    }
     $title = trim((string)($seo['title'] ?? '')) ?: trim((string)($args['pageTitle'] ?? ($data['title'] ?? '')));
     $description = trim((string)($seo['description'] ?? '')) ?: trim((string)($args['pageDescription'] ?? ($data['description'] ?? '')));
     $canonical = trim((string)($seo['canonical'] ?? ''));
@@ -314,7 +319,8 @@ function nibblySeoRenderablePages(): array {
     $defaultLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
     foreach (glob(nibblySeoRoot() . '/content/pages/[a-z][a-z]_*.json') ?: [] as $file) {
         $name = basename($file, '.json');
-        if (!preg_match('/^([a-z]{2})_(.+)$/', $name, $m)) continue;
+        $page = nibblyPageParseContentKey($name);
+        if ($page === null) continue;
         $data = json_decode((string)file_get_contents($file), true);
         if (!is_array($data)) continue;
         $visibility = is_array($data['visibility'] ?? null) ? $data['visibility'] : [];
@@ -322,8 +328,8 @@ function nibblySeoRenderablePages(): array {
         if (($visibility['status'] ?? 'public') === 'private') continue;
         if (($seo['sitemap'] ?? true) === false) continue;
         if (stripos(nibblySeoRobots($seo, $visibility), 'noindex') !== false) continue;
-        $lang = $m[1];
-        $slug = $m[2];
+        $lang = $page['lang'];
+        $slug = $page['path'];
         $pages[] = [
             'lang' => $lang,
             'slug' => $slug,

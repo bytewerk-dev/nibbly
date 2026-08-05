@@ -318,7 +318,7 @@
     "modal.new_page_title_placeholder": "My New Page",
     "modal.new_page_slug": "Slug",
     "modal.new_page_slug_placeholder": "my-new-page",
-    "modal.new_page_slug_hint": "Lowercase, hyphens only. Auto-generated from title.",
+    "modal.new_page_slug_hint": "Lowercase URL path; use slashes for nested pages. Auto-generated from title.",
     "modal.create_page": "Create Page",
     "modal.delete_permanently": "Delete Permanently",
     "modal.delete_confirm": "Are you sure you want to permanently delete \"{title}\" ({page})? This cannot be undone.",

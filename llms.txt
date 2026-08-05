@@ -6,7 +6,7 @@
 
 - **Flat-file**: No database — all content lives in JSON files under `content/`
 - **PHP templates**: Pages are plain PHP files that include header/footer and use editable helper functions
-- **JSON content**: Each page has a matching `content/pages/{lang}_{slug}.json` file with sections or custom keys
+- **JSON content**: Each page has a matching `content/pages/{lang}_{slug}.json` file with sections or custom keys. Nested public paths encode `/` as `__` in the flat filename (`products/vitamin-d` → `en_products__vitamin-d.json`).
 - **Inline editing via data-attributes**: Replace hardcoded text/images/links with PHP helpers (`editableText()`, `editableImage()`, `editableLink()`) that inject `data-*` attributes. The inline editor JS discovers these attributes and makes elements clickable/editable for logged-in admins. Visitors see clean HTML with no editor markup. This is Nibbly's main purpose: making any HTML page editable.
 - **CSS Custom Properties**: All design tokens defined in `css/style.css` — override in a separate stylesheet for custom branding
 - **Multi-language**: Pages organized by language directories (`en/`, `de/`, etc.)
@@ -38,4 +38,4 @@ php -S localhost:3000 router.php
 php cli/convert.php my-page.html --slug=about --lang=en --dry-run
 ```
 
-Create a page with `php cli/make.php --slug=about --lang=en` or by adding a JSON file to `content/pages/` — no PHP template needed for standard pages. Pages appear in navigation automatically. Use `cli/convert.php` to convert an existing HTML page into an editable template. See CLAUDE.md for details.
+Create a page with `php cli/make.php --slug=about --lang=en` (or a nested page with `--slug=products/vitamin-d`) or by adding a JSON file to `content/pages/` — no PHP template needed for standard pages. Pages appear in navigation automatically. Use `cli/convert.php` to convert an existing HTML page into an editable template. See CLAUDE.md for details.

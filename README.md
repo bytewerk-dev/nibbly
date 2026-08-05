@@ -121,6 +121,18 @@ Create `content/pages/en_about.json`:
 }
 ```
 
+Nested clean URLs are supported as well. Use a slash in the public page path
+and a reserved double underscore in the flat JSON filename:
+
+```text
+content/pages/en_products__vitamin-d.json  →  /products/vitamin-d
+content/pages/de_produkte__vitamin-d.json  →  /de/produkte/vitamin-d
+```
+
+When the language is the configured default, its language prefix is omitted.
+The Dashboard and `php cli/make.php --slug=products/vitamin-d --lang=en`
+create this mapping automatically.
+
 The page is now live at `/about`. No PHP file needed.
 
 ### Option 2: Custom layout (PHP template)

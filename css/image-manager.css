@@ -761,10 +761,17 @@
 
 .nb-imgmgr-thumb {
     height: 110px;
-    background-color: var(--nb-imgmgr-transparent-bg);
-    background-image: var(--nb-imgmgr-transparent-grid);
+    background-color: var(--nb-bg-sunken, #f0f0f0);
+    background-image: none;
     background-position: 0 0, 0 8px, 8px -8px, -8px 0;
     background-size: 16px 16px;
+}
+
+.nb-imgmgr-thumb.nb-imgmgr-has-transparency,
+.nb-imgmgr-list-thumb.nb-imgmgr-has-transparency,
+.nb-imgmgr-lightbox-stage--image.nb-imgmgr-has-transparency {
+    background-color: var(--nb-imgmgr-transparent-bg);
+    background-image: var(--nb-imgmgr-transparent-grid);
 }
 
 .nb-imgmgr-thumb-btn {
@@ -1106,8 +1113,8 @@
 .nb-imgmgr-list-thumb {
     width: 54px;
     height: 40px;
-    background-color: var(--nb-imgmgr-transparent-bg);
-    background-image: var(--nb-imgmgr-transparent-grid);
+    background-color: var(--nb-bg-sunken, #f0f0f0);
+    background-image: none;
     background-position: 0 0, 0 8px, 8px -8px, -8px 0;
     background-size: 16px 16px;
     border-radius: 4px;
@@ -1198,8 +1205,8 @@
     padding: 18px;
     border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: 8px;
-    background-color: var(--nb-imgmgr-transparent-bg);
-    background-image: var(--nb-imgmgr-transparent-grid);
+    background-color: var(--nb-bg-sunken, #f0f0f0);
+    background-image: none;
     background-position: 0 0, 0 8px, 8px -8px, -8px 0;
     background-size: 16px 16px;
     box-shadow: 0 10px 50px rgba(0, 0, 0, 0.6);

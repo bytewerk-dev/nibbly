@@ -15,7 +15,7 @@ php cli/make.php --slug=about --lang=en [options]
 
 | Option | Default | Description |
 |---|---|---|
-| `--slug=NAME` | *(required)* | Page slug for URLs |
+| `--slug=PATH` | *(required)* | Public page path; slashes create nested pages |
 | `--lang=CODE` | `en` | Language code |
 | `--type=TYPE` | `standard` | `standard` (JSON only) or `custom` (PHP + JSON) |
 | `--title=TEXT` | From slug | Page title |
@@ -29,6 +29,9 @@ php cli/make.php --slug=about --lang=en [options]
 ```bash
 # Standard page — creates JSON only, front controller serves it
 php cli/make.php --slug=about --lang=en --title="About Us"
+
+# Nested SEO path → content/pages/en_products__vitamin-d.json
+php cli/make.php --slug=products/vitamin-d --lang=en --title="Vitamin D"
 
 # Custom layout page — creates PHP template + JSON
 php cli/make.php --slug=services --lang=de --type=custom --title="Unsere Dienste"
@@ -44,6 +47,10 @@ php cli/make.php --slug=terms --lang=en --hide-nav
 
 **Standard pages** (`--type=standard`, default):
 - `content/pages/{lang}_{slug}.json` — content file with heading + text section
+
+Nested paths stay flat on disk: `/` in the public path becomes `__` in the
+content key and filename (`products/vitamin-d` →
+`en_products__vitamin-d.json`).
 - The front controller (`includes/page.php`) serves it automatically
 - Navigation auto-discovery adds it to the menu
 
@@ -74,7 +81,7 @@ php cli/convert.php <input.html> [options]
 
 | Option | Default | Description |
 |---|---|---|
-| `--slug=NAME` | From filename | Page slug for URLs |
+| `--slug=PATH` | From filename | Public page path; slashes create nested pages |
 | `--lang=CODE` | `en` | Language code |
 | `--title=TEXT` | From `<title>` or `<h1>` | Page title |
 | `--description=TEXT` | From `<meta description>` | SEO description |

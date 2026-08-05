@@ -361,7 +361,8 @@ function nibblyAccessEnforcePage(string $contentPage, array $pageData): void {
 }
 
 function nibblyAccessEnforceCurrentTemplatePage(?string $contentPage): void {
-    if (!$contentPage || !preg_match('/^[a-z]{2}_[a-z0-9]+(?:-[a-z0-9]+)*$/', $contentPage)) {
+    require_once __DIR__ . '/page-path.php';
+    if (!$contentPage || !nibblyPageIsValidContentKey($contentPage)) {
         return;
     }
     $path = nibblyAccessSiteRoot() . '/content/pages/' . $contentPage . '.json';

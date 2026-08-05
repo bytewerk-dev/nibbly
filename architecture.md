@@ -8,8 +8,11 @@ Nibbly is a flat-file CMS built on PHP with no database dependency. Content is s
 
 1. **Request arrives** at `router.php` (dev server) or `.htaccess` (Apache)
 2. **Static files** (CSS, JS, images) are served directly
-3. **PHP templates**: if `{lang}/{slug}.php` exists, it is included directly
-4. **JSON pages**: if `content/pages/{lang}_{slug}.json` exists, the front controller `includes/page.php` renders it using `renderAllSections()`
+3. **PHP templates**: if `{lang}/{path}.php` exists, it is included directly
+4. **JSON pages**: if the matching `content/pages/{lang}_{encoded-path}.json`
+   exists, the front controller `includes/page.php` renders it using
+   `renderAllSections()`. `/` is encoded as `__`, so
+   `/products/vitamin-d` maps to `en_products__vitamin-d.json`.
 5. **News posts**: URLs like `/en/news/my-post` route to `{lang}/news-post.php`
 6. **404**: falls through to `404.php`
 

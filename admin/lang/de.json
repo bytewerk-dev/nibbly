@@ -318,7 +318,7 @@
     "modal.new_page_title_placeholder": "Meine neue Seite",
     "modal.new_page_slug": "Slug",
     "modal.new_page_slug_placeholder": "meine-neue-seite",
-    "modal.new_page_slug_hint": "Nur Kleinbuchstaben und Bindestriche. Wird automatisch aus dem Titel generiert.",
+    "modal.new_page_slug_hint": "URL-Pfad in Kleinbuchstaben; Schrägstriche erzeugen Unterseiten. Wird automatisch aus dem Titel generiert.",
     "modal.create_page": "Seite erstellen",
     "modal.delete_permanently": "Endgültig löschen",
     "modal.delete_confirm": "Möchtest du \"{title}\" ({page}) wirklich endgültig löschen? Dies kann nicht rückgängig gemacht werden.",
