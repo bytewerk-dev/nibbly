@@ -16,6 +16,7 @@
 - Added GitHub Actions for PHP 8.4/8.5 and Chromium, with reproducible browser
   tooling and integration coverage for setup, SMTP, media lifecycle, revisions,
   fallback generation, budget concurrency, Kie recovery and analytics migration.
+  All three successful checks are required by the existing main branch ruleset.
 - Added an analytics privacy toggle and distinct disabled, empty and failed states.
 
 ### Changed

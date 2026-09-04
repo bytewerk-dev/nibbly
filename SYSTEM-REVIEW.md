@@ -75,7 +75,7 @@ Die sechs Vorschläge wurden im anschließenden Core-Durchlauf umgesetzt:
 | --- | --- | --- |
 | Bearbeitungskonflikte | Revision je Seite/Einstellung, HTTP 409/428, Vergleich und Download eigener Änderungen; atomare Fallback-Ergänzung. | Zwei unabhängige HTTP-Clients, zwei Browser-Tabs und 24 parallele Fallbacks. |
 | Fachliche Module | Zwölf API-Handler und 17 Dashboard-Scriptfragmente; stabile URLs und gemeinsame Methoden-/CSRF-/Rollenregeln. | Bestehende Integrations- und Copilot-Suites, direkte Browserausführung. |
-| CI | Workflow für PHP 8.4/8.5 und Chromium; Setup-, SMTP-, Upload- und Seitenabläufe ergänzt. | 18 lokale Offline-Suites. GitHub-Ergebnisse werden im Umsetzungsstand festgehalten. |
+| CI | Workflow für PHP 8.4/8.5 und Chromium; Setup-, SMTP-, Upload- und Seitenabläufe ergänzt. Alle drei Checks sind für `main` verpflichtend. | 18 Offline-Suites auch mit beiden PHP-Versionen in GitHub erfolgreich; Chromium einschließlich 120 responsiver Ansichten und Zwei-Tab-Konflikt erfolgreich. |
 | KI-Zustand | Gemeinsame Reservierung und Verbrauchsbuchung, persistente Kie-IDs, Wiederaufnahme, Systemstatus-Abgleich und gemeinsamer Modellkatalog. | 24 konkurrierende Reservierungen lassen exakt drei Anfragen bei drei Cent Budget zu; ein Kie-Auftrag überlebt einen Prozesswechsel ohne erneute Einreichung. |
 | Analytics | Tagesdateien, historische Monatsarchive ohne Besucher-Hashes und kurzlebiger Abfragecache; automatische Migration. | 730 Tage behalten 5.110 Aufrufe; täglicher Schreibzugriff auf 8.501 statt 185.430 Byte. |
 | Wartung und Sprache | Systemstatus für Erweiterungen, Speicher, Sicherungen, Aufträge; Analytics-Zustände „deaktiviert“, „leer“, „Fehler“; SEO-/Dialogtexte über i18n. | Browser- und HTTP-Prüfungen. Neue ausführliche Texte auf Deutsch und Englisch; andere Sprachen verwenden den vorhandenen englischen Fallback. |
@@ -84,7 +84,7 @@ Zusätzlich wurden Dashboard und alle Einstellungsbereiche bei 360, 390, 768,
 1024 und 1440 Pixeln geprüft: 120 Ansichten einschließlich aktivierter KI und
 umfangreicher Backup-Felder. Die Formulare nutzen die verfügbare Panelbreite.
 Eine kompakte Auswahl ersetzt auf schmalen Displays die lange Einstellungs-
-navigation. Farbwerte, Aktionen, Remote-Ziele und Uploads bleiben bedienbar.
+navigation. Farbwerte, Aktionen, Remote-Ziele, lange Menünamen und Uploads bleiben bedienbar.
 Die neue Konfliktansicht wurde ebenfalls bei 360 Pixeln geprüft.
 
 Bei der Umsetzung bestätigte weitere Fehler sind behoben: Teiländerungen an
@@ -109,7 +109,8 @@ wirklich Geld berechnet hat, muss dort geprüft werden.
   Seite, mobilen Admin-Abstand und Besucheransicht; keine JavaScript-Ausnahmen.
 - Separater lokaler Apache-2.4-/PHP-FPM-Test für Startseite, Sprach- und Unterseiten,
   Zugriffssperren, Anmeldung und authentifizierte API.
-- Lokale Laufzeit: PHP 8.5.4 und Node 22.17.1. Ältere PHP-Versionen wurden nicht
+- Lokale Laufzeit: PHP 8.5.4 und Node 22.17.1; zusätzlich PHP 8.4 und PHP 8.5
+  auf Ubuntu 24.04 in GitHub CI erfolgreich geprüft. PHP 8.1–8.3 wurden nicht
   ausgeführt. Für produktive Installationen sollte eine
   [weiterhin unterstützte PHP-Version](https://www.php.net/supported-versions.php)
   eingesetzt werden.
