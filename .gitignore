@@ -4,8 +4,7 @@ api/smtp-config.php
 includes/nav-config.php
 content/settings.json
 
-# Website overlay (deployed separately via website/deploy.sh)
-website/
+# Adjacent product/support projects are separate repositories.
 auth.nibbly.dev/
 
 # Local working material / scratch (not part of the distributable core)

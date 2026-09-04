@@ -56,7 +56,7 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
 $adminTheme = $siteSettings['theme']['adminTheme'] ?? 'light';
 $dashboardModules = array_replace(['news' => true, 'events' => true, 'messages' => true, 'iconManager' => true, 'ai' => true], is_array($siteSettings['modules'] ?? null) ? $siteSettings['modules'] : []);
 $aiFeaturesEnabled = !empty($dashboardModules['ai']);
-$aiDashboardVisible = $aiFeaturesEnabled || $isAdminUser;
+$aiDashboardVisible = $aiFeaturesEnabled;
 $_aiDashboardPublicSettings = $aiFeaturesEnabled && function_exists('nibblyAiLoadSettings') ? nibblyAiLoadSettings(true) : [];
 $_aiDashboardCopilotAvailable = $aiFeaturesEnabled
     && !empty($_aiDashboardPublicSettings['enabled'])
@@ -1898,6 +1898,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                                     <option value="openai-compatible"><?php echo t('ai.openai_compatible'); ?></option>
                                     <option value="openrouter"><?php echo t('ai.openrouter'); ?></option>
                                     <option value="anthropic"><?php echo t('ai.anthropic'); ?></option>
+                                    <option value="kie"><?php echo t('ai.kie'); ?></option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -2519,6 +2520,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                                 <li role="option" data-value="iconoir">Iconoir</li>
                                 <li role="option" data-value="ion">Ionicons</li>
                                 <li role="option" data-value="mynaui">Myna UI</li>
+                                <li role="option" data-value="mingcute">MingCute</li>
                                 <li role="option" data-value="tdesign">TDesign Icons</li>
                             </ul>
                             <input type="hidden" id="iconifyImportSet" value="lucide">
@@ -6064,6 +6066,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         iconoir:  { label: 'Iconoir',        license: 'MIT', licenseUrl: 'https://github.com/iconoir-icons/iconoir/blob/main/LICENSE' },
         ion:      { label: 'Ionicons',       license: 'MIT', licenseUrl: 'https://github.com/ionic-team/ionicons/blob/main/LICENSE' },
         mynaui:   { label: 'Myna UI',        license: 'MIT', licenseUrl: 'https://github.com/MynaUI/icons/blob/main/LICENSE' },
+        mingcute: { label: 'MingCute',       license: 'Apache-2.0', licenseUrl: 'https://github.com/mingcute-design/mingcute-icons/blob/main/LICENSE' },
         tdesign:  { label: 'TDesign Icons',  license: 'MIT', licenseUrl: 'https://github.com/Tencent/tdesign-icons/blob/main/LICENSE' }
     };
 
@@ -8294,7 +8297,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         if (window.NbImageManager && typeof NbImageManager.refresh === 'function') {
             NbImageManager.refresh();
         }
-        section.hidden = !usable && unavailableDismissed;
+        section.hidden = !AI_FEATURES_ENABLED || (!usable && unavailableDismissed);
         updateDashboardAiStatus(settings);
 
         if (usage && !usable) usage.hidden = true;
@@ -8367,7 +8370,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var defaults = {
             'openai-compatible': { baseUrl: 'https://api.openai.com/v1', organization: '', hasApiKey: false },
             openrouter: { baseUrl: 'https://openrouter.ai/api/v1', organization: '', hasApiKey: false },
-            anthropic: { baseUrl: 'https://api.anthropic.com/v1', organization: '', hasApiKey: false }
+            anthropic: { baseUrl: 'https://api.anthropic.com/v1', organization: '', hasApiKey: false },
+            kie: { baseUrl: 'https://api.kie.ai', organization: '', hasApiKey: false }
         };
         var credentials = settings.providerCredentials && settings.providerCredentials[provider]
             ? settings.providerCredentials[provider]
@@ -8391,6 +8395,14 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         return provider === 'anthropic' || baseUrl.indexOf('api.anthropic.com') !== -1;
     }
 
+    function aiUsesKie(settings) {
+        settings = settings || currentAiSettings || {};
+        var provider = String(document.getElementById('aiProvider')?.value || settings.provider || '').trim();
+        var credentials = aiProviderCredentials(settings, provider);
+        var baseUrl = String(document.getElementById('aiBaseUrl')?.value || credentials.baseUrl || settings.baseUrl || '').trim();
+        return provider === 'kie' || baseUrl.indexOf('api.kie.ai') !== -1;
+    }
+
     var AI_TEXT_MODEL_PRESETS = {
         'openai-compatible': {
             chat: 'gpt-4.1-mini',
@@ -8406,6 +8418,11 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             chat: 'claude-sonnet-4-6',
             text: 'claude-haiku-4-5',
             suggestions: ['claude-sonnet-4-6', 'claude-haiku-4-5', 'claude-opus-4-8']
+        },
+        kie: {
+            chat: 'gpt-5-6-luna',
+            text: 'gpt-5-6-luna',
+            suggestions: ['gpt-5-6-luna', 'gpt-5-6-terra', 'gpt-5-6-sol', 'claude-sonnet-5', 'gemini-3-5-flash']
         }
     };
 
@@ -8618,6 +8635,11 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             { value: 'openai/gpt-5.4-image-2', label: t('ai.openrouter_image_gpt') },
             { value: 'google/gemini-3.1-flash-image-preview', label: t('ai.openrouter_image_gemini_flash') },
             { value: 'google/gemini-3-pro-image-preview', label: t('ai.openrouter_image_gemini_pro') }
+        ],
+        kie: [
+            { value: 'gpt-image-2', label: 'Kie.ai: GPT Image 2' },
+            { value: 'nano-banana-2', label: 'Kie.ai: Nano Banana 2' },
+            { value: 'seedream-5-0-pro', label: 'Kie.ai: Seedream 5.0 Pro' }
         ]
     };
 
@@ -8646,9 +8668,23 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         return model === 'gpt-image-2' ? model : 'gpt-image-2';
     }
 
+    function normalizeKieImageModel(model) {
+        model = String(model || '').trim();
+        var aliases = {
+            'gpt-image-2-text-to-image': 'gpt-image-2',
+            'gpt-image-2-image-to-image': 'gpt-image-2',
+            'seedream/5-pro-text-to-image': 'seedream-5-0-pro',
+            'seedream/5-pro-image-to-image': 'seedream-5-0-pro'
+        };
+        model = aliases[model] || model;
+        return AI_IMAGE_MODEL_OPTIONS.kie.some(function(option) { return option.value === model; })
+            ? model : 'gpt-image-2';
+    }
+
     function currentAiProviderKey(settings) {
         settings = settings || currentAiSettings || {};
         var provider = document.getElementById('aiProvider')?.value || settings.provider || 'openai-compatible';
+        if (provider === 'kie' || aiUsesKie(settings)) return 'kie';
         return provider === 'openrouter' || aiUsesOpenRouter(settings) ? 'openrouter' : 'openai-compatible';
     }
 
@@ -8661,7 +8697,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var options = AI_IMAGE_MODEL_OPTIONS[providerKey] || AI_IMAGE_MODEL_OPTIONS['openai-compatible'];
         var selected = providerKey === 'openrouter'
             ? normalizeOpenRouterImageModel(settings.imageModel || input.value || '')
-            : normalizeOpenAiImageModel(settings.imageModel || input.value || '');
+            : (providerKey === 'kie'
+                ? normalizeKieImageModel(settings.imageModel || input.value || '')
+                : normalizeOpenAiImageModel(settings.imageModel || input.value || ''));
         if (picker) {
             picker.innerHTML = options.map(function(option) {
                 return '<option value="' + escapeHtml(option.value) + '">' + escapeHtml(option.label) + '</option>';
@@ -11392,6 +11430,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var provider = String(settings.provider || '').trim();
         var baseUrl = String(settings.baseUrl || '').trim();
         if (provider === 'anthropic' || baseUrl.indexOf('api.anthropic.com') !== -1) return 'anthropic';
+        if (provider === 'kie' || baseUrl.indexOf('api.kie.ai') !== -1) return 'kie';
         if (provider === 'openrouter' || baseUrl.indexOf('openrouter.ai') !== -1) return 'openrouter';
         return 'openai-compatible';
     }
@@ -11417,6 +11456,18 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 return { cents: entry.imageCostCents, estimated: !!entry.imageCostEstimated };
             }
             // Catalog not loaded yet or model not found: fall back to settings.
+            return configuredCents ? { cents: configuredCents, estimated: true } : null;
+        }
+
+        if (providerKey === 'kie') {
+            var kieCosts = {
+                'gpt-image-2': 5,
+                'nano-banana-2': 4,
+                'seedream-5-0-pro': 5
+            };
+            if (kieCosts[model] != null) {
+                return { cents: kieCosts[model], estimated: true };
+            }
             return configuredCents ? { cents: configuredCents, estimated: true } : null;
         }
 

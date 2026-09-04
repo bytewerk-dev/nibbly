@@ -46,6 +46,11 @@ function nibblyAiDefaults(): array {
                 'baseUrl' => 'https://api.anthropic.com/v1',
                 'apiKey' => '',
                 'organization' => ''
+            ],
+            'kie' => [
+                'baseUrl' => 'https://api.kie.ai',
+                'apiKey' => '',
+                'organization' => ''
             ]
         ],
         'chatModel' => 'gpt-4.1-mini',
@@ -167,7 +172,7 @@ function nibblyAiSaveSettings(array $input, array $existing = []): array {
     $existing = $existing ?: nibblyAiLoadSettings(false);
 
     $provider = (string)($input['provider'] ?? $existing['provider'] ?? $defaults['provider']);
-    if (!in_array($provider, ['openai-compatible', 'openrouter', 'anthropic'], true)) {
+    if (!in_array($provider, ['openai-compatible', 'openrouter', 'anthropic', 'kie'], true)) {
         throw new RuntimeException('Unsupported AI provider.');
     }
 
@@ -204,6 +209,8 @@ function nibblyAiSaveSettings(array $input, array $existing = []): array {
         : nibblyAiCleanModel((string)$defaults['imageModel']);
     if ($provider === 'openrouter') {
         $imageModel = nibblyAiNormalizeOpenRouterImageModel($imageModel);
+    } elseif ($provider === 'kie') {
+        $imageModel = nibblyAiNormalizeKieImageModel($imageModel);
     }
 
     $settings = [
@@ -597,9 +604,12 @@ function nibblyAiGenerateImage(string $prompt, array $options = []): array {
     nibblyAiAssertWithinLimits($settings, 'image', $cost);
 
     $usesOpenRouter = nibblyAiIsOpenRouterSettings($settings);
+    $usesKie = nibblyAiIsKieSettings($settings);
     $model = (string)($options['model'] ?? $settings['imageModel']);
     if ($usesOpenRouter) {
         $model = nibblyAiNormalizeOpenRouterImageModel($model);
+    } elseif ($usesKie) {
+        $model = nibblyAiNormalizeKieImageModel($model);
     }
     if (trim($model) === '') {
         throw new RuntimeException('Image model is missing.');
@@ -630,16 +640,54 @@ function nibblyAiGenerateImage(string $prompt, array $options = []): array {
     if (!in_array($moderation, ['auto', 'low'], true)) {
         $moderation = 'auto';
     }
-    $outputCompression = max(0, min(100, (int)($options['outputCompression'] ?? 100)));
+    $outputCompression = max(0, min(100, (int)($options['outputCompression'] ?? 75)));
     $aspectRatio = nibblyAiCleanAspectRatio((string)($options['aspectRatio'] ?? 'auto'));
     $started = microtime(true);
     $referencePaths = nibblyAiCollectReferenceImagePaths($options);
     nibblyAiAudit('image-references-collected', true, [
         'usesOpenRouter' => $usesOpenRouter,
+        'usesKie' => $usesKie,
         'referenceImagePathsIn' => count(is_array($options['referenceImagePaths'] ?? null) ? $options['referenceImagePaths'] : []),
         'referenceMediaPathsIn' => count(is_array($options['referenceMediaPaths'] ?? null) ? $options['referenceMediaPaths'] : []),
         'collected' => count($referencePaths)
     ]);
+
+    if ($usesKie) {
+        [$paths, $revisedPrompts] = nibblyAiGenerateKieImages($settings, [
+            'model' => $model,
+            'prompt' => $prompt,
+            'count' => $count,
+            'size' => $size,
+            'aspectRatio' => $aspectRatio,
+            'imageScale' => $options['imageScale'] ?? null,
+            'quality' => $quality,
+            'outputFormat' => $outputFormat,
+            'outputCompression' => $outputCompression,
+            'referencePaths' => $referencePaths,
+            'filenameHint' => $options['filenameHint'] ?? 'ai-image'
+        ]);
+        nibblyAiRecordUsage('image', nibblyAiEstimateTokens($prompt), 0, $cost);
+        $actualMeta = nibblyAiActualImageMeta($paths);
+        $durationMs = (int)round((microtime(true) - $started) * 1000);
+        nibblyAiAudit('image', true, [
+            'provider' => 'kie', 'model' => $model, 'count' => count($paths),
+            'estimatedCostCents' => $cost, 'paths' => $paths, 'durationMs' => $durationMs
+        ]);
+        $historyItem = nibblyAiRecordImageHistory([
+            'status' => 'success', 'model' => $model, 'prompt' => $prompt,
+            'revisedPrompt' => implode("\n\n", array_values(array_unique(array_filter($revisedPrompts)))),
+            'size' => $actualMeta['size'] ?? $size, 'aspectRatio' => $aspectRatio,
+            'quality' => $quality, 'format' => $actualMeta['format'] ?? $outputFormat,
+            'moderation' => $moderation, 'compression' => $outputCompression,
+            'count' => count($paths), 'referenceImages' => nibblyAiPublicReferenceList($options),
+            'outputs' => $paths, 'error' => '', 'estimatedCostCents' => $cost,
+            'durationMs' => $durationMs
+        ]);
+        return [
+            'path' => $paths[0], 'paths' => $paths, 'historyItem' => $historyItem,
+            'usage' => ['estimatedCostCents' => $cost], 'limits' => nibblyAiUsageSummary()
+        ];
+    }
 
     if ($usesOpenRouter) {
         [$paths, $revisedPrompts] = nibblyAiGenerateOpenRouterImages($settings, [
@@ -1185,6 +1233,12 @@ function nibblyAiProviderRequest(array $settings, string $path, array $body): ar
         }
         return nibblyAiAnthropicChatRequest($settings, $body);
     }
+    if (nibblyAiIsKieSettings($settings)) {
+        if ($path !== '/chat/completions') {
+            throw new RuntimeException('Unsupported Kie.ai provider request.');
+        }
+        return nibblyAiKieChatRequest($settings, $body);
+    }
     $url = rtrim((string)$settings['baseUrl'], '/') . $path;
     $headers = [
         'Content-Type: application/json',
@@ -1204,6 +1258,79 @@ function nibblyAiProviderRequest(array $settings, string $path, array $body): ar
 function nibblyAiIsAnthropicSettings(array $settings): bool {
     return (string)($settings['provider'] ?? '') === 'anthropic'
         || stripos((string)($settings['baseUrl'] ?? ''), 'api.anthropic.com') !== false;
+}
+
+function nibblyAiIsKieSettings(array $settings): bool {
+    return (string)($settings['provider'] ?? '') === 'kie'
+        || stripos((string)($settings['baseUrl'] ?? ''), 'api.kie.ai') !== false;
+}
+
+/** Translate Kie.ai's provider-specific chat APIs to Nibbly's completion shape. */
+function nibblyAiKieChatRequest(array $settings, array $body): array {
+    $model = trim((string)($body['model'] ?? '')) ?: 'gpt-5-6-luna';
+    $baseUrl = rtrim((string)($settings['baseUrl'] ?? 'https://api.kie.ai'), '/');
+    $headers = ['Content-Type: application/json', 'Accept: application/json'];
+    $key = trim((string)($settings['apiKey'] ?? ''));
+    if ($key !== '') $headers[] = 'Authorization: Bearer ' . $key;
+
+    if ($model === 'claude-sonnet-5') {
+        return nibblyAiKieClaudeChatRequest($settings, $headers, $body, $baseUrl . '/claude/v1/messages');
+    }
+    if ($model === 'gemini-3-5-flash') {
+        $request = $body;
+        $request['model'] = $model;
+        $request['stream'] = false;
+        return nibblyAiExecuteJsonRequest($settings, $baseUrl . '/gemini-3-5-flash-openai/v1/chat/completions', $headers, $request);
+    }
+
+    $input = [];
+    foreach ((array)($body['messages'] ?? []) as $message) {
+        if (!is_array($message)) continue;
+        $content = [];
+        foreach (is_array($message['content'] ?? null) ? $message['content'] : [['type' => 'text', 'text' => (string)($message['content'] ?? '')]] as $part) {
+            if (!is_array($part)) continue;
+            if (($part['type'] ?? '') === 'text') $content[] = ['type' => 'input_text', 'text' => (string)($part['text'] ?? '')];
+            if (($part['type'] ?? '') === 'image_url') {
+                $url = is_array($part['image_url'] ?? null) ? (string)($part['image_url']['url'] ?? '') : (string)($part['image_url'] ?? '');
+                if ($url !== '') $content[] = ['type' => 'input_image', 'image_url' => $url];
+            }
+        }
+        if ($content) $input[] = ['role' => (string)($message['role'] ?? 'user'), 'content' => $content];
+    }
+    $response = nibblyAiExecuteJsonRequest($settings, $baseUrl . '/codex/v1/responses', $headers, [
+        'model' => $model, 'input' => $input, 'reasoning' => ['effort' => 'low'], 'stream' => false
+    ]);
+    $text = '';
+    foreach ((array)($response['output'] ?? []) as $output) {
+        if (!is_array($output) || ($output['type'] ?? '') !== 'message') continue;
+        foreach ((array)($output['content'] ?? []) as $part) {
+            if (is_array($part) && ($part['type'] ?? '') === 'output_text') $text .= (string)($part['text'] ?? '');
+        }
+    }
+    return ['object' => 'chat.completion', 'model' => $model,
+        'choices' => [['message' => ['role' => 'assistant', 'content' => $text], 'finish_reason' => 'stop']],
+        'usage' => ['prompt_tokens' => (int)($response['usage']['input_tokens'] ?? 0), 'completion_tokens' => (int)($response['usage']['output_tokens'] ?? 0)]];
+}
+
+function nibblyAiKieClaudeChatRequest(array $settings, array $headers, array $body, string $url): array {
+    $system = [];
+    $messages = [];
+    foreach ((array)($body['messages'] ?? []) as $message) {
+        if (!is_array($message)) continue;
+        $role = (string)($message['role'] ?? '');
+        $content = $message['content'] ?? '';
+        if ($role === 'system') { $system[] = is_string($content) ? $content : ''; continue; }
+        if (in_array($role, ['user', 'assistant'], true) && $content !== '') $messages[] = ['role' => $role, 'content' => $content];
+    }
+    $request = ['model' => 'claude-sonnet-5', 'messages' => $messages,
+        'max_tokens' => max(1, (int)($body['max_tokens'] ?? 4096)), 'stream' => false];
+    if ($system) $request['system'] = implode("\n\n", array_filter($system));
+    $response = nibblyAiExecuteJsonRequest($settings, $url, $headers, $request);
+    $text = '';
+    foreach ((array)($response['content'] ?? []) as $part) if (is_array($part) && ($part['type'] ?? '') === 'text') $text .= (string)($part['text'] ?? '');
+    return ['object' => 'chat.completion', 'model' => (string)($response['model'] ?? 'claude-sonnet-5'),
+        'choices' => [['message' => ['role' => 'assistant', 'content' => $text], 'finish_reason' => ($response['stop_reason'] ?? '') === 'max_tokens' ? 'length' : 'stop']],
+        'usage' => ['prompt_tokens' => (int)($response['usage']['input_tokens'] ?? 0), 'completion_tokens' => (int)($response['usage']['output_tokens'] ?? 0)]];
 }
 
 /**
@@ -1518,6 +1645,103 @@ function nibblyAiProviderMultipartRequest(array $settings, string $path, array $
 function nibblyAiIsOpenRouterSettings(array $settings): bool {
     return ($settings['provider'] ?? '') === 'openrouter'
         || str_contains((string)($settings['baseUrl'] ?? ''), 'openrouter.ai');
+}
+
+function nibblyAiNormalizeKieImageModel(string $model): string {
+    $aliases = [
+        'gpt-image-2-text-to-image' => 'gpt-image-2',
+        'gpt-image-2-image-to-image' => 'gpt-image-2',
+        'seedream/5-pro-text-to-image' => 'seedream-5-0-pro',
+        'seedream/5-pro-image-to-image' => 'seedream-5-0-pro'
+    ];
+    $model = $aliases[trim($model)] ?? trim($model);
+    return in_array($model, ['gpt-image-2', 'nano-banana-2', 'seedream-5-0-pro'], true) ? $model : 'gpt-image-2';
+}
+
+function nibblyAiGenerateKieImages(array $settings, array $options): array {
+    $count = nibblyAiClampInt($options['count'] ?? 1, 1, 10);
+    $model = nibblyAiNormalizeKieImageModel((string)($options['model'] ?? ''));
+    $baseUrl = rtrim((string)($settings['baseUrl'] ?? 'https://api.kie.ai'), '/');
+    $headers = ['Content-Type: application/json', 'Accept: application/json'];
+    $key = trim((string)($settings['apiKey'] ?? ''));
+    if ($key !== '') $headers[] = 'Authorization: Bearer ' . $key;
+    $references = [];
+    foreach (array_slice((array)($options['referencePaths'] ?? []), 0, 10) as $path) $references[] = nibblyAiKieUploadReference($settings, (string)$path);
+    $tasks = [];
+    for ($index = 0; $index < $count; $index++) {
+        $taskModel = $model;
+        $input = ['prompt' => substr((string)($options['prompt'] ?? ''), 0, 8000), 'aspect_ratio' => (string)($options['aspectRatio'] ?? 'auto')];
+        if ($model === 'gpt-image-2') {
+            $taskModel = $references ? 'gpt-image-2-image-to-image' : 'gpt-image-2-text-to-image';
+            if ($references) $input['input_urls'] = $references;
+        } elseif ($model === 'nano-banana-2') {
+            $input['resolution'] = nibblyAiKieResolution($options['imageScale'] ?? 2048);
+            $input['output_format'] = nibblyAiKieProviderOutputFormat($options, $model);
+            $input['image_input'] = $references;
+        } else {
+            $taskModel = $references ? 'seedream/5-pro-image-to-image' : 'seedream/5-pro-text-to-image';
+            if ($references) $input['image_urls'] = $references;
+            $input['quality'] = (string)($options['quality'] ?? '') === 'high' ? 'high' : 'basic';
+            $input['output_format'] = nibblyAiKieProviderOutputFormat($options, $model);
+            $input['nsfw_checker'] = false;
+        }
+        $response = nibblyAiExecuteJsonRequest($settings, $baseUrl . '/api/v1/jobs/createTask', $headers, ['model' => $taskModel, 'input' => $input]);
+        $taskId = trim((string)($response['data']['taskId'] ?? ''));
+        if ($taskId === '') throw new RuntimeException((string)($response['msg'] ?? 'Kie.ai did not return a task ID.'));
+        $tasks[$taskId] = true;
+    }
+    $deadline = microtime(true) + max(300, nibblyAiRequestTimeout($settings));
+    $urls = []; $failures = [];
+    while ($tasks && microtime(true) < $deadline) {
+        foreach (array_keys($tasks) as $taskId) {
+            $record = nibblyAiKieGetJson($settings, $baseUrl . '/api/v1/jobs/recordInfo?taskId=' . rawurlencode($taskId), $headers);
+            $data = is_array($record['data'] ?? null) ? $record['data'] : [];
+            $state = strtolower((string)($data['state'] ?? 'waiting'));
+            if ($state === 'success') {
+                $result = $data['resultJson'] ?? [];
+                if (is_string($result)) $result = json_decode($result, true);
+                foreach ((array)(is_array($result) ? ($result['resultUrls'] ?? $result['result_urls'] ?? []) : []) as $url) if (filter_var($url, FILTER_VALIDATE_URL)) $urls[] = $url;
+                unset($tasks[$taskId]);
+            } elseif (in_array($state, ['fail', 'failed', 'error'], true)) {
+                $failures[] = (string)($data['failMsg'] ?? $data['errorMessage'] ?? 'Kie.ai image generation failed.');
+                unset($tasks[$taskId]);
+            }
+        }
+        if ($tasks) usleep(2000000);
+    }
+    if ($tasks) throw new RuntimeException('Kie.ai image generation timed out. The provider jobs may still be running.');
+    if (!$urls) throw new RuntimeException($failures[0] ?? 'Kie.ai returned no usable image.');
+    $paths = [];
+    foreach (array_slice($urls, 0, $count) as $url) {
+        $paths[] = nibblyAiStoreGeneratedImage(nibblyAiDownloadProviderImage((string)$url), (string)($options['filenameHint'] ?? 'ai-image'), (string)($options['size'] ?? 'auto'), count($paths) + 1, (string)($options['outputFormat'] ?? ''), (int)($options['outputCompression'] ?? 75));
+    }
+    return [$paths, []];
+}
+
+function nibblyAiKieResolution($scale): string { $scale = (int)$scale; return $scale >= 3072 ? '4K' : ($scale >= 1536 ? '2K' : '1K'); }
+function nibblyAiKieProviderOutputFormat(array $options, string $model): string {
+    $format = strtolower(trim((string)($options['outputFormat'] ?? 'webp')));
+    if ($format === 'webp') return 'png';
+    return $format === 'png' ? 'png' : (nibblyAiNormalizeKieImageModel($model) === 'seedream-5-0-pro' ? 'jpeg' : 'jpg');
+}
+function nibblyAiKieUploadReference(array $settings, string $path): string {
+    $headers = ['Content-Type: application/json', 'Accept: application/json'];
+    $key = trim((string)($settings['apiKey'] ?? ''));
+    if ($key !== '') $headers[] = 'Authorization: Bearer ' . $key;
+    $response = nibblyAiExecuteJsonRequest($settings, 'https://kieai.redpandaai.co/api/file-base64-upload', $headers, ['base64Data' => nibblyAiReferenceImageDataUrl($path), 'uploadPath' => 'nibbly-references', 'fileName' => 'reference-' . bin2hex(random_bytes(6)) . '.png']);
+    $url = trim((string)($response['data']['fileUrl'] ?? $response['data']['downloadUrl'] ?? ''));
+    if (!filter_var($url, FILTER_VALIDATE_URL)) throw new RuntimeException('Kie.ai could not upload the reference image.');
+    return $url;
+}
+function nibblyAiKieGetJson(array $settings, string $url, array $headers): array {
+    if (!function_exists('curl_init')) throw new RuntimeException('Kie.ai requires cURL support.');
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPHEADER => $headers, CURLOPT_CONNECTTIMEOUT => 10, CURLOPT_TIMEOUT => min(30, nibblyAiRequestTimeout($settings))]);
+    $raw = curl_exec($ch); $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); $error = curl_error($ch); curl_close($ch);
+    if ($raw === false) throw new RuntimeException($error ?: 'Kie.ai task request failed.');
+    $data = json_decode((string)$raw, true);
+    if ($status < 200 || $status >= 300 || !is_array($data)) throw new RuntimeException((string)($data['msg'] ?? $data['message'] ?? 'Kie.ai returned invalid task data.'));
+    return $data;
 }
 
 function nibblyAiGenerateOpenRouterImages(array $settings, array $options): array {

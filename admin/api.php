@@ -1511,6 +1511,13 @@ function getIconifyAllowedSets() {
             'defaultWidth' => 24,
             'defaultHeight' => 24,
         ],
+        'mingcute' => [
+            'label' => 'MingCute',
+            'license' => 'Apache-2.0',
+            'licenseUrl' => 'https://github.com/mingcute-design/mingcute-icons/blob/main/LICENSE',
+            'defaultWidth' => 24,
+            'defaultHeight' => 24,
+        ],
         'tdesign' => [
             'label' => 'TDesign Icons',
             'license' => 'MIT',
@@ -6618,6 +6625,10 @@ switch ($action) {
             // Skip directories
             if (str_ends_with($entry, '/')) continue;
 
+            // Older full-site backups may contain development tests. Accept
+            // the archive, but do not treat or restore these as site PHP.
+            if (backupRestoreEntryIgnored($entry)) continue;
+
             $ext = strtolower(pathinfo($entry, PATHINFO_EXTENSION));
 
             // Check PHP files are in allowed locations
@@ -6697,6 +6708,11 @@ switch ($action) {
 
             // Skip directories (they'll be created as needed)
             if (str_ends_with($entry, '/')) continue;
+
+            if (backupRestoreEntryIgnored($entry)) {
+                $skipped++;
+                continue;
+            }
 
             $ext = strtolower(pathinfo($entry, PATHINFO_EXTENSION));
 

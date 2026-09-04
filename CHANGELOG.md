@@ -1,5 +1,32 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Added the public MingCute Core Regular/Core Filled collection to the Iconify
+  import dialog under Apache License 2.0, with source and license metadata
+  retained for imported icons.
+
+### Fixed
+
+- Hide the Dashboard AI section and setup notice when the AI module is disabled,
+  including for administrators.
+- Full-site backups now omit local QA evidence, development tests and examples,
+  agent instructions, and other internal root documentation. Product, version,
+  and third-party license documents remain included.
+- Restoring older full-site backups no longer fails when they contain PHP smoke
+  tests: legacy `tests/` entries are accepted for compatibility but skipped
+  during extraction.
+
+## [1.6.1] — 2026-08-05
+
+### Added
+
+- Kie.ai as a configurable AI provider with independently stored credentials.
+- Kie chat/text model presets for GPT-5.6, Claude Sonnet 5 and Gemini 3.5 Flash.
+- Kie image generation support for GPT Image 2, Nano Banana 2 and Seedream 5.0 Pro, including asynchronous job polling and reference images.
+
 All notable changes to Nibbly are documented in this file. The project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 

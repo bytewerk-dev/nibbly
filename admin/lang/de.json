@@ -997,6 +997,7 @@
     "ai.openai_compatible": "OpenAI-kompatibel",
     "ai.anthropic": "Anthropic (Claude)",
     "ai.openrouter": "OpenRouter",
+    "ai.kie": "Kie.ai",
     "ai.openrouter_image_gpt": "GPT Image 2",
     "ai.openai_image_gpt": "GPT Image 2",
     "ai.openrouter_image_gemini_flash": "Nano Banana 2",

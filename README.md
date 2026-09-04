@@ -220,6 +220,9 @@ Nibbly is licensed under the Mozilla Public License 2.0 starting with version
 1.4.0. Earlier releases up to and including 1.3.2 were published under the MIT
 License. See [LICENSE](LICENSE) for details.
 
+Third-party components and their license terms are listed in
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.

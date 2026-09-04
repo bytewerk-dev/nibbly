@@ -386,9 +386,12 @@ function backupExcludeDirs() {
         '.git',
         'screenshots',
         'reference',
+        '.codex-qa',
         '.vscode',
         '.idea',
         '.claude',
+        'tests',
+        'examples',
         'vendor',
         'website',
         'nibbly-alt',
@@ -401,6 +404,19 @@ function backupExcludeFiles() {
     return ['.DS_Store', 'Thumbs.db'];
 }
 
+/** Development and agent documentation at the project root. */
+function backupExcludeRootFiles() {
+    return [
+        'AGENTS.md',
+        'AI-AGENT-GUIDE.md',
+        'CLAUDE.md',
+        'CONTRIBUTING.md',
+        'SKILLS.md',
+        'architecture.md',
+        'design-qa.md',
+    ];
+}
+
 /** Return whether a relative path should be skipped in a full-site ZIP. */
 function backupShouldSkipPath($relativePath) {
     $relativePath = str_replace('\\', '/', $relativePath);
@@ -408,6 +424,10 @@ function backupShouldSkipPath($relativePath) {
         if ($relativePath === $dir || str_starts_with($relativePath, $dir . '/')) {
             return true;
         }
+    }
+
+    if (!str_contains($relativePath, '/') && in_array($relativePath, backupExcludeRootFiles(), true)) {
+        return true;
     }
 
     $base = basename($relativePath);
@@ -1626,6 +1646,16 @@ function backupRestorePhpEntryAllowed(string $entry): bool {
     }
 
     return backupRestoreIsLanguageEntry($entry);
+}
+
+/**
+ * Development-only archive entries may occur in backups created by older
+ * versions. They are accepted for backwards compatibility, but are never
+ * restored into the public site tree.
+ */
+function backupRestoreEntryIgnored(string $entry): bool {
+    $entry = str_replace('\\', '/', ltrim($entry, '/'));
+    return $entry === 'tests' || str_starts_with($entry, 'tests/');
 }
 
 /**

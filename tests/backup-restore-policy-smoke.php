@@ -25,6 +25,38 @@ backupPolicyAssert(
     !backupRestorePhpEntryAllowed('uploads/shell.php'),
     'PHP outside approved locations must be rejected.'
 );
+backupPolicyAssert(
+    !backupRestorePhpEntryAllowed('tests/copilot-smoke.php'),
+    'Development tests must not become an approved executable PHP location.'
+);
+backupPolicyAssert(
+    backupRestoreEntryIgnored('tests/copilot-smoke.php'),
+    'PHP tests from older backups must be ignored during restore.'
+);
+backupPolicyAssert(
+    backupShouldSkipPath('tests/copilot-smoke.php'),
+    'New full-site backups must exclude development tests.'
+);
+backupPolicyAssert(
+    backupShouldSkipPath('.codex-qa/dashboard-toolbar.png'),
+    'New full-site backups must exclude local Codex QA evidence.'
+);
+backupPolicyAssert(
+    backupShouldSkipPath('examples/templates/page-simple.php'),
+    'New full-site backups must exclude development examples.'
+);
+backupPolicyAssert(
+    backupShouldSkipPath('CLAUDE.md') && backupShouldSkipPath('design-qa.md'),
+    'New full-site backups must exclude internal root documentation.'
+);
+backupPolicyAssert(
+    !backupShouldSkipPath('README.md') && !backupShouldSkipPath('THIRD-PARTY-NOTICES.md'),
+    'Product and legal documentation must remain in full-site backups.'
+);
+backupPolicyAssert(
+    !backupRestoreEntryIgnored('admin/api.php'),
+    'Production PHP must not be ignored during restore.'
+);
 
 foreach ([
     'content/pages/de_home.json',
