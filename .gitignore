@@ -85,3 +85,9 @@ Thumbs.db
 
 # Site-specific upgrade notes (kept locally, not part of Nibbly Core)
 NIBBLY-UPGRADE-NOTES.md
+
+# Reproducible browser tooling is development-only.
+!tests/package.json
+!tests/package-lock.json
+content/analytics/
+content/ai-requests.json

@@ -12,6 +12,9 @@ if (file_exists(__DIR__ . '/config.php')) {
 }
 
 require_once __DIR__ . '/lang/i18n.php';
+require_once __DIR__ . '/../includes/session-helper.php';
+nibblySessionStart();
+$_SESSION['setup_csrf'] ??= bin2hex(random_bytes(32));
 
 $error = '';
 $success = false;
@@ -290,7 +293,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Validation
-    if (empty($siteName)) {
+    if (!is_string($_POST['csrf_token'] ?? null) || !hash_equals($_SESSION['setup_csrf'], $_POST['csrf_token'])) {
+        $error = t('api.csrf');
+    } elseif (empty($siteName)) {
         $error = t('setup.error_site_name');
     } elseif (empty($username)) {
         $error = t('setup.error_username');
@@ -453,6 +458,7 @@ CONFIGTPL;
             <?php endif; ?>
 
             <form method="post" action="" id="setupForm">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['setup_csrf']); ?>">
                 <div class="form-group">
                     <label for="site_name"><?php echo t('setup.site_name'); ?></label>
                     <input type="text" id="site_name" name="site_name" required

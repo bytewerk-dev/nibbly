@@ -17,6 +17,7 @@ const { chromium } = require('playwright');
         ]);
         await page.waitForLoadState('networkidle');
         if (await page.locator('#dashboardAiSection').count()) throw Error('Disabled AI section rendered');
+        if (!(await page.locator('#dashboardAnalyticsState').textContent()).includes('disabled')) throw Error('Disabled analytics state missing');
         const ticks = await page.locator('#dashboardTrafficChart .dashboard-chart-grid text').allTextContents();
         if (ticks.length !== 5 || new Set(ticks).size !== 5) throw Error('Chart repeats integer axis labels');
         for (const tab of ['content', 'news', 'mails', 'media', 'icons', 'settings', 'backup', 'home']) {

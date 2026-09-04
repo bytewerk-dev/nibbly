@@ -67,93 +67,43 @@ Bestehende Konten und Passwörter bleiben erhalten. Rich Text erlaubt bewusst nu
 die dokumentierten Inhaltselemente und Textstile; ausführbare oder freie Layout-
 Attribute gehören in Website-Templates.
 
-## Schwächen und Änderungsvorschläge
+## Umsetzung der sechs Änderungsvorschläge
 
-### 1. Seiten und Einstellungen gegen Bearbeitungskonflikte schützen
+Die sechs Vorschläge wurden im anschließenden Core-Durchlauf umgesetzt:
 
-**Priorität: hoch. Aufwand: mittel.** Die jetzt eingeführten Transaktionen schützen
-die häufig gemeinsam beschriebenen Register. Vollständige Seiten- und
-Einstellungssnapshots haben weiterhin keine durchgehende Versionsprüfung.
-`lastModified` dient hauptsächlich als Metadatum; zwei geöffnete Editoren können
-auf unterschiedlichen Ausgangsständen arbeiten.
+| Bereich | Neuer Stand | Nachweis |
+| --- | --- | --- |
+| Bearbeitungskonflikte | Revision je Seite/Einstellung, HTTP 409/428, Vergleich und Download eigener Änderungen; atomare Fallback-Ergänzung. | Zwei unabhängige HTTP-Clients, zwei Browser-Tabs und 24 parallele Fallbacks. |
+| Fachliche Module | Zwölf API-Handler und 17 Dashboard-Scriptfragmente; stabile URLs und gemeinsame Methoden-/CSRF-/Rollenregeln. | Bestehende Integrations- und Copilot-Suites, direkte Browserausführung. |
+| CI | Workflow für PHP 8.4/8.5 und Chromium; Setup-, SMTP-, Upload- und Seitenabläufe ergänzt. | 18 lokale Offline-Suites. GitHub-Ergebnisse werden im Umsetzungsstand festgehalten. |
+| KI-Zustand | Gemeinsame Reservierung und Verbrauchsbuchung, persistente Kie-IDs, Wiederaufnahme, Systemstatus-Abgleich und gemeinsamer Modellkatalog. | 24 konkurrierende Reservierungen lassen exakt drei Anfragen bei drei Cent Budget zu; ein Kie-Auftrag überlebt einen Prozesswechsel ohne erneute Einreichung. |
+| Analytics | Tagesdateien, historische Monatsarchive ohne Besucher-Hashes und kurzlebiger Abfragecache; automatische Migration. | 730 Tage behalten 5.110 Aufrufe; täglicher Schreibzugriff auf 8.501 statt 185.430 Byte. |
+| Wartung und Sprache | Systemstatus für Erweiterungen, Speicher, Sicherungen, Aufträge; Analytics-Zustände „deaktiviert“, „leer“, „Fehler“; SEO-/Dialogtexte über i18n. | Browser- und HTTP-Prüfungen. Neue ausführliche Texte auf Deutsch und Englisch; andere Sprachen verwenden den vorhandenen englischen Fallback. |
 
-Vorschlag: Beim Laden eine Revision bzw. einen Inhaltshash zurückgeben, beim
-Speichern vergleichen und bei Abweichung HTTP 409 liefern. Der Editor zeigt
-„Inzwischen geändert“ mit Vergleich und Neuladen. Gemeinsam verwendete Speicher-
-operationen schrittweise auf `json-store.php` umstellen, einschließlich automatischer
-Fallback-Ergänzungen. Die JSON-Dateien bleiben dabei das Speicherformat.
+Zusätzlich wurden Dashboard und alle Einstellungsbereiche bei 360, 390, 768,
+1024 und 1440 Pixeln geprüft: 120 Ansichten einschließlich aktivierter KI und
+umfangreicher Backup-Felder. Die Formulare nutzen die verfügbare Panelbreite.
+Eine kompakte Auswahl ersetzt auf schmalen Displays die lange Einstellungs-
+navigation. Farbwerte, Aktionen, Remote-Ziele und Uploads bleiben bedienbar.
+Die neue Konfliktansicht wurde ebenfalls bei 360 Pixeln geprüft.
 
-### 2. API und Dashboard in fachliche Module zerlegen
+Bei der Umsetzung bestätigte weitere Fehler sind behoben: Teiländerungen an
+Einstellungen setzten unbeteiligte Gruppen auf Standardwerte zurück; versteckte
+Selects vergrößerten unsichtbar die Seite; Setup hatte keinen CSRF-Schutz;
+unklare KI-Antworten konnten automatisch eine zweite kostenpflichtige Anfrage
+verursachen. Seitenbackups unterstützen eindeutige Dateinamen einschließlich
+Vorschau und Wiederherstellung.
 
-**Priorität: hoch. Aufwand: mittel bis groß, in kleinen Schritten.**
-`admin/dashboard.php` enthält rund 14.200 Zeilen, `admin/api.php` rund 7.650;
-PHP, HTML, JavaScript, Berechtigungen und Fachlogik liegen eng beieinander.
-Das erschwert die Prüfung einzelner Änderungen und begünstigt doppelte Regeln.
-
-Vorschlag: Zuerst Benutzerverwaltung, Backup und Medien als getrennte Handler
-mit einheitlichen Eingabe-, Fehler- und Berechtigungsverträgen extrahieren.
-Dashboard-JavaScript danach nach denselben Bereichen aufteilen. Bestehende
-URLs, JSON-Strukturen und Website-Erweiterungspunkte beibehalten. Ein Wechsel
-des Frameworks oder eine Datenbankmigration ist dafür nicht nötig.
-
-### 3. Die neue Testsuite vor jedem Merge automatisch ausführen
-
-**Priorität: hoch. Aufwand: klein bis mittel.** Ein wiederholbarer lokaler Runner
-ist jetzt vorhanden. Im geprüften Repository existiert noch kein CI-Workflow.
-Einige ältere Tests suchen lediglich bestimmte Zeichenketten im Quelltext;
-sie sind als Schutz vor Funktionsverlust nützlich, ersetzen aber keine Ausführung.
-
-Vorschlag: Pull Requests auf PHP 8.4 und 8.5 prüfen, HTTP- und Paralleltests als
-Pflichtchecks ausführen und einen kleinen Chromium-Lauf hinzufügen. Danach
-zusätzliche Abläufe für Upload, Seitenbearbeitung, Setup und SMTP ergänzen.
-Die Branch-Protection sollte erfolgreiche Tests vor dem Merge verlangen.
-
-### 4. KI-Budget und Aufträge als reservierbaren Zustand behandeln
-
-**Priorität: mittel bis hoch. Aufwand: mittel.** Das Gateway prüft Kosten vor
-dem Aufruf anhand konfigurierter Schätzpreise und verbucht den Verbrauch danach.
-Auch mit einem korrekten Verbrauchszähler ist diese Prüfung keine harte
-anbieterseitige Kostenbegrenzung. Gleichzeitige unterschiedliche Anfragen haben
-keine gemeinsame Budgetreservierung. Kie-Aufträge können beim Anbieter weiterlaufen,
-wenn der lokale Request abbricht.
-
-Vorschlag: Anfrage-ID, Budgetreservierung, Anbieter-Task-ID und Abschlussstatus
-persistieren. Polling nach Neustart fortsetzen und Reservierungen nachvollziehbar
-auflösen. In der Oberfläche Schätzung, lokale Grenze und tatsächlichen
-Anbieterverbrauch klar benennen. Modelllisten und Fähigkeiten an einer Stelle
-pflegen und mit Adaptertests absichern.
-
-### 5. Analytics nach Zeiträumen aufteilen
-
-**Priorität: mittel. Aufwand: mittel.** Jeder Seitenaufruf verarbeitet derzeit
-das gemeinsame Analytics-Dokument. Mit wachsender Historie steigen Lese-,
-Schreib- und Sperrkosten. Der Paralleltest prüft korrekte Zähler, ist jedoch
-kein Lasttest für große Websites.
-
-Vorschlag: Aktuelle Tagesdaten separat speichern, ältere Zeiträume aggregieren
-und historische Zusammenfassungen zwischenspeichern. Vor einer größeren
-Umstellung Dateigröße, Antwortzeiten und gleichzeitige Anfragen messen.
-
-### 6. Sprache, Leerzustände und Wartungsinformationen vereinheitlichen
-
-**Priorität: mittel. Aufwand: klein bis mittel.** Dashboard, SEO-Hinweise und
-Editor enthalten noch gemischte deutsche/englische und technische Meldungen.
-Die vorhandenen neun Sprachdateien werden nicht von allen Oberflächen gleich
-konsequent genutzt. Ein Diagramm mit null Aufrufen erklärt beispielsweise nicht,
-ob Analytics deaktiviert ist oder noch keine Daten vorliegen.
-
-Vorschlag: Alle sichtbaren Meldungen durch dieselbe Übersetzungsschicht führen,
-technische Details nur bei Bedarf einblenden und „deaktiviert“, „noch keine Daten“
-und „fehlgeschlagen“ als unterschiedliche Zustände gestalten. Ergänzend eine
-Systemstatus-Seite für PHP-Erweiterungen, Schreibrechte, letzte erfolgreiche
-Sicherung und fehlgeschlagene Hintergrundaufträge anbieten.
+Die Architektur bleibt bewusst dateibasiert. Die Modulaufteilung führt kein
+Framework ein; die Scriptfragmente teilen vorerst weiterhin denselben JavaScript-
+Gültigkeitsbereich. KI-Grenzen bleiben lokale Schätzgrenzen. Unklare Einreichungen
+ohne Anbieter-ID werden nicht automatisch erneut gestartet. Ob ein Anbieter
+wirklich Geld berechnet hat, muss dort geprüft werden.
 
 ## Prüfung und verbleibende Grenzen
 
-- `python3 tests/run-smoke.py`: 13 Offline-Suites; Syntaxprüfung aller kopierten
-  PHP- und JavaScript-Dateien sowie Translation-/Fixture-JSON. Enthält die acht
-  bisherigen Suiten und fünf neue Suiten für Sicherheit, HTTP, Speicherung,
-  Benutzer und KI-Anbieter.
+- `python3 tests/run-smoke.py`: 18 Offline-Suites; Syntaxprüfung aller kopierten
+  PHP- und JavaScript-Dateien sowie Translation-/Fixture-JSON. Enthält zusätzlich Revisionen, KI-Reservierung/Wiederaufnahme, Analytics-Migration sowie Setup-, Medien- und SMTP-Abläufe.
 - `python3 tests/browser-check.py`: optionaler Playwright-/Chromium-Test für
   Login, acht Dashboard-Bereiche, deaktivierte KI, Diagrammskala, verschachtelte
   Seite, mobilen Admin-Abstand und Besucheransicht; keine JavaScript-Ausnahmen.
@@ -168,16 +118,14 @@ Sicherung und fehlgeschlagene Hintergrundaufträge anbieten.
   Die Routen orientieren sich an der offiziellen
   [Kie-Chat-Dokumentation](https://docs.kie.ai/market/chat/gpt-5-6-luna) und
   [Kie-Bild-Dokumentation](https://docs.kie.ai/market/gpt/gpt-image-2-text-to-image).
-- SMTP, Remote-Speicher, OAuth-Verbindungen, andere Browser und ein vollständiger
-  Setup-/Upgrade-Durchlauf auf unterschiedlichen Hostingplattformen wurden nicht
-  live geprüft. Die vorhandene Website wurde nicht neu gestaltet.
+- SMTP wurde lokal gegen einen Mock, Setup in einer frischen Testkopie geprüft.
+  Reale Mailserver, Remote-Speicher, OAuth-Verbindungen, andere Browser und
+  unterschiedliche Hostingplattformen wurden nicht live geprüft. Die vorhandene Website wurde nicht neu gestaltet.
 - Ein Restore kann normale I/O-Fehler zurücknehmen. Prozessabbruch, Stromausfall
   oder gleichzeitig laufende andere Schreibvorgänge sind keine atomare
   Gesamttransaktion der Website. Vollrestores erzeugen vorher eine Sicherung;
   größere Installationen sollten zusätzlich eine Wartungsphase und geübte
   Wiederanlaufprozedur vorsehen.
 
-Empfohlene Reihenfolge: zuerst CI und Konflikterkennung für Inhalte, anschließend
-die fachliche Aufteilung von API/Dashboard, danach KI-Auftragsverwaltung und
-Analytics-Speicher. Das stärkt die vorhandene Architektur, ohne ihren einfachen
-Betrieb aufzugeben.
+Details zur technischen Umsetzung stehen in [architecture.md](architecture.md),
+der Arbeits- und CI-Stand in [SYSTEM-IMPLEMENTATION.md](SYSTEM-IMPLEMENTATION.md).

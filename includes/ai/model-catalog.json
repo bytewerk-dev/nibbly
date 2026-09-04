@@ -1,0 +1,131 @@
+{
+    "openai-compatible": {
+        "baseUrl": "https://api.openai.com/v1",
+        "text": {
+            "chat": "gpt-4.1-mini",
+            "text": "gpt-4.1-mini",
+            "suggestions": [
+                "gpt-4.1-mini",
+                "gpt-4.1"
+            ]
+        },
+        "images": [
+            {
+                "value": "gpt-image-2",
+                "label": "ai.openai_image_gpt"
+            }
+        ],
+        "capabilities": {
+            "chat": true,
+            "text": true,
+            "images": true,
+            "stream": true,
+            "persistentTasks": false
+        }
+    },
+    "openrouter": {
+        "baseUrl": "https://openrouter.ai/api/v1",
+        "text": {
+            "chat": "openai/gpt-4.1-mini",
+            "text": "openai/gpt-4.1-mini",
+            "suggestions": [
+                "openai/gpt-4.1-mini",
+                "openai/gpt-4.1",
+                "anthropic/claude-sonnet-4-6",
+                "anthropic/claude-haiku-4-5",
+                "google/gemini-3.1-flash"
+            ]
+        },
+        "images": [
+            {
+                "value": "openai/gpt-5.4-image-2",
+                "label": "ai.openrouter_image_gpt"
+            },
+            {
+                "value": "google/gemini-3.1-flash-image-preview",
+                "label": "ai.openrouter_image_gemini_flash"
+            },
+            {
+                "value": "google/gemini-3-pro-image-preview",
+                "label": "ai.openrouter_image_gemini_pro"
+            }
+        ],
+        "capabilities": {
+            "chat": true,
+            "text": true,
+            "images": true,
+            "stream": true,
+            "persistentTasks": false
+        },
+        "imageAliases": {
+            "gpt-image-2": "openai/gpt-5.4-image-2",
+            "gpt-5.4": "openai/gpt-5.4-image-2",
+            "openai/gpt-5.4": "openai/gpt-5.4-image-2",
+            "gpt-5.4-2026-03-05": "openai/gpt-5.4-image-2",
+            "openai/gpt-5.4-2026-03-05": "openai/gpt-5.4-image-2",
+            "gemini-3.1-flash-image-preview": "google/gemini-3.1-flash-image-preview",
+            "gemini-3-pro-image-preview": "google/gemini-3-pro-image-preview"
+        }
+    },
+    "anthropic": {
+        "baseUrl": "https://api.anthropic.com/v1",
+        "text": {
+            "chat": "claude-sonnet-4-6",
+            "text": "claude-haiku-4-5",
+            "suggestions": [
+                "claude-sonnet-4-6",
+                "claude-haiku-4-5",
+                "claude-opus-4-8"
+            ]
+        },
+        "images": [],
+        "capabilities": {
+            "chat": true,
+            "text": true,
+            "images": false,
+            "stream": true,
+            "persistentTasks": false
+        }
+    },
+    "kie": {
+        "baseUrl": "https://api.kie.ai",
+        "text": {
+            "chat": "gpt-5-6-luna",
+            "text": "gpt-5-6-luna",
+            "suggestions": [
+                "gpt-5-6-luna",
+                "gpt-5-6-terra",
+                "gpt-5-6-sol",
+                "claude-sonnet-5",
+                "gemini-3-5-flash"
+            ]
+        },
+        "images": [
+            {
+                "value": "gpt-image-2",
+                "label": "Kie.ai: GPT Image 2"
+            },
+            {
+                "value": "nano-banana-2",
+                "label": "Kie.ai: Nano Banana 2"
+            },
+            {
+                "value": "seedream-5-0-pro",
+                "label": "Kie.ai: Seedream 5.0 Pro"
+            }
+        ],
+        "capabilities": {
+            "chat": true,
+            "text": true,
+            "images": true,
+            "stream": false,
+            "persistentTasks": true
+        },
+        "imageAliases": {
+            "gpt-image-2-text-to-image": "gpt-image-2",
+            "gpt-image-2-image-to-image": "gpt-image-2",
+            "seedream/5-pro-text-to-image": "seedream-5-0-pro",
+            "seedream/5-pro-image-to-image": "seedream-5-0-pro"
+        }
+    }
+}

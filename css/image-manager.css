@@ -1706,3 +1706,14 @@
         display: inline-flex;
     }
 }
+
+/* Keep uploads usable inside narrow embedded panels as well as modals. */
+.nb-imgmgr-modal { container-type: inline-size; container-name: media-manager; }
+@container media-manager (max-width: 42rem) {
+    .nb-imgmgr-dropzone, .nb-imgmgr-dropzone-upload { flex-wrap: wrap; }
+    .nb-imgmgr-dropzone { height: auto; min-height: 90px; padding: 16px; }
+    .nb-imgmgr-dropzone-text { flex: 1 1 100%; text-align: center; }
+    .nb-imgmgr-dropzone-upload { flex: 1 1 100%; gap: 12px; }
+    .nb-imgmgr-ai-generator-btn { flex: 1 1 100%; }
+    .nb-imgmgr-footer, .nb-imgmgr-footer-actions { flex-wrap: wrap; }
+}

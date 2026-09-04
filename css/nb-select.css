@@ -189,3 +189,6 @@ input.modal-input {
     letter-spacing: 0.05em;
     color: var(--nb-text-muted, #888);
 }
+
+/* Mirrored field classes must not impose a minimum width on the hidden native control. */
+.nb-select .nb-select__native { min-width: 0 !important; max-width: 1px !important; }

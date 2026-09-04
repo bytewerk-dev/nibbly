@@ -1,10 +1,11 @@
+const { apiSource, dashboardSource } = require('./source-helpers');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { resolve } = require('node:path');
 const { execFileSync } = require('node:child_process');
 const { runInNewContext } = require('node:vm');
 
-const source = readFileSync(resolve(__dirname, '../admin/dashboard.php'), 'utf8');
+const source = dashboardSource();
 const assignment = source.match(/^\$aiDashboardVisible = .+;$/m);
 assert.ok(assignment, 'Dashboard visibility gate must exist');
 const phpResults = JSON.parse(execFileSync('php', ['-r',

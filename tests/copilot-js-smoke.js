@@ -1,3 +1,4 @@
+const { apiSource, dashboardSource } = require('./source-helpers');
 const { readFileSync } = require('fs');
 const { dirname, resolve } = require('path');
 
@@ -6,8 +7,8 @@ const source = readFileSync(resolve(root, 'js/ai-copilot.js'), 'utf8');
 const styles = readFileSync(resolve(root, 'css/ai-copilot.css'), 'utf8');
 const adminStyles = readFileSync(resolve(root, 'admin/style.css'), 'utf8');
 const footer = readFileSync(resolve(root, 'includes/footer.php'), 'utf8');
-const dashboard = readFileSync(resolve(root, 'admin/dashboard.php'), 'utf8');
-const adminApi = readFileSync(resolve(root, 'admin/api.php'), 'utf8');
+const dashboard = dashboardSource();
+const adminApi = apiSource();
 const adminTokens = readFileSync(resolve(root, 'css/nibbly-admin-tokens.css'), 'utf8');
 const inlineEditor = readFileSync(resolve(root, 'js/inline-editor.js'), 'utf8');
 

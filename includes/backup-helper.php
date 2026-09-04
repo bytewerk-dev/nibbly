@@ -414,7 +414,7 @@ function backupExcludeRootFiles() {
         'SKILLS.md',
         'architecture.md',
         'design-qa.md',
-        'SYSTEM-REVIEW.md',
+        'SYSTEM-REVIEW.md', 'SYSTEM-IMPLEMENTATION.md',
     ];
 }
 
@@ -449,13 +449,10 @@ function backupShouldSkipPath($relativePath) {
 /** Persist the backup config back to settings.json (merging with existing keys). */
 function backupSaveConfig(array $patch) {
     $settingsPath = __DIR__ . '/../content/settings.json';
-    $settings = is_file($settingsPath) ? json_decode(file_get_contents($settingsPath), true) : [];
-    if (!is_array($settings)) $settings = [];
-    $settings['backup'] = array_replace_recursive($settings['backup'] ?? [], $patch);
-    return file_put_contents(
-        $settingsPath,
-        json_encode($settings, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
-    ) !== false;
+    require_once __DIR__ . '/json-store.php';
+    return nibblyJsonUpdate($settingsPath, static function (&$settings) use ($patch) {
+        $settings['backup'] = array_replace_recursive($settings['backup'] ?? [], $patch);
+    });
 }
 
 /**

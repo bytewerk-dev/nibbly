@@ -19,7 +19,7 @@ def copy_core(target):
     for folder in ("admin", "api", "includes", "cli", "css", "js", "templates", "examples", "tests"):
         if (ROOT / folder).is_dir():
             shutil.copytree(ROOT / folder, target / folder,
-                            ignore=shutil.ignore_patterns("config.php", "smtp-config.php", "nav-config.php", "__pycache__", "*.pyc"))
+                            ignore=shutil.ignore_patterns("config.php", "smtp-config.php", "nav-config.php", "__pycache__", "*.pyc", "node_modules"))
     for source in ROOT.iterdir():
         if source.is_file() and (source.suffix in (".php", ".md") or source.name in (".htaccess", "VERSION")):
             shutil.copyfile(source, target / source.name)

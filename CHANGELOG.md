@@ -4,6 +4,33 @@
 
 ### Added
 
+- Added revision checks for page/settings saves with HTTP 409 conflicts, HTTP 428
+  for missing revisions, and a shared comparison/download/reload dialog in the
+  dashboard and inline editor. Direct API integrations must send the revision
+  returned by their load request.
+- Added persistent AI budget reservations, idempotent usage settlement, Kie task
+  recovery and administrative reconciliation of uncertain provider outcomes.
+  Model presets, image aliases and capabilities share one server-owned catalog.
+- Added a System status view for PHP extensions, writable storage, the latest
+  successful backup, failed image jobs and open AI reservations.
+- Added GitHub Actions for PHP 8.4/8.5 and Chromium, with reproducible browser
+  tooling and integration coverage for setup, SMTP, media lifecycle, revisions,
+  fallback generation, budget concurrency, Kie recovery and analytics migration.
+- Added an analytics privacy toggle and distinct disabled, empty and failed states.
+
+### Changed
+
+- Split the stable admin API into twelve domain handlers and extracted dashboard
+  scripts by workflow, keeping public URLs and the no-build PHP installation.
+- Partitioned analytics into daily records and compact monthly archives. Existing
+  totals migrate automatically; historical summaries are cached and current-day
+  writes invalidate the cache. Legacy migration data is retained without hashes.
+- Routed SEO diagnostics, conflict/status messages and previously mixed-language
+  editor controls through the shared translation layer; SEO length checks count
+  Unicode characters. New detailed copy is available in German and English,
+  with the established English fallback for other dashboard languages.
+
+
 - Added an offline system test runner and regression suites for authentication,
   HTTP endpoints, concurrent storage, password resets and mocked AI providers;
   an optional Chromium check covers dashboard navigation and mobile editing.
@@ -12,6 +39,20 @@
   retained for imported icons.
 
 ### Fixed
+
+- Fixed dashboard field and action wrapping across phone/tablet/desktop sizes,
+  including backup retention, remote targets, settings, forms, image uploads,
+  color controls and page filters. Narrow settings views use a compact selector.
+  Hidden native select fields no longer expand the page invisibly.
+- Partial settings updates preserve unrelated privacy, module, maintenance and
+  login values. Editor settings responses omit SMTP, backup and AI credentials.
+- Automatic fallback fields merge transactionally without overwriting edits.
+  Page backups have collision-resistant names understood by list/restore actions.
+- Ambiguous AI POST failures no longer trigger automatic duplicate submissions.
+  Explicitly enabled local image providers may download from their configured
+  origin only; redirects cannot escape the download URL validation.
+- Added setup CSRF validation and atomic backup configuration updates.
+
 
 - Unified dashboard, API and inline-editor session validation. Deleted accounts,
   changed passwords and changed roles now take effect on existing sessions;

@@ -54,3 +54,8 @@ function nibblyJsonUpdate(string $path, callable $update, array $default = []): 
         // Keep the lock inode stable for other processes already waiting.
     }
 }
+
+/** Revision of the stored bytes, including an explicit missing-file version. */
+function nibblyJsonRevision(string $path): string {
+    return is_file($path) ? (hash_file('sha256', $path) ?: 'unreadable') : 'missing';
+}

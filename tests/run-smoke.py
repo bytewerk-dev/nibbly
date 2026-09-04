@@ -23,7 +23,7 @@ with tempfile.TemporaryDirectory(prefix="nibbly-suite-") as folder:
     with ThreadPoolExecutor(max_workers=8) as workers:
         list(workers.map(lambda p: run(["php", "-l", str(p)], root), php_files))
         list(workers.map(lambda p: run(["node", "--check", str(p)], root), js_files))
-    json_files = list((root / "admin/lang").glob("*.json")) + list((root / "content").rglob("*.json"))
+    json_files = list((root / "includes/ai").glob("*.json")) + list((root / "admin/lang").glob("*.json")) + list((root / "content").rglob("*.json"))
     for path in json_files:
         json.loads(path.read_text())
     print(f"PASS syntax: {len(php_files)} PHP, {len(js_files)} JavaScript, {len(json_files)} JSON files", flush=True)

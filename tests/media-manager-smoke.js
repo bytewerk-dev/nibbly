@@ -1,10 +1,11 @@
+const { apiSource, dashboardSource } = require('./source-helpers');
 const { readFileSync } = require('fs');
 const { dirname, resolve } = require('path');
 
 const root = dirname(__dirname);
 const source = readFileSync(resolve(root, 'js/image-manager.js'), 'utf8');
 const styles = readFileSync(resolve(root, 'css/image-manager.css'), 'utf8');
-const dashboard = readFileSync(resolve(root, 'admin/dashboard.php'), 'utf8');
+const dashboard = dashboardSource();
 
 function assertContains(haystack, needle, message) {
     if (!haystack.includes(needle)) {

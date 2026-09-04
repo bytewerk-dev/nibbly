@@ -755,6 +755,8 @@ $_footerSummary = [
     </script>
     <script src="<?php echo $_v('js/nb-select.js'); ?>"></script>
     <script src="<?php echo $_v('js/image-manager.js'); ?>"></script>
+    <link rel="stylesheet" href="<?php echo $_v('css/revision-client.css'); ?>">
+    <script src="<?php echo $_v('js/revision-client.js'); ?>"></script>
     <script src="<?php echo $_v('js/inline-editor.js'); ?>"></script>
     <?php if ($_aiCopilotAvailable && file_exists(__DIR__ . '/../js/ai-copilot.js')): ?>
     <script src="<?php echo $_v('js/ai-copilot.js'); ?>"></script>

@@ -1462,3 +1462,17 @@ Not `($lang, $basePath)`. Use `renderNewsList(0, $currentLang)` for all posts.
 - **Page-specific styles belong in `css/page-{slug}.css`**, not in `style.css` or `components.css`. Use `$pageStylesheet` in the template (or let the HTML converter generate it). Selectors like `.page-foo .card` in the base stylesheets leak page logic into the CMS core.
 - **Every `<img>` needs `alt`**, every interactive element needs `:focus-visible`
 - **Set `$contentPage`** before including `header.php` so the admin bar works
+
+
+## Concurrent editing and modular core
+
+Core request handlers now live in `admin/api/`; dashboard script fragments live
+in `admin/dashboard/scripts/`. Keep their public URLs and action names stable.
+Read the “Core modules and shared state” section of `architecture.md` before
+changing these boundaries, AI request state or the analytics format.
+
+When calling `save` or `save-settings`, first load the resource through `load` or
+`load-settings` and include the returned top-level `revision` in the POST form.
+Handle HTTP 409 as a concurrent-edit conflict and HTTP 428 as a missing load.
+Never fetch a newer revision solely to force an old snapshot through. The shared
+browser revision client already handles normal dashboard and inline-editor forms.

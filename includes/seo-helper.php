@@ -4,6 +4,7 @@
  */
 
 require_once __DIR__ . '/page-path.php';
+require_once __DIR__ . '/../admin/lang/i18n.php';
 
 function nibblySeoRoot(): string {
     return dirname(__DIR__);
@@ -218,30 +219,30 @@ function nibblySeoHealth(array $context): array {
         $issues[] = $message;
     };
 
-    $titleLen = strlen($context['title'] ?? '');
-    if ($titleLen < 20) $warn('SEO-Titel ist zu kurz.', 18);
-    if ($titleLen > 70) $warn('SEO-Titel ist zu lang.', 10);
+    $titleLen = mb_strlen($context['title'] ?? '', 'UTF-8');
+    if ($titleLen < 20) $warn(t('seo.title_short'), 18);
+    if ($titleLen > 70) $warn(t('seo.title_long'), 10);
 
-    $descLen = strlen($context['description'] ?? '');
-    if ($descLen < 70) $warn('Meta Description ist zu kurz oder fehlt.', 18);
-    if ($descLen > 170) $warn('Meta Description ist zu lang.', 8);
+    $descLen = mb_strlen($context['description'] ?? '', 'UTF-8');
+    if ($descLen < 70) $warn(t('seo.description_short'), 18);
+    if ($descLen > 170) $warn(t('seo.description_long'), 8);
 
-    if (empty($context['canonical'])) $warn('Canonical URL fehlt.', 12);
-    if (stripos($context['robots'] ?? '', 'noindex') !== false) $warn('Seite ist auf noindex gesetzt.', 20);
+    if (empty($context['canonical'])) $warn(t('seo.canonical_missing'), 12);
+    if (stripos($context['robots'] ?? '', 'noindex') !== false) $warn(t('seo.noindex'), 20);
     if (!empty($context['data']['sections']) && !nibblySeoPageHasH1($context['data'] ?? [])) {
-        $warn('Keine erkennbare H1 in den Seitendaten.', 14);
+        $warn(t('seo.h1_missing'), 14);
     }
-    if (empty($context['ogImage'])) $warn('Open-Graph-Bild fehlt.', 8);
+    if (empty($context['ogImage'])) $warn(t('seo.image_missing'), 8);
     $missingAlts = nibblySeoMissingImageAlts($context['data'] ?? []);
-    if ($missingAlts > 0) $warn($missingAlts . ' Bild(er) ohne Alt-Text.', min(14, $missingAlts * 4));
+    if ($missingAlts > 0) $warn(t('seo.alt_missing', ['count' => $missingAlts]), min(14, $missingAlts * 4));
 
     $score = max(0, min(100, $score));
     $status = $score >= 85 ? 'green' : ($score >= 60 ? 'yellow' : 'red');
     return [
         'status' => $status,
         'score' => $score,
-        'label' => $status === 'green' ? 'SEO gut' : ($status === 'yellow' ? 'SEO prüfen' : 'SEO kritisch'),
-        'issues' => $issues ?: ['Keine wesentlichen technischen SEO-Probleme erkannt.'],
+        'label' => t('seo.' . $status),
+        'issues' => $issues ?: [t('seo.no_issues')],
     ];
 }
 

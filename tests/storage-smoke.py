@@ -43,6 +43,14 @@ with tempfile.TemporaryDirectory(prefix="nibbly-storage-smoke-") as folder:
     mail_path.write_text("{damaged-json")
     assert php(root, prefix + "echo (int)nibblyFormsSaveSubmission(['id'=>'must-not-overwrite']);") == "0"
     assert mail_path.read_text() == "{damaged-json", "Damaged inbox overwritten"
+    # Fallback generation merges one missing field without overwriting concurrent edits.
+    write_json(root / 'content/pages/en_fallback.json', {'page': 'en_fallback', 'title': 'Keep this title'})
+    prefix = "require 'includes/content-loader.php'; "
+    with ThreadPoolExecutor(max_workers=12) as workers:
+        list(workers.map(lambda i: php(root, prefix + f"autoGenerateContentField('en_fallback','fields.key{i}','value{i}');"), range(24)))
+    php(root, prefix + "autoGenerateContentField('en_fallback','title','Wrong fallback');")
+    fallback = json.loads((root / 'content/pages/en_fallback.json').read_text())
+    assert fallback['title'] == 'Keep this title' and len(fallback['fields']) == 24
     prefix = "require 'includes/ai/ai-helper.php'; "
     with ThreadPoolExecutor(max_workers=12) as workers:
         list(workers.map(lambda _: php(root, prefix + "nibblyAiRecordUsage('text', 10, 2, 1);"), range(24)))
@@ -60,6 +68,6 @@ with tempfile.TemporaryDirectory(prefix="nibbly-storage-smoke-") as folder:
     prefix = "require 'includes/analytics-helper.php'; $_SERVER['REQUEST_URI']='/test'; $_SERVER['HTTP_USER_AGENT']='Mozilla/5.0'; "
     with ThreadPoolExecutor(max_workers=12) as workers:
         list(workers.map(lambda _: php(root, prefix + "nibblyAnalyticsTrack('en_test','en','test');"), range(24)))
-    analytics = json.loads((root / "content/analytics.json").read_text())
+    analytics = json.loads(subprocess.check_output(['php', '-r', "require 'includes/analytics-helper.php'; echo json_encode(nibblyAnalyticsLoad());"], cwd=root, text=True))
     assert next(iter(analytics['days'].values()))['views'] == 24, 'Concurrent page views were lost'
 print("PASS concurrent tokens, submissions, rate counters, AI usage/history, single image worker, analytics and corrupt-store preservation")

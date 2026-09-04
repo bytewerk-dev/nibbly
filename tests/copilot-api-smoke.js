@@ -1,8 +1,9 @@
+const { apiSource, dashboardSource } = require('./source-helpers');
 const { readFileSync } = require('fs');
 const { dirname, resolve } = require('path');
 
 const root = dirname(__dirname);
-const source = readFileSync(resolve(root, 'admin/api.php'), 'utf8');
+const source = apiSource();
 const helper = readFileSync(resolve(root, 'includes/ai/ai-helper.php'), 'utf8');
 const context = readFileSync(resolve(root, 'includes/ai/copilot-context.php'), 'utf8');
 
