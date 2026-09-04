@@ -12,6 +12,10 @@ with tempfile.TemporaryDirectory(prefix="nibbly-browser-review-") as folder:
     site = Site(folder).start()
     script = sys.argv[1] if len(sys.argv) > 1 else 'browser-check.js'
     if script == 'responsive-check.js':
+        menu_page = site.root / 'content/pages/en_services__test.json'
+        menu_content = json.loads(menu_page.read_text())
+        menu_content['title'] = 'Leistungen für internationale Geschäftskunden'
+        menu_page.write_text(json.dumps(menu_content))
         settings = json.loads((site.root / 'content/settings.json').read_text())
         settings['modules']['ai'] = True
         settings['email'] = {'method': 'smtp', 'smtpHost': 'smtp.example.invalid', 'recipientEmail': 'test@example.invalid', 'fromEmail': 'site@example.invalid', 'smtpPort': 587, 'smtpEncryption': 'tls'}

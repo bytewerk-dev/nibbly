@@ -42,7 +42,7 @@
 
 - Fixed dashboard field and action wrapping across phone/tablet/desktop sizes,
   including backup retention, remote targets, settings, forms, image uploads,
-  color controls and page filters. Narrow settings views use a compact selector.
+  color controls, menu ordering and page filters. Narrow settings views use a compact selector.
   Hidden native select fields no longer expand the page invisibly.
 - Partial settings updates preserve unrelated privacy, module, maintenance and
   login values. Editor settings responses omit SMTP, backup and AI credentials.

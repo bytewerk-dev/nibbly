@@ -158,9 +158,10 @@ Generated images are validated and saved under `assets/images/generated/`, are
 visible in the Media Library, and are indexed in `content/ai-image-history.json`
 with prompt, model, options, response status, and local media paths. OpenAI image
 edits use multipart image uploads; OpenRouter-compatible image generation uses
-the configured model id and may have provider-specific option support. Preserve
-the gateway's cautious curl retry behavior: retry transient TLS/read errors only
-when no response bytes were received, so paid image requests are not duplicated.
+the configured model id and may have provider-specific option support. Never
+automatically retry an ambiguous paid POST, even when no response bytes arrived.
+Resume known provider task IDs through the request ledger; outcomes without a
+task ID need reconciliation before another submission.
 
 Dashboard AI UI should honor both global module visibility and AI feature flags.
 If AI features are disabled, hide AI buttons and tools throughout the admin UI.

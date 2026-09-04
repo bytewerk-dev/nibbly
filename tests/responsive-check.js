@@ -34,8 +34,9 @@ const { writeFileSync } = require('node:fs');
                     };
                 });
                 if (layout.overflow || layout.narrow.length || layout.outside.length) findings.push({ width, tab, ...layout });
-                if (tab === 'backup' || width === 390) {
-                    await page.screenshot({ path: process.env.REVIEW_SCREENSHOTS + '/' + tab + '-' + width + '.png', fullPage: true });
+                if (tab === 'backup' || tab === 'settings:menus' || width === 390) {
+                    const filename = tab.replace(/[^a-z0-9_-]/gi, '-') + '-' + width + '.png';
+                    await page.screenshot({ path: process.env.REVIEW_SCREENSHOTS + '/' + filename, fullPage: true });
                 }
             }
         }
