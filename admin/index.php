@@ -16,14 +16,8 @@ require_once __DIR__ . '/users.php';
 require_once __DIR__ . '/../includes/asset-helpers.php';
 ensureUsersFile();
 
-// Secure session cookie settings
-session_set_cookie_params([
-    'lifetime' => SESSION_LIFETIME,
-    'path' => '/',
-    'httponly' => true,
-    'samesite' => 'Strict'
-]);
-session_start();
+require_once __DIR__ . '/../includes/session-helper.php';
+nibblySessionStart();
 
 $error = '';
 $lockoutWait = 0; // seconds remaining for countdown
@@ -132,28 +126,11 @@ function resetAttempts() {
 }
 
 function nibblyIsLoopbackName(string $host): bool {
-    $host = strtolower(trim($host));
-    if (preg_match('/^\[([^\]]+)\](?::\d+)?$/', $host, $m)) {
-        $host = $m[1];
-    } elseif (substr_count($host, ':') === 1) {
-        $host = preg_replace('/:\d+$/', '', $host);
-    }
-
-    return $host === 'localhost'
-        || $host === '::1'
-        || $host === '0:0:0:0:0:0:0:1'
-        || preg_match('/^127(?:\.\d{1,3}){3}$/', $host);
+    return nibblySessionIsLoopback($host);
 }
 
 function nibblyDevLoginAvailable(): bool {
-    if (defined('NIBBLY_DEV_LOGIN') && NIBBLY_DEV_LOGIN === false) {
-        return false;
-    }
-
-    $remote = $_SERVER['REMOTE_ADDR'] ?? '';
-    $host = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? '');
-
-    return nibblyIsLoopbackName($remote) && nibblyIsLoopbackName($host);
+    return nibblySessionDevLoginAllowed();
 }
 
 /**
@@ -222,30 +199,7 @@ function isPasswordWeak($password) {
 // ============================================================
 
 function validateRedirectUrl($url) {
-    if (empty($url)) {
-        return '/';
-    }
-
-    $parsed = parse_url($url);
-    if ($parsed === false) {
-        return '/';
-    }
-
-    // Only allow relative URLs or URLs to own domain
-    if (isset($parsed['host'])) {
-        $ownHost = $_SERVER['HTTP_HOST'] ?? '';
-        if ($parsed['host'] !== $ownHost) {
-            return '/';
-        }
-    }
-
-    // Don't redirect back to admin area
-    $path = $parsed['path'] ?? '';
-    if ($path === '/admin' || strpos($path, '/admin/') === 0) {
-        return '/';
-    }
-
-    return $url;
+    return nibblySessionRedirectUrl(is_string($url) ? $url : '');
 }
 
 // ============================================================
@@ -287,7 +241,7 @@ if (!empty($_GET['redirect'])) {
 }
 
 // Already logged in? Redirect to saved page
-if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
+if (nibblySessionValidate()) {
     $redirect = $_SESSION['redirect_after_login'] ?? 'dashboard';
     unset($_SESSION['redirect_after_login']);
     header('Location: ' . $redirect);
@@ -338,11 +292,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($user) {
             resetAttempts();
+            session_regenerate_id(true);
+            nibblySessionForgetLogin();
             $_SESSION['admin_logged_in'] = true;
             $_SESSION['admin_login_time'] = time();
             $_SESSION['admin_user_id'] = $user['id'];
             $_SESSION['admin_username'] = $user['username'];
             $_SESSION['admin_role'] = $user['role'];
+            $_SESSION['admin_password_fingerprint'] = hash('sha256', (string)($user['passwordHash'] ?? ''));
             $_SESSION['nibbly_dev_login'] = $usedDevLogin;
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
@@ -461,10 +418,12 @@ if ($resetAction === 'reset' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $resetError = t('login.reset_password_weak');
     } else {
         $newHash = password_hash($newPassword, PASSWORD_DEFAULT);
-        updateUserPassword($user['id'], $newHash);
-        clearResetToken($user['id']);
-        $resetSuccess = t('login.reset_success');
-        $resetAction = ''; // Show login form with success message
+        if (completePasswordReset($user['id'], $token, $newHash)) {
+            $resetSuccess = t('login.reset_success');
+            $resetAction = ''; // Show login form with success message
+        } else {
+            $resetError = t('login.reset_invalid_token');
+        }
     }
 }
 

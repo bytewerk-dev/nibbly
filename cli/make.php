@@ -12,7 +12,7 @@
 // Must run from project root
 $projectRoot = dirname(__DIR__);
 require_once $projectRoot . '/includes/page-path.php';
-if (!file_exists($projectRoot . '/router.php')) {
+if (!file_exists($projectRoot . '/route.php')) {
     fwrite(STDERR, "Error: Run this script from the Nibbly project root.\n");
     fwrite(STDERR, "  cd /path/to/nibbly && php cli/make.php --slug=about\n");
     exit(1);

@@ -32,7 +32,7 @@ if (!$form || empty($form['enabled'])) {
     nibblyFormSubmitResponse(false, $lang === 'de' ? 'Formular nicht gefunden.' : 'Form not found.', [], 404);
 }
 
-if (nibblyFormIsRateLimited($clientKey)) {
+if (!nibblyFormReserveRequest($clientKey)) {
     nibblyFormSubmitResponse(false, $lang === 'de' ? 'Zu viele Versuche. Bitte versuchen Sie es später erneut.' : 'Too many attempts. Please try again later.', [], 429);
 }
 
@@ -101,7 +101,7 @@ if ($store) {
         'message' => $values['message'] ?? '',
         'fields' => $fieldRows,
         'timestamp' => date('c'),
-        'status' => $sent ? 'sent' : 'local_only',
+        'status' => $sent ? 'sent' : (!empty($form['submit']['email']) ? 'send_failed' : 'local_only'),
         'read' => false,
         'starred' => false,
     ]);
@@ -114,6 +114,16 @@ if (!$saved) {
         : 'The message could not be saved. Please try again later.', [
             'formToken' => nibblyCreateFormToken($form['id']),
         ], 500);
+}
+
+// A successful response requires at least one actual delivery channel.
+if (!$store && !$sent) {
+    nibblyFormRecordAttempt($clientKey, false);
+    nibblyFormSubmitResponse(false, $lang === 'de'
+        ? 'Die Nachricht konnte nicht gesendet werden. Bitte versuchen Sie es später erneut.'
+        : 'The message could not be sent. Please try again later.', [
+            'formToken' => nibblyCreateFormToken($form['id']),
+        ], 503);
 }
 
 nibblyFormRecordAttempt($clientKey, true);

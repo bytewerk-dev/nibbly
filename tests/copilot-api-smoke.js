@@ -54,7 +54,7 @@ for (const [action, block] of Object.entries(blocks)) {
     assertContains(block, 'dashboardAiModuleEnabled()', action + ' should respect the global AI module gate.');
     assertContains(block, 'validateCsrfToken()', action + ' should require CSRF validation.');
 }
-assertContains(source, "$_SESSION['admin_login_time'] = time();", 'Authenticated API requests should refresh session activity.');
+assertContains(source, 'return nibblySessionValidate();', 'Authenticated API requests should use shared session validation and activity refresh.');
 assertContains(keepaliveBlock, 'validateCsrfToken()', 'Keepalive should require CSRF validation.');
 assertContains(keepaliveBlock, "jsonResponse(true, ['time' => time()]", 'Keepalive should return a successful timestamp response.');
 

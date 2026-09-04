@@ -58,7 +58,8 @@ An AI agent can create a new page, build a custom layout, add content blocks, an
 
 ## Requirements
 
-- PHP 7.4 or newer
+- PHP 8.1 is the language minimum; use a [currently supported PHP branch](https://www.php.net/supported-versions.php) in production (8.4 or 8.5 recommended).
+- PHP extensions: `mbstring`, `dom`, `fileinfo`, `session`; `zip` for backups, `curl` for provider integrations, and `gd` for image conversion.
 - Apache with `mod_rewrite` (production) or PHP built-in server (development)
 - No Composer, no npm, no database
 

@@ -18,8 +18,9 @@ function nibblyAiRunImageJobCore(string $jobId, ?callable $assertAccess = null):
     if (in_array((string)($existingJob['status'] ?? ''), ['success', 'error'], true)) {
         return nibblyAiPublicImageJob($existingJob);
     }
-    $job = nibblyAiMarkImageJobRunning($jobId);
-    if (in_array((string)($job['status'] ?? ''), ['success', 'error'], true)) {
+    $claimed = false;
+    $job = nibblyAiMarkImageJobRunning($jobId, $claimed);
+    if (!$claimed) {
         return nibblyAiPublicImageJob($job);
     }
 

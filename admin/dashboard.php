@@ -3,8 +3,9 @@
  * Admin Dashboard - Content Editor
  */
 
-session_start();
 require_once 'config.php';
+require_once __DIR__ . '/../includes/session-helper.php';
+nibblySessionStart();
 require_once __DIR__ . '/../includes/version.php';
 require_once __DIR__ . '/lang/i18n.php';
 require_once __DIR__ . '/users.php';
@@ -12,19 +13,11 @@ require_once __DIR__ . '/../includes/asset-helpers.php';
 require_once __DIR__ . '/../includes/ai/ai-helper.php';
 ensureUsersFile();
 
-// Check authentication
-if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-    header('Location: index.php');
-    exit;
-}
-
-// Session timeout check
-if (time() - $_SESSION['admin_login_time'] > SESSION_LIFETIME) {
-    session_destroy();
+// Validate account changes and session timeout on every request.
+if (!nibblySessionValidate()) {
     header('Location: index.php?timeout=' . time());
     exit;
 }
-$_SESSION['admin_login_time'] = time();
 
 // Logout
 if (isset($_GET['logout'])) {
@@ -34,7 +27,7 @@ if (isset($_GET['logout'])) {
 }
 
 $csrfToken = $_SESSION['csrf_token'];
-$userRole = $_SESSION['admin_role'] ?? 'admin'; // backward compat: old sessions default to admin
+$userRole = $_SESSION['admin_role'] ?? 'editor';
 $isAdminUser = ($userRole === 'admin');
 
 // Load settings for theme
@@ -8141,7 +8134,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         var chartHeight = height - pad.top - pad.bottom;
         var values = series.map(function(item) { return Math.max(0, parseInt(item.views || 0, 10)); });
         var maxValue = Math.max.apply(null, values.concat([1]));
-        var yMax = Math.max(1, Math.ceil(maxValue * 1.2));
+        // Four integer intervals keep low traffic from repeating rounded ticks.
+        var yMax = Math.max(4, Math.ceil(maxValue * 1.2 / 4) * 4);
         var stepX = series.length > 1 ? chartWidth / (series.length - 1) : chartWidth;
 
         function x(index) {

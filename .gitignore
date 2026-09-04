@@ -62,6 +62,8 @@ assets/fonts/
 screenshots/
 reference/
 node_modules/
+__pycache__/
+*.pyc
 *.mjs
 deploy.sh
 auth-deploy.sh

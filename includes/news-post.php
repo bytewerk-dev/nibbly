@@ -66,8 +66,7 @@ if (!$post) {
 $pageTitle = (string)($post['title'] ?? '');
 $pageDescription = (string)($post['excerpt'] ?? '');
 
-if (session_status() === PHP_SESSION_NONE) session_start();
-$_isAdmin = isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true;
+$_isAdmin = isAdminLoggedIn();
 $newsPostJson = $_isAdmin ? json_encode($post, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) : '';
 
 include $_includeBase . 'includes/header.php';
@@ -87,7 +86,7 @@ if ($_dateRaw !== '') {
 
 $_postBody = '';
 if (isset($post['content']) && is_string($post['content'])) {
-    $_postBody = $post['content'];
+    $_postBody = sanitizeHtml($post['content']);
 } elseif (!empty($post['sections']) && is_array($post['sections'])) {
     foreach ($post['sections'] as $_sectionIndex => $_section) {
         if (is_array($_section)) {

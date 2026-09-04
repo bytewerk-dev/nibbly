@@ -6,6 +6,8 @@
  * storage so CMS features do not talk to AI vendors directly.
  */
 
+require_once dirname(__DIR__) . '/json-store.php';
+
 if (!defined('NIBBLY_AI_SETTINGS_PATH')) {
     define('NIBBLY_AI_SETTINGS_PATH', dirname(__DIR__, 2) . '/content/ai-settings.json');
 }
@@ -365,7 +367,7 @@ function nibblyAiChatStream(array $messages, array $options, callable $onDelta):
     if ($feature !== '') {
         nibblyAiEnsureFeature($settings, $feature);
     }
-    if (!function_exists('curl_init')) {
+    if (!function_exists('curl_init') || nibblyAiIsKieSettings($settings)) {
         $result = nibblyAiChat($messages, $options);
         $onDelta((string)$result['text']);
         return $result;
@@ -506,7 +508,7 @@ function nibblyAiChatStream(array $messages, array $options, callable $onDelta):
     $ok = curl_exec($ch);
     $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $curlError = curl_error($ch);
-    curl_close($ch);
+    unset($ch);
     if ($state['buffer'] !== '') {
         $parseLine($state['buffer']);
     }
@@ -870,23 +872,24 @@ function nibblyAiAssertWithinLimits(array $settings, string $type, int $estimate
 }
 
 function nibblyAiRecordUsage(string $type, int $inputTokens, int $outputTokens, int $costCents): void {
-    $usage = nibblyAiLoadUsage();
-    $today = gmdate('Y-m-d');
-    $month = gmdate('Y-m');
-    foreach ([['days', $today], ['months', $month]] as $ref) {
-        [$group, $key] = $ref;
-        if (!isset($usage[$group][$key])) {
-            $usage[$group][$key] = nibblyAiEmptyUsageBucket();
+    $saved = nibblyJsonUpdate(NIBBLY_AI_USAGE_PATH, function (array &$usage) use ($type, $inputTokens, $outputTokens, $costCents): void {
+        $today = gmdate('Y-m-d');
+        $month = gmdate('Y-m');
+        foreach ([['days', $today], ['months', $month]] as $ref) {
+            [$group, $key] = $ref;
+            if (!isset($usage[$group][$key])) {
+                $usage[$group][$key] = nibblyAiEmptyUsageBucket();
+            }
+            $usage[$group][$key]['requests']++;
+            $usage[$group][$key][$type === 'image' ? 'imageRequests' : 'textRequests']++;
+            $usage[$group][$key]['inputTokens'] += $inputTokens;
+            $usage[$group][$key]['outputTokens'] += $outputTokens;
+            $usage[$group][$key]['estimatedCostCents'] += $costCents;
         }
-        $usage[$group][$key]['requests']++;
-        $usage[$group][$key][$type === 'image' ? 'imageRequests' : 'textRequests']++;
-        $usage[$group][$key]['inputTokens'] += $inputTokens;
-        $usage[$group][$key]['outputTokens'] += $outputTokens;
-        $usage[$group][$key]['estimatedCostCents'] += $costCents;
-    }
-    $usage['updatedAt'] = gmdate('c');
-    nibblyAiPruneUsage($usage);
-    nibblyAiSaveUsage($usage);
+        $usage['updatedAt'] = gmdate('c');
+        nibblyAiPruneUsage($usage);
+    }, ['days' => [], 'months' => [], 'updatedAt' => null]);
+    if (!$saved) throw new RuntimeException('Could not save AI usage.');
 }
 
 function nibblyAiAudit(string $action, bool $success, array $meta = []): void {
@@ -925,20 +928,13 @@ function nibblyAiLoadImageHistory(int $offset = 0, int $limit = 12): array {
 }
 
 function nibblyAiRecordImageHistory(array $entry): array {
-    $history = ['items' => []];
-    if (is_file(NIBBLY_AI_IMAGE_HISTORY_PATH)) {
-        $loaded = json_decode((string)file_get_contents(NIBBLY_AI_IMAGE_HISTORY_PATH), true);
-        if (is_array($loaded) && is_array($loaded['items'] ?? null)) {
-            $history = ['items' => $loaded['items']];
-        }
-    }
     $item = [
         'id' => 'img_' . gmdate('Ymd_His') . '_' . substr(bin2hex(random_bytes(4)), 0, 8),
         'createdAt' => gmdate('c'),
         'status' => in_array(($entry['status'] ?? ''), ['success', 'error'], true) ? $entry['status'] : 'success',
         'model' => substr((string)($entry['model'] ?? ''), 0, 120),
-        'prompt' => substr((string)($entry['prompt'] ?? ''), 0, 8000),
-        'revisedPrompt' => substr((string)($entry['revisedPrompt'] ?? ''), 0, 8000),
+        'prompt' => nibblyAiUtf8Prefix((string)($entry['prompt'] ?? ''), 8000),
+        'revisedPrompt' => nibblyAiUtf8Prefix((string)($entry['revisedPrompt'] ?? ''), 8000),
         'size' => substr((string)($entry['size'] ?? ''), 0, 40),
         'aspectRatio' => substr((string)($entry['aspectRatio'] ?? ''), 0, 20),
         'quality' => substr((string)($entry['quality'] ?? ''), 0, 40),
@@ -948,13 +944,15 @@ function nibblyAiRecordImageHistory(array $entry): array {
         'count' => nibblyAiClampInt($entry['count'] ?? 0, 0, 100),
         'referenceImages' => nibblyAiCleanPublicPathList($entry['referenceImages'] ?? []),
         'outputs' => nibblyAiCleanPublicPathList($entry['outputs'] ?? []),
-        'error' => substr((string)($entry['error'] ?? ''), 0, 1000),
+        'error' => nibblyAiUtf8Prefix((string)($entry['error'] ?? ''), 1000),
         'estimatedCostCents' => max(0, (int)($entry['estimatedCostCents'] ?? 0)),
         'durationMs' => max(0, (int)($entry['durationMs'] ?? 0)),
         'user' => (string)($_SESSION['admin_username'] ?? ($_SESSION['admin_user_id'] ?? ''))
     ];
-    array_unshift($history['items'], $item);
-    nibblyAiSaveImageHistory($history);
+    $saved = nibblyJsonUpdate(NIBBLY_AI_IMAGE_HISTORY_PATH, function (array &$history) use ($item): void {
+        array_unshift($history['items'], $item);
+    }, ['items' => []]);
+    if (!$saved) throw new RuntimeException('Could not save image history.');
     return $item;
 }
 
@@ -1045,7 +1043,9 @@ function nibblyAiPersistImageJobReferences(array $payload, string $jobDir): arra
 function nibblyAiSaveImageJob(array $job): void {
     nibblyAiEnsureImageJobsDir();
     $job['updatedAt'] = gmdate('c');
-    file_put_contents(nibblyAiImageJobPath((string)$job['id']), json_encode($job, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX);
+    if (!nibblyJsonAtomicWrite(nibblyAiImageJobPath((string)$job['id']), $job)) {
+        throw new RuntimeException('Could not save image job.');
+    }
 }
 
 function nibblyAiLoadImageJob(string $id): array {
@@ -1123,28 +1123,31 @@ function nibblyAiPublicImageJob(array $job): array {
         'updatedAt' => (string)($job['updatedAt'] ?? ''),
         'startedAt' => (string)($job['startedAt'] ?? ''),
         'finishedAt' => (string)($job['finishedAt'] ?? ''),
-        'prompt' => substr((string)($payload['prompt'] ?? $payload['instruction'] ?? ''), 0, 8000),
+        'prompt' => nibblyAiUtf8Prefix((string)($payload['prompt'] ?? $payload['instruction'] ?? ''), 8000),
         'model' => substr((string)($options['model'] ?? ''), 0, 120),
         'count' => (int)($options['count'] ?? 1),
         'result' => $result,
-        'error' => substr((string)($job['error'] ?? ''), 0, 1000)
+        'error' => nibblyAiUtf8Prefix((string)($job['error'] ?? ''), 1000)
     ];
 }
 
-function nibblyAiMarkImageJobRunning(string $id): array {
-    $job = nibblyAiLoadImageJob($id);
-    if (in_array((string)($job['status'] ?? ''), ['success', 'error'], true)) {
-        return $job;
-    }
-    if ((string)($job['status'] ?? '') === 'running') {
-        return nibblyAiRefreshImageJobState($job);
-    }
-    $job['status'] = 'running';
-    $job['startedAt'] = $job['startedAt'] ?: gmdate('c');
-    $job['attempts'] = (int)($job['attempts'] ?? 0) + 1;
-    $job['error'] = '';
-    nibblyAiSaveImageJob($job);
-    return $job;
+function nibblyAiMarkImageJobRunning(string $id, ?bool &$claimed = null): array {
+    $claimed = false;
+    $result = [];
+    $saved = nibblyJsonUpdate(nibblyAiImageJobPath($id), function (array &$job) use (&$claimed, &$result): void {
+        if (empty($job['id'])) throw new RuntimeException('Image job not found.');
+        if (($job['status'] ?? '') === 'queued') {
+            $job['status'] = 'running';
+            $job['startedAt'] = gmdate('c');
+            $job['updatedAt'] = gmdate('c');
+            $job['attempts'] = (int)($job['attempts'] ?? 0) + 1;
+            $job['error'] = '';
+            $claimed = true;
+        }
+        $result = $job;
+    });
+    if (!$saved) throw new RuntimeException('Could not claim image job.');
+    return $result;
 }
 
 function nibblyAiFinishImageJob(string $id, array $result): array {
@@ -1161,19 +1164,16 @@ function nibblyAiFailImageJob(string $id, string $message): array {
     $job = nibblyAiLoadImageJob($id);
     $job['status'] = 'error';
     $job['finishedAt'] = gmdate('c');
-    $job['error'] = substr($message, 0, 1000);
+    $job['error'] = nibblyAiUtf8Prefix($message, 1000);
     nibblyAiSaveImageJob($job);
     return nibblyAiPublicImageJob($job);
 }
 
 function nibblyAiSaveImageHistory(array $history): void {
-    $dir = dirname(NIBBLY_AI_IMAGE_HISTORY_PATH);
-    if (!is_dir($dir)) {
-        mkdir($dir, 0755, true);
-    }
-    file_put_contents(NIBBLY_AI_IMAGE_HISTORY_PATH, json_encode([
-        'items' => array_values(is_array($history['items'] ?? null) ? $history['items'] : [])
-    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX);
+    $saved = nibblyJsonUpdate(NIBBLY_AI_IMAGE_HISTORY_PATH, function (array &$stored) use ($history): void {
+        $stored = ['items' => array_values(is_array($history['items'] ?? null) ? $history['items'] : [])];
+    }, ['items' => []]);
+    if (!$saved) throw new RuntimeException('Could not save image history.');
 }
 
 function nibblyAiCleanPublicPathList($paths): array {
@@ -1298,7 +1298,11 @@ function nibblyAiKieChatRequest(array $settings, array $body): array {
         if ($content) $input[] = ['role' => (string)($message['role'] ?? 'user'), 'content' => $content];
     }
     $response = nibblyAiExecuteJsonRequest($settings, $baseUrl . '/codex/v1/responses', $headers, [
-        'model' => $model, 'input' => $input, 'reasoning' => ['effort' => 'low'], 'stream' => false
+        'model' => $model,
+        'input' => $input,
+        'max_output_tokens' => max(1, (int)($body['max_tokens'] ?? $settings['limits']['maxOutputTokens'] ?? 4096)),
+        'reasoning' => ['effort' => 'low'],
+        'stream' => false
     ]);
     $text = '';
     foreach ((array)($response['output'] ?? []) as $output) {
@@ -1412,7 +1416,7 @@ function nibblyAiAnthropicChatRequest(array $settings, array $body): array {
 function nibblyAiExecuteJsonRequest(array $settings, string $url, array $headers, array $body): array {
     $timeout = nibblyAiRequestTimeout($settings);
     nibblyAiExtendExecutionTime($timeout + 10);
-    $payload = json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $payload = json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
     $attempts = 0;
     $streamed = false;
     do {
@@ -1572,7 +1576,7 @@ function nibblyAiCurlPost(string $url, array $headers, $postFields, int $timeout
             $downloadedBytes = (float)curl_getinfo($ch, CURLINFO_SIZE_DOWNLOAD);
         }
         $lastError = curl_error($ch);
-        curl_close($ch);
+        unset($ch);
         if ($raw !== false) {
             return [$buffer, $status];
         }
@@ -1665,12 +1669,19 @@ function nibblyAiGenerateKieImages(array $settings, array $options): array {
     $headers = ['Content-Type: application/json', 'Accept: application/json'];
     $key = trim((string)($settings['apiKey'] ?? ''));
     if ($key !== '') $headers[] = 'Authorization: Bearer ' . $key;
+    $aspectRatio = nibblyAiCleanAspectRatio((string)($options['aspectRatio'] ?? 'auto'));
+    if ($aspectRatio === 'auto' && preg_match('/^(\d+)x(\d+)$/', (string)($options['size'] ?? ''), $dimensions)) {
+        $aspectRatio = nibblyAiNearestOpenRouterAspectRatio((int)$dimensions[1], (int)$dimensions[2]);
+    }
+    // Preserve UTF-8 at the provider's prompt-length boundary.
+    $prompt = (string)($options['prompt'] ?? '');
+    $prompt = nibblyAiUtf8Prefix($prompt, 8000);
     $references = [];
     foreach (array_slice((array)($options['referencePaths'] ?? []), 0, 10) as $path) $references[] = nibblyAiKieUploadReference($settings, (string)$path);
     $tasks = [];
     for ($index = 0; $index < $count; $index++) {
         $taskModel = $model;
-        $input = ['prompt' => substr((string)($options['prompt'] ?? ''), 0, 8000), 'aspect_ratio' => (string)($options['aspectRatio'] ?? 'auto')];
+        $input = ['prompt' => $prompt, 'aspect_ratio' => $aspectRatio];
         if ($model === 'gpt-image-2') {
             $taskModel = $references ? 'gpt-image-2-image-to-image' : 'gpt-image-2-text-to-image';
             if ($references) $input['input_urls'] = $references;
@@ -1737,7 +1748,7 @@ function nibblyAiKieGetJson(array $settings, string $url, array $headers): array
     if (!function_exists('curl_init')) throw new RuntimeException('Kie.ai requires cURL support.');
     $ch = curl_init($url);
     curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPHEADER => $headers, CURLOPT_CONNECTTIMEOUT => 10, CURLOPT_TIMEOUT => min(30, nibblyAiRequestTimeout($settings))]);
-    $raw = curl_exec($ch); $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); $error = curl_error($ch); curl_close($ch);
+    $raw = curl_exec($ch); $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE); $error = curl_error($ch); unset($ch);
     if ($raw === false) throw new RuntimeException($error ?: 'Kie.ai task request failed.');
     $data = json_decode((string)$raw, true);
     if ($status < 200 || $status >= 300 || !is_array($data)) throw new RuntimeException((string)($data['msg'] ?? $data['message'] ?? 'Kie.ai returned invalid task data.'));
@@ -2020,6 +2031,13 @@ function nibblyAiExtendExecutionTime(int $seconds): void {
     @set_time_limit(max(5, $seconds));
 }
 
+function nibblyAiUtf8Prefix(string $text, int $maxCharacters): string {
+    if (!preg_match('/\A.{0,' . max(0, $maxCharacters) . '}/us', $text, $match)) {
+        throw new RuntimeException('AI text must contain valid UTF-8.');
+    }
+    return $match[0];
+}
+
 function nibblyAiCleanMessages(array $messages): array {
     $clean = [];
     foreach ($messages as $message) {
@@ -2034,7 +2052,7 @@ function nibblyAiCleanMessages(array $messages): array {
         if ($content === '') {
             continue;
         }
-        $clean[] = ['role' => $role, 'content' => substr($content, 0, 24000)];
+        $clean[] = ['role' => $role, 'content' => nibblyAiUtf8Prefix($content, 24000)];
     }
     return array_slice($clean, -20);
 }
@@ -2123,7 +2141,7 @@ function nibblyAiConvertImageBinary(string $binary, int $targetType, int $qualit
             $white = imagecolorallocate($flattened, 255, 255, 255);
             imagefilledrectangle($flattened, 0, 0, $width, $height, $white);
             imagecopy($flattened, $image, 0, 0, 0, 0, $width, $height);
-            imagedestroy($image);
+            unset($image);
             $image = $flattened;
         } elseif (function_exists('imagealphablending')) {
             imagealphablending($image, false);
@@ -2141,7 +2159,7 @@ function nibblyAiConvertImageBinary(string $binary, int $targetType, int $qualit
         $out = ob_get_clean();
     } finally {
         if ($image instanceof GdImage) {
-            imagedestroy($image);
+            unset($image);
         }
     }
     return is_string($out) && $out !== '' ? $out : null;

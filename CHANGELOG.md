@@ -4,12 +4,57 @@
 
 ### Added
 
+- Added an offline system test runner and regression suites for authentication,
+  HTTP endpoints, concurrent storage, password resets and mocked AI providers;
+  an optional Chromium check covers dashboard navigation and mobile editing.
 - Added the public MingCute Core Regular/Core Filled collection to the Iconify
   import dialog under Apache License 2.0, with source and license metadata
   retained for imported icons.
 
 ### Fixed
 
+- Unified dashboard, API and inline-editor session validation. Deleted accounts,
+  changed passwords and changed roles now take effect on existing sessions;
+  login rotates the session ID, local dev sessions remain loopback-only, and
+  login/logout destinations reject unsafe URLs.
+- Password-protected pages revoke previous unlocks when their password changes.
+- News IDs can no longer escape the news directory. Renaming a post preserves
+  the original if saving fails, and duplicate slugs cannot overwrite other posts.
+- Replaced regex-only rich-text filtering with an HTML allowlist that rejects
+  encoded script URLs and active markup. Existing news content is filtered when
+  rendered, and inline-editor branding is escaped in HTML attributes.
+- Added atomic JSON transactions for form tokens, submission limits, inbox
+  writes, user changes, AI usage/history and analytics. Concurrent requests no
+  longer lose records; damaged stores are preserved instead of overwritten.
+- Password-reset tokens are consumed atomically, password changes revoke reset
+  links, and concurrent role changes cannot remove the last administrator.
+- Forms now return a failure when neither email delivery nor local storage
+  succeeds, and distinguish failed delivery from intentionally local storage.
+- Kie chat uses the correct provider adapter for streaming callers without an
+  extra failed request. GPT requests include the configured output-token cap.
+- Kie image requests derive the aspect ratio from explicit image dimensions.
+  AI chat, image prompts and image history preserve UTF-8 at length limits;
+  malformed request JSON fails before reaching a provider.
+- Only one worker can claim a queued image-generation job, preventing duplicate
+  provider requests from concurrent workers.
+- Restores now include supported video, audio and document formats, stage and
+  validate archive data before replacing content, reject symbolic-link targets,
+  and roll back ordinary write failures. Full restores abort if the safety
+  backup fails. Process termination or machine failure still requires recovery
+  from a backup.
+- Backups created in the same second no longer overwrite each other. Backup
+  locks keep a stable inode; runtime locks and restore staging files are excluded.
+- Development and production routing share the same front controller. Language
+  homepages and nested URLs retain working asset paths with trailing slashes;
+  trash, hidden files, tests and CLI paths are blocked from HTTP access.
+- CLI tools also work in deployed copies without the development router.
+  Empty byte-range requests now return HTTP 416.
+- Mobile editor layout and notifications follow the actual admin-bar height;
+  informational notifications have a readable background and fit the viewport.
+  Analytics charts use distinct integer ticks when traffic is low or zero.
+- Removed obsolete PHP resource cleanup calls that produce PHP 8.5 deprecation
+  output. Corrected the documented minimum PHP version to 8.1 and updated stale
+  tests to the current theme and shared session validation.
 - Hide the Dashboard AI section and setup notice when the AI module is disabled,
   including for administrators.
 - Full-site backups now omit local QA evidence, development tests and examples,
@@ -18,6 +63,12 @@
 - Restoring older full-site backups no longer fails when they contain PHP smoke
   tests: legacy `tests/` entries are accepted for compatibility but skipped
   during extraction.
+
+### Upgrade notes
+
+- Existing administrator sessions require one fresh sign-in after this update
+  so they can be bound to the current account password. No user data migration
+  or password change is required.
 
 ## [1.6.1] — 2026-08-05
 

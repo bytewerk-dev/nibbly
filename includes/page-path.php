@@ -81,7 +81,9 @@ function nibblyPageBasePath(string $path, bool $languagePrefixed): string {
     $path = nibblyPageNormalizePath($path);
     if ($path === '') return '';
     $urlSegments = substr_count($path, '/') + 1 + ($languagePrefixed ? 1 : 0);
-    return str_repeat('../', max(0, $urlSegments - 1));
+    $requestPath = (string)parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+    $directoryUrl = str_ends_with($requestPath, '/');
+    return str_repeat('../', max(0, $urlSegments - ($directoryUrl ? 0 : 1)));
 }
 
 function nibblyPageUrlPath(string $lang, string $path, ?string $defaultLang = null): string {

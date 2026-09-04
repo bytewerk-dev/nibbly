@@ -74,27 +74,10 @@ function parseConfiguredEmailList($value): array {
  * Save email locally as backup
  */
 function saveMailBackup($filePath, $mailData) {
-    $mails = [];
-
-    if (file_exists($filePath)) {
-        $content = file_get_contents($filePath);
-        $mails = json_decode($content, true) ?: [];
-    }
-
-    // Insert new mail at beginning (newest first)
-    array_unshift($mails, $mailData);
-
-    // Keep max 500 mails
-    if (count($mails) > 500) {
+    return nibblyJsonUpdate($filePath, function (array &$mails) use ($mailData): void {
+        array_unshift($mails, $mailData);
         $mails = array_slice($mails, 0, 500);
-    }
-
-    $dir = dirname($filePath);
-    if (!is_dir($dir)) {
-        mkdir($dir, 0755, true);
-    }
-
-    return file_put_contents($filePath, json_encode($mails, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX) !== false;
+    });
 }
 
 // Get and sanitize form data
@@ -107,7 +90,7 @@ $date = sanitizeHeaderValue($_POST['date'] ?? '');
 $message = trim($_POST['message'] ?? '');
 $clientKey = nibblyFormClientKey();
 
-if (nibblyFormIsRateLimited($clientKey)) {
+if (!nibblyFormReserveRequest($clientKey)) {
     http_response_code(429);
     echo json_encode([
         'success' => false,

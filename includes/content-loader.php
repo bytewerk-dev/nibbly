@@ -14,18 +14,8 @@ if (!defined('CONTENT_BASE_PATH')) {
  * Allowed HTML tags for content areas (XSS protection)
  */
 function sanitizeHtml($html) {
-    $allowedTags = '<p><br><strong><b><em><i><u><a><ul><ol><li><h1><h2><h3><h4><h5><h6><blockquote><span><div>';
-
-    $clean = strip_tags($html, $allowedTags);
-
-    // Remove dangerous attributes (onclick, onerror, etc.)
-    $clean = preg_replace('/\s+on\w+\s*=\s*["\'][^"\']*["\']/i', '', $clean);
-    $clean = preg_replace('/\s+on\w+\s*=\s*[^\s>]+/i', '', $clean);
-    // Block dangerous URI schemes in href/src (javascript:, data:, vbscript:)
-    $clean = preg_replace('/href\s*=\s*["\']?\s*(javascript|data|vbscript)\s*:[^"\'>\s]*/i', 'href="#"', $clean);
-    $clean = preg_replace('/src\s*=\s*["\']?\s*(javascript|data|vbscript)\s*:[^"\'>\s]*/i', 'src=""', $clean);
-
-    return $clean;
+    require_once __DIR__ . '/html-sanitizer.php';
+    return nibblySanitizeRichHtml((string)$html);
 }
 
 /**

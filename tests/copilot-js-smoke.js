@@ -227,7 +227,7 @@ assertContains(dashboard, 'aiAssistantSurfaceDashboard', 'AI settings should inc
 assertContains(dashboard, 'imageGeneration: true', 'AI image generation should be enabled by default once a provider key is configured.');
 assertContains(dashboard, 'function applyAiDefaultsForNewApiKey()', 'AI settings should auto-enable default features when a provider key is first entered.');
 assertContains(dashboard, "primaryColor: '#3858e9'", 'Dashboard theme defaults should use the updated nibbly primary color.');
-assertContains(dashboard, "accentColor: '#b45309'", 'Dashboard theme defaults should use a readable distinct accent color.');
+assertContains(dashboard, "accentColor: '#3858e9'", 'Dashboard theme defaults should use the current nibbly brand accent.');
 assertContains(dashboard, 'function sanitizeThemeContrast(theme)', 'Dashboard theme save should enforce readable color contrast.');
 assertContains(dashboard, 'function updateThemeContrastFeedback()', 'Dashboard theme form should show live contrast feedback for color fields.');
 assertContains(dashboard, 'data-contrast-for="primaryColor"', 'Theme primary color field should expose contrast feedback.');
@@ -258,7 +258,7 @@ assertContains(adminStyles, 'background: color-mix(in srgb, var(--nb-bg-elevated
 assertMatches(adminStyles, /\.settings-tabs\s*\{[\s\S]*?box-shadow:\s*none;/, 'Settings sidebar should use a border-only container without shadow.');
 assertMatches(adminStyles, /\.settings-panel\s*\{[\s\S]*?box-shadow:\s*none;/, 'Settings panels should use a border-only container without shadow.');
 assertContains(adminApi, "'primaryColor' => '#3858e9'", 'Settings API defaults should use the updated nibbly primary color.');
-assertContains(adminApi, "'accentColor' => '#b45309'", 'Settings API defaults should use a readable distinct accent color.');
+assertContains(adminApi, "'accentColor' => '#3858e9'", 'Settings API defaults should use the current nibbly brand accent.');
 assertContains(adminApi, 'function nibblySanitizeThemeContrast(array $theme): array', 'Settings API should enforce readable theme contrast server-side.');
 assertContains(adminApi, 'nibblyAdjustColorForContrast((string)$theme[$key], \'#ffffff\'', 'Settings API should darken overly light light-theme colors.');
 assertContains(adminApi, 'nibblyAdjustColorForContrast((string)$theme[$key], \'#0b0d12\'', 'Settings API should lighten overly dark dark-theme colors.');

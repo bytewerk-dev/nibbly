@@ -375,7 +375,7 @@ function backupWithLock(callable $fn) {
     } finally {
         flock($handle, LOCK_UN);
         fclose($handle);
-        @unlink($lockPath);
+        // Do not unlink: another process may already hold this lock inode.
     }
 }
 
@@ -414,6 +414,7 @@ function backupExcludeRootFiles() {
         'SKILLS.md',
         'architecture.md',
         'design-qa.md',
+        'SYSTEM-REVIEW.md',
     ];
 }
 
@@ -432,7 +433,8 @@ function backupShouldSkipPath($relativePath) {
 
     $base = basename($relativePath);
     if (in_array($base, backupExcludeFiles(), true)) return true;
-    if (str_ends_with($base, '.tmp') || str_ends_with($base, '.swp')) return true;
+    if (str_ends_with($base, '.tmp') || str_ends_with($base, '.swp') || str_ends_with($base, '.lock') || str_starts_with($base, '.nibbly-json-')) return true;
+    if (preg_match('#(^|/)\.restore-[^/]+(/|$)#', $relativePath)) return true;
 
     // Keep old JSON page backups, but never include generated backup ZIPs/logs.
     if (str_starts_with($relativePath, 'backups/')) {
@@ -556,13 +558,13 @@ function backupRemoteCurl($url, array $options = []) {
     $raw = curl_exec($ch);
     if ($raw === false) {
         $error = curl_error($ch);
-        curl_close($ch);
+        unset($ch);
         throw new RuntimeException($error);
     }
     $status = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
     $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
     $body = substr($raw, $headerSize);
-    curl_close($ch);
+    unset($ch);
     if ($status < 200 || $status >= 300) {
         $message = trim($body);
         if (strlen($message) > 240) $message = substr($message, 0, 240) . '...';
@@ -1616,6 +1618,17 @@ function backupRestoreRequiredFiles(): array {
     ];
 }
 
+/** Site media formats must survive the same backup/restore round trip. */
+function backupRestoreAllowedExtensions(): array {
+    return [
+        'php', 'json', 'css', 'js', 'html', 'htm', 'htaccess',
+        'jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'ico', 'avif',
+        'mp3', 'ogg', 'wav', 'm4a', 'aac', 'flac', 'mp4', 'webm', 'mov', 'm4v',
+        'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'rtf',
+        'woff', 'woff2', 'ttf', 'otf', 'eot', 'txt', 'xml', 'md',
+    ];
+}
+
 function backupRestoreIsLanguageEntry(string $entry): bool {
     return !str_starts_with($entry, 'js/')
         && (bool)preg_match('#^[a-z]{2}/#', $entry);
@@ -1655,7 +1668,8 @@ function backupRestorePhpEntryAllowed(string $entry): bool {
  */
 function backupRestoreEntryIgnored(string $entry): bool {
     $entry = str_replace('\\', '/', ltrim($entry, '/'));
-    return $entry === 'tests' || str_starts_with($entry, 'tests/');
+    return $entry === 'tests' || str_starts_with($entry, 'tests/')
+        || str_ends_with($entry, '.lock') || preg_match('#(^|/)\.(restore-|nibbly-json-)#', $entry);
 }
 
 /**
@@ -1720,6 +1734,12 @@ function backupCreate($tier = null, $now = null) {
     $stamp = date('Y-m-d_His', $now);
     $filename = backupSiteIdentifier() . "-backup-{$stamp}-{$tier}.zip";
     $zipPath = BACKUP_PATH . $filename;
+    // Preserve two manual backups created in the same second.
+    for ($offset = 1; file_exists($zipPath); $offset++) {
+        $stamp = date('Y-m-d_His', $now + $offset);
+        $filename = backupSiteIdentifier() . "-backup-{$stamp}-{$tier}.zip";
+        $zipPath = BACKUP_PATH . $filename;
+    }
 
     @set_time_limit(300);
 
@@ -1749,9 +1769,10 @@ function backupCreate($tier = null, $now = null) {
         }
     }
 
-    $zip->close();
+    $closed = $zip->close();
 
-    if (!is_file($zipPath)) {
+    if (!$closed || !is_file($zipPath)) {
+        if (is_file($zipPath)) @unlink($zipPath);
         return ['ok' => false, 'message' => 'ZIP file was not written to disk.'];
     }
 

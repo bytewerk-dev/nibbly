@@ -26,7 +26,7 @@
 
 $projectRoot = dirname(__DIR__);
 
-if (!file_exists($projectRoot . '/router.php')) {
+if (!file_exists($projectRoot . '/route.php')) {
     fwrite(STDERR, "Error: Run this script from the Nibbly project root.\n");
     fwrite(STDERR, "  php /path/to/nibbly/cli/backup.php --action=run\n");
     exit(1);

@@ -21,39 +21,19 @@ ensureUsersFile();
 ini_set('html_errors', '0');
 ini_set('display_errors', '0');
 
-// Secure session cookie settings
-session_set_cookie_params([
-    'lifetime' => SESSION_LIFETIME,
-    'path' => '/',
-    'httponly' => true,
-    'samesite' => 'Strict'
-]);
-session_start();
+require_once __DIR__ . '/../includes/session-helper.php';
+nibblySessionStart();
 
 header('Content-Type: application/json; charset=utf-8');
 
-// Authentication check (incl. session timeout)
 function isAuthenticated() {
-    if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-        return false;
-    }
-
-    if (isset($_SESSION['admin_login_time'])) {
-        $sessionAge = time() - $_SESSION['admin_login_time'];
-        if ($sessionAge > SESSION_LIFETIME) {
-            session_destroy();
-            return false;
-        }
-    }
-
-    $_SESSION['admin_login_time'] = time();
-    return true;
+    return nibblySessionValidate();
 }
 
 // CSRF token validation
 function validateCsrfToken() {
     $token = $_POST['csrf_token'] ?? $_GET['csrf_token'] ?? '';
-    return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
+    return is_string($token) && isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
 }
 
 // JSON response helper
@@ -338,7 +318,7 @@ function nibblyApiHttpGetJson(string $url, int $timeout = 12): array {
         $raw = curl_exec($ch);
         $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $error = curl_error($ch);
-        curl_close($ch);
+        unset($ch);
         if ($raw === false) {
             throw new RuntimeException($error !== '' ? $error : 'Request failed.');
         }
@@ -1548,7 +1528,7 @@ function fetchIconifyJson($url) {
         ]);
         $json = curl_exec($ch);
         $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        unset($ch);
         if ($json === false || $status >= 400) {
             return null;
         }
@@ -1879,6 +1859,25 @@ function buildPageList() {
 }
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
+
+// Inbox mutations share the same transaction lock as public submissions.
+if (in_array($action, ['mark-mail-read', 'update-mail-flags', 'mark-all-mails-read', 'delete-mail', 'delete-read-mails'], true)) {
+    $mailLock = nibblyJsonLock(dirname(__DIR__) . '/content/mails.json');
+    if ($mailLock === false) {
+        http_response_code(503);
+        jsonResponse(false, null, 'Could not lock inbox storage');
+    }
+    register_shutdown_function(static function () use ($mailLock): void {
+        flock($mailLock, LOCK_UN);
+        fclose($mailLock);
+    });
+    $inboxPath = dirname(__DIR__) . '/content/mails.json';
+    if (is_file($inboxPath) && !is_array(json_decode((string)file_get_contents($inboxPath), true))) {
+        http_response_code(503);
+        jsonResponse(false, null, 'Inbox storage is damaged; existing data was preserved');
+    }
+}
+
 
 switch ($action) {
 
@@ -4053,7 +4052,7 @@ switch ($action) {
 
         $content = $_POST['content'] ?? '';
         $contentData = json_decode($content, true);
-        if ($contentData === null) {
+        if (!is_array($contentData)) {
             jsonResponse(false, null, 'Invalid JSON format');
         }
 
@@ -4228,7 +4227,7 @@ switch ($action) {
 
         $eventData = $_POST['event'] ?? '';
         $event = json_decode($eventData, true);
-        if ($event === null) {
+        if (!is_array($event)) {
             jsonResponse(false, null, 'Invalid JSON format');
         }
 
@@ -4634,7 +4633,7 @@ switch ($action) {
 
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $mimeType = finfo_file($finfo, $file['tmp_name']);
-        finfo_close($finfo);
+        unset($finfo);
         if (!in_array($mimeType, $config['mimeTypes'], true)) {
             jsonResponse(false, null, 'Invalid file type');
         }
@@ -5058,7 +5057,7 @@ switch ($action) {
         $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $mimeType = finfo_file($finfo, $file['tmp_name']);
-        finfo_close($finfo);
+        unset($finfo);
 
         if (!in_array($mimeType, $allowedMimeTypes)) {
             jsonResponse(false, null, 'Only JPG, PNG, WebP and SVG allowed');
@@ -5314,7 +5313,7 @@ switch ($action) {
         $allowedMimeTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/x-m4a', 'audio/aac', 'audio/flac'];
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
         $mimeType = finfo_file($finfo, $file['tmp_name']);
-        finfo_close($finfo);
+        unset($finfo);
 
         if (!in_array($mimeType, $allowedMimeTypes)) {
             jsonResponse(false, null, 'Only MP3, WAV, OGG, M4A, AAC and FLAC allowed');
@@ -5436,7 +5435,7 @@ switch ($action) {
 
         $postJson = $_POST['post'] ?? '';
         $post = json_decode($postJson, true);
-        if ($post === null) {
+        if (!is_array($post)) {
             jsonResponse(false, null, 'Invalid JSON format');
         }
 
@@ -5477,16 +5476,17 @@ switch ($action) {
 
         // If editing an existing post with a different ID, delete the old file
         $oldId = $post['id'] ?? '';
+        if (!is_string($oldId) || ($oldId !== '' && !preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/D', $oldId))) {
+            jsonResponse(false, null, 'Invalid news ID');
+        }
         $newsDir = dirname(CONTENT_PATH) . '/news/';
         if (!is_dir($newsDir)) {
             mkdir($newsDir, 0755, true);
         }
 
-        if ($oldId && $oldId !== $postId) {
-            $oldFile = $newsDir . $oldId . '.json';
-            if (is_file($oldFile)) {
-                unlink($oldFile);
-            }
+        $filepath = $newsDir . $postId . '.json';
+        if ($oldId !== $postId && is_file($filepath)) {
+            jsonResponse(false, null, 'A news post with this date and slug already exists.');
         }
 
         // Sanitize content
@@ -5499,20 +5499,20 @@ switch ($action) {
             'author' => trim($post['author'] ?? ''),
             'excerpt' => trim($post['excerpt'] ?? ''),
             'image' => trim($post['image'] ?? ''),
-            'content' => $post['content'] ?? '',
+            'content' => sanitizeHtml((string)($post['content'] ?? '')),
             'hidden' => !empty($post['hidden']),
             'lastModified' => date('c'),
         ];
 
         $filepath = $newsDir . $postId . '.json';
-        $result = file_put_contents(
-            $filepath,
-            json_encode($sanitized, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            LOCK_EX
-        );
+        $result = nibblyJsonAtomicWrite($filepath, $sanitized);
 
         if ($result === false) {
             jsonResponse(false, null, 'Error saving post');
+        }
+
+        if ($oldId !== '' && $oldId !== $postId) {
+            @unlink($newsDir . $oldId . '.json');
         }
 
         jsonResponse(true, $sanitized, 'Post saved');
@@ -5667,7 +5667,7 @@ switch ($action) {
             jsonResponse(false, null, 'Mail not found');
         }
 
-        file_put_contents($mailsFile, json_encode($mails, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+        if (!nibblyJsonAtomicWrite($mailsFile, $mails)) jsonResponse(false, null, 'Could not save inbox');
         jsonResponse(true, null, 'Mail marked as read');
         break;
 
@@ -5716,7 +5716,7 @@ switch ($action) {
             jsonResponse(false, null, 'Mail not found');
         }
 
-        file_put_contents($mailsFile, json_encode($mails, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+        if (!nibblyJsonAtomicWrite($mailsFile, $mails)) jsonResponse(false, null, 'Could not save inbox');
         jsonResponse(true, ['mail_id' => $mailId, 'updates' => $updates], 'Mail flags updated');
         break;
 
@@ -5737,7 +5737,7 @@ switch ($action) {
         }
         unset($mail);
 
-        file_put_contents($mailsFile, json_encode($mails, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+        if (!nibblyJsonAtomicWrite($mailsFile, $mails)) jsonResponse(false, null, 'Could not save inbox');
         jsonResponse(true, null, 'All mails marked as read');
         break;
 
@@ -5769,7 +5769,7 @@ switch ($action) {
 
         $mails = array_values($mails);
 
-        file_put_contents($mailsFile, json_encode($mails, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+        if (!nibblyJsonAtomicWrite($mailsFile, $mails)) jsonResponse(false, null, 'Could not save inbox');
         jsonResponse(true, null, 'Mail deleted');
         break;
 
@@ -5790,7 +5790,7 @@ switch ($action) {
         }));
         $deletedCount = $originalCount - count($mails);
 
-        file_put_contents($mailsFile, json_encode($mails, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+        if (!nibblyJsonAtomicWrite($mailsFile, $mails)) jsonResponse(false, null, 'Could not save inbox');
         jsonResponse(true, ['deleted' => $deletedCount], 'Read mails deleted');
         break;
 
@@ -5856,6 +5856,10 @@ switch ($action) {
         if (!updateUserPassword($userId, $newHash)) {
             jsonResponse(false, null, 'Could not update password');
         }
+
+        // Keep this session valid; other sessions must authenticate again.
+        $_SESSION['admin_password_fingerprint'] = hash('sha256', $newHash);
+        session_regenerate_id(true);
 
         // Clear password warning
         unset($_SESSION['password_warning']);
@@ -6612,13 +6616,7 @@ switch ($action) {
         }
 
         // File extension whitelist
-        $allowedExtensions = [
-            'php', 'json', 'css', 'js', 'html', 'htm', 'htaccess',
-            'jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'ico', 'avif',
-            'mp3', 'ogg', 'wav', 'm4a',
-            'woff', 'woff2', 'ttf', 'otf', 'eot',
-            'txt', 'xml', 'md',
-        ];
+        $allowedExtensions = backupRestoreAllowedExtensions();
 
         $rejectedPhpFiles = [];
         foreach ($entries as $entry) {
@@ -6648,100 +6646,32 @@ switch ($action) {
         }
 
         $siteRoot = realpath(__DIR__ . '/..');
-
-        // For full restore: create automatic backup first
-        if ($mode === 'full') {
-            $backupDir = BACKUP_PATH;
-            if (!is_dir($backupDir)) {
-                @mkdir($backupDir, 0755, true);
-            }
-
-            $preRestoreZip = new ZipArchive();
-            $preRestorePath = $backupDir . 'pre-restore-' . date('Y-m-d_His') . '.zip';
-            if ($preRestoreZip->open($preRestorePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true) {
-                $iterator = new RecursiveIteratorIterator(
-                    new RecursiveDirectoryIterator($siteRoot, RecursiveDirectoryIterator::SKIP_DOTS),
-                    RecursiveIteratorIterator::SELF_FIRST
-                );
-                foreach ($iterator as $file) {
-                    $filePath = $file->getRealPath();
-                    if ($filePath === false) continue;
-                    if ($filePath === realpath($preRestorePath)) continue;
-                    $relativePath = str_replace(DIRECTORY_SEPARATOR, '/', substr($filePath, strlen($siteRoot) + 1));
-                    if (backupShouldSkipPath($relativePath)) continue;
-
-                    if ($file->isDir()) {
-                        $preRestoreZip->addEmptyDir($relativePath);
-                    } else {
-                        $preRestoreZip->addFile($filePath, $relativePath);
-                    }
-                }
-                $preRestoreZip->close();
-            }
-        }
-
-        // Determine which entries to extract based on mode
-        set_time_limit(300);
-        $extracted = 0;
+        require_once __DIR__ . '/../includes/restore-helper.php';
+        $selected = [];
         $skipped = 0;
-
-        // For content-only: clear existing content dirs first so deleted pages are removed
-        if ($mode === 'content') {
-            $clearDirs = [
-                $siteRoot . '/content/pages',
-                $siteRoot . '/content/news',
-            ];
-            foreach ($clearDirs as $clearDir) {
-                if (is_dir($clearDir)) {
-                    $files = glob($clearDir . '/*');
-                    foreach ($files as $f) {
-                        if (is_file($f)) @unlink($f);
-                    }
-                }
-            }
-        }
-
-        // Content-only: paths that should be extracted
-        // Full: everything (with extension whitelist)
-        for ($i = 0; $i < $zip->numFiles; $i++) {
-            $entry = $zip->getNameIndex($i);
-
-            // Skip directories (they'll be created as needed)
+        foreach ($entries as $entry) {
             if (str_ends_with($entry, '/')) continue;
-
-            if (backupRestoreEntryIgnored($entry)) {
-                $skipped++;
-                continue;
-            }
-
             $ext = strtolower(pathinfo($entry, PATHINFO_EXTENSION));
-
-            // Extension whitelist
-            if ($ext !== '' && !in_array($ext, $allowedExtensions) && basename($entry) !== '.htaccess') {
+            if (backupRestoreEntryIgnored($entry)
+                || ($ext !== '' && !in_array($ext, $allowedExtensions, true) && basename($entry) !== '.htaccess')
+                || ($mode === 'content' && !backupRestoreContentEntryAllowed($entry))) {
                 $skipped++;
                 continue;
             }
-
-            // In content-only mode, filter to user-data paths
-            if ($mode === 'content' && !backupRestoreContentEntryAllowed($entry)) {
-                $skipped++;
-                continue;
-            }
-
-            // Extract this file
-            $targetPath = $siteRoot . '/' . $entry;
-            $targetDir = dirname($targetPath);
-            if (!is_dir($targetDir)) {
-                @mkdir($targetDir, 0755, true);
-            }
-
-            $content = $zip->getFromIndex($i);
-            if ($content !== false) {
-                file_put_contents($targetPath, $content);
-                $extracted++;
-            }
+            $selected[] = $entry;
         }
-
+        try {
+            $extracted = backupWithLock(function () use ($zip, $selected, $siteRoot, $mode): int {
+                if ($mode === 'full') {
+                    $safetyBackup = backupCreate('manual');
+                    if (empty($safetyBackup['ok'])) throw new RuntimeException('Pre-restore backup failed: ' . ($safetyBackup['message'] ?? 'unknown error'));
+                }
+                return nibblyRestoreFiles($zip, $selected, $siteRoot, $mode === 'content');
+            });
+        } catch (Throwable $error) {
+            $zip->close();
+            jsonResponse(false, null, $error->getMessage());
+        }
         $zip->close();
 
         jsonResponse(true, [
@@ -7520,7 +7450,11 @@ switch ($action) {
         }
 
         $createdBy = $_SESSION['admin_username'] ?? 'admin';
-        $newUser = createUser($newUsername, $newEmail, $newPw, $newRole, $createdBy);
+        try {
+            $newUser = createUser($newUsername, $newEmail, $newPw, $newRole, $createdBy);
+        } catch (RuntimeException $error) {
+            jsonResponse(false, null, $error->getMessage());
+        }
         jsonResponse(true, [
             'id' => $newUser['id'],
             'username' => $newUser['username'],
@@ -7578,7 +7512,7 @@ switch ($action) {
         }
 
         if (!empty($fields)) {
-            updateUser($editUserId, $fields);
+            if (!updateUser($editUserId, $fields)) jsonResponse(false, null, 'Could not update user');
 
             // Update session if editing self
             if ($editUserId === ($_SESSION['admin_user_id'] ?? '')) {
@@ -7612,7 +7546,7 @@ switch ($action) {
             jsonResponse(false, null, 'Cannot delete the last admin');
         }
 
-        deleteUser($delUserId);
+        if (!deleteUser($delUserId)) jsonResponse(false, null, 'Could not delete user');
         jsonResponse(true, null, 'User deleted');
         break;
 
@@ -7644,7 +7578,7 @@ switch ($action) {
         }
 
         $resetHash = password_hash($resetNewPw, PASSWORD_DEFAULT);
-        updateUserPassword($resetUserId, $resetHash);
+        if (!updateUserPassword($resetUserId, $resetHash)) jsonResponse(false, null, 'Could not save password');
         jsonResponse(true, null, 'Password reset successfully');
         break;
 

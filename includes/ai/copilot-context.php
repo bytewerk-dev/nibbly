@@ -1408,7 +1408,7 @@ function nibblyCopilotDownloadExternalReferenceImage(string $url): string {
         $headerSize = (int)curl_getinfo($ch, CURLINFO_HEADER_SIZE);
         $contentType = (string)curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
         $error = curl_error($ch);
-        curl_close($ch);
+        unset($ch);
         if ($raw === false || $raw === '') {
             throw new RuntimeException($error !== '' ? 'Could not download reference image: ' . $error : 'Could not download reference image.');
         }

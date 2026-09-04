@@ -215,22 +215,22 @@ body.edit-mode-active .editable-field {
 }
 
 body.has-admin-bar {
-    padding-top: 40px;
+    padding-top: var(--nibbly-admin-bar-height, 40px);
 }
 
 body.has-admin-bar .site-header {
-    top: 40px;
+    top: var(--nibbly-admin-bar-height, 40px);
 }
 
 body.has-admin-bar .mobile-nav-overlay {
-    top: 40px;
+    top: var(--nibbly-admin-bar-height, 40px);
 }
 
 /* Site templates set .main-content padding-top based on --header-height.
-   When the admin bar is present, it pushes .site-header down by 40px,
+   When the admin bar is present, it pushes .site-header down by its height,
    so the scroll-start of the content area needs the same extra offset. */
 body.has-admin-bar .main-content {
-    padding-top: calc(var(--header-height, 80px) + var(--spacing-lg, 4rem) + 40px);
+    padding-top: calc(var(--header-height, 80px) + var(--spacing-lg, 4rem) + var(--nibbly-admin-bar-height, 40px));
 }
 
 /* ============================================================
@@ -1343,10 +1343,13 @@ textarea.editor-html {
 
 .editor-toast {
     position: fixed;
-    top: 56px;
+    top: calc(var(--nibbly-admin-bar-height, 40px) + 16px);
     right: 20px;
+    max-width: calc(100vw - 40px);
+    box-sizing: border-box;
     padding: 12px 20px;
     border-radius: var(--editor-btn-radius, 6px);
+    background: var(--editor-bar-bg, #23282d);
     color: white;
     font-size: 14px;
     z-index: 30000;

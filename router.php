@@ -6,7 +6,11 @@
  * Usage: php -S localhost:3000 router.php
  */
 
-$uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$uri = rawurldecode((string)parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH));
+if (preg_match('/[\x00-\x1f\x7f\\\\]/', $uri) || preg_match('#(^|/)\.\.?(/|$)#', $uri)) {
+    http_response_code(403);
+    return true;
+}
 $root = __DIR__;
 $filePath = $root . $uri;
 
@@ -38,7 +42,7 @@ function _routerServeSeekableMedia(string $filePath): bool {
     $range = trim((string)($_SERVER['HTTP_RANGE'] ?? ''));
 
     if ($range !== '') {
-        if (!preg_match('/^bytes=(\d*)-(\d*)$/', $range, $matches)) {
+        if (!preg_match('/^bytes=(\d*)-(\d*)$/', $range, $matches) || ($matches[1] === '' && $matches[2] === '')) {
             header('Content-Range: bytes */' . $size);
             http_response_code(416);
             return true;
@@ -87,12 +91,12 @@ function _routerServeSeekableMedia(string $filePath): bool {
 
 
 // Block access to sensitive paths BEFORE serving any files
-if (preg_match('#^/(content|backups)/|-trash/#', $uri)) {
+if (preg_match('#^/(content|backups|tests|cli)(/|$)|-trash(/|$)|(^|/)\.(?!well-known(?:/|$))#i', $uri)) {
     http_response_code(403);
     echo '403 Forbidden';
     return true;
 }
-if (preg_match('#/(config|smtp-config)\.php$#', $uri)) {
+if (preg_match('#/(config|smtp-config)\.php$#i', $uri)) {
     http_response_code(403);
     echo '403 Forbidden';
     return true;
@@ -143,87 +147,6 @@ if (is_file($phpFile)) {
     return true;
 }
 
-// Helper: load primary language from config
-function _routerGetPrimaryLang() {
-    global $root;
-    if (defined('SITE_LANG_DEFAULT')) return SITE_LANG_DEFAULT;
-    $configPath = $root . '/admin/config.php';
-    if (is_file($configPath)) {
-        require_once $configPath;
-        if (defined('SITE_LANG_DEFAULT')) return SITE_LANG_DEFAULT;
-    }
-    return 'en';
-}
-
-$cleanUri = trim($uri, '/');
-
-// News post URL: /en/news/slug or /news/slug
-if (preg_match('#^([a-z]{2})/news/([a-z0-9-]+)$#', $cleanUri, $m)) {
-    $currentLang = $m[1];
-    $_GET['slug'] = $m[2];
-    $basePath = '../../';
-    include $root . '/includes/news-post.php';
-    return true;
-}
-if (preg_match('#^news/([a-z0-9-]+)$#', $cleanUri, $m)) {
-    $primaryLang = _routerGetPrimaryLang();
-    $currentLang = $primaryLang;
-    $_GET['slug'] = $m[1];
-    $basePath = '../';
-    include $root . '/includes/news-post.php';
-    return true;
-}
-
-// Language-prefixed URL: /en/path/to/page or /de/path/to/page
-if (preg_match('#^([a-z]{2})/(' . nibblyPagePathPattern() . ')$#', $cleanUri, $m)) {
-    $lang = $m[1];
-    $slug = $m[2];
-    $contentPage = nibblyPageContentKey($lang, $slug);
-
-    // 1. Physical PHP file has priority
-    $langFile = nibblyPageTemplatePath($root, $lang, $slug);
-    if (is_file($langFile)) {
-        $basePath = nibblyPageBasePath($slug, true);
-        nibblyAccessEnforceCurrentTemplatePage($contentPage);
-        include $langFile;
-        return true;
-    }
-
-    // 2. JSON content file → front controller
-    $jsonFile = nibblyPageJsonPath($root, $lang, $slug);
-    if (is_file($jsonFile)) {
-        $basePath = nibblyPageBasePath($slug, true);
-        include $root . '/includes/page.php';
-        return true;
-    }
-}
-
-// Root-level URL: /path/to/page → primary language
-if (preg_match('#^' . nibblyPagePathPattern() . '$#', $cleanUri)) {
-    $primaryLang = _routerGetPrimaryLang();
-    $lang = $primaryLang;
-    $slug = $cleanUri;
-    $contentPage = nibblyPageContentKey($lang, $slug);
-
-    // 1. Physical PHP file has priority
-    $langFile = nibblyPageTemplatePath($root, $lang, $slug);
-    if (is_file($langFile)) {
-        $basePath = nibblyPageBasePath($slug, false);
-        nibblyAccessEnforceCurrentTemplatePage($contentPage);
-        include $langFile;
-        return true;
-    }
-
-    // 2. JSON content file → front controller
-    $jsonFile = nibblyPageJsonPath($root, $lang, $slug);
-    if (is_file($jsonFile)) {
-        $basePath = nibblyPageBasePath($slug, false);
-        include $root . '/includes/page.php';
-        return true;
-    }
-}
-
-// 404 fallback
-http_response_code(404);
-include $root . '/404.php';
+// Share dynamic routing with Apache so language and page behavior stays identical.
+require $root . '/route.php';
 return true;

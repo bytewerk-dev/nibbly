@@ -16,7 +16,7 @@
 // Load config
 $configPath = __DIR__ . '/admin/config.php';
 if (!file_exists($configPath)) {
-    header('Location: admin/setup.php');
+    header('Location: /admin/setup.php');
     exit;
 }
 require_once $configPath;
@@ -44,6 +44,23 @@ if ($cleanUri === 'robots.txt') {
     nibblySeoServeRobots();
 }
 
+// A language homepage can also be backed only by JSON.
+if (preg_match('/^[a-z]{2}$/D', $cleanUri) && isset($SITE_LANGUAGES[$cleanUri])) {
+    $lang = $cleanUri;
+    $slug = 'home';
+    $basePath = str_ends_with((string)$uri, '/') ? '../' : '';
+    $langHome = __DIR__ . '/' . $lang . '/index.php';
+    if (is_file($langHome)) {
+        nibblyAccessEnforceCurrentTemplatePage($lang . '_home');
+        include $langHome;
+        exit;
+    }
+    if (is_file(nibblyPageJsonPath(__DIR__, $lang, $slug))) {
+        include __DIR__ . '/includes/page.php';
+        exit;
+    }
+}
+
 // Root URL → homepage
 if ($cleanUri === '') {
     $basePath = '';
@@ -69,14 +86,14 @@ if ($cleanUri === '') {
 if (preg_match('#^([a-z]{2})/news/([a-z0-9-]+)$#', $cleanUri, $m)) {
     $currentLang = $m[1];
     $_GET['slug'] = $m[2];
-    $basePath = '../../';
+    $basePath = nibblyPageBasePath('news/' . $m[2], true);
     include __DIR__ . '/includes/news-post.php';
     exit;
 }
 if (preg_match('#^news/([a-z0-9-]+)$#', $cleanUri, $m)) {
     $currentLang = $primaryLang;
     $_GET['slug'] = $m[1];
-    $basePath = '../';
+    $basePath = nibblyPageBasePath('news/' . $m[1], false);
     include __DIR__ . '/includes/news-post.php';
     exit;
 }

@@ -3,9 +3,11 @@
  * Central frontend access controls for maintenance mode and private pages.
  */
 
+require_once __DIR__ . '/session-helper.php';
+
 function nibblyAccessStartSession(): void {
     if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
-        session_start();
+        nibblySessionStart();
     }
 }
 
@@ -21,7 +23,7 @@ function nibblyAccessStartExistingSession(): bool {
     if (!nibblyAccessHasSessionCookie() || headers_sent()) {
         return false;
     }
-    session_start();
+    nibblySessionStart();
     return session_status() === PHP_SESSION_ACTIVE;
 }
 
@@ -42,16 +44,7 @@ function nibblyAccessIsLoggedIn(): bool {
     if (!nibblyAccessStartExistingSession()) {
         return false;
     }
-    if (empty($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
-        return false;
-    }
-    if (defined('SESSION_LIFETIME') && !empty($_SESSION['admin_login_time'])) {
-        if (time() - (int)$_SESSION['admin_login_time'] > SESSION_LIFETIME) {
-            return false;
-        }
-    }
-    $_SESSION['admin_login_time'] = time();
-    return true;
+    return nibblySessionValidate();
 }
 
 function nibblyAccessCurrentPath(): string {
@@ -333,17 +326,18 @@ function nibblyAccessEnforcePage(string $contentPage, array $pageData): void {
 
     nibblyAccessStartSession();
     $sessionKey = 'nibbly_private_page_' . hash('sha256', $contentPage);
-    if (!empty($_SESSION[$sessionKey])) {
+    $visibility = $pageData['visibility'];
+    $passwordHash = (string)($visibility['passwordHash'] ?? '');
+    $grant = (string)($_SESSION[$sessionKey] ?? '');
+    if ($passwordHash !== '' && hash_equals(hash('sha256', $passwordHash), $grant)) {
         return;
     }
-
-    $visibility = $pageData['visibility'];
     $error = '';
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_POST['nibbly_page_password'])) {
         $password = (string)$_POST['nibbly_page_password'];
         $hash = (string)($visibility['passwordHash'] ?? '');
         if ($hash !== '' && password_verify($password, $hash)) {
-            $_SESSION[$sessionKey] = true;
+            $_SESSION[$sessionKey] = hash('sha256', $hash);
             header('Location: ' . ($_SERVER['REQUEST_URI'] ?? '/'));
             exit;
         }
