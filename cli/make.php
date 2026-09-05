@@ -11,7 +11,8 @@
 
 // Must run from project root
 $projectRoot = dirname(__DIR__);
-if (!file_exists($projectRoot . '/router.php')) {
+require_once $projectRoot . '/includes/page-path.php';
+if (!file_exists($projectRoot . '/route.php')) {
     fwrite(STDERR, "Error: Run this script from the Nibbly project root.\n");
     fwrite(STDERR, "  cd /path/to/nibbly && php cli/make.php --slug=about\n");
     exit(1);
@@ -39,7 +40,7 @@ Usage:
   php cli/make.php --slug=about --lang=en [options]
 
 Options:
-  --slug=NAME         Page slug (required)
+  --slug=PATH         Page path (required; e.g. products/vitamin-d)
   --lang=CODE         Language code (default: en)
   --type=TYPE         Page type: standard or custom (default: standard)
   --title=TEXT        Page title (default: derived from slug)
@@ -93,11 +94,14 @@ if (isset($opts['breadcrumb'])) {
     }
 }
 
-// Sanitize slug (same as convert.php)
-$slug = preg_replace('/[^a-z0-9-]/', '-', strtolower($slug));
-$slug = trim(preg_replace('/-+/', '-', $slug), '-');
+// Sanitize every path segment while preserving deliberate nesting.
+$slugParts = array_map(static function (string $part): string {
+    $part = preg_replace('/[^a-z0-9-]/', '-', strtolower(trim($part)));
+    return trim((string)preg_replace('/-+/', '-', (string)$part), '-');
+}, explode('/', trim((string)$slug, '/')));
+$slug = implode('/', array_filter($slugParts, static fn(string $part): bool => $part !== ''));
 
-if ($slug === '') {
+if (!nibblyPageIsValidPath($slug)) {
     fwrite(STDERR, "Error: --slug is required and must contain alphanumeric characters.\n");
     exit(1);
 }
@@ -112,14 +116,15 @@ if (!in_array($type, ['standard', 'custom'])) {
     exit(1);
 }
 
-$title = $opts['title'] ?? ucfirst(str_replace('-', ' ', $slug));
+$titleSlug = basename(str_replace('/', DIRECTORY_SEPARATOR, $slug));
+$title = $opts['title'] ?? ucfirst(str_replace('-', ' ', $titleSlug));
 $description = $opts['description'] ?? '';
 
 // ── Path computation ──────────────────────────────────────────────────
 
-$pageKey = $lang . '_' . $slug;
+$pageKey = nibblyPageContentKey($lang, $slug);
 $jsonPath = $projectRoot . '/content/pages/' . $pageKey . '.json';
-$templatePath = $projectRoot . '/' . $lang . '/' . $slug . '.php';
+$templatePath = nibblyPageTemplatePath($projectRoot, $lang, $slug);
 
 // Check for existing files (without --force)
 if (!$dryRun && !$force) {
@@ -137,6 +142,7 @@ if (!$dryRun && !$force) {
 
 $json = [
     'page' => $pageKey,
+    'path' => $slug,
     'lang' => $lang,
     'title' => $title,
     'description' => $description,
@@ -185,6 +191,7 @@ if ($type === 'custom') {
     $safeTitle = addcslashes($title, "'");
     $safeDesc = addcslashes($description, "'");
 
+    $includePrefix = str_repeat('../', substr_count($slug, '/') + 1);
     $templateContent = <<<PHP
 <?php
 \$pageTitle = '$safeTitle';
@@ -192,10 +199,10 @@ if ($type === 'custom') {
 \$currentLang = '$lang';
 \$currentPage = '$slug';
 \$contentPage = '$pageKey';
-\$basePath = '../';
+\$basePath = \$basePath ?? '$includePrefix';
 
-include '../includes/header.php';
-include '../includes/content-loader.php';
+include '{$includePrefix}includes/header.php';
+include '{$includePrefix}includes/content-loader.php';
 
 \$_p = \$contentPage;
 ?>
@@ -218,7 +225,7 @@ include '../includes/content-loader.php';
         </div>
     </main>
 
-<?php include '../includes/footer.php'; ?>
+<?php include '{$includePrefix}includes/footer.php'; ?>
 
 PHP;
 }

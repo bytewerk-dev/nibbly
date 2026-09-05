@@ -8,6 +8,8 @@
  * - honeypot and conservative content heuristics
  */
 
+require_once __DIR__ . '/json-store.php';
+
 const NIBBLY_FORM_TOKEN_FILE = __DIR__ . '/../content/form-tokens.json';
 const NIBBLY_FORM_RATE_FILE = __DIR__ . '/../content/form-rate-limit.json';
 const NIBBLY_FORM_TOKEN_MIN_AGE = 4;
@@ -49,29 +51,16 @@ function nibblyCreateFormToken(string $formId = 'contact'): string
 {
     $token = bin2hex(random_bytes(32));
     $now = time();
-    $tokens = nibblyFormReadJsonFile(NIBBLY_FORM_TOKEN_FILE);
-    $cleaned = [];
-
-    foreach ($tokens as $hash => $entry) {
-        if (!is_array($entry)) {
-            continue;
-        }
-
-        $created = (int) ($entry['created'] ?? 0);
-        if ($created > 0 && ($now - $created) <= NIBBLY_FORM_TOKEN_MAX_AGE) {
-            $cleaned[$hash] = $entry;
-        }
-    }
-
-    $cleaned[nibblyFormTokenHash($token)] = [
-        'form' => $formId,
-        'created' => $now,
-    ];
-
-    nibblyFormWriteJsonFile(NIBBLY_FORM_TOKEN_FILE, $cleaned);
-
+    $saved = nibblyJsonUpdate(NIBBLY_FORM_TOKEN_FILE, function (array &$tokens) use ($token, $formId, $now): void {
+        $tokens = array_filter($tokens, static fn($entry) => is_array($entry)
+            && (int)($entry['created'] ?? 0) > 0
+            && $now - (int)$entry['created'] <= NIBBLY_FORM_TOKEN_MAX_AGE);
+        $tokens[nibblyFormTokenHash($token)] = ['form' => $formId, 'created' => $now];
+    });
+    if (!$saved) throw new RuntimeException('Could not create form token.');
     return $token;
 }
+
 
 function nibblyFormProtectionFields(string $formId = 'contact'): string
 {
@@ -134,34 +123,22 @@ function nibblyLazyFormPlaceholder(string $formId, array $options = []): string
 
 function nibblyValidateFormToken(?string $token, string $formId = 'contact'): array
 {
-    $token = is_string($token) ? trim($token) : '';
-    if ($token === '') {
-        return ['valid' => false, 'reason' => 'missing'];
-    }
-
-    $now = time();
+    $token = trim((string)$token);
+    if ($token === '') return ['valid' => false, 'reason' => 'missing'];
     $hash = nibblyFormTokenHash($token);
-    $tokens = nibblyFormReadJsonFile(NIBBLY_FORM_TOKEN_FILE);
-    $entry = $tokens[$hash] ?? null;
-
-    if (!is_array($entry) || (($entry['form'] ?? '') !== $formId)) {
-        return ['valid' => false, 'reason' => 'invalid'];
-    }
-
-    unset($tokens[$hash]);
-    nibblyFormWriteJsonFile(NIBBLY_FORM_TOKEN_FILE, $tokens);
-
-    $age = $now - (int) ($entry['created'] ?? 0);
-    if ($age < NIBBLY_FORM_TOKEN_MIN_AGE) {
-        return ['valid' => false, 'reason' => 'too_fast'];
-    }
-
-    if ($age > NIBBLY_FORM_TOKEN_MAX_AGE) {
-        return ['valid' => false, 'reason' => 'expired'];
-    }
-
-    return ['valid' => true, 'reason' => 'ok'];
+    $result = ['valid' => false, 'reason' => 'invalid'];
+    $saved = nibblyJsonUpdate(NIBBLY_FORM_TOKEN_FILE, function (array &$tokens) use ($hash, $formId, &$result): bool {
+        $entry = $tokens[$hash] ?? null;
+        if (!is_array($entry) || ($entry['form'] ?? '') !== $formId) return false;
+        unset($tokens[$hash]);
+        $age = time() - (int)($entry['created'] ?? 0);
+        $reason = $age < NIBBLY_FORM_TOKEN_MIN_AGE ? 'too_fast' : ($age > NIBBLY_FORM_TOKEN_MAX_AGE ? 'expired' : 'ok');
+        $result = ['valid' => $reason === 'ok', 'reason' => $reason];
+        return true;
+    });
+    return !$saved && $result['valid'] ? ['valid' => false, 'reason' => 'storage'] : $result;
 }
+
 
 function nibblyFormClientKey(): string
 {
@@ -172,59 +149,62 @@ function nibblyFormClientKey(): string
     return hash('sha256', $ip . '|' . $userAgent . '|' . $salt);
 }
 
-function nibblyFormRateState(string $clientKey): array
+function nibblyFormPruneRate(array &$rate, string $clientKey): void
 {
     $now = time();
-    $rate = nibblyFormReadJsonFile(NIBBLY_FORM_RATE_FILE);
-    $cleaned = [];
-
     foreach ($rate as $key => $entry) {
-        if (!is_array($entry)) {
-            continue;
+        if (!is_array($entry)) { unset($rate[$key]); continue; }
+        foreach (['submissions', 'failures', 'pending'] as $kind) {
+            $rate[$key][$kind] = array_values(array_filter($entry[$kind] ?? [],
+                static fn($timestamp) => $now - (int)$timestamp <= NIBBLY_FORM_RATE_WINDOW));
         }
-
-        $submissions = array_values(array_filter(
-            $entry['submissions'] ?? [],
-            fn ($timestamp) => ($now - (int) $timestamp) <= NIBBLY_FORM_RATE_WINDOW
-        ));
-        $failures = array_values(array_filter(
-            $entry['failures'] ?? [],
-            fn ($timestamp) => ($now - (int) $timestamp) <= NIBBLY_FORM_RATE_WINDOW
-        ));
-
-        if ($submissions || $failures || $key === $clientKey) {
-            $cleaned[$key] = [
-                'submissions' => $submissions,
-                'failures' => $failures,
-            ];
-        }
+        if (!$rate[$key]['submissions'] && !$rate[$key]['failures'] && !$rate[$key]['pending'] && $key !== $clientKey) unset($rate[$key]);
     }
-
-    if (!isset($cleaned[$clientKey])) {
-        $cleaned[$clientKey] = ['submissions' => [], 'failures' => []];
-    }
-
-    nibblyFormWriteJsonFile(NIBBLY_FORM_RATE_FILE, $cleaned);
-
-    return $cleaned[$clientKey];
+    $rate[$clientKey] = $rate[$clientKey] ?? ['submissions' => [], 'failures' => [], 'pending' => []];
 }
+
+function nibblyFormRateState(string $clientKey): array
+{
+    $state = ['submissions' => [], 'failures' => []];
+    $saved = nibblyJsonUpdate(NIBBLY_FORM_RATE_FILE, function (array &$rate) use ($clientKey, &$state): void {
+        nibblyFormPruneRate($rate, $clientKey);
+        $state = $rate[$clientKey];
+    });
+    if (!$saved) return ['submissions' => array_fill(0, NIBBLY_FORM_RATE_MAX_SUBMISSIONS, time()), 'failures' => []];
+    return $state;
+}
+
 
 function nibblyFormIsRateLimited(string $clientKey): bool
 {
     $state = nibblyFormRateState($clientKey);
 
-    return count($state['submissions'] ?? []) >= NIBBLY_FORM_RATE_MAX_SUBMISSIONS
+    return count($state['submissions'] ?? []) + count($state['pending'] ?? []) >= NIBBLY_FORM_RATE_MAX_SUBMISSIONS
         || count($state['failures'] ?? []) >= NIBBLY_FORM_RATE_MAX_FAILURES;
+}
+
+/** Reserve a slot before processing so parallel submissions cannot evade limits. */
+function nibblyFormReserveRequest(string $clientKey): bool
+{
+    return nibblyJsonUpdate(NIBBLY_FORM_RATE_FILE, function (array &$rate) use ($clientKey): bool {
+        nibblyFormPruneRate($rate, $clientKey);
+        $state = &$rate[$clientKey];
+        if (count($state['submissions']) + count($state['pending']) >= NIBBLY_FORM_RATE_MAX_SUBMISSIONS
+            || count($state['failures']) >= NIBBLY_FORM_RATE_MAX_FAILURES) return false;
+        $state['pending'][] = time();
+        return true;
+    });
 }
 
 function nibblyFormRecordAttempt(string $clientKey, bool $success): void
 {
-    $state = nibblyFormRateState($clientKey);
-    $rate = nibblyFormReadJsonFile(NIBBLY_FORM_RATE_FILE);
-    $state[$success ? 'submissions' : 'failures'][] = time();
-    $rate[$clientKey] = $state;
-    nibblyFormWriteJsonFile(NIBBLY_FORM_RATE_FILE, $rate);
+    nibblyJsonUpdate(NIBBLY_FORM_RATE_FILE, function (array &$rate) use ($clientKey, $success): void {
+        nibblyFormPruneRate($rate, $clientKey);
+        array_shift($rate[$clientKey]['pending']);
+        $rate[$clientKey][$success ? 'submissions' : 'failures'][] = time();
+    });
 }
+
 
 function nibblyFormLooksLikeSpam(array $fields): bool
 {

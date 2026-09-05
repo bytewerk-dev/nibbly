@@ -1,0 +1,8 @@
+.nibbly-conflict { box-sizing: border-box; width: min(64rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); overflow: auto; padding: 1.5rem; border: 1px solid var(--nb-border, #ccc); border-radius: 12px; background: var(--nb-bg, #fff); color: var(--nb-text, #222); font: 16px/1.5 system-ui, sans-serif; }
+.nibbly-conflict::backdrop { background: #0009; }
+.nibbly-conflict h2 { font-size: 1.3rem; margin: 0; }
+.nibbly-conflict__columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 1rem; }
+.nibbly-conflict label { display: grid; gap: .5rem; min-width: 0; }
+.nibbly-conflict textarea { box-sizing: border-box; width: 100%; min-height: 14rem; padding: .75rem; font: 13px/1.5 monospace; color: inherit; background: inherit; border: 1px solid var(--nb-border, #ccc); }
+.nibbly-conflict__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .75rem; margin-top: 1rem; }
+.nibbly-conflict button { font: inherit; padding: .5rem 1rem; cursor: pointer; border: 1px solid var(--nb-border, #ccc); border-radius: 6px; color: inherit; background: inherit; }

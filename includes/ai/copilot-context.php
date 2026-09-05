@@ -1,4 +1,5 @@
 <?php
+require_once dirname(__DIR__) . '/page-path.php';
 /**
  * Safe context builder for the frontend AI Assistant.
  *
@@ -310,7 +311,7 @@ function nibblyCopilotPageContext(?string $contentPage): array {
         return $context;
     }
 
-    if ($contentPage === '' || !preg_match('/^[a-z]{2}_[a-z0-9]+(?:-[a-z0-9]+)*$/', $contentPage)) {
+    if ($contentPage === '' || !nibblyPageIsValidContentKey($contentPage)) {
         return $context;
     }
 
@@ -320,11 +321,11 @@ function nibblyCopilotPageContext(?string $contentPage): array {
         return $context;
     }
 
-    $parts = explode('_', $contentPage, 2);
+    $page = nibblyPageParseContentKey($contentPage);
     $context['exists'] = true;
     $context['type'] = isset($data['sections']) && is_array($data['sections']) ? 'standard-page' : 'custom-page';
-    $context['lang'] = (string)($data['lang'] ?? $parts[0] ?? '');
-    $context['slug'] = (string)($parts[1] ?? '');
+    $context['lang'] = (string)($data['lang'] ?? $page['lang'] ?? '');
+    $context['slug'] = (string)($data['path'] ?? $page['path'] ?? '');
     $context['title'] = nibblyCopilotShortText($data['title'] ?? $context['slug'], 160);
     $context['description'] = nibblyCopilotShortText($data['description'] ?? '', 240);
 
@@ -508,7 +509,7 @@ function nibblyCopilotLoadPageData(string $contentPage): array {
 }
 
 function nibblyCopilotContentPath(string $contentPage): string {
-    if (preg_match('/^[a-z]{2}_[a-z0-9]+(?:-[a-z0-9]+)*$/', $contentPage)) {
+    if (nibblyPageIsValidContentKey($contentPage)) {
         return nibblyCopilotContentRoot() . '/pages/' . $contentPage . '.json';
     }
     if (preg_match('/^news:([a-z0-9]+(?:-[a-z0-9]+)*)$/', $contentPage, $match)) {
@@ -929,13 +930,14 @@ function nibblyCopilotTranslationCounterpart(string $contentPage, string $target
     if (!preg_match('/^[a-z]{2}$/', $targetLang)) {
         return '';
     }
-    if (!preg_match('/^([a-z]{2})_([a-z0-9]+(?:-[a-z0-9]+)*)$/', $contentPage, $match)) {
+    $page = nibblyPageParseContentKey($contentPage);
+    if ($page === null) {
         return '';
     }
-    if ($match[1] === $targetLang) {
+    if ($page['lang'] === $targetLang) {
         return '';
     }
-    return $targetLang . '_' . $match[2];
+    return nibblyPageContentKey($targetLang, $page['path']);
 }
 
 /**
@@ -1406,7 +1408,7 @@ function nibblyCopilotDownloadExternalReferenceImage(string $url): string {
         $headerSize = (int)curl_getinfo($ch, CURLINFO_HEADER_SIZE);
         $contentType = (string)curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
         $error = curl_error($ch);
-        curl_close($ch);
+        unset($ch);
         if ($raw === false || $raw === '') {
             throw new RuntimeException($error !== '' ? 'Could not download reference image: ' . $error : 'Could not download reference image.');
         }

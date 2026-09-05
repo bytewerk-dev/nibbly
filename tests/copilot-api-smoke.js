@@ -1,8 +1,9 @@
+const { apiSource, dashboardSource } = require('./source-helpers');
 const { readFileSync } = require('fs');
 const { dirname, resolve } = require('path');
 
 const root = dirname(__dirname);
-const source = readFileSync(resolve(root, 'admin/api.php'), 'utf8');
+const source = apiSource();
 const helper = readFileSync(resolve(root, 'includes/ai/ai-helper.php'), 'utf8');
 const context = readFileSync(resolve(root, 'includes/ai/copilot-context.php'), 'utf8');
 
@@ -54,7 +55,7 @@ for (const [action, block] of Object.entries(blocks)) {
     assertContains(block, 'dashboardAiModuleEnabled()', action + ' should respect the global AI module gate.');
     assertContains(block, 'validateCsrfToken()', action + ' should require CSRF validation.');
 }
-assertContains(source, "$_SESSION['admin_login_time'] = time();", 'Authenticated API requests should refresh session activity.');
+assertContains(source, 'return nibblySessionValidate();', 'Authenticated API requests should use shared session validation and activity refresh.');
 assertContains(keepaliveBlock, 'validateCsrfToken()', 'Keepalive should require CSRF validation.');
 assertContains(keepaliveBlock, "jsonResponse(true, ['time' => time()]", 'Keepalive should return a successful timestamp response.');
 

@@ -4,8 +4,7 @@ api/smtp-config.php
 includes/nav-config.php
 content/settings.json
 
-# Website overlay (deployed separately via website/deploy.sh)
-website/
+# Adjacent product/support projects are separate repositories.
 auth.nibbly.dev/
 
 # Local working material / scratch (not part of the distributable core)
@@ -63,6 +62,8 @@ assets/fonts/
 screenshots/
 reference/
 node_modules/
+__pycache__/
+*.pyc
 *.mjs
 deploy.sh
 auth-deploy.sh
@@ -84,3 +85,9 @@ Thumbs.db
 
 # Site-specific upgrade notes (kept locally, not part of Nibbly Core)
 NIBBLY-UPGRADE-NOTES.md
+
+# Reproducible browser tooling is development-only.
+!tests/package.json
+!tests/package-lock.json
+content/analytics/
+content/ai-requests.json

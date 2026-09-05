@@ -8,8 +8,11 @@ Nibbly is a flat-file CMS built on PHP with no database dependency. Content is s
 
 1. **Request arrives** at `router.php` (dev server) or `.htaccess` (Apache)
 2. **Static files** (CSS, JS, images) are served directly
-3. **PHP templates**: if `{lang}/{slug}.php` exists, it is included directly
-4. **JSON pages**: if `content/pages/{lang}_{slug}.json` exists, the front controller `includes/page.php` renders it using `renderAllSections()`
+3. **PHP templates**: if `{lang}/{path}.php` exists, it is included directly
+4. **JSON pages**: if the matching `content/pages/{lang}_{encoded-path}.json`
+   exists, the front controller `includes/page.php` renders it using
+   `renderAllSections()`. `/` is encoded as `__`, so
+   `/products/vitamin-d` maps to `en_products__vitamin-d.json`.
 5. **News posts**: URLs like `/en/news/my-post` route to `{lang}/news-post.php`
 6. **404**: falls through to `404.php`
 
@@ -957,3 +960,57 @@ News posts are individual JSON files in `content/news/`. Each file contains meta
 ### Content Sanitization
 
 `sanitizeHtml()` strips all but safe HTML tags and removes `on*` event handlers and `javascript:` URLs from user-provided content.
+
+## Core modules and shared state (September 2026)
+
+`admin/api.php` remains the single authenticated endpoint. Its bootstrap loads
+shared helpers; `admin/api/contracts.php` enforces request method, CSRF and
+administrative boundaries, and acquires the revision locks. `routes.php` maps
+existing action names to twelve domain handlers. Direct handler requests return
+404. Dashboard workflows live in `admin/dashboard/scripts/`; PHP assembles them
+in the original order in one classic script, preserving shared scope, inline
+handlers and the no-build installation. New workflows should use a separate
+fragment rather than expanding the main dashboard template.
+
+`load` and `load-settings` return a top-level `revision` (SHA-256 of stored bytes,
+`missing` for an absent file). `save` and `save-settings` require the same value
+in their POST form: missing revisions return 428, changed revisions return 409.
+The lock spans read, comparison and atomic replacement. `js/revision-client.js`
+tracks revisions independently for each resource and displays a read-only
+comparison, download and explicit reload on conflict. It never retries a stale
+write automatically. Integrations using these write actions must first load the
+resource and send the returned revision. Field-level copilot changes retain
+signed hash checks and share the page lock. Automatic fallback generation adds
+only a still-missing field in a JSON transaction.
+
+AI reservations live beside consumption in `content/ai-usage.json`, under one
+stable lock. Requests move from `reserved` to `settled`, `released` or `uncertain`.
+Reserved and uncertain estimates count against limits. Settlement is idempotent
+and uses the request's original accounting date. These are configured estimates,
+not an imported provider invoice. System status offers explicit reconciliation
+after 15 minutes without progress. Verify the provider before resolving a request.
+No automatic retry resubmits a paid POST after an ambiguous transport response.
+
+Image workers hold a separate process lock. Kie task IDs are persisted as soon
+as submission returns; known tasks resume polling after worker interruption.
+An ambiguous submission without a task ID requires manual provider inspection.
+Polling errors can requeue the same job (60-second backoff, at most ten attempts);
+the dashboard and existing CLI runner use the same implementation. Provider
+changes cannot redirect a resumed task. `includes/ai/model-catalog.json` is the
+shared source for provider capabilities, image aliases and UI model presets.
+OpenRouter's existing live catalog cache remains available.
+
+Analytics format 2 stores the active day in `content/analytics/days/YYYY-MM-DD.json`.
+Historical days older than 90 days lose visitor/session hashes and move into
+monthly files under `archive/`. The restartable legacy import retains the old
+`analytics.json` as aggregates without identifiers. Summary queries read only the
+needed date range and cache results for 60 seconds; today's file revision
+invalidates that cache immediately. The privacy setting `analyticsEnabled`
+defaults to true for compatibility, while explicit false stops collection and
+preserves existing totals. Backups include the new analytics directory.
+
+Run `python3 tests/run-smoke.py` for isolated offline checks. Browser development
+requires `npm ci --prefix tests` and `tests/node_modules/.bin/playwright install
+chromium`, followed by `python3 tests/browser-check.py`, the `responsive-check.js`
+and `revision-check.js` variants. These packages are not website dependencies.
+GitHub Actions runs the suite on PHP 8.4/8.5 and Chromium on pull requests.

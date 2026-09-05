@@ -3,6 +3,9 @@
  * SEO/AEO/GEO helpers for public metadata, sitemaps, robots, and health checks.
  */
 
+require_once __DIR__ . '/page-path.php';
+require_once __DIR__ . '/../admin/lang/i18n.php';
+
 function nibblySeoRoot(): string {
     return dirname(__DIR__);
 }
@@ -32,10 +35,10 @@ function nibblySeoBaseUrl(): string {
 
 function nibblySeoPageUrl(string $lang, string $slug): string {
     $base = nibblySeoBaseUrl();
-    $defaultLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
-    $path = $slug === 'home'
-        ? ($lang === $defaultLang ? '/' : '/' . $lang . '/')
-        : ($lang === $defaultLang ? '/' . $slug : '/' . $lang . '/' . $slug);
+    $path = nibblyPageUrlPath($lang, $slug);
+    if ($path !== '/') {
+        $path = rtrim($path, '/') . '/';
+    }
     return $base . $path;
 }
 
@@ -46,7 +49,7 @@ function nibblySeoCurrentUrl(): string {
 }
 
 function nibblySeoLoadPageData(?string $contentPage): array {
-    if (!$contentPage || !preg_match('/^[a-z]{2}_[a-z0-9]+(?:-[a-z0-9]+)*$/', $contentPage)) {
+    if (!$contentPage || !nibblyPageIsValidContentKey($contentPage)) {
         return [];
     }
     $path = nibblySeoRoot() . '/content/pages/' . $contentPage . '.json';
@@ -150,7 +153,10 @@ function nibblySeoContext(array $args): array {
     $visibility = is_array($data['visibility'] ?? null) ? $data['visibility'] : [];
     $lang = $args['currentLang'] ?? ($data['lang'] ?? (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en'));
     $slug = $args['currentPage'] ?? '';
-    if ($slug === '' && $contentPage && preg_match('/^[a-z]{2}_(.+)$/', $contentPage, $m)) $slug = $m[1];
+    if ($slug === '' && $contentPage) {
+        $page = nibblyPageParseContentKey((string)$contentPage);
+        if ($page !== null) $slug = $page['path'];
+    }
     $title = trim((string)($seo['title'] ?? '')) ?: trim((string)($args['pageTitle'] ?? ($data['title'] ?? '')));
     $description = trim((string)($seo['description'] ?? '')) ?: trim((string)($args['pageDescription'] ?? ($data['description'] ?? '')));
     $canonical = trim((string)($seo['canonical'] ?? ''));
@@ -213,30 +219,30 @@ function nibblySeoHealth(array $context): array {
         $issues[] = $message;
     };
 
-    $titleLen = strlen($context['title'] ?? '');
-    if ($titleLen < 20) $warn('SEO-Titel ist zu kurz.', 18);
-    if ($titleLen > 70) $warn('SEO-Titel ist zu lang.', 10);
+    $titleLen = mb_strlen($context['title'] ?? '', 'UTF-8');
+    if ($titleLen < 20) $warn(t('seo.title_short'), 18);
+    if ($titleLen > 70) $warn(t('seo.title_long'), 10);
 
-    $descLen = strlen($context['description'] ?? '');
-    if ($descLen < 70) $warn('Meta Description ist zu kurz oder fehlt.', 18);
-    if ($descLen > 170) $warn('Meta Description ist zu lang.', 8);
+    $descLen = mb_strlen($context['description'] ?? '', 'UTF-8');
+    if ($descLen < 70) $warn(t('seo.description_short'), 18);
+    if ($descLen > 170) $warn(t('seo.description_long'), 8);
 
-    if (empty($context['canonical'])) $warn('Canonical URL fehlt.', 12);
-    if (stripos($context['robots'] ?? '', 'noindex') !== false) $warn('Seite ist auf noindex gesetzt.', 20);
+    if (empty($context['canonical'])) $warn(t('seo.canonical_missing'), 12);
+    if (stripos($context['robots'] ?? '', 'noindex') !== false) $warn(t('seo.noindex'), 20);
     if (!empty($context['data']['sections']) && !nibblySeoPageHasH1($context['data'] ?? [])) {
-        $warn('Keine erkennbare H1 in den Seitendaten.', 14);
+        $warn(t('seo.h1_missing'), 14);
     }
-    if (empty($context['ogImage'])) $warn('Open-Graph-Bild fehlt.', 8);
+    if (empty($context['ogImage'])) $warn(t('seo.image_missing'), 8);
     $missingAlts = nibblySeoMissingImageAlts($context['data'] ?? []);
-    if ($missingAlts > 0) $warn($missingAlts . ' Bild(er) ohne Alt-Text.', min(14, $missingAlts * 4));
+    if ($missingAlts > 0) $warn(t('seo.alt_missing', ['count' => $missingAlts]), min(14, $missingAlts * 4));
 
     $score = max(0, min(100, $score));
     $status = $score >= 85 ? 'green' : ($score >= 60 ? 'yellow' : 'red');
     return [
         'status' => $status,
         'score' => $score,
-        'label' => $status === 'green' ? 'SEO gut' : ($status === 'yellow' ? 'SEO prüfen' : 'SEO kritisch'),
-        'issues' => $issues ?: ['Keine wesentlichen technischen SEO-Probleme erkannt.'],
+        'label' => t('seo.' . $status),
+        'issues' => $issues ?: [t('seo.no_issues')],
     ];
 }
 
@@ -314,7 +320,8 @@ function nibblySeoRenderablePages(): array {
     $defaultLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
     foreach (glob(nibblySeoRoot() . '/content/pages/[a-z][a-z]_*.json') ?: [] as $file) {
         $name = basename($file, '.json');
-        if (!preg_match('/^([a-z]{2})_(.+)$/', $name, $m)) continue;
+        $page = nibblyPageParseContentKey($name);
+        if ($page === null) continue;
         $data = json_decode((string)file_get_contents($file), true);
         if (!is_array($data)) continue;
         $visibility = is_array($data['visibility'] ?? null) ? $data['visibility'] : [];
@@ -322,8 +329,8 @@ function nibblySeoRenderablePages(): array {
         if (($visibility['status'] ?? 'public') === 'private') continue;
         if (($seo['sitemap'] ?? true) === false) continue;
         if (stripos(nibblySeoRobots($seo, $visibility), 'noindex') !== false) continue;
-        $lang = $m[1];
-        $slug = $m[2];
+        $lang = $page['lang'];
+        $slug = $page['path'];
         $pages[] = [
             'lang' => $lang,
             'slug' => $slug,

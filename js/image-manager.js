@@ -253,12 +253,48 @@
         return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8M8 9h2"/></svg>';
     }
 
+    function detectTransparency(image) {
+        if (!image) return;
+        var surface = image.closest('.nb-imgmgr-thumb-btn, .nb-imgmgr-lightbox-stage');
+        if (!surface) return;
+
+        var source = (image.currentSrc || image.src || '').split(/[?#]/)[0].toLowerCase();
+        if (/\.jpe?g$/.test(source)) {
+            surface.classList.remove('nb-imgmgr-has-transparency');
+            return;
+        }
+
+        try {
+            var naturalWidth = image.naturalWidth || 1;
+            var naturalHeight = image.naturalHeight || 1;
+            var scale = Math.min(1, 256 / Math.max(naturalWidth, naturalHeight));
+            var canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(naturalWidth * scale));
+            canvas.height = Math.max(1, Math.round(naturalHeight * scale));
+            var context = canvas.getContext('2d', { willReadFrequently: true });
+            if (!context) return;
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+            var pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+            var hasTransparency = false;
+            for (var i = 3; i < pixels.length; i += 4) {
+                if (pixels[i] < 255) {
+                    hasTransparency = true;
+                    break;
+                }
+            }
+            surface.classList.toggle('nb-imgmgr-has-transparency', hasTransparency);
+        } catch (e) {
+            // If a browser cannot inspect the bitmap, keep the neutral default.
+            surface.classList.remove('nb-imgmgr-has-transparency');
+        }
+    }
+
     function mediaThumbHtml(item, className, previewAction) {
         var actionAttr = previewAction ? ' data-action="preview"' : '';
         var previewAttr = ' data-preview-path="' + escapeHtml(item.path || '') + '" data-preview-name="' + escapeHtml(mediaDisplayName(item)) + '" onclick="window.NbImageManager && NbImageManager.preview(this.dataset.previewPath, this.dataset.previewName); return false;"';
         if (isImage(item)) {
             return '<button type="button" class="' + className + ' nb-imgmgr-thumb-btn nb-imgmgr-thumb-btn--image"' + actionAttr + previewAttr + ' aria-label="' + escapeHtml(t('image_preview')) + '">' +
-                '<span class="nb-imgmgr-thumb-surface"><img src="' + escapeHtml(item.path) + '" alt="" loading="lazy"></span>' +
+                '<span class="nb-imgmgr-thumb-surface"><img src="' + escapeHtml(item.path) + '" alt="" loading="lazy" onload="window.NbImageManager && NbImageManager.detectTransparency(this)"></span>' +
             '</button>';
         }
         return '<button type="button" class="' + className + ' nb-imgmgr-thumb-btn nb-imgmgr-media-icon nb-imgmgr-media-icon--' + escapeHtml(item.type || 'document') + '"' + actionAttr + previewAttr + ' aria-label="' + escapeHtml(t('image_preview')) + '">' + mediaIcon(item) + '</button>';
@@ -752,7 +788,6 @@
                     ? (Array.isArray(result.data) ? result.data : (result.data.items || []))
                     : [];
                 state.folders = result.success && result.data && Array.isArray(result.data.folders) ? result.data.folders : [];
-                updateFolderUI();
                 if (items.length > 0) {
                     state.data = items.map(function (img) {
                         return Object.assign({}, img, {
@@ -762,6 +797,7 @@
                             path: img.path.indexOf('api.php?') === 0 ? img.path : img.path.replace(/^\.\.\//, '/')
                         });
                     });
+                    updateFolderUI();
                     updateSortHeaderClasses();
                     applySortOrder();
                     filterAndRender();
@@ -769,6 +805,7 @@
                     state.data = [];
                     state.filtered = [];
                     state.page = 1;
+                    updateFolderUI();
                     renderPagination();
                     var emptyKey = state.mode === 'trash' ? (isImageOnlyPicker() ? 'image.trash_empty' : 'media.trash_empty') : 'media.no_files';
                     var empty = '<p class="nb-imgmgr-empty">' + escapeHtml(t(emptyKey)) + '</p>';
@@ -1595,8 +1632,9 @@
         var stage = lb.querySelector('.nb-imgmgr-lightbox-stage');
         var label = mediaDisplayName(item);
         stage.classList.toggle('nb-imgmgr-lightbox-stage--image', isImage(item));
+        stage.classList.remove('nb-imgmgr-has-transparency');
         if (isImage(item)) {
-            stage.innerHTML = '<img alt="" src="' + escapeHtml(item.path) + '">';
+            stage.innerHTML = '<img alt="" src="' + escapeHtml(item.path) + '" onload="window.NbImageManager && NbImageManager.detectTransparency(this)">';
         } else if (isAudio(item)) {
             stage.innerHTML = '<div class="nb-imgmgr-lightbox-media nb-imgmgr-lightbox-media--audio">' +
                 mediaIcon(item) +
@@ -2032,6 +2070,7 @@
             var item = state.data.find(function (entry) { return entry.path === path; });
             openLightbox(item || path, name || path);
         },
+        detectTransparency: detectTransparency,
         close: close,
         confirmSelection: confirmSelection,
         refresh: function () {

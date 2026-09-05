@@ -5,6 +5,8 @@
  * Handles migration from single-user config.php constants.
  */
 
+require_once __DIR__ . '/../includes/json-store.php';
+
 if (!defined('USERS_PATH')) {
     define('USERS_PATH', __DIR__ . '/../content/users.json');
 }
@@ -18,7 +20,7 @@ function loadUsers(): array {
         return ['users' => []];
     }
     $data = json_decode(file_get_contents(USERS_PATH), true);
-    if (!is_array($data) || !isset($data['users'])) {
+    if (!is_array($data) || !is_array($data['users'] ?? null)) {
         return ['users' => []];
     }
     return $data;
@@ -28,11 +30,18 @@ function loadUsers(): array {
  * Save users array to users.json.
  */
 function saveUsers(array $data): bool {
-    $dir = dirname(USERS_PATH);
-    if (!is_dir($dir)) {
-        mkdir($dir, 0755, true);
-    }
-    return file_put_contents(USERS_PATH, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX) !== false;
+    return nibblyJsonUpdate(USERS_PATH, function (array &$stored) use ($data): void { $stored = $data; }, ['users' => []]);
+}
+
+/** Mutate one account while holding the shared user-store lock. */
+function updateUserRecord(string $userId, callable $update): bool {
+    return nibblyJsonUpdate(USERS_PATH, function (array &$data) use ($userId, $update): bool {
+        if (!is_array($data['users'] ?? null)) return false;
+        foreach ($data['users'] as &$user) {
+            if (($user['id'] ?? '') === $userId) return $update($user, $data) !== false;
+        }
+        return false;
+    }, ['users' => []]);
 }
 
 /**
@@ -94,8 +103,6 @@ function verifyUserPassword(string $username, string $password) {
  * Create a new user. Returns the user array.
  */
 function createUser(string $username, string $email, string $password, string $role, string $createdBy): array {
-    $data = loadUsers();
-
     $user = [
         'id' => 'u_' . bin2hex(random_bytes(5)),
         'username' => $username,
@@ -109,8 +116,16 @@ function createUser(string $username, string $email, string $password, string $r
         'resetTokenExpiry' => null,
     ];
 
-    $data['users'][] = $user;
-    saveUsers($data);
+    $saved = nibblyJsonUpdate(USERS_PATH, function (array &$data) use ($user): bool {
+        if (!is_array($data['users'] ?? null)) return false;
+        foreach ($data['users'] as $existing) {
+            if (strcasecmp($existing['username'], $user['username']) === 0
+                || ($user['email'] !== '' && strcasecmp($existing['email'] ?? '', $user['email']) === 0)) return false;
+        }
+        $data['users'][] = $user;
+        return true;
+    }, ['users' => []]);
+    if (!$saved) throw new RuntimeException('Could not create user; account may already exist or storage is unavailable.');
 
     return $user;
 }
@@ -119,69 +134,63 @@ function createUser(string $username, string $email, string $password, string $r
  * Update user fields (username, email, role). Does NOT update password.
  */
 function updateUser(string $userId, array $fields): bool {
-    $data = loadUsers();
-    $allowedFields = ['username', 'email', 'role'];
-
-    foreach ($data['users'] as &$user) {
-        if ($user['id'] === $userId) {
-            foreach ($fields as $key => $value) {
-                if (in_array($key, $allowedFields)) {
-                    $user[$key] = $value;
-                }
+    return updateUserRecord($userId, function (array &$user, array $data) use ($fields): bool {
+        if (isset($fields['role']) && !in_array($fields['role'], ['admin', 'editor'], true)) return false;
+        if ($user['role'] === 'admin' && ($fields['role'] ?? 'admin') !== 'admin'
+            && count(array_filter($data['users'], fn($u) => $u['role'] === 'admin')) <= 1) return false;
+        foreach ($data['users'] as $other) {
+            if ($other['id'] === $user['id']) continue;
+            foreach (['username', 'email'] as $key) {
+                if (!empty($fields[$key]) && strcasecmp($other[$key] ?? '', $fields[$key]) === 0) return false;
             }
-            return saveUsers($data);
         }
-    }
-    return false;
+        foreach (['username', 'email', 'role'] as $key) {
+            if (array_key_exists($key, $fields)) $user[$key] = $fields[$key];
+        }
+        return true;
+    });
 }
 
 /**
  * Update a user's password hash.
  */
 function updateUserPassword(string $userId, string $newHash): bool {
-    $data = loadUsers();
-    foreach ($data['users'] as &$user) {
-        if ($user['id'] === $userId) {
-            $user['passwordHash'] = $newHash;
-            return saveUsers($data);
-        }
-    }
-    return false;
+    return updateUserRecord($userId, function (array &$user) use ($newHash): void {
+        $user['passwordHash'] = $newHash;
+        $user['resetToken'] = null;
+        $user['resetTokenExpiry'] = null;
+    });
 }
 
 /**
  * Update last login timestamp.
  */
 function updateUserLastLogin(string $userId): bool {
-    $data = loadUsers();
-    foreach ($data['users'] as &$user) {
-        if ($user['id'] === $userId) {
-            $user['lastLogin'] = gmdate('c');
-            return saveUsers($data);
-        }
-    }
-    return false;
+    return updateUserRecord($userId, function (array &$user): void { $user['lastLogin'] = gmdate('c'); });
 }
 
 /**
  * Delete a user by ID.
  */
 function deleteUser(string $userId): bool {
-    $data = loadUsers();
-    $filtered = [];
-    $found = false;
-    foreach ($data['users'] as $user) {
-        if ($user['id'] === $userId) {
-            $found = true;
-        } else {
-            $filtered[] = $user;
+    return nibblyJsonUpdate(USERS_PATH, function (array &$data) use ($userId): bool {
+        if (!is_array($data['users'] ?? null)) return false;
+        $filtered = [];
+        $found = false;
+        foreach ($data['users'] as $user) {
+            if ($user['id'] === $userId) {
+                if ($user['role'] === 'admin' && count(array_filter($data['users'], fn($u) => $u['role'] === 'admin')) <= 1) return false;
+                $found = true;
+            } else {
+                $filtered[] = $user;
+            }
         }
-    }
-    if (!$found) {
-        return false;
-    }
-    $data['users'] = $filtered;
-    return saveUsers($data);
+        if (!$found) {
+            return false;
+        }
+        $data['users'] = $filtered;
+        return true;
+    }, ['users' => []]);
 }
 
 /**
@@ -203,19 +212,14 @@ function countUsersByRole(string $role): int {
  * returns the raw token (to be sent via email).
  */
 function generateResetToken(string $userId): ?string {
-    $data = loadUsers();
     $rawToken = bin2hex(random_bytes(32));
     $hashedToken = hash('sha256', $rawToken);
 
-    foreach ($data['users'] as &$user) {
-        if ($user['id'] === $userId) {
-            $user['resetToken'] = $hashedToken;
-            $user['resetTokenExpiry'] = time() + 3600; // 1 hour
-            saveUsers($data);
-            return $rawToken;
-        }
-    }
-    return null;
+    $saved = updateUserRecord($userId, function (array &$user) use ($hashedToken): void {
+        $user['resetToken'] = $hashedToken;
+        $user['resetTokenExpiry'] = time() + 3600;
+    });
+    return $saved ? $rawToken : null;
 }
 
 /**
@@ -230,8 +234,8 @@ function validateResetToken(string $rawToken) {
             if (($user['resetTokenExpiry'] ?? 0) > time()) {
                 return $user;
             }
-            // Token expired — clear it
-            clearResetToken($user['id']);
+            // A newer token may have been issued since this snapshot was read.
+            // Expired tokens are rejected without overwriting the account.
             return false;
         }
     }
@@ -242,15 +246,22 @@ function validateResetToken(string $rawToken) {
  * Clear reset token for a user.
  */
 function clearResetToken(string $userId): bool {
-    $data = loadUsers();
-    foreach ($data['users'] as &$user) {
-        if ($user['id'] === $userId) {
-            $user['resetToken'] = null;
-            $user['resetTokenExpiry'] = null;
-            return saveUsers($data);
-        }
-    }
-    return false;
+    return updateUserRecord($userId, function (array &$user): void {
+        $user['resetToken'] = null;
+        $user['resetTokenExpiry'] = null;
+    });
+}
+
+/** Validate and consume a reset token in the same transaction as the password. */
+function completePasswordReset(string $userId, string $rawToken, string $newHash): bool {
+    return updateUserRecord($userId, function (array &$user) use ($rawToken, $newHash): bool {
+        if (($user['resetTokenExpiry'] ?? 0) <= time()
+            || !hash_equals((string)($user['resetToken'] ?? ''), hash('sha256', $rawToken))) return false;
+        $user['passwordHash'] = $newHash;
+        $user['resetToken'] = null;
+        $user['resetTokenExpiry'] = null;
+        return true;
+    });
 }
 
 /**

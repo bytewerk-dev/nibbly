@@ -12,7 +12,8 @@
 
 // Must run from project root
 $projectRoot = dirname(__DIR__);
-if (!file_exists($projectRoot . '/router.php')) {
+require_once $projectRoot . '/includes/page-path.php';
+if (!file_exists($projectRoot . '/route.php')) {
     fwrite(STDERR, "Error: Run this script from the Nibbly project root.\n");
     fwrite(STDERR, "  cd /path/to/nibbly && php cli/convert.php input.html\n");
     exit(1);
@@ -68,8 +69,15 @@ if (!file_exists($inputFile)) {
 }
 
 $slug = $opts['slug'] ?? pathinfo($inputFile, PATHINFO_FILENAME);
-$slug = preg_replace('/[^a-z0-9-]/', '-', strtolower($slug));
-$slug = trim(preg_replace('/-+/', '-', $slug), '-');
+$slugParts = array_map(static function (string $part): string {
+    $part = preg_replace('/[^a-z0-9-]/', '-', strtolower(trim($part)));
+    return trim((string)preg_replace('/-+/', '-', (string)$part), '-');
+}, explode('/', trim((string)$slug, '/')));
+$slug = implode('/', array_filter($slugParts, static fn(string $part): bool => $part !== ''));
+if (!nibblyPageIsValidPath($slug)) {
+    fwrite(STDERR, "Error: --slug must be a valid lowercase URL path.\n");
+    exit(1);
+}
 $lang = $opts['lang'] ?? 'en';
 $dryRun = isset($opts['dry-run']);
 $jsonOnly = isset($opts['json-only']);
@@ -156,7 +164,8 @@ class HtmlToNibbly
     public function generateJson(): string
     {
         $data = [
-            'page' => $this->lang . '_' . $this->slug,
+            'page' => nibblyPageContentKey($this->lang, $this->slug),
+            'path' => $this->slug,
             'lang' => $this->lang,
             'title' => $this->pageTitle,
         ];
@@ -171,10 +180,11 @@ class HtmlToNibbly
 
     public function generateTemplate(): string
     {
-        $contentPage = $this->lang . '_' . $this->slug;
+        $contentPage = nibblyPageContentKey($this->lang, $this->slug);
         $title = addslashes($this->pageTitle);
         $desc = addslashes($this->pageDescription);
-        $cssFile = 'css/page-' . $this->slug . '.css';
+        $cssFile = 'css/page-' . str_replace('/', '--', $this->slug) . '.css';
+        $includePrefix = str_repeat('../', substr_count($this->slug, '/') + 1);
 
         $php = "<?php\n";
         $php .= "\$pageTitle = '$title';\n";
@@ -182,7 +192,7 @@ class HtmlToNibbly
         $php .= "\$currentLang = '{$this->lang}';\n";
         $php .= "\$currentPage = '{$this->slug}';\n";
         $php .= "\$contentPage = '$contentPage';\n";
-        $php .= "\$basePath = '../';\n";
+        $php .= "\$basePath = \$basePath ?? '$includePrefix';\n";
 
         if ($this->hasCss()) {
             $php .= "\$pageStylesheet = '$cssFile';\n";
@@ -199,8 +209,8 @@ class HtmlToNibbly
         }
 
         $php .= "\n";
-        $php .= "include '../includes/header.php';\n";
-        $php .= "include '../includes/content-loader.php';\n";
+        $php .= "include '{$includePrefix}includes/header.php';\n";
+        $php .= "include '{$includePrefix}includes/content-loader.php';\n";
         $php .= "\$_p = \$contentPage;\n";
         $php .= "?>\n";
         $php .= "    <main class=\"main-content\">\n";
@@ -210,7 +220,7 @@ class HtmlToNibbly
         }
 
         $php .= "    </main>\n";
-        $php .= "<?php include '../includes/footer.php'; ?>\n";
+        $php .= "<?php include '{$includePrefix}includes/footer.php'; ?>\n";
 
         return $php;
     }
@@ -1144,11 +1154,11 @@ echo "\n";
 
 // ── Generate files ────────────────────────────────────────────────────
 
-$contentPage = $lang . '_' . $slug;
+$contentPage = nibblyPageContentKey($lang, $slug);
 $jsonPath = $projectRoot . '/content/pages/' . $contentPage . '.json';
 $templateDir = $projectRoot . '/' . $lang;
 $templatePath = $templateDir . '/' . $slug . '.php';
-$cssPath = $projectRoot . '/css/page-' . $slug . '.css';
+$cssPath = $projectRoot . '/css/page-' . str_replace('/', '--', $slug) . '.css';
 
 $jsonContent = $converter->generateJson();
 $templateContent = $converter->generateTemplate();
@@ -1199,8 +1209,9 @@ echo "  \033[32m✓\033[0m $jsonPath\n";
 
 // Write template
 if (!$jsonOnly) {
-    if (!is_dir($templateDir)) {
-        mkdir($templateDir, 0755, true);
+    $templateWriteDir = dirname($templatePath);
+    if (!is_dir($templateWriteDir)) {
+        mkdir($templateWriteDir, 0755, true);
     }
     if (file_exists($templatePath) && !$force) {
         fwrite(STDERR, "Error: $templatePath already exists. Use --force to overwrite.\n");

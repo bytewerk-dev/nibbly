@@ -6,6 +6,8 @@
  * cross-site tracking identifiers. Unique visitors are short-lived hashes.
  */
 
+require_once __DIR__ . '/json-store.php';
+
 if (!defined('NIBBLY_ANALYTICS_PATH')) {
     define('NIBBLY_ANALYTICS_PATH', dirname(__DIR__) . '/content/analytics.json');
 }
@@ -49,24 +51,7 @@ function nibblyAnalyticsEmptyBucket(): array {
     ];
 }
 
-function nibblyAnalyticsLoad(): array {
-    if (!is_file(NIBBLY_ANALYTICS_PATH)) {
-        return ['days' => [], 'updatedAt' => null];
-    }
-
-    $data = json_decode((string)file_get_contents(NIBBLY_ANALYTICS_PATH), true);
-    return is_array($data) ? array_replace(['days' => [], 'updatedAt' => null], $data) : ['days' => [], 'updatedAt' => null];
-}
-
-function nibblyAnalyticsSave(array $data): void {
-    $dir = dirname(NIBBLY_ANALYTICS_PATH);
-    if (!is_dir($dir)) {
-        mkdir($dir, 0755, true);
-    }
-
-    nibblyAnalyticsCompact($data, 90);
-    file_put_contents(NIBBLY_ANALYTICS_PATH, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX);
-}
+require_once __DIR__ . '/analytics-store.php';
 
 function nibblyAnalyticsSetCount(array &$bucket, string $setKey, string $countKey): void {
     if (isset($bucket[$setKey]) && is_array($bucket[$setKey])) {
@@ -87,6 +72,12 @@ function nibblyAnalyticsCompact(array &$data, int $detailDays = 90): void {
             continue;
         }
 
+        nibblyAnalyticsForgetIdentifiers($bucket);
+    }
+    unset($bucket);
+}
+
+function nibblyAnalyticsForgetIdentifiers(array &$bucket): void {
         nibblyAnalyticsSetCount($bucket, 'visitors', 'visitorCount');
         nibblyAnalyticsSetCount($bucket, 'sessions', 'sessionCount');
 
@@ -110,11 +101,16 @@ function nibblyAnalyticsCompact(array &$data, int $detailDays = 90): void {
         }
 
         $bucket['compacted'] = true;
-    }
-    unset($bucket);
+}
+
+function nibblyAnalyticsEnabled(): bool {
+    $path = defined('SETTINGS_PATH') ? SETTINGS_PATH : dirname(__DIR__) . '/content/settings.json';
+    $settings = is_file($path) ? json_decode((string)file_get_contents($path), true) : [];
+    return ($settings['privacy']['analyticsEnabled'] ?? true) !== false;
 }
 
 function nibblyAnalyticsShouldTrack(): bool {
+    if (!nibblyAnalyticsEnabled()) return false;
     $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
     if (preg_match('#^/(admin|api|assets|css|js|content|backups)(/|$)#', $path)) {
         return false;
@@ -144,89 +140,93 @@ function nibblyAnalyticsTrack(?string $contentPage = null, ?string $currentLang 
         return;
     }
 
-    $data = nibblyAnalyticsLoad();
-    $day = date('Y-m-d');
-    if (!isset($data['days'][$day]) || !is_array($data['days'][$day])) {
-        $data['days'][$day] = nibblyAnalyticsEmptyBucket();
-    }
-    $bucket =& $data['days'][$day];
-    $bucket = array_replace_recursive(nibblyAnalyticsEmptyBucket(), $bucket);
-    $hour = date('H');
-    if (!isset($bucket['hours'][$hour]) || !is_array($bucket['hours'][$hour])) {
-        $bucket['hours'][$hour] = nibblyAnalyticsEmptyHourBucket();
-    }
-    $bucket['hours'][$hour] = array_replace_recursive(nibblyAnalyticsEmptyHourBucket(), $bucket['hours'][$hour]);
+    try { nibblyAnalyticsMigrate(); } catch (Throwable $error) { error_log($error->getMessage()); return; }
+    nibblyJsonUpdate(nibblyAnalyticsDirectory() . '/days/' . date('Y-m-d') . '.json', function (array &$data) use ($contentPage, $currentLang, $currentPage): void {
+        $day = date('Y-m-d');
+        if (!isset($data['days'][$day]) || !is_array($data['days'][$day])) {
+            $data['days'][$day] = nibblyAnalyticsEmptyBucket();
+        }
+        $bucket =& $data['days'][$day];
+        $bucket = array_replace_recursive(nibblyAnalyticsEmptyBucket(), $bucket);
+        $hour = date('H');
+        if (!isset($bucket['hours'][$hour]) || !is_array($bucket['hours'][$hour])) {
+            $bucket['hours'][$hour] = nibblyAnalyticsEmptyHourBucket();
+        }
+        $bucket['hours'][$hour] = array_replace_recursive(nibblyAnalyticsEmptyHourBucket(), $bucket['hours'][$hour]);
 
-    $ua = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
-    if (nibblyAnalyticsIsBot($ua)) {
-        $bucket['bots'] = (int)($bucket['bots'] ?? 0) + 1;
-        $bucket['hours'][$hour]['bots'] = (int)($bucket['hours'][$hour]['bots'] ?? 0) + 1;
-        $data['updatedAt'] = date('c');
-        nibblyAnalyticsSave($data);
-        return;
-    }
+        $ua = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
+        if (nibblyAnalyticsIsBot($ua)) {
+            $bucket['bots'] = (int)($bucket['bots'] ?? 0) + 1;
+            $bucket['hours'][$hour]['bots'] = (int)($bucket['hours'][$hour]['bots'] ?? 0) + 1;
+            $data['updatedAt'] = date('c');
+            nibblyAnalyticsCompact($data, 90);
+            return;
+        }
 
-    $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-    $key = $contentPage ?: trim((string)$currentLang . '_' . (string)$currentPage, '_');
-    if ($key === '') {
-        $key = $path;
-    }
+        $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+        $key = $contentPage ?: trim((string)$currentLang . '_' . (string)$currentPage, '_');
+        if ($key === '') {
+            $key = $path;
+        }
 
-    $visitorId = nibblyAnalyticsVisitorId();
-    $sessionId = nibblyAnalyticsSessionId($visitorId);
-    $isNewVisitor = empty($bucket['visitors'][$visitorId]);
-    $isNewSession = empty($bucket['sessions'][$sessionId]);
+        $visitorId = nibblyAnalyticsVisitorId();
+        $sessionId = nibblyAnalyticsSessionId($visitorId);
+        $isNewVisitor = empty($bucket['visitors'][$visitorId]);
+        $isNewSession = empty($bucket['sessions'][$sessionId]);
 
-    $bucket['views'] = (int)($bucket['views'] ?? 0) + 1;
-    $bucket['hours'][$hour]['views'] = (int)($bucket['hours'][$hour]['views'] ?? 0) + 1;
-    if ($isNewSession) {
-        $bucket['visits'] = (int)($bucket['visits'] ?? 0) + 1;
-        $bucket['hours'][$hour]['visits'] = (int)($bucket['hours'][$hour]['visits'] ?? 0) + 1;
-    }
-    $bucket['visitors'][$visitorId] = true;
-    $bucket['sessions'][$sessionId] = true;
-    $bucket['hours'][$hour]['visitors'][$visitorId] = true;
-    $bucket['hours'][$hour]['sessions'][$sessionId] = true;
+        $bucket['views'] = (int)($bucket['views'] ?? 0) + 1;
+        $bucket['hours'][$hour]['views'] = (int)($bucket['hours'][$hour]['views'] ?? 0) + 1;
+        if ($isNewSession) {
+            $bucket['visits'] = (int)($bucket['visits'] ?? 0) + 1;
+            $bucket['hours'][$hour]['visits'] = (int)($bucket['hours'][$hour]['visits'] ?? 0) + 1;
+        }
+        $bucket['visitors'][$visitorId] = true;
+        $bucket['sessions'][$sessionId] = true;
+        $bucket['hours'][$hour]['visitors'][$visitorId] = true;
+        $bucket['hours'][$hour]['sessions'][$sessionId] = true;
 
-    if (!isset($bucket['pages'][$key])) {
-        $bucket['pages'][$key] = [
+        if (!isset($bucket['pages'][$key])) {
+            $bucket['pages'][$key] = [
+                'views' => 0,
+                'visits' => 0,
+                'visitors' => [],
+                'path' => $path,
+                'title' => $currentPage ?: $key
+            ];
+        }
+        $bucket['pages'][$key] = array_replace([
             'views' => 0,
             'visits' => 0,
             'visitors' => [],
             'path' => $path,
             'title' => $currentPage ?: $key
-        ];
-    }
-    $bucket['pages'][$key] = array_replace([
-        'views' => 0,
-        'visits' => 0,
-        'visitors' => [],
-        'path' => $path,
-        'title' => $currentPage ?: $key
-    ], is_array($bucket['pages'][$key]) ? $bucket['pages'][$key] : []);
-    if (!is_array($bucket['pages'][$key]['visitors'])) {
-        $bucket['pages'][$key]['visitors'] = [];
-    }
-    $bucket['pages'][$key]['views']++;
-    if ($isNewSession) {
-        $bucket['pages'][$key]['visits']++;
-    }
-    $bucket['pages'][$key]['visitors'][$visitorId] = true;
-    $bucket['pages'][$key]['path'] = $path;
-    $bucket['pages'][$key]['title'] = $currentPage ?: $key;
+        ], is_array($bucket['pages'][$key]) ? $bucket['pages'][$key] : []);
+        if (!is_array($bucket['pages'][$key]['visitors'])) {
+            $bucket['pages'][$key]['visitors'] = [];
+        }
+        $bucket['pages'][$key]['views']++;
+        if ($isNewSession) {
+            $bucket['pages'][$key]['visits']++;
+        }
+        $bucket['pages'][$key]['visitors'][$visitorId] = true;
+        $bucket['pages'][$key]['path'] = $path;
+        $bucket['pages'][$key]['title'] = $currentPage ?: $key;
 
-    nibblyAnalyticsIncrement($bucket['referrers'], nibblyAnalyticsReferrer());
-    nibblyAnalyticsIncrement($bucket['devices'], nibblyAnalyticsDevice($ua));
-    nibblyAnalyticsIncrement($bucket['browsers'], nibblyAnalyticsBrowser($ua));
-    nibblyAnalyticsIncrement($bucket['os'], nibblyAnalyticsOs($ua));
-    nibblyAnalyticsIncrement($bucket['languages'], nibblyAnalyticsLanguage());
+        nibblyAnalyticsIncrement($bucket['referrers'], nibblyAnalyticsReferrer());
+        nibblyAnalyticsIncrement($bucket['devices'], nibblyAnalyticsDevice($ua));
+        nibblyAnalyticsIncrement($bucket['browsers'], nibblyAnalyticsBrowser($ua));
+        nibblyAnalyticsIncrement($bucket['os'], nibblyAnalyticsOs($ua));
+        nibblyAnalyticsIncrement($bucket['languages'], nibblyAnalyticsLanguage());
 
-    $data['updatedAt'] = date('c');
-    nibblyAnalyticsSave($data);
+        $data['updatedAt'] = date('c');
+        nibblyAnalyticsCompact($data, 90);
+    }, ['days' => [], 'updatedAt' => null]);
 }
 
-function nibblyAnalyticsSummary(string $period = 'days', int $count = 30): array {
-    $data = nibblyAnalyticsLoad();
+function nibblyAnalyticsBuildSummary(string $period = 'days', int $count = 30): array {
+    $from = $period === 'days' ? date('Y-m-d', strtotime('-' . (max(1, $count ?: 30) - 1) . ' days'))
+        : ($period === 'months' ? date('Y-m-01', strtotime('first day of this month -' . (max(1, $count ?: 12) - 1) . ' months')) : null);
+    $data = nibblyAnalyticsLoad($from);
     $today = date('Y-m-d');
     $period = in_array($period, ['days', 'months', 'years'], true) ? $period : 'days';
     $count = max(0, $count);

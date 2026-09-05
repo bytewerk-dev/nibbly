@@ -341,12 +341,10 @@ function nibblyFormsApplySubjectTemplate(string $template, array $form, array $v
 
 function nibblyFormsSaveSubmission(array $submission): bool
 {
-    $mails = nibblyFormsReadJson(NIBBLY_MAILS_PATH);
-    array_unshift($mails, $submission);
-    if (count($mails) > 500) {
+    return nibblyJsonUpdate(NIBBLY_MAILS_PATH, function (array &$mails) use ($submission): void {
+        array_unshift($mails, $submission);
         $mails = array_slice($mails, 0, 500);
-    }
-    return nibblyFormsWriteJson(NIBBLY_MAILS_PATH, $mails);
+    });
 }
 
 function nibblyFormsLoadEmailSettings(): array

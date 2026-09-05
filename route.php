@@ -16,11 +16,12 @@
 // Load config
 $configPath = __DIR__ . '/admin/config.php';
 if (!file_exists($configPath)) {
-    header('Location: admin/setup.php');
+    header('Location: /admin/setup.php');
     exit;
 }
 require_once $configPath;
 
+require_once __DIR__ . '/includes/page-path.php';
 require_once __DIR__ . '/includes/access-guard.php';
 nibblyAccessEnforceMaintenance();
 require_once __DIR__ . '/includes/seo-helper.php';
@@ -41,6 +42,23 @@ if ($cleanUri === 'sitemap.xml') {
 }
 if ($cleanUri === 'robots.txt') {
     nibblySeoServeRobots();
+}
+
+// A language homepage can also be backed only by JSON.
+if (preg_match('/^[a-z]{2}$/D', $cleanUri) && isset($SITE_LANGUAGES[$cleanUri])) {
+    $lang = $cleanUri;
+    $slug = 'home';
+    $basePath = str_ends_with((string)$uri, '/') ? '../' : '';
+    $langHome = __DIR__ . '/' . $lang . '/index.php';
+    if (is_file($langHome)) {
+        nibblyAccessEnforceCurrentTemplatePage($lang . '_home');
+        include $langHome;
+        exit;
+    }
+    if (is_file(nibblyPageJsonPath(__DIR__, $lang, $slug))) {
+        include __DIR__ . '/includes/page.php';
+        exit;
+    }
 }
 
 // Root URL → homepage
@@ -68,62 +86,65 @@ if ($cleanUri === '') {
 if (preg_match('#^([a-z]{2})/news/([a-z0-9-]+)$#', $cleanUri, $m)) {
     $currentLang = $m[1];
     $_GET['slug'] = $m[2];
-    $basePath = '../../';
+    $basePath = nibblyPageBasePath('news/' . $m[2], true);
     include __DIR__ . '/includes/news-post.php';
     exit;
 }
 if (preg_match('#^news/([a-z0-9-]+)$#', $cleanUri, $m)) {
     $currentLang = $primaryLang;
     $_GET['slug'] = $m[1];
-    $basePath = '../';
+    $basePath = nibblyPageBasePath('news/' . $m[1], false);
     include __DIR__ . '/includes/news-post.php';
     exit;
 }
 
 // ------------------------------------------------------------------
-// Language-prefixed URL: /{lang}/{slug}
+// Language-prefixed URL: /{lang}/{path}
 // ------------------------------------------------------------------
-if (preg_match('#^([a-z]{2})/([a-zA-Z0-9_-]+)$#', $cleanUri, $m)) {
+if (preg_match('#^([a-z]{2})/(' . nibblyPagePathPattern() . ')$#', $cleanUri, $m)) {
     $lang = $m[1];
     $slug = $m[2];
+    $contentPage = nibblyPageContentKey($lang, $slug);
 
     // 1. Physical PHP file
-    $phpFile = __DIR__ . '/' . $lang . '/' . $slug . '.php';
+    $phpFile = nibblyPageTemplatePath(__DIR__, $lang, $slug);
     if (is_file($phpFile)) {
-        nibblyAccessEnforceCurrentTemplatePage($lang . '_' . $slug);
+        $basePath = nibblyPageBasePath($slug, true);
+        nibblyAccessEnforceCurrentTemplatePage($contentPage);
         include $phpFile;
         exit;
     }
 
     // 2. JSON content → front controller
-    $jsonFile = __DIR__ . '/content/pages/' . $lang . '_' . $slug . '.json';
+    $jsonFile = nibblyPageJsonPath(__DIR__, $lang, $slug);
     if (is_file($jsonFile)) {
-        $basePath = '../';
+        $basePath = nibblyPageBasePath($slug, true);
         include __DIR__ . '/includes/page.php';
         exit;
     }
 }
 
 // ------------------------------------------------------------------
-// Root-level slug: /{slug} → primary language
+// Root-level path: /{path} → primary language
 // ------------------------------------------------------------------
-if (preg_match('#^[a-zA-Z0-9_-]+$#', $cleanUri)) {
+if (preg_match('#^' . nibblyPagePathPattern() . '$#', $cleanUri)) {
     $lang = $primaryLang;
     $slug = $cleanUri;
+    $contentPage = nibblyPageContentKey($lang, $slug);
 
     // 1. Physical PHP file (with .php extension)
-    $phpFile = __DIR__ . '/' . $lang . '/' . $slug . '.php';
+    $phpFile = nibblyPageTemplatePath(__DIR__, $lang, $slug);
     if (is_file($phpFile)) {
-        $basePath = '';
-        nibblyAccessEnforceCurrentTemplatePage($lang . '_' . $slug);
+        $basePath = nibblyPageBasePath($slug, false);
+        nibblyAccessEnforceCurrentTemplatePage($contentPage);
         include $phpFile;
         exit;
     }
 
     // 2. JSON content → front controller
-    $jsonFile = __DIR__ . '/content/pages/' . $lang . '_' . $slug . '.json';
+    $jsonFile = nibblyPageJsonPath(__DIR__, $lang, $slug);
     if (is_file($jsonFile)) {
-        $basePath = '';
+        $basePath = nibblyPageBasePath($slug, false);
         include __DIR__ . '/includes/page.php';
         exit;
     }

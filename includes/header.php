@@ -17,6 +17,7 @@
  */
 
 require_once __DIR__ . '/access-guard.php';
+require_once __DIR__ . '/page-path.php';
 nibblyAccessEnforceMaintenance();
 if (!empty($contentPage)) {
     nibblyAccessEnforceCurrentTemplatePage((string)$contentPage);
@@ -69,9 +70,9 @@ $_contentPath = __DIR__ . '/../content/pages/';
 foreach ($SITE_LANGUAGES as $code => $name) {
     if (isset($PAGE_MAPPING[$currentPageKey][$code])) {
         $langLinks[$code] = $basePath . $PAGE_MAPPING[$currentPageKey][$code];
-    } elseif ($currentPageKey !== 'home' && is_file($_contentPath . $code . '_' . $currentPageKey . '.json')) {
+    } elseif ($currentPageKey !== 'home' && is_file($_contentPath . nibblyPageContentKey($code, $currentPageKey) . '.json')) {
         // Dynamic fallback: same slug exists in target language
-        $langLinks[$code] = $basePath . (($code === $defaultLang) ? $currentPageKey : $code . '/' . $currentPageKey);
+        $langLinks[$code] = $basePath . ltrim(nibblyPageUrlPath($code, $currentPageKey, $defaultLang), '/');
     } else {
         // Final fallback: home page of that language
         $langLinks[$code] = $basePath . (($code === $defaultLang) ? '.' : $code . '/');

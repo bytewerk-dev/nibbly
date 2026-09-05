@@ -158,9 +158,10 @@ Generated images are validated and saved under `assets/images/generated/`, are
 visible in the Media Library, and are indexed in `content/ai-image-history.json`
 with prompt, model, options, response status, and local media paths. OpenAI image
 edits use multipart image uploads; OpenRouter-compatible image generation uses
-the configured model id and may have provider-specific option support. Preserve
-the gateway's cautious curl retry behavior: retry transient TLS/read errors only
-when no response bytes were received, so paid image requests are not duplicated.
+the configured model id and may have provider-specific option support. Never
+automatically retry an ambiguous paid POST, even when no response bytes arrived.
+Resume known provider task IDs through the request ledger; outcomes without a
+task ID need reconciliation before another submission.
 
 Dashboard AI UI should honor both global module visibility and AI feature flags.
 If AI features are disabled, hide AI buttons and tools throughout the admin UI.
@@ -458,6 +459,23 @@ php cli/make.php --slug=about --lang=en --title="About Us"
 ```
 
 This creates `content/pages/en_about.json` with a heading and text section. The router + front controller (`includes/page.php`) will automatically serve `/about` or `/en/about` using `renderAllSections()`. No PHP template file needed.
+
+### Nested Page Paths
+
+Use slash-separated slugs when an information architecture or an existing SEO
+URL must be preserved:
+
+```bash
+php cli/make.php --slug=products/vitamin-d --lang=en --title="Vitamin D"
+```
+
+The public path remains `/products/vitamin-d` (or
+`/{lang}/products/vitamin-d` for a non-default language). Content remains in a
+flat directory: Nibbly reserves `__` as the path separator in page identifiers,
+so the example is stored as `content/pages/en_products__vitamin-d.json` with
+`"path": "products/vitamin-d"`. Never expose the encoded identifier in links,
+Canonicals, hreflang URLs, redirects, or sitemap entries. Custom templates use
+nested directories, for example `en/products/vitamin-d.php`.
 
 The page appears in header navigation automatically via auto-discovery. To control which menus a page appears in, use `--nav=header,footer-pages` or set `"nav": ["header", "footer-pages"]` in the JSON. Use `--nav=none` to hide from all menus.
 
@@ -1445,3 +1463,17 @@ Not `($lang, $basePath)`. Use `renderNewsList(0, $currentLang)` for all posts.
 - **Page-specific styles belong in `css/page-{slug}.css`**, not in `style.css` or `components.css`. Use `$pageStylesheet` in the template (or let the HTML converter generate it). Selectors like `.page-foo .card` in the base stylesheets leak page logic into the CMS core.
 - **Every `<img>` needs `alt`**, every interactive element needs `:focus-visible`
 - **Set `$contentPage`** before including `header.php` so the admin bar works
+
+
+## Concurrent editing and modular core
+
+Core request handlers now live in `admin/api/`; dashboard script fragments live
+in `admin/dashboard/scripts/`. Keep their public URLs and action names stable.
+Read the “Core modules and shared state” section of `architecture.md` before
+changing these boundaries, AI request state or the analytics format.
+
+When calling `save` or `save-settings`, first load the resource through `load` or
+`load-settings` and include the returned top-level `revision` in the POST form.
+Handle HTTP 409 as a concurrent-edit conflict and HTTP 428 as a missing load.
+Never fetch a newer revision solely to force an old snapshot through. The shared
+browser revision client already handles normal dashboard and inline-editor forms.

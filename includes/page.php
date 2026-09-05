@@ -15,15 +15,21 @@ if (!isset($lang) || !isset($slug)) {
     return;
 }
 
-$contentPage = $lang . '_' . $slug;
 $_includeBase = dirname(__DIR__) . '/';
+require_once $_includeBase . 'includes/page-path.php';
+$contentPage = nibblyPageContentKey($lang, $slug);
+if ($contentPage === '') {
+    http_response_code(404);
+    include $_includeBase . '404.php';
+    return;
+}
 
 // Load config if not already loaded
 if (!defined('SITE_LANG_DEFAULT')) {
     require_once $_includeBase . 'admin/config.php';
 }
 
-$jsonPath = ($_includeBase) . 'content/pages/' . $contentPage . '.json';
+$jsonPath = nibblyPageJsonPath(dirname(__DIR__), $lang, $slug);
 if (!file_exists($jsonPath)) {
     http_response_code(404);
     include $_includeBase . '404.php';

@@ -1,7 +1,161 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Added revision checks for page/settings saves with HTTP 409 conflicts, HTTP 428
+  for missing revisions, and a shared comparison/download/reload dialog in the
+  dashboard and inline editor. Direct API integrations must send the revision
+  returned by their load request.
+- Added persistent AI budget reservations, idempotent usage settlement, Kie task
+  recovery and administrative reconciliation of uncertain provider outcomes.
+  Model presets, image aliases and capabilities share one server-owned catalog.
+- Added a System status view for PHP extensions, writable storage, the latest
+  successful backup, failed image jobs and open AI reservations.
+- Added GitHub Actions for PHP 8.4/8.5 and Chromium, with reproducible browser
+  tooling and integration coverage for setup, SMTP, media lifecycle, revisions,
+  fallback generation, budget concurrency, Kie recovery and analytics migration.
+  All three successful checks are required by the existing main branch ruleset.
+- Added an analytics privacy toggle and distinct disabled, empty and failed states.
+
+### Changed
+
+- Split the stable admin API into twelve domain handlers and extracted dashboard
+  scripts by workflow, keeping public URLs and the no-build PHP installation.
+- Partitioned analytics into daily records and compact monthly archives. Existing
+  totals migrate automatically; historical summaries are cached and current-day
+  writes invalidate the cache. Legacy migration data is retained without hashes.
+- Routed SEO diagnostics, conflict/status messages and previously mixed-language
+  editor controls through the shared translation layer; SEO length checks count
+  Unicode characters. New detailed copy is available in German and English,
+  with the established English fallback for other dashboard languages.
+
+
+- Added an offline system test runner and regression suites for authentication,
+  HTTP endpoints, concurrent storage, password resets and mocked AI providers;
+  an optional Chromium check covers dashboard navigation and mobile editing.
+- Added the public MingCute Core Regular/Core Filled collection to the Iconify
+  import dialog under Apache License 2.0, with source and license metadata
+  retained for imported icons.
+
+### Fixed
+
+- Fixed dashboard field and action wrapping across phone/tablet/desktop sizes,
+  including backup retention, remote targets, settings, forms, image uploads,
+  color controls, menu ordering and page filters. Narrow settings views use a compact selector.
+  Hidden native select fields no longer expand the page invisibly.
+- Partial settings updates preserve unrelated privacy, module, maintenance and
+  login values. Editor settings responses omit SMTP, backup and AI credentials.
+- Automatic fallback fields merge transactionally without overwriting edits.
+  Page backups have collision-resistant names understood by list/restore actions.
+- Ambiguous AI POST failures no longer trigger automatic duplicate submissions.
+  Explicitly enabled local image providers may download from their configured
+  origin only; redirects cannot escape the download URL validation.
+- Added setup CSRF validation and atomic backup configuration updates.
+
+
+- Unified dashboard, API and inline-editor session validation. Deleted accounts,
+  changed passwords and changed roles now take effect on existing sessions;
+  login rotates the session ID, local dev sessions remain loopback-only, and
+  login/logout destinations reject unsafe URLs.
+- Password-protected pages revoke previous unlocks when their password changes.
+- News IDs can no longer escape the news directory. Renaming a post preserves
+  the original if saving fails, and duplicate slugs cannot overwrite other posts.
+- Replaced regex-only rich-text filtering with an HTML allowlist that rejects
+  encoded script URLs and active markup. Existing news content is filtered when
+  rendered, and inline-editor branding is escaped in HTML attributes.
+- Added atomic JSON transactions for form tokens, submission limits, inbox
+  writes, user changes, AI usage/history and analytics. Concurrent requests no
+  longer lose records; damaged stores are preserved instead of overwritten.
+- Password-reset tokens are consumed atomically, password changes revoke reset
+  links, and concurrent role changes cannot remove the last administrator.
+- Forms now return a failure when neither email delivery nor local storage
+  succeeds, and distinguish failed delivery from intentionally local storage.
+- Kie chat uses the correct provider adapter for streaming callers without an
+  extra failed request. GPT requests include the configured output-token cap.
+- Kie image requests derive the aspect ratio from explicit image dimensions.
+  AI chat, image prompts and image history preserve UTF-8 at length limits;
+  malformed request JSON fails before reaching a provider.
+- Only one worker can claim a queued image-generation job, preventing duplicate
+  provider requests from concurrent workers.
+- Restores now include supported video, audio and document formats, stage and
+  validate archive data before replacing content, reject symbolic-link targets,
+  and roll back ordinary write failures. Full restores abort if the safety
+  backup fails. Process termination or machine failure still requires recovery
+  from a backup.
+- Backups created in the same second no longer overwrite each other. Backup
+  locks keep a stable inode; runtime locks and restore staging files are excluded.
+- Development and production routing share the same front controller. Language
+  homepages and nested URLs retain working asset paths with trailing slashes;
+  trash, hidden files, tests and CLI paths are blocked from HTTP access.
+- CLI tools also work in deployed copies without the development router.
+  Empty byte-range requests now return HTTP 416.
+- Mobile editor layout and notifications follow the actual admin-bar height;
+  informational notifications have a readable background and fit the viewport.
+  Analytics charts use distinct integer ticks when traffic is low or zero.
+- Removed obsolete PHP resource cleanup calls that produce PHP 8.5 deprecation
+  output. Corrected the documented minimum PHP version to 8.1 and updated stale
+  tests to the current theme and shared session validation.
+- Hide the Dashboard AI section and setup notice when the AI module is disabled,
+  including for administrators.
+- Full-site backups now omit local QA evidence, development tests and examples,
+  agent instructions, and other internal root documentation. Product, version,
+  and third-party license documents remain included.
+- Restoring older full-site backups no longer fails when they contain PHP smoke
+  tests: legacy `tests/` entries are accepted for compatibility but skipped
+  during extraction.
+
+### Upgrade notes
+
+- Existing administrator sessions require one fresh sign-in after this update
+  so they can be bound to the current account password. No user data migration
+  or password change is required.
+
+## [1.6.1] — 2026-08-05
+
+### Added
+
+- Kie.ai as a configurable AI provider with independently stored credentials.
+- Kie chat/text model presets for GPT-5.6, Claude Sonnet 5 and Gemini 3.5 Flash.
+- Kie image generation support for GPT Image 2, Nano Banana 2 and Seedream 5.0 Pro, including asynchronous job polling and reference images.
+
 All notable changes to Nibbly are documented in this file. The project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.6.0] — 2026-08-04
+
+### Added
+- Added first-class nested page paths for SEO-preserving site structures such
+  as `/produkte/rokivit-d3` and `/studien-vitamin-d/vitamin-d`. Nested pages
+  work in the Apache and development routers, custom templates, the Dashboard,
+  automatic navigation, language switching, Canonical and hreflang metadata,
+  link pickers, sitemap generation, access protection, backups, and AI tools.
+- Added nested-path support to `cli/make.php` and `cli/convert.php`. Public path
+  segments are stored in flat JSON filenames with a reserved `__` separator;
+  for example `de_produkte__rokivit-d3.json` serves
+  `/produkte/rokivit-d3` when German is the default language.
+- Added a nested-page-path smoke test covering validation, path/key conversion,
+  navigation auto-discovery, sitemap URLs, and CLI scaffolding.
+
+### Changed
+- Page JSON generated by the Dashboard and CLI tools now records its public
+  `path` explicitly while retaining the existing `page` content identifier for
+  backward compatibility with flat pages.
+
+### Fixed
+- Canonical sitemap entries for clean page routes now consistently use a
+  trailing slash, avoiding a redirect between the sitemap URL and the page's
+  canonical URL.
+- Media Library thumbnails and image previews now show the checkerboard only
+  when the rendered image contains transparent pixels; opaque images use the
+  same neutral background as document previews.
+- Media Library folder counters are calculated after the current file list has
+  loaded, so the sidebar no longer reports zero for populated folders.
+- Saving branding settings no longer drops the configured SEO site URL,
+  organization name, or site-wide robots setting.
+- The PHP development router now serves video and audio byte ranges correctly,
+  allowing scroll-scrubbed and seeked media to work on localhost.
 
 ## [1.5.4] — 2026-06-18
 

@@ -7,8 +7,17 @@
  */
 
 function nibblyAiRunImageJobCore(string $jobId, ?callable $assertAccess = null): array {
+    $job = nibblyAiRefreshImageJobState(nibblyAiLoadImageJob($jobId));
+    if ($assertAccess) $assertAccess($job);
+    $worker = fopen(nibblyAiImageJobPath($jobId) . '.worker.lock', 'c');
+    if (!$worker) throw new RuntimeException('Could not lock image worker.');
+    if (!flock($worker, LOCK_EX | LOCK_NB)) { fclose($worker); return nibblyAiPublicImageJob($job); }
+    try { return nibblyAiRunImageJobClaimed($jobId, $assertAccess); }
+    finally { flock($worker, LOCK_UN); fclose($worker); }
+}
+
+function nibblyAiRunImageJobClaimed(string $jobId, ?callable $assertAccess = null): array {
     $existingJob = nibblyAiLoadImageJob($jobId);
-    $existingJob = nibblyAiRefreshImageJobState($existingJob);
     if ($assertAccess) {
         $assertAccess($existingJob);
     }
@@ -18,13 +27,15 @@ function nibblyAiRunImageJobCore(string $jobId, ?callable $assertAccess = null):
     if (in_array((string)($existingJob['status'] ?? ''), ['success', 'error'], true)) {
         return nibblyAiPublicImageJob($existingJob);
     }
-    $job = nibblyAiMarkImageJobRunning($jobId);
-    if (in_array((string)($job['status'] ?? ''), ['success', 'error'], true)) {
+    $claimed = false;
+    $job = nibblyAiMarkImageJobRunning($jobId, $claimed);
+    if (!$claimed) {
         return nibblyAiPublicImageJob($job);
     }
 
     $payload = is_array($job['payload'] ?? null) ? $job['payload'] : [];
     $options = is_array($payload['options'] ?? null) ? $payload['options'] : [];
+    $options['_requestId'] = 'image_' . $jobId;
     $prompt = trim((string)($payload['prompt'] ?? ''));
     $kind = (string)($job['kind'] ?? 'dashboard');
 
@@ -70,6 +81,18 @@ function nibblyAiRunImageJobCore(string $jobId, ?callable $assertAccess = null):
         $result = nibblyAiGenerateImage($prompt, $options);
         return nibblyAiFinishImageJob($jobId, $result);
     } catch (Throwable $e) {
+        $entry = nibblyAiLoadUsage()['reservations']['image_' . $jobId] ?? [];
+        $tasks = $entry['tasks'] ?? [];
+        $pending = array_filter($tasks, fn($task) => !in_array($task['state'] ?? '', ['success', 'fail', 'failed', 'error'], true));
+        if ($tasks && !array_filter($tasks, fn($task) => empty($task['id'])) && ($pending || !empty($entry['outputs'])) && (int)($job['attempts'] ?? 0) < 10) {
+            nibblyJsonUpdate(nibblyAiImageJobPath($jobId), static function (&$current) use ($e) {
+                $current['status'] = 'queued';
+                $current['retryAt'] = time() + 60;
+                $current['updatedAt'] = gmdate('c');
+                $current['error'] = nibblyAiUtf8Prefix($e->getMessage(), 1000);
+            });
+            return nibblyAiPublicImageJob(nibblyAiLoadImageJob($jobId));
+        }
         if ($kind === 'dashboard') {
             $settings = nibblyAiLoadSettings(false);
             nibblyAiRecordImageHistory([

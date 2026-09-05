@@ -42,7 +42,7 @@
     function escHtml(str) {
         const d = document.createElement('div');
         d.textContent = str;
-        return d.innerHTML;
+        return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
     function tFallback(key, fallback, params) {
@@ -741,7 +741,7 @@
         const isDefaultFavicon = /(^|\/)assets\/images\/favicon\.svg(?:[?#].*)?$/.test(brandLogo);
         const logoClass = `admin-bar-logo-icon${isDefaultFavicon ? ' admin-bar-logo-icon--default' : ''}`;
         const logoHtml = showBranding
-            ? `<img src="${brandLogo}" alt="${brandName}" width="24" height="24" class="${logoClass}">`
+            ? `<img src="${escHtml(brandLogo)}" alt="${escHtml(brandName)}" width="24" height="24" class="${logoClass}">`
             : '';
         const seoHealth = window.NB_SEO_HEALTH || { status: 'yellow', score: 0, label: 'SEO prüfen', issues: ['Keine SEO-Prüfung verfügbar.'] };
         const seoIssues = Array.isArray(seoHealth.issues) ? seoHealth.issues : [];
@@ -809,6 +809,17 @@
         `;
         document.body.insertBefore(bar, document.body.firstChild);
         document.body.classList.add('has-admin-bar');
+
+        const syncAdminBarHeight = () => {
+            document.documentElement.style.setProperty('--nibbly-admin-bar-height', Math.ceil(bar.getBoundingClientRect().height) + 'px');
+        };
+        syncAdminBarHeight();
+        if (typeof ResizeObserver !== 'undefined') {
+            const barObserver = new ResizeObserver(syncAdminBarHeight);
+            barObserver.observe(bar);
+        } else {
+            window.addEventListener('resize', syncAdminBarHeight);
+        }
 
         // Button Event Listeners
         document.getElementById('admin-btn-edit').addEventListener('click', enterEditMode);

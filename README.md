@@ -58,7 +58,8 @@ An AI agent can create a new page, build a custom layout, add content blocks, an
 
 ## Requirements
 
-- PHP 7.4 or newer
+- PHP 8.1 is the language minimum; use a [currently supported PHP branch](https://www.php.net/supported-versions.php) in production (8.4 or 8.5 recommended).
+- PHP extensions: `mbstring`, `dom`, `fileinfo`, `session`; `zip` for backups, `curl` for provider integrations, and `gd` for image conversion.
 - Apache with `mod_rewrite` (production) or PHP built-in server (development)
 - No Composer, no npm, no database
 
@@ -120,6 +121,18 @@ Create `content/pages/en_about.json`:
   ]
 }
 ```
+
+Nested clean URLs are supported as well. Use a slash in the public page path
+and a reserved double underscore in the flat JSON filename:
+
+```text
+content/pages/en_products__vitamin-d.json  →  /products/vitamin-d
+content/pages/de_produkte__vitamin-d.json  →  /de/produkte/vitamin-d
+```
+
+When the language is the configured default, its language prefix is omitted.
+The Dashboard and `php cli/make.php --slug=products/vitamin-d --lang=en`
+create this mapping automatically.
 
 The page is now live at `/about`. No PHP file needed.
 
@@ -207,6 +220,9 @@ To use custom fonts, place font files in `assets/fonts/` and define `@font-face`
 Nibbly is licensed under the Mozilla Public License 2.0 starting with version
 1.4.0. Earlier releases up to and including 1.3.2 were published under the MIT
 License. See [LICENSE](LICENSE) for details.
+
+Third-party components and their license terms are listed in
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ## Contributing
 
