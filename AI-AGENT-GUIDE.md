@@ -1345,6 +1345,10 @@ When converting a hand-coded or AI-generated ("vibe-coded") site to use Nibbly a
 
 ## Upgrading Nibbly
 
+For the 2.0.0 API transition, customized footers and storage migration, follow
+[UPGRADING.md](UPGRADING.md) in addition to the ownership boundaries below.
+Publish core releases according to [RELEASES.md](RELEASES.md).
+
 CSS file roles:
 
 | File | Role | Overwritten on upgrade? |
@@ -1353,6 +1357,7 @@ CSS file roles:
 | `css/components.css` | Nibbly-Core: reusable block-renderer components | **Yes** |
 | `css/inline-editor.css` | Nibbly-Core: editor UI | **Yes** |
 | `css/image-manager.css` | Nibbly-Core: image-manager UI | **Yes** |
+| `css/revision-client.css` | Nibbly-Core: concurrent-edit conflict dialog | **Yes** |
 | `css/nibbly-admin-tokens.css` | Nibbly-Core: admin tokens | **Yes** |
 | `css/nibbly-admin-components.css` | Nibbly-Core: admin components | **Yes** |
 | `css/website.css` | Site-Owner: custom layouts, components, variable overrides | **No** |
@@ -1362,7 +1367,7 @@ CSS file roles:
 **Whitelist** (safely overwritable on upgrade):
 - `admin/` except `admin/config.php`
 - `includes/` except `includes/header.php`, `includes/footer.php`, `includes/nav-config.php`, `includes/site-page-hook.php`
-- Core JS: `js/inline-editor.js`, `js/image-manager.js`
+- Core JS: `js/inline-editor.js`, `js/image-manager.js`, `js/revision-client.js`, `js/ai-copilot.js`
 - All Nibbly-Core CSS files (see table above)
 - `api/`, `cli/`, `examples/`
 - All `*.md` files except site-owned documentation
