@@ -1,6 +1,27 @@
 # Changelog
 
+All notable changes to Nibbly are documented in this file. The project follows
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+Release dates use Europe/Vienna calendar dates. Historical 1.x dates are retained
+as originally recorded; see [release history and policy](RELEASES.md) for verified
+Git milestones and the gaps in publication records.
+
 ## Unreleased
+
+No changes yet.
+
+## [2.0.0] — 2026-09-06
+
+### Breaking changes
+
+- The documented admin API actions `save` and `save-settings` now require the
+  `revision` returned by the corresponding load request. Missing revisions return
+  HTTP 428; stale revisions return HTTP 409. Existing custom integrations must be
+  updated. This API incompatibility is the reason for the major version bump.
+- Update the PHP API and editor assets together. Sites with a customized footer
+  must integrate the shared revision client before using the inline editor.
+  See [Upgrading to 2.0.0](UPGRADING.md) for deployment and recovery steps.
 
 ### Added
 
@@ -18,6 +39,12 @@
   fallback generation, budget concurrency, Kie recovery and analytics migration.
   All three successful checks are required by the existing main branch ruleset.
 - Added an analytics privacy toggle and distinct disabled, empty and failed states.
+- Added an offline system test runner and regression suites for authentication,
+  HTTP endpoints, concurrent storage, password resets and mocked AI providers;
+  an optional Chromium check covers dashboard navigation and mobile editing.
+- Added the public MingCute Core Regular/Core Filled collection to the Iconify
+  import dialog under Apache License 2.0, with source and license metadata
+  retained for imported icons.
 
 ### Changed
 
@@ -31,19 +58,12 @@
   Unicode characters. New detailed copy is available in German and English,
   with the established English fallback for other dashboard languages.
 
-
-- Added an offline system test runner and regression suites for authentication,
-  HTTP endpoints, concurrent storage, password resets and mocked AI providers;
-  an optional Chromium check covers dashboard navigation and mobile editing.
-- Added the public MingCute Core Regular/Core Filled collection to the Iconify
-  import dialog under Apache License 2.0, with source and license metadata
-  retained for imported icons.
-
 ### Fixed
 
 - Fixed dashboard field and action wrapping across phone/tablet/desktop sizes,
   including backup retention, remote targets, settings, forms, image uploads,
-  color controls, menu ordering and page filters. Narrow settings views use a compact selector.
+  color controls, menu ordering and page filters. Narrow settings views use a
+  compact selector.
   Hidden native select fields no longer expand the page invisibly.
 - Partial settings updates preserve unrelated privacy, module, maintenance and
   login values. Editor settings responses omit SMTP, backup and AI credentials.
@@ -53,8 +73,6 @@
   Explicitly enabled local image providers may download from their configured
   origin only; redirects cannot escape the download URL validation.
 - Added setup CSRF validation and atomic backup configuration updates.
-
-
 - Unified dashboard, API and inline-editor session validation. Deleted accounts,
   changed passwords and changed roles now take effect on existing sessions;
   login rotates the session ID, local dev sessions remain loopback-only, and
@@ -109,8 +127,16 @@
 ### Upgrade notes
 
 - Existing administrator sessions require one fresh sign-in after this update
-  so they can be bound to the current account password. No user data migration
+  so they can be bound to the current account password. No account migration
   or password change is required.
+- PHP 8.1 is the actual language minimum; PHP 8.4/8.5 are the tested production
+  targets. The former PHP 7.4 claim was incorrect.
+- Analytics storage migrates automatically on first access. Keep a full pre-upgrade
+  backup for rollback; do not downgrade only the PHP files after migration.
+- Rich text uses an HTML allowlist. Check custom content and move unsupported
+  layout markup into site-owned templates.
+- Follow the complete [upgrade guide](UPGRADING.md), including custom footer
+  integration, provider job handling and post-upgrade checks.
 
 ## [1.6.1] — 2026-08-05
 
@@ -119,9 +145,6 @@
 - Kie.ai as a configurable AI provider with independently stored credentials.
 - Kie chat/text model presets for GPT-5.6, Claude Sonnet 5 and Gemini 3.5 Flash.
 - Kie image generation support for GPT Image 2, Nano Banana 2 and Seedream 5.0 Pro, including asynchronous job polling and reference images.
-
-All notable changes to Nibbly are documented in this file. The project follows
-[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.6.0] — 2026-08-04
 

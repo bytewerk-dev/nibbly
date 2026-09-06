@@ -30,6 +30,12 @@ Thank you for your interest in contributing to Nibbly!
 - Describe the use case
 - Discuss before implementing large changes
 
+## Releases
+
+Follow [RELEASES.md](RELEASES.md) to keep `VERSION`, changelog dates, tested tags
+and GitHub releases synchronized. Document compatibility changes in the upgrade
+guide before publishing a release.
+
 ## Offline validation
 
 Run `python3 tests/run-smoke.py` from the repository root. The runner needs PHP
