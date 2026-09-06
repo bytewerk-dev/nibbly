@@ -9,7 +9,12 @@ Git milestones and the gaps in publication records.
 
 ## Unreleased
 
-No changes yet.
+### Changed
+
+- Added PHP 8.1 to the CI compatibility matrix alongside PHP 8.4/8.5.
+- Clarified that PHP 8.1 is the minimum requirement, while PHP 8.4/8.5 are
+  recommended for production. PHP 8.1 compatibility testing does not extend its
+  expired upstream security support.
 
 ## [2.0.0] — 2026-09-06
 

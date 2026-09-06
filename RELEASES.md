@@ -22,7 +22,7 @@ compatible fixes a patch version. Do not rename or move existing published tags.
    documented compatibility impact.
 2. Update `VERSION`, move pending changelog entries into a dated version section,
    leave a fresh `Unreleased` section and document upgrade steps.
-3. Submit a release PR. Check that PHP 8.4, PHP 8.5 and Chromium pass for its
+3. Submit a release PR. Check that PHP 8.1, PHP 8.4, PHP 8.5 and Chromium pass for its
    current commit, then merge through the protected `main` branch.
 4. Verify the merge commit's CI and the version rendered by `nibblyVersion()`.
    Check that its release archive includes `VERSION` and the complete core.
