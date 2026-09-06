@@ -6,8 +6,10 @@ but custom API clients and customized editor footers need attention.
 
 ## Before replacing files
 
-1. Use PHP 8.4 or 8.5, the versions covered by CI. The language minimum is PHP
-   8.1; older documentation claiming PHP 7.4 support was incorrect. Check the
+1. PHP 8.1 or newer is required. CI covers PHP 8.1, 8.4 and 8.5; PHP 8.4/8.5
+   are recommended for production. PHP 8.1 remains a compatibility target, but
+   its [official security support ended on 2025-12-31](https://www.php.net/eol.php).
+   Older documentation claiming PHP 7.4 support was incorrect. Check the
    extensions listed in [README.md](README.md#requirements).
 2. Make and verify a full backup of code, configuration, content and assets.
    Keep it outside the installation being updated. Rehearse the update on a copy.
