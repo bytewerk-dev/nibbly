@@ -9,6 +9,11 @@ Git milestones and the gaps in publication records.
 
 ## Unreleased
 
+## [2.1.0] — 2026-09-25
+
+Compatible features and fixes. The documented API, storage formats, accounts
+and sessions are unchanged.
+
 ### Added
 
 - Add AI disclosure labels for images (EU AI Act, Art. 50). Editors mark files
@@ -32,10 +37,23 @@ Git milestones and the gaps in publication records.
   successful safety backup, and keep the previous editing mode after reloading.
   Backup lists now exclude similarly named and nested pages. Add isolated API
   and toolbar regression coverage for restoration, image references and errors.
-
 - Offer to activate the visual editor after two clicks on non-interactive page
   content while logged in. The accessible dialog appears once per page load;
   links, controls, existing dialogs and active editing are excluded.
+
+### Changed
+
+- Added a routing regression suite for both the PHP development server and
+  an isolated Apache/PHP-FPM server using the actual `.htaccess`, with a separate
+  Apache CI job. Checks cover login settings, relative CSS, POST redirects,
+  future directory collisions, public pages, API access and protected paths.
+- Documented routing collision prevention and required Apache/post-upload
+  verification in `ROUTING.md`, linked from agent, contributor, upgrade and
+  release guidance. PHP development-server tests are not Apache coverage.
+- Added PHP 8.1 to the CI compatibility matrix alongside PHP 8.4/8.5.
+- Clarified that PHP 8.1 is the minimum requirement, while PHP 8.4/8.5 are
+  recommended for production. PHP 8.1 compatibility testing does not extend its
+  expired upstream security support.
 
 ### Fixed
 
@@ -56,52 +74,49 @@ Git milestones and the gaps in publication records.
 - Use the admin font in the image manager, its dialogs and the leave-edit-mode
   confirmation when they open over a website; site heading styles no longer
   apply to their titles.
-
 - Separate backup restore controls from visual/content editor actions with
   more spacing and a divider; use a separate row on narrow screens.
-
 - Load shared content referenced by standalone editable text, links, images,
   icons and lists before opening the visual editor, including its save revision.
   This prevents missing-revision conflicts and preserves unrelated shared fields.
 - Update list visibility button labels and tooltips immediately after hiding or
   showing an item.
-
 - Preserve the current page when the content editor refreshes its page list.
   Opening the editor from the frontend now keeps the requested page, heading,
   and desktop/mobile selectors in sync instead of resetting to the first entry.
   The admin-bar content and SEO links share the encoded page destination using
   the explicit `dashboard.php` endpoint. Regression tests cover query/hash links,
   multiple languages, and both page-list/content response orders.
-
 - Use a shared caret inset for admin/editor dropdowns, including native-picker
   controls. Reserve text space, support RTL and retain system arrows in
   forced-colors mode.
-
 - Canonicalize PHP directory entry points and file/directory name collisions
   before generic routing. `/admin` gets its directory slash, `/login` and
   `/login/` reach the styled login form, and PHP endpoints with an extra slash
   reach their real handler. HTTP 308 preserves query strings and POST bodies.
 - Share local canonicalization between the development router and front
   controller; directory handlers receive their actual PHP script identity.
-
 - Send admin logins directly to `dashboard.php` so Apache cannot redirect them
   into the dashboard fragment directory and return 404. Both clean dashboard
   URL variants redirect to `dashboard.php`, preserving query parameters and
   relative asset paths in Apache and the local PHP router.
 
-### Changed
+### Upgrade notes
 
-- Added a routing regression suite for both the PHP development server and
-  an isolated Apache/PHP-FPM server using the actual `.htaccess`, with a separate
-  Apache CI job. Checks cover login settings, relative CSS, POST redirects,
-  future directory collisions, public pages, API access and protected paths.
-- Documented routing collision prevention and required Apache/post-upload
-  verification in `ROUTING.md`, linked from agent, contributor, upgrade and
-  release guidance. PHP development-server tests are not Apache coverage.
-- Added PHP 8.1 to the CI compatibility matrix alongside PHP 8.4/8.5.
-- Clarified that PHP 8.1 is the minimum requirement, while PHP 8.4/8.5 are
-  recommended for production. PHP 8.1 compatibility testing does not extend its
-  expired upstream security support.
+- Deploy the complete core, including the new `includes/ai-labels.php`,
+  `includes/routing-helper.php`, `css/ai-labels/` and `js/ai-labels.js`.
+- Merge the updated `.htaccess` with site-specific rules, upload it with the core
+  and run the Apache and post-upload checks in
+  [ROUTING.md](ROUTING.md#required-verification).
+- Sites with a customized `includes/footer.php` add the `js/ai-labels.js` loader
+  and `window.NB_AI_LABELS` from the 2.1.0 footer. Without them, labels still
+  render, but touch devices cannot reveal them and the visual editor updates
+  them only after a reload.
+- AI labels are stored in the site-owned `content/media-meta.json`; keep it with
+  `content/` in backups and deployments. Existing images stay unlabelled until
+  an editor marks them in the media library.
+- Follow the [upgrade guide](UPGRADING.md#upgrading-from-200-to-210) for the
+  complete steps and post-upgrade checks.
 
 ## [2.0.0] — 2026-09-06
 

@@ -4,8 +4,9 @@ A flat-file CMS built on PHP with no database. Content lives in JSON files, page
 
 **Current release:** tracked in [`VERSION`](VERSION). Examples and full documentation at [nibbly.dev](https://nibbly.dev/).
 
-**Upgrading an existing site:** read [Upgrading to 2.0.0](UPGRADING.md) before
-replacing files. Custom save API integrations now require resource revisions.
+**Upgrading an existing site:** read the [upgrade guide](UPGRADING.md) for every
+version step before replacing files. Since 2.0.0, custom save API integrations
+require resource revisions.
 Release metadata and historical date notes are documented in [RELEASES.md](RELEASES.md).
 
 ## Features
