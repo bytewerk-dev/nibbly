@@ -13,6 +13,10 @@
  * so .htaccess never needs to be edited for language changes.
  */
 
+// Keep custom front-controller integrations on the same URL contract.
+require_once __DIR__ . '/includes/routing-helper.php';
+nibblyRoutingCanonicalize(__DIR__);
+
 // Load config
 $configPath = __DIR__ . '/admin/config.php';
 if (!file_exists($configPath)) {

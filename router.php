@@ -102,6 +102,10 @@ if (preg_match('#/(config|smtp-config)\.php$#i', $uri)) {
     return true;
 }
 
+// Run the same route-specific normalization as Apache before directory lookup.
+require_once $root . '/includes/routing-helper.php';
+nibblyRoutingCanonicalize($root);
+
 // Serve existing files directly (CSS, JS, images, etc.)
 if ($uri !== '/' && is_file($filePath)) {
     if (_routerServeSeekableMedia($filePath)) return true;
@@ -132,6 +136,8 @@ nibblyAccessEnforceMaintenance();
 if (is_dir($filePath)) {
     $index = rtrim($filePath, '/') . '/index.php';
     if (is_file($index)) {
+        $_SERVER['SCRIPT_FILENAME'] = $index;
+        $_SERVER['SCRIPT_NAME'] = $_SERVER['PHP_SELF'] = rtrim($uri, '/') . '/index.php';
         include $index;
         return true;
     }

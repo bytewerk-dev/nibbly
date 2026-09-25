@@ -1249,6 +1249,21 @@ function normalizePageSeo(array $contentData): array {
         jsonResponse(false, null, 'Open Graph image must be a JPG or PNG file from /assets/images/');
     }
 
+    // Keep additional scalar SEO fields that the page editor does not manage,
+    // e.g. the sitemap `priority` read by seo-helper.php or site-specific keys
+    $managed = ['title', 'description', 'answerSummary', 'canonical', 'robots', 'ogTitle', 'ogDescription', 'ogImage', 'sitemap'];
+    $extra = [];
+    foreach ($seo as $key => $value) {
+        if (!is_string($key) || in_array($key, $managed, true) || !preg_match('/^[A-Za-z][A-Za-z0-9_]{0,63}$/', $key)) {
+            continue;
+        }
+        if (is_string($value)) {
+            $extra[$key] = substr(trim($value), 0, 1000);
+        } elseif (is_int($value) || is_float($value) || is_bool($value)) {
+            $extra[$key] = $value;
+        }
+    }
+
     $contentData['seo'] = [
         'title' => substr(trim((string)($seo['title'] ?? '')), 0, 120),
         'description' => substr(trim((string)($seo['description'] ?? '')), 0, 260),
@@ -1259,7 +1274,7 @@ function normalizePageSeo(array $contentData): array {
         'ogDescription' => substr(trim((string)($seo['ogDescription'] ?? '')), 0, 260),
         'ogImage' => $ogImage,
         'sitemap' => ($seo['sitemap'] ?? true) !== false,
-    ];
+    ] + $extra;
 
     return $contentData;
 }
@@ -1343,6 +1358,7 @@ function listMediaFiles(string $type, bool $trash = false): array {
             'modified' => $modified,
             'dateFormatted' => date('d.m.Y H:i', $modified),
             'extension' => strtolower(pathinfo($relativePath, PATHINFO_EXTENSION)),
+            'aiLabel' => nibblyMediaAiLabelFor($trash ? $type . '-trash' : $type, $relativePath),
         ];
     }
 

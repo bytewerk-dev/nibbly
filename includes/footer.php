@@ -661,6 +661,9 @@ $_footerSummary = [
     <?php if (file_exists(__DIR__ . '/../js/faq-accordion.js')): ?>
     <script src="<?php echo $basePath; ?>js/faq-accordion.js"></script>
     <?php endif; ?>
+    <?php if (function_exists('nibblyAiLabelsRendered') && nibblyAiLabelsRendered() && file_exists(__DIR__ . '/../js/ai-labels.js')): ?>
+    <script src="<?php echo $basePath; ?>js/ai-labels.js" defer></script>
+    <?php endif; ?>
 
     <?php if (!$isAdminLoggedIn && !empty($_settings['privacy']['emailObfuscation']) && file_exists(__DIR__ . '/../js/email-obfuscator.js')): ?>
     <script src="<?php echo $basePath; ?>js/email-obfuscator.js"></script>
@@ -723,6 +726,7 @@ $_footerSummary = [
     window.NB_AI_ASSISTANT_LANGUAGE = <?php echo json_encode(function_exists('_nbAdminLang') ? _nbAdminLang() : ($currentLang ?? (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en'))); ?>;
     window.NB_ADMIN_API_URL = <?php echo json_encode($basePath . 'admin/api.php', JSON_UNESCAPED_SLASHES); ?>;
     window.NB_ADMIN_BASE_URL = <?php echo $_adminAccessBaseJson; ?>;
+    window.NB_AI_LABELS = <?php echo json_encode(nibblyAiLabelEditorConfig($currentLang ?? null), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG); ?>;
     <?php
     // Build lightweight page list for link picker (slug → title for current language)
     $_linkPages = [];

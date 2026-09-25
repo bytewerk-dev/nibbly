@@ -29,6 +29,14 @@ helpers and core editor CSS/JavaScript. Copying only `admin/api.php` or
 `admin/dashboard.php` is insufficient. Preserve the site-owned exceptions above;
 do not unpack a release over a live installation without applying these rules.
 
+Merge and upload `.htaccess` together with routing/login changes; confirm the
+upload includes hidden files and preserve site-specific rules. The
+`admin/dashboard/` fragment directory collides with the old clean login target:
+the default destination must be `dashboard.php`, with both clean aliases handled
+explicitly. Follow [ROUTING.md](ROUTING.md) for the required Apache and post-upload
+checks. A successful `/admin/` login-page request alone does not verify login or
+dashboard routing.
+
 The bundled dashboard and inline editor already implement revision handling.
 If your site has a customized `includes/footer.php`, merge the editor integration
 from the 2.0.0 footer into it while preserving the site's layout:

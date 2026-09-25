@@ -103,7 +103,7 @@ if (isset($post['content']) && is_string($post['content'])) {
 
                 <?php if (!empty($post['image'])): ?>
                 <div class="news-post-page__hero">
-                    <img src="<?php echo htmlspecialchars($post['image']); ?>" alt="<?php echo htmlspecialchars($pageTitle); ?>">
+                    <img src="<?php echo htmlspecialchars($post['image']); ?>" alt="<?php echo htmlspecialchars($pageTitle); ?>"><?php echo nibblyAiLabelHtml((string)$post['image']); ?>
                 </div>
                 <?php endif; ?>
 

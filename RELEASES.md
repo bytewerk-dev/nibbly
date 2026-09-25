@@ -26,6 +26,9 @@ compatible fixes a patch version. Do not rename or move existing published tags.
    current commit, then merge through the protected `main` branch.
 4. Verify the merge commit's CI and the version rendered by `nibblyVersion()`.
    Check that its release archive includes `VERSION` and the complete core.
+   For routing, login-destination or handler-directory changes, also record the
+   [Apache routing verification](ROUTING.md#required-verification) for that code.
+   The PHP/Chromium CI jobs alone do not exercise Apache or `.htaccess`.
 5. Create an annotated `vX.Y.Z` tag on that exact merge commit and publish a
    GitHub release using explicit release notes. Include the compatibility impact,
    upgrade instructions and validation scope. If publication crosses midnight

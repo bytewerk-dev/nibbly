@@ -145,7 +145,7 @@
     }
 
     // Update page dropdown from pageListCache (both desktop and mobile)
-    function updatePageSelect() {
+    function updatePageSelect(selectedSlug = document.getElementById('pageSelect').value) {
         const lang = document.getElementById('langSelect').value;
         const pageSelect = document.getElementById('pageSelect');
         const pageSelectMobile = document.getElementById('pageSelectMobile');
@@ -163,6 +163,14 @@
             pageSelect.appendChild(option);
             if (pageSelectMobile) pageSelectMobile.appendChild(option.cloneNode(true));
         }
+
+        // Background list refreshes must not reset the editor to the first page.
+        if (Array.from(pageSelect.options).some(option => option.value === selectedSlug)) {
+            pageSelect.value = selectedSlug;
+        }
+        if (pageSelectMobile) pageSelectMobile.value = pageSelect.value;
+        const langSelectMobile = document.getElementById('langSelectMobile');
+        if (langSelectMobile) langSelectMobile.value = lang;
     }
 
     // Sync selectors between desktop and mobile
@@ -503,8 +511,7 @@
     function openPageFromList(lang, slug) {
         // Set selectors and load
         document.getElementById('langSelect').value = lang;
-        updatePageSelect();
-        document.getElementById('pageSelect').value = slug;
+        updatePageSelect(slug);
         const m = document.getElementById('langSelectMobile');
         if (m) m.value = lang;
         const pm = document.getElementById('pageSelectMobile');
@@ -1343,7 +1350,8 @@
             currentContent.visibility = { status: 'public', title: visTitle, text: visText };
         }
 
-        currentContent.seo = {
+        // Merge, so SEO fields without a form control (e.g. priority) are kept
+        currentContent.seo = Object.assign({}, currentContent.seo || {}, {
             title: document.getElementById('seoTitle')?.value?.trim() || '',
             description: document.getElementById('seoDescription')?.value?.trim() || '',
             answerSummary: document.getElementById('seoAnswerSummary')?.value?.trim() || '',
@@ -1353,7 +1361,7 @@
             ogDescription: document.getElementById('seoOgDescription')?.value?.trim() || '',
             ogImage: document.getElementById('seoOgImage')?.value?.trim() || '',
             sitemap: document.getElementById('seoSitemap')?.checked !== false
-        };
+        });
     }
 
     function getSectionPreview(section, maxLength = 72) {

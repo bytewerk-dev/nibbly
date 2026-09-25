@@ -29,6 +29,22 @@ jobs:
         with:
           node-version: '22'
       - run: python3 tests/run-smoke.py
+  apache:
+    name: Apache routing / PHP-FPM
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Apache and PHP-FPM
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y apache2 php8.3-cli php8.3-fpm php8.3-curl php8.3-gd php8.3-mbstring php8.3-xml php8.3-zip
+      - name: Check real .htaccess routing in an isolated installation
+        env:
+          HTTPD: /usr/sbin/apache2
+          PHP_FPM: /usr/sbin/php-fpm8.3
+          HTTPD_MODULE_DIR: /usr/lib/apache2/modules
+        run: python3 tests/routing-smoke.py --apache
   chromium:
     name: Chromium
     runs-on: ubuntu-24.04

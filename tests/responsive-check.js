@@ -12,7 +12,7 @@ const { writeFileSync } = require('node:fs');
         await page.goto(process.env.REVIEW_URL + '/admin/index.php');
         await page.locator('#username').fill('admin');
         await page.locator('#password').fill(process.env.REVIEW_PASSWORD);
-        await Promise.all([page.waitForURL('**/admin/dashboard'), page.locator('form button[type=submit]').first().click()]);
+        await Promise.all([page.waitForURL('**/admin/dashboard.php'), page.locator('form button[type=submit]').first().click()]);
         await page.waitForLoadState('networkidle');
         for (const width of (process.env.REVIEW_WIDTH ? [Number(process.env.REVIEW_WIDTH)] : [360, 390, 768, 1024, 1440])) {
             await page.setViewportSize({ width, height: 1000 });

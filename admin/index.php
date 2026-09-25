@@ -234,15 +234,15 @@ if (!empty($_GET['redirect'])) {
     if ($loginMode === 'auto') {
         $_SESSION['redirect_after_login'] = $sourceUrl;
     } else {
-        $_SESSION['redirect_after_login'] = 'dashboard';
+        $_SESSION['redirect_after_login'] = 'dashboard.php';
     }
 } elseif (!isset($_SESSION['redirect_after_login'])) {
-    $_SESSION['redirect_after_login'] = 'dashboard';
+    $_SESSION['redirect_after_login'] = 'dashboard.php';
 }
 
 // Already logged in? Redirect to saved page
 if (nibblySessionValidate()) {
-    $redirect = $_SESSION['redirect_after_login'] ?? 'dashboard';
+    $redirect = $_SESSION['redirect_after_login'] ?? 'dashboard.php';
     unset($_SESSION['redirect_after_login']);
     header('Location: ' . $redirect);
     exit;
@@ -315,7 +315,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['email_missing'] = true;
             }
 
-            $redirect = $_SESSION['redirect_after_login'] ?? 'dashboard';
+            $redirect = $_SESSION['redirect_after_login'] ?? 'dashboard.php';
             unset($_SESSION['redirect_after_login']);
             header('Location: ' . $redirect);
             exit;

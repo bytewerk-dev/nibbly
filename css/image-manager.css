@@ -27,6 +27,22 @@
         linear-gradient(-45deg, var(--nb-imgmgr-transparent-check) 25%, transparent 25%),
         linear-gradient(45deg, transparent 75%, var(--nb-imgmgr-transparent-check) 75%),
         linear-gradient(-45deg, transparent 75%, var(--nb-imgmgr-transparent-check) 75%);
+    /* Admin typography (as in the dashboard), also when the manager opens over a
+       website with its own fonts, sizes and resets */
+    font-family: var(--nb-font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--nb-text, #1a1a1a);
+}
+
+:is(.nb-imgmgr-modal, .nb-imgmgr-lightbox, .nb-imgmgr-replace, .nb-imgmgr-move) :is(h1, h2, h3, h4) {
+    font-family: inherit;
+    letter-spacing: normal;
+}
+
+/* Form controls do not inherit fonts by default */
+:is(.nb-imgmgr-modal, .nb-imgmgr-lightbox, .nb-imgmgr-replace, .nb-imgmgr-move) :is(input, select, textarea, button) {
+    font-family: inherit;
 }
 
 .nb-imgmgr-modal {
@@ -1385,6 +1401,57 @@
     font-weight: 600;
 }
 
+.nb-imgmgr-replace-intro {
+    margin: 0 0 14px;
+}
+
+/* AI disclosure label: badge on thumbnails, active action and dialog */
+.nb-imgmgr-ai-badge {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    z-index: 1;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: rgba(17, 24, 39, 0.82);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1.6;
+    pointer-events: none;
+}
+
+.nb-imgmgr-list-thumb .nb-imgmgr-ai-badge {
+    top: 2px;
+    left: 2px;
+    padding: 0 4px;
+    font-size: 8px;
+}
+
+.nb-imgmgr-action-btn--on {
+    color: var(--nb-imgmgr-accent);
+}
+
+.nb-imgmgr-ai-dialog .nb-imgmgr-replace-options {
+    margin-bottom: 0;
+}
+
+/* The dialog reuses the move dialog frame: keep the option layout of the replace dialog */
+.nb-imgmgr-ai-dialog .nb-imgmgr-replace-option {
+    display: flex;
+    margin-bottom: 0;
+    font-size: inherit;
+    font-weight: inherit;
+}
+
+.nb-imgmgr-ai-hint {
+    margin: 14px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--nb-text-muted, #6e6e6e);
+}
+
 .nb-imgmgr-replace-body,
 .nb-imgmgr-move-body {
     padding: 20px;
@@ -1524,7 +1591,11 @@
 }
 
 .nb-imgmgr-replace-option input[type="radio"] {
-    margin-top: 2px;
+    flex: none;
+    width: 16px;
+    height: 16px;
+    /* centred on the first line of the option title (line-height 1.6) */
+    margin: calc((1.6em - 16px) / 2) 0 0;
     accent-color: var(--nb-imgmgr-accent);
 }
 

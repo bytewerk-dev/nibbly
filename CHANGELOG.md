@@ -9,8 +9,95 @@ Git milestones and the gaps in publication records.
 
 ## Unreleased
 
+### Added
+
+- Add AI disclosure labels for images (EU AI Act, Art. 50). Editors mark files
+  as AI-generated or AI-modified in the media library; uploads with embedded
+  provenance (IPTC digital source type in XMP or C2PA) are labelled
+  automatically. Labels are stored in `content/media-meta.json`, follow renames,
+  moves, trash and restore, and are rendered automatically by editable images
+  and the image, card, news and event output: a small "KI"/"AI" label in the
+  bottom-right corner with a localized alt text, hidden at rest and shown after
+  lingering (600 ms hover, or `js/ai-labels.js` on touch devices). In the visual
+  editor, labels follow image swaps, undo/redo and label changes in the media
+  library right away (`window.NB_AI_LABELS`).
+- Add `contentBindAttrs()` for elements that repeat a field shown elsewhere,
+  such as image previews or table-of-contents labels. The visual editor now
+  refreshes these bound elements live after group edits, undo and redo.
+- Show saved backups for the current page in the frontend admin bar, in both
+  browse and visual-edit modes. The compact dropdown uses local dates, refreshes
+  after saving, and provides a confirmed Apply action with an unsaved-change
+  warning. Remove the reorder instruction from the toolbar hint.
+- Guard frontend backup restores against concurrent page changes, require a
+  successful safety backup, and keep the previous editing mode after reloading.
+  Backup lists now exclude similarly named and nested pages. Add isolated API
+  and toolbar regression coverage for restoration, image references and errors.
+
+- Offer to activate the visual editor after two clicks on non-interactive page
+  content while logged in. The accessible dialog appears once per page load;
+  links, controls, existing dialogs and active editing are excluded.
+
+### Fixed
+
+- Keep SEO fields without a form control, such as the sitemap `priority` read
+  by the sitemap or site-specific keys, when saving a page in the content
+  editor; the dashboard and the save API previously dropped them.
+- Align the image manager with the dashboard typography when it opens over a
+  website: base size and line height, centred radio buttons and spacing in the
+  replace dialog.
+- Show replaced images immediately in the media library and lightbox: previews
+  carry the file's modification time, so the browser no longer shows the
+  cached old file.
+- Use the editor font for toast notifications on websites.
+- Show the link icon in link fields of the group editor instead of `undefined`.
+- Keep editable images filling their frame in edit mode. The editor's image
+  wrapper is styled in CSS instead of inline styles, so sites can adapt it, and
+  follows images that fill a container via `object-fit` or absolute positioning.
+- Use the admin font in the image manager, its dialogs and the leave-edit-mode
+  confirmation when they open over a website; site heading styles no longer
+  apply to their titles.
+
+- Separate backup restore controls from visual/content editor actions with
+  more spacing and a divider; use a separate row on narrow screens.
+
+- Load shared content referenced by standalone editable text, links, images,
+  icons and lists before opening the visual editor, including its save revision.
+  This prevents missing-revision conflicts and preserves unrelated shared fields.
+- Update list visibility button labels and tooltips immediately after hiding or
+  showing an item.
+
+- Preserve the current page when the content editor refreshes its page list.
+  Opening the editor from the frontend now keeps the requested page, heading,
+  and desktop/mobile selectors in sync instead of resetting to the first entry.
+  The admin-bar content and SEO links share the encoded page destination using
+  the explicit `dashboard.php` endpoint. Regression tests cover query/hash links,
+  multiple languages, and both page-list/content response orders.
+
+- Use a shared caret inset for admin/editor dropdowns, including native-picker
+  controls. Reserve text space, support RTL and retain system arrows in
+  forced-colors mode.
+
+- Canonicalize PHP directory entry points and file/directory name collisions
+  before generic routing. `/admin` gets its directory slash, `/login` and
+  `/login/` reach the styled login form, and PHP endpoints with an extra slash
+  reach their real handler. HTTP 308 preserves query strings and POST bodies.
+- Share local canonicalization between the development router and front
+  controller; directory handlers receive their actual PHP script identity.
+
+- Send admin logins directly to `dashboard.php` so Apache cannot redirect them
+  into the dashboard fragment directory and return 404. Both clean dashboard
+  URL variants redirect to `dashboard.php`, preserving query parameters and
+  relative asset paths in Apache and the local PHP router.
+
 ### Changed
 
+- Added a routing regression suite for both the PHP development server and
+  an isolated Apache/PHP-FPM server using the actual `.htaccess`, with a separate
+  Apache CI job. Checks cover login settings, relative CSS, POST redirects,
+  future directory collisions, public pages, API access and protected paths.
+- Documented routing collision prevention and required Apache/post-upload
+  verification in `ROUTING.md`, linked from agent, contributor, upgrade and
+  release guidance. PHP development-server tests are not Apache coverage.
 - Added PHP 8.1 to the CI compatibility matrix alongside PHP 8.4/8.5.
 - Clarified that PHP 8.1 is the minimum requirement, while PHP 8.4/8.5 are
   recommended for production. PHP 8.1 compatibility testing does not extend its

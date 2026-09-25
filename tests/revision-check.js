@@ -8,7 +8,7 @@ const { chromium } = require('playwright');
         await first.goto(process.env.REVIEW_URL + '/admin/index.php');
         await first.locator('#username').fill('admin');
         await first.locator('#password').fill(process.env.REVIEW_PASSWORD);
-        await Promise.all([first.waitForURL('**/admin/dashboard'), first.locator('form button[type=submit]').first().click()]);
+        await Promise.all([first.waitForURL('**/admin/dashboard.php'), first.locator('form button[type=submit]').first().click()]);
         await second.goto(process.env.REVIEW_URL + '/admin/dashboard');
         for (const page of [first, second]) await page.evaluate(async () => { await fetch('api.php?action=load&page=en_home'); });
         const save = page => page.evaluate(async () => {

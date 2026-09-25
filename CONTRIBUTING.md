@@ -47,6 +47,11 @@ The suite covers PHP/JavaScript syntax, translation JSON, permissions, sessions,
 CSRF, safe HTML, routing, forms, backup/restore, concurrent file writes, and mocked
 AI provider requests. Browser checks are separate from the offline runner.
 
+Routing tests in this suite run on the PHP development server, not Apache.
+For routing, login-destination or handler-directory changes, also complete the
+[Apache routing checks](ROUTING.md#required-verification) and include that evidence
+in the PR. The focused local regression command is `python3 tests/system-smoke.py`.
+
 With Playwright and Chromium installed locally, run `python3 tests/browser-check.py`.
 This also uses an isolated fixture and reports the location of its screenshots.
 

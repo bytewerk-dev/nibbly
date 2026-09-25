@@ -49,6 +49,10 @@ php -S localhost:3000 router.php
 
 That's it. Your site is running.
 
+Before uploading or upgrading a site, follow
+[Routing and deployment verification](ROUTING.md). Local PHP routing and Apache
+can differ, especially when clean URLs share names with physical directories.
+
 ## Built for AI
 
 Nibbly ships with structured documentation designed for AI coding agents:

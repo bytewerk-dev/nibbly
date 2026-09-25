@@ -19,10 +19,10 @@ if (empty($src) && !$editable) {
 
 $html .= '<figure class="block-image' . $widthClass . '">' . "\n";
 if ($editable) {
-    $html .= '    ' . editableImageSplit($page, "sections.$index.src", "sections.$index.alt", $src, $rawAlt) . "\n";
+    $html .= '    ' . nibblyAiLabelFrame(editableImageSplit($page, "sections.$index.src", "sections.$index.alt", $src, $rawAlt)) . "\n";
     $html .= '    <figcaption>' . editableText($page, "sections.$index.caption", $caption) . '</figcaption>' . "\n";
 } else {
-    $html .= '    <img src="' . htmlspecialchars($src) . '" alt="' . htmlspecialchars($rawAlt) . '" loading="lazy">' . "\n";
+    $html .= '    ' . nibblyAiLabelAttach('<img src="' . htmlspecialchars($src) . '" alt="' . htmlspecialchars($rawAlt) . '" loading="lazy">', (string)$src, true) . "\n";
     if ($caption !== '') {
         $html .= '    <figcaption>' . htmlspecialchars($caption) . '</figcaption>' . "\n";
     }
