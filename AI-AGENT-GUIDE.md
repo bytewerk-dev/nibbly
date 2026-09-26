@@ -829,8 +829,12 @@ C2PA) are labelled automatically. Labels are stored in `content/media-meta.json`
 and follow the file when it is renamed, moved, trashed or restored.
 
 Nibbly renders the label right after the image: `<span class="nb-ai-label">` with
-the artwork from `css/ai-labels/` ("KI" on German pages, "AI" otherwise) and a
-localized alt text. The label is absolutely positioned in the image's parent, so
+English artwork from `css/ai-labels/` ("AI generated", "AI modified") and an alt
+text in the page language. German artwork ("KI generiert") is optional: with
+Settings → Language → AI labels on images = page language (`settings.json` →
+`general.aiLabelArtwork` = `"page"`), German pages use it; `nibblyAiLabelArtworkMode()`
+reads the choice. `css/ai-labels/en-ai.svg`, a round "AI" badge, ships unused for
+later purposes such as AI-generated news or blog texts. The label is absolutely positioned in the image's parent, so
 place labelled images in a frame (a wrapper that has the image's size) or use
 `nibblyAiLabelAttach($imgHtml, $src, true)`, which wraps image and label in
 `.nb-ai-media`. Default styles in `css/components.css`: bottom right, hidden at

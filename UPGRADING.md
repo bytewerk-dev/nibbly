@@ -29,10 +29,12 @@ formats, accounts and sessions are unchanged.
    created when the first label is set. Keep it with `content/` in backups and
    deployments. Existing images stay unlabelled until an editor marks them in
    the media library; uploads with embedded provenance are labelled
-   automatically. Labels are hidden at rest and shown when a visitor lingers;
-   set `--nb-ai-label-rest` (for example `0.25`) to keep them visible. Labelled
-   images need a positioned frame, see
-   [AI Disclosure Labels](AI-AGENT-GUIDE.md#ai-disclosure-labels).
+   automatically. The label artwork is English ("AI generated") on every page;
+   for the German artwork on German pages, choose Settings → Language → AI
+   labels on images → Page language. Labels are hidden at rest and shown when a
+   visitor lingers; set `--nb-ai-label-rest` (for example `0.25`) to keep them
+   visible. Labelled images need a positioned frame, see [AI Disclosure
+   Labels](AI-AGENT-GUIDE.md#ai-disclosure-labels).
 
 After deployment, confirm that the Dashboard reports **2.1.0**, sign in through
 `/admin/`, save a page in both editors, open the saved backups in the admin bar,

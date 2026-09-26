@@ -8,6 +8,7 @@ $root = dirname(__DIR__);
 $tmp = sys_get_temp_dir() . '/nibbly-ai-labels-' . bin2hex(random_bytes(4));
 mkdir($tmp, 0755, true);
 define('NIBBLY_MEDIA_META_PATH', $tmp . '/media-meta.json');
+define('SETTINGS_PATH', $tmp . '/settings.json');
 require_once $root . '/includes/ai-labels.php';
 
 function aiLabelAssert(bool $condition, string $message): void {
@@ -56,14 +57,23 @@ try {
     aiLabelAssert(nibblyDetectAiLabel($modified) === 'modified', 'composites must be detected as modified');
     aiLabelAssert(nibblyDetectAiLabel($plain) === '', 'files without provenance carry no label');
 
-    // Markup in the page language
+    // Markup: English artwork by default, alt text in the page language
     $GLOBALS['basePath'] = '../';
     nibblySetMediaAiLabel('image', 'c.webp', 'generated');
+    aiLabelAssert(nibblyAiLabelArtworkMode() === 'en', 'English artwork is the default');
     $de = nibblyAiLabelHtml('/assets/images/c.webp', 'de');
     aiLabelAssert(str_contains($de, 'class="nb-ai-label nb-ai-label--generated"'), 'label wrapper with kind modifier');
-    aiLabelAssert(str_contains($de, 'src="../css/ai-labels/de-generated.svg"') && str_contains($de, 'alt="KI-generiert"'), 'German artwork and alt text');
-    $en = nibblyAiLabelHtml('/assets/images/c.webp', 'fr');
-    aiLabelAssert(str_contains($en, 'en-generated.svg') && str_contains($en, 'alt="Généré par IA"'), 'AI artwork with localized alt text');
+    aiLabelAssert(str_contains($de, 'src="../css/ai-labels/en-generated.svg"') && str_contains($de, 'alt="KI-generiert"'), 'English artwork with a German alt text on German pages');
+    $fr = nibblyAiLabelHtml('/assets/images/c.webp', 'fr');
+    aiLabelAssert(str_contains($fr, 'en-generated.svg') && str_contains($fr, 'alt="Généré par IA"'), 'English artwork with a localized alt text');
+
+    // Optional German artwork on German pages (Settings → Language → AI labels on images)
+    file_put_contents(SETTINGS_PATH, json_encode(['general' => ['aiLabelArtwork' => 'page']]));
+    aiLabelAssert(nibblyAiLabelArtworkMode(true) === 'page', 'the page-language artwork can be selected');
+    aiLabelAssert(str_contains(nibblyAiLabelHtml('/assets/images/c.webp', 'de'), 'src="../css/ai-labels/de-generated.svg"'), 'German artwork on German pages when selected');
+    aiLabelAssert(str_contains(nibblyAiLabelHtml('/assets/images/c.webp', 'fr'), 'en-generated.svg'), 'other languages keep the English artwork');
+    file_put_contents(SETTINGS_PATH, json_encode(['general' => ['aiLabelArtwork' => 'unknown']]));
+    aiLabelAssert(nibblyAiLabelArtworkMode(true) === 'en', 'unknown artwork modes fall back to English');
     aiLabelAssert(nibblyAiLabelHtml('/assets/images/unlabelled.webp', 'de') === '', 'unlabelled images render no label');
     aiLabelAssert(nibblyAiLabelsRendered(), 'rendered labels must be tracked for the touch script');
     $framed = nibblyAiLabelAttach('<img src="/assets/images/c.webp" alt="">', '/assets/images/c.webp', true);
@@ -76,13 +86,14 @@ try {
     $editorJson = json_encode(nibblyAiLabelEditorConfig('de'));
     $editor = json_decode((string)$editorJson, true);
     aiLabelAssert(($editor['files']['image']['c.webp'] ?? '') === 'generated' && ($editor['files']['video']['clip.mp4'] ?? '') === 'modified', 'editor data lists labelled files');
-    aiLabelAssert(str_contains($editor['markup']['generated'] ?? '', 'de-generated.svg') && str_contains($editor['markup']['modified'] ?? '', 'nb-ai-label--modified'), 'editor data carries the label markup per kind');
+    aiLabelAssert(str_contains($editor['markup']['generated'] ?? '', 'en-generated.svg') && str_contains($editor['markup']['modified'] ?? '', 'nb-ai-label--modified'), 'editor data carries the label markup per kind');
     aiLabelAssert(!nibblyAiLabelsRendered(), 'label templates for the editor do not count as rendered labels');
     nibblySetMediaAiLabel('image', 'c.webp', '');
     nibblySetMediaAiLabel('video', 'clip.mp4', '');
     aiLabelAssert(str_starts_with((string)json_encode(nibblyAiLabelEditorConfig('de')), '{"files":{}'), 'no labelled files encode as an object');
 
-    foreach (['de-generated', 'de-modified', 'en-generated', 'en-modified'] as $artwork) {
+    // en-ai is a round "AI" badge that ships for later use (e.g. AI-generated texts)
+    foreach (['de-generated', 'de-modified', 'en-generated', 'en-modified', 'en-ai'] as $artwork) {
         aiLabelAssert(is_file($root . '/css/ai-labels/' . $artwork . '.svg'), "artwork {$artwork} must ship with the core");
     }
 } finally {

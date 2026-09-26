@@ -1462,6 +1462,14 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label for="settingsAiLabelArtwork"><?php echo t('settings.ai_label_artwork'); ?></label>
+                        <select id="settingsAiLabelArtwork" class="topbar-select" style="width: auto; min-width: 200px;">
+                            <option value="en"><?php echo t('settings.ai_label_artwork_en'); ?></option>
+                            <option value="page"><?php echo t('settings.ai_label_artwork_page'); ?></option>
+                        </select>
+                        <small class="form-hint"><?php echo t('settings.ai_label_artwork_hint'); ?></small>
+                    </div>
                     <button type="submit" class="btn btn-primary" id="saveLanguageBtn"><?php echo t('settings.save_language'); ?></button>
                 </form>
             </div>

@@ -3,6 +3,11 @@
     document.querySelectorAll('.settings-tab-btn[data-settings-tab]').forEach(button => {
         settingsMobileNav?.add(new Option(button.textContent.trim(), button.dataset.settingsTab));
     });
+    // A settings link (#settings/…) can activate a tab before this script runs: show it in the menu too
+    if (settingsMobileNav) {
+        settingsMobileNav.value = document.querySelector('.settings-tab-btn.active')?.dataset.settingsTab || settingsMobileNav.value;
+        window.nbSelectSync?.(settingsMobileNav);
+    }
     settingsMobileNav?.addEventListener('change', () => activateSettingsTab(settingsMobileNav.value));
     function loadSettingsTabData(tab) {
         if (tab === 'users' && typeof loadUsers === 'function' && typeof _usersLoaded !== 'undefined' && !_usersLoaded) {
@@ -29,7 +34,9 @@
         document.querySelectorAll('.settings-tab-btn').forEach(function(b) { b.classList.remove('active'); });
         document.querySelectorAll('.settings-panel').forEach(function(p) { p.classList.remove('active'); });
         btn.classList.add('active');
-        if (settingsMobileNav) { settingsMobileNav.value = tab; window.nbSelectSync?.(settingsMobileNav); }
+        // Looked up here: the initial route can call this before the constant above is initialized
+        var mobileNav = document.getElementById('settingsMobileNav');
+        if (mobileNav) { mobileNav.value = tab; window.nbSelectSync?.(mobileNav); }
         var panel = document.getElementById('settingsPanel-' + tab);
         if (panel) panel.classList.add('active');
         loadSettingsTabData(tab);
@@ -161,6 +168,8 @@
         // Language
         var langSelect = document.getElementById('settingsAdminLanguage');
         if (langSelect) langSelect.value = settings.general?.adminLanguage || '';
+        var aiLabelArtworkSelect = document.getElementById('settingsAiLabelArtwork');
+        if (aiLabelArtworkSelect) aiLabelArtworkSelect.value = settings.general?.aiLabelArtwork === 'page' ? 'page' : 'en';
 
         // Frontend-login redirect mode (default: 'auto')
         var loginMode = (settings.general && settings.general.frontendLoginRedirect) || 'auto';
@@ -2418,6 +2427,8 @@
             var settings = Object.assign({}, currentSettings || {});
             if (!settings.general) settings.general = {};
             settings.general.adminLanguage = document.getElementById('settingsAdminLanguage').value;
+            var aiLabelArtworkEl = document.getElementById('settingsAiLabelArtwork');
+            if (aiLabelArtworkEl) settings.general.aiLabelArtwork = aiLabelArtworkEl.value === 'page' ? 'page' : 'en';
 
             var formData = new FormData();
             formData.append('action', 'save-settings');

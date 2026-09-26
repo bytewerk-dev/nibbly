@@ -9,7 +9,7 @@ Git milestones and the gaps in publication records.
 
 ## Unreleased
 
-## [2.1.0] — 2026-09-25
+## [2.1.0] — 2026-09-26
 
 Compatible features and fixes. The documented API, storage formats, accounts
 and sessions are unchanged.
@@ -21,9 +21,11 @@ and sessions are unchanged.
   provenance (IPTC digital source type in XMP or C2PA) are labelled
   automatically. Labels are stored in `content/media-meta.json`, follow renames,
   moves, trash and restore, and are rendered automatically by editable images
-  and the image, card, news and event output: a small "KI"/"AI" label in the
-  bottom-right corner with a localized alt text, hidden at rest and shown after
-  lingering (600 ms hover, or `js/ai-labels.js` on touch devices). In the visual
+  and the image, card, news and event output: a small "AI generated"/"AI
+  modified" label in the bottom-right corner with a localized alt text, hidden at
+  rest and shown after lingering (600 ms hover, or `js/ai-labels.js` on touch
+  devices). German pages can show the German "KI" artwork instead (Settings →
+  Language → AI labels on images). In the visual
   editor, labels follow image swaps, undo/redo and label changes in the media
   library right away (`window.NB_AI_LABELS`).
 - Add `contentBindAttrs()` for elements that repeat a field shown elsewhere,
@@ -74,6 +76,9 @@ and sessions are unchanged.
 - Use the admin font in the image manager, its dialogs and the leave-edit-mode
   confirmation when they open over a website; site heading styles no longer
   apply to their titles.
+- Open the linked settings tab when the dashboard loads on a settings address
+  (`#settings/…`, also after saving the language). A script error previously
+  left the panel unloaded and blocked back/forward navigation in the dashboard.
 - Separate backup restore controls from visual/content editor actions with
   more spacing and a divider; use a separate row on narrow screens.
 - Load shared content referenced by standalone editable text, links, images,

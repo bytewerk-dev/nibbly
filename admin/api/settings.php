@@ -133,7 +133,7 @@ switch ($action) {
         $allowed = [
             'branding' => ['logo', 'logoDark', 'adminLogo', 'name', 'showBranding', 'logoDisplay', 'logoSize'],
             'theme' => ['adminTheme', 'publicDefault', 'primaryColor', 'accentColor', 'sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg', 'buttonGlow', 'buttonRadius'],
-            'general' => ['adminLanguage', 'frontendLoginRedirect'],
+            'general' => ['adminLanguage', 'frontendLoginRedirect', 'aiLabelArtwork'],
             'email' => ['method', 'recipientEmail', 'bccEmail', 'fromEmail', 'fromName', 'smtpHost', 'smtpPort', 'smtpUsername', 'smtpPassword', 'smtpEncryption'],
             'seo' => ['siteUrl', 'organizationName', 'defaultOgImage', 'noindexSite']
         ];
@@ -245,6 +245,11 @@ switch ($action) {
                         if ($value !== '' && !is_file(NIBBLY_ADMIN_DIR . '/lang/' . $value . '.json')) {
                             jsonResponse(false, null, 'Language file not found');
                         }
+                    }
+
+                    // AI label artwork: English everywhere or German on German pages
+                    if ($key === 'aiLabelArtwork' && !in_array($value, ['en', 'page'], true)) {
+                        $value = 'en';
                     }
 
                     // Validate boolean

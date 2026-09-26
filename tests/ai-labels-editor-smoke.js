@@ -7,6 +7,9 @@ const root = path.join(__dirname, '..');
 const editor = fs.readFileSync(path.join(root, 'js/inline-editor.js'), 'utf8');
 const manager = fs.readFileSync(path.join(root, 'js/image-manager.js'), 'utf8');
 const footer = fs.readFileSync(path.join(root, 'includes/footer.php'), 'utf8');
+const dashboard = fs.readFileSync(path.join(root, 'admin/dashboard.php'), 'utf8');
+const settingsScript = fs.readFileSync(path.join(root, 'admin/dashboard/scripts/settings.php'), 'utf8');
+const settingsApi = fs.readFileSync(path.join(root, 'admin/api/settings.php'), 'utf8');
 
 function implementation(name) {
     const match = editor.match(new RegExp(`    function ${name}\\([^]*?\\n    }`));
@@ -109,5 +112,10 @@ assert.deepEqual(labels(frameBound), ['modified']);
 assert.ok(footer.includes('window.NB_AI_LABELS = <?php echo json_encode(nibblyAiLabelEditorConfig('), 'footer passes label data to the editor');
 assert.ok((editor.match(/syncAiLabel\((img|el|element|heroEl)\);/g) || []).length >= 5, 'editor syncs labels wherever it changes an image');
 assert.ok((manager.match(/announceAiLabel\(/g) || []).length >= 4, 'media library announces label changes, detections and replacements');
+
+// Label artwork: English by default, German on German pages when selected under Settings → Language
+assert.ok(dashboard.includes('id="settingsAiLabelArtwork"'), 'language settings offer the label artwork choice');
+assert.ok(settingsScript.includes('settings.general.aiLabelArtwork ='), 'the language form saves the label artwork choice');
+assert.ok(/'general' => \[[^\]]*'aiLabelArtwork'/.test(settingsApi), 'the settings API accepts the label artwork choice');
 
 console.log(JSON.stringify({ ok: true }));

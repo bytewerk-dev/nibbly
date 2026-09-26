@@ -10,8 +10,11 @@
  *
  * Rendering: nibblyAiLabelHtml($src) returns the label markup for an image source
  * (empty for unlabelled files). editableImage(), editableImageSplit() and the core
- * blocks call it automatically. The label artwork lives in css/ai-labels/. In edit
- * mode, js/inline-editor.js keeps labels in sync with image changes (window.NB_AI_LABELS).
+ * blocks call it automatically. The label artwork lives in css/ai-labels/: English
+ * ("AI generated"/"AI modified") on every page by default; with Settings → Language →
+ * AI labels = page language, German pages use the German artwork ("KI generiert"). The
+ * alt text always follows the page language. In edit mode, js/inline-editor.js keeps
+ * labels in sync with image changes (window.NB_AI_LABELS).
  */
 
 require_once __DIR__ . '/json-store.php';
@@ -152,17 +155,31 @@ function nibblyAiLabelText(string $kind, ?string $lang = null): string {
     return ($texts[$lang] ?? $texts['en'])[$kind] ?? '';
 }
 
+/**
+ * Label artwork mode (settings.json → general.aiLabelArtwork): 'en' shows the English
+ * artwork on every page (default), 'page' the German artwork on German pages.
+ */
+function nibblyAiLabelArtworkMode(bool $reload = false): string {
+    static $mode = null;
+    if ($mode === null || $reload) {
+        $path = defined('SETTINGS_PATH') ? SETTINGS_PATH : dirname(__DIR__) . '/content/settings.json';
+        $settings = is_file($path) ? json_decode((string)file_get_contents($path), true) : [];
+        $mode = is_array($settings) && ($settings['general']['aiLabelArtwork'] ?? '') === 'page' ? 'page' : 'en';
+    }
+    return $mode;
+}
+
 /** Label markup for an image source; empty when the file carries no AI label. */
 function nibblyAiLabelHtml(string $src, ?string $lang = null): string {
     $kind = nibblyMediaAiLabel($src);
     return $kind === '' ? '' : nibblyAiLabelMarkup($kind, $lang);
 }
 
-/** Label markup for a label kind. The artwork says "KI" on German pages and "AI" otherwise. */
+/** Label markup for a label kind: English artwork, or German on German pages if the site opts in. */
 function nibblyAiLabelMarkup(string $kind, ?string $lang = null): string {
     if (!in_array($kind, NIBBLY_AI_LABEL_KINDS, true)) return '';
     $lang = nibblyAiLabelLanguage($lang);
-    $artwork = ($lang === 'de' ? 'de' : 'en') . '-' . $kind;
+    $artwork = (nibblyAiLabelArtworkMode() === 'page' && $lang === 'de' ? 'de' : 'en') . '-' . $kind;
     // Width at the default height of 22px, from the artwork's aspect ratio
     $widths = ['de-generated' => 111, 'de-modified' => 122, 'en-generated' => 114, 'en-modified' => 102];
     $GLOBALS['nibblyAiLabelsRendered'] = true;
