@@ -53,6 +53,7 @@
     var moveTarget = null;
     var renameTarget = null;
     var pendingRename = null;
+    var aiLabelTarget = null;
     var previousFocus = null;
     var mediaTypes = {
         image: {
@@ -173,7 +174,7 @@
         overlay.querySelector('h3').textContent = title || 'Bestätigen';
         overlay.querySelector('p').textContent = message || '';
         var style = document.createElement('style');
-        style.textContent = '.nibbly-dialog-overlay{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:rgba(17,24,39,.55);padding:20px}.nibbly-dialog{width:min(420px,100%);background:#fff;border-radius:10px;box-shadow:0 18px 60px rgba(15,23,42,.25);padding:22px}.nibbly-dialog h3{margin:0 0 10px;font-size:20px}.nibbly-dialog p{margin:0 0 18px;color:#374151;line-height:1.45}.nibbly-dialog__actions{display:flex;gap:10px;justify-content:flex-end}.nibbly-dialog__btn{border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font:inherit;padding:9px 14px}.nibbly-dialog__btn--primary{background:#5aa6a6;border-color:#5aa6a6;color:#fff}.nibbly-dialog__btn--secondary{background:#fff;color:#111827}';
+        style.textContent = '.nibbly-dialog-overlay{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:rgba(17,24,39,.55);padding:20px;font-family:var(--nb-font-sans,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif)}.nibbly-dialog{width:min(420px,100%);background:#fff;border-radius:10px;box-shadow:0 18px 60px rgba(15,23,42,.25);padding:22px}.nibbly-dialog h3{margin:0 0 10px;font-family:inherit;font-size:20px;letter-spacing:normal}.nibbly-dialog p{margin:0 0 18px;color:#374151;line-height:1.45}.nibbly-dialog__actions{display:flex;gap:10px;justify-content:flex-end}.nibbly-dialog__btn{border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font:inherit;padding:9px 14px}.nibbly-dialog__btn--primary{background:#5aa6a6;border-color:#5aa6a6;color:#fff}.nibbly-dialog__btn--secondary{background:#fff;color:#111827}';
         overlay.appendChild(style);
         function close() {
             overlay.remove();
@@ -289,12 +290,50 @@
         }
     }
 
+    // Versioned preview URL: a replaced file keeps its name, so without the
+    // modification time the browser would show the cached old image
+    function previewSrc(item) {
+        var path = item && item.path ? String(item.path) : '';
+        if (!path || !item.modified) return path;
+        return path + (path.indexOf('?') === -1 ? '?' : '&') + 'v=' + encodeURIComponent(String(item.modified));
+    }
+
+    // AI disclosure label (EU AI Act, Art. 50) for images and videos
+    function canAiLabel(item) {
+        return !!item && (isImage(item) || item.type === 'video');
+    }
+
+    function aiLabelText(kind) {
+        return t(kind === 'modified' ? 'media.ai_modified' : 'media.ai_generated');
+    }
+
+    function aiBadgeHtml(item) {
+        if (!item || !item.aiLabel) return '';
+        return '<span class="nb-imgmgr-ai-badge nb-imgmgr-ai-badge--' + escapeHtml(item.aiLabel) + '" title="' + escapeHtml(aiLabelText(item.aiLabel)) + '">' +
+            escapeHtml(t('media.ai_badge')) + '</span>';
+    }
+
+    // Tell the page about label changes, so the inline editor updates labels next to images
+    function announceAiLabel(type, name, label) {
+        if (!name) return;
+        document.dispatchEvent(new CustomEvent('nibbly:ai-label-change', {
+            detail: { type: type || 'image', name: name, label: label || '' }
+        }));
+    }
+
+    function aiLabelActionHtml(item) {
+        if (!canAiLabel(item)) return '';
+        var title = t('media.ai_label') + (item.aiLabel ? ': ' + aiLabelText(item.aiLabel) : '');
+        return '<button type="button" class="nb-imgmgr-action-btn' + (item.aiLabel ? ' nb-imgmgr-action-btn--on' : '') + '" data-action="ai-label" title="' + escapeHtml(title) + '" aria-label="' + escapeHtml(title) + '">' + Icons.ai + '</button>';
+    }
+
     function mediaThumbHtml(item, className, previewAction) {
         var actionAttr = previewAction ? ' data-action="preview"' : '';
         var previewAttr = ' data-preview-path="' + escapeHtml(item.path || '') + '" data-preview-name="' + escapeHtml(mediaDisplayName(item)) + '" onclick="window.NbImageManager && NbImageManager.preview(this.dataset.previewPath, this.dataset.previewName); return false;"';
         if (isImage(item)) {
             return '<button type="button" class="' + className + ' nb-imgmgr-thumb-btn nb-imgmgr-thumb-btn--image"' + actionAttr + previewAttr + ' aria-label="' + escapeHtml(t('image_preview')) + '">' +
-                '<span class="nb-imgmgr-thumb-surface"><img src="' + escapeHtml(item.path) + '" alt="" loading="lazy" onload="window.NbImageManager && NbImageManager.detectTransparency(this)"></span>' +
+                '<span class="nb-imgmgr-thumb-surface"><img src="' + escapeHtml(previewSrc(item)) + '" alt="" loading="lazy" onload="window.NbImageManager && NbImageManager.detectTransparency(this)"></span>' +
+                aiBadgeHtml(item) +
             '</button>';
         }
         return '<button type="button" class="' + className + ' nb-imgmgr-thumb-btn nb-imgmgr-media-icon nb-imgmgr-media-icon--' + escapeHtml(item.type || 'document') + '"' + actionAttr + previewAttr + ' aria-label="' + escapeHtml(t('image_preview')) + '">' + mediaIcon(item) + '</button>';
@@ -497,6 +536,7 @@
             var replaceDialog = document.getElementById('nb-imgmgr-replace');
             var moveDialog = document.getElementById('nb-imgmgr-move');
             var renameDialog = document.getElementById('nb-imgmgr-rename');
+            var aiLabelDialog = document.getElementById('nb-imgmgr-ai-label');
             var lightbox = document.getElementById('nb-imgmgr-lightbox');
             if (replaceDialog && replaceDialog.classList.contains('active')) {
                 e.stopPropagation();
@@ -510,6 +550,10 @@
                 e.stopPropagation();
                 e.preventDefault();
                 closeRenameDialog();
+            } else if (aiLabelDialog && aiLabelDialog.classList.contains('active')) {
+                e.stopPropagation();
+                e.preventDefault();
+                closeAiLabelDialog();
             } else if (lightbox && lightbox.classList.contains('active')) {
                 e.stopPropagation();
                 e.preventDefault();
@@ -955,6 +999,7 @@
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="move" title="' + escapeHtml(t('media.move_file')) + '" aria-label="' + escapeHtml(t('media.move_file')) + '">' + Icons.move + '</button>' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="rename" title="' + escapeHtml(t('media.rename_file')) + '" aria-label="' + escapeHtml(t('media.rename_file')) + '">' + Icons.rename + '</button>' +
                     (isImage(image) ? '<button type="button" class="nb-imgmgr-action-btn" data-action="replace" title="' + escapeHtml(t('image.replace')) + '" aria-label="' + escapeHtml(t('image.replace')) + '">' + Icons.replace + '</button>' : '') +
+                    aiLabelActionHtml(image) +
                     '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete" title="' + escapeHtml(t('delete')) + '" aria-label="' + escapeHtml(t('delete')) + '">' + Icons.delete + '</button>' +
                 '</div>';
             if (state.mode !== 'trash' && state.isPicker) {
@@ -1014,6 +1059,7 @@
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="move" title="' + escapeHtml(t('media.move_file')) + '" aria-label="' + escapeHtml(t('media.move_file')) + '">' + Icons.move + '</button>' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="rename" title="' + escapeHtml(t('media.rename_file')) + '" aria-label="' + escapeHtml(t('media.rename_file')) + '">' + Icons.rename + '</button>' +
                     (isImage(image) ? '<button type="button" class="nb-imgmgr-action-btn" data-action="replace" title="' + escapeHtml(t('image.replace')) + '" aria-label="' + escapeHtml(t('image.replace')) + '">' + Icons.replace + '</button>' : '') +
+                    aiLabelActionHtml(image) +
                     '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete" title="' + escapeHtml(t('delete')) + '" aria-label="' + escapeHtml(t('delete')) + '">' + Icons.delete + '</button>' +
                 '</div>';
             if (state.mode !== 'trash' && state.isPicker) {
@@ -1050,6 +1096,7 @@
                 else if (action === 'copy') copyPath(image.path);
                 else if (action === 'move') openMoveDialog(image);
                 else if (action === 'rename') openRenameDialog(image);
+                else if (action === 'ai-label') openAiLabelDialog(image);
                 else if (action === 'replace') openReplaceDialog(image.name, image.path);
                 else if (action === 'delete') deleteMedia(image);
                 else if (action === 'restore') restoreMedia(image);
@@ -1547,6 +1594,10 @@
                     if (!options.quietSuccess) {
                         config.showToast(t('image.uploaded'), 'success');
                     }
+                    if (result.data && result.data.aiLabel) {
+                        config.showToast(t('media.ai_detected'), 'info');
+                        announceAiLabel(result.data.type || type, result.data.name, result.data.aiLabel);
+                    }
                     state.sort = { field: 'date', dir: 'desc' };
                     if (state.isPicker) {
                         state.activeType = type;
@@ -1634,7 +1685,7 @@
         stage.classList.toggle('nb-imgmgr-lightbox-stage--image', isImage(item));
         stage.classList.remove('nb-imgmgr-has-transparency');
         if (isImage(item)) {
-            stage.innerHTML = '<img alt="" src="' + escapeHtml(item.path) + '" onload="window.NbImageManager && NbImageManager.detectTransparency(this)">';
+            stage.innerHTML = '<img alt="" src="' + escapeHtml(previewSrc(item)) + '" onload="window.NbImageManager && NbImageManager.detectTransparency(this)">';
         } else if (isAudio(item)) {
             stage.innerHTML = '<div class="nb-imgmgr-lightbox-media nb-imgmgr-lightbox-media--audio">' +
                 mediaIcon(item) +
@@ -1703,7 +1754,7 @@
                     '<button type="button" class="nb-imgmgr-close" aria-label="Close">&times;</button>' +
                 '</div>' +
                 '<div class="nb-imgmgr-replace-body">' +
-                    '<p style="margin-top:0">' + escapeHtml(t('image.replacing')) + ' <strong class="nb-imgmgr-replace-target"></strong></p>' +
+                    '<p class="nb-imgmgr-replace-intro">' + escapeHtml(t('image.replacing')) + ' <strong class="nb-imgmgr-replace-target"></strong></p>' +
                     '<div class="nb-imgmgr-replace-options">' +
                         '<label class="nb-imgmgr-replace-option selected" data-option="replace">' +
                             '<input type="radio" name="nb-replace-option" value="replace" checked>' +
@@ -1832,6 +1883,7 @@
             .then(function (result) {
                 if (result.success) {
                     config.showToast(option === 'replace' ? t('image.replaced') : t('image.uploaded'), 'success');
+                    if (result.data) announceAiLabel('image', result.data.name, result.data.aiLabel);
                     closeReplaceDialog();
                     state.sort = { field: 'date', dir: 'desc' };
                     loadImages();
@@ -1972,6 +2024,118 @@
         if (dialog) dialog.classList.remove('active');
         renameTarget = null;
         pendingRename = null;
+    }
+
+    // ============================================================
+    // AI LABEL DIALOG
+    // ============================================================
+    function createAiLabelDialog() {
+        if (document.getElementById('nb-imgmgr-ai-label')) return;
+
+        var option = function (value, title, desc) {
+            return '<label class="nb-imgmgr-replace-option" data-option="' + value + '">' +
+                '<input type="radio" name="nb-imgmgr-ai-label" value="' + value + '">' +
+                '<div class="nb-imgmgr-replace-option-content">' +
+                    '<div class="nb-imgmgr-replace-option-title">' + escapeHtml(title) + '</div>' +
+                    (desc ? '<div class="nb-imgmgr-replace-option-desc">' + escapeHtml(desc) + '</div>' : '') +
+                '</div>' +
+            '</label>';
+        };
+        var dialog = document.createElement('div');
+        dialog.id = 'nb-imgmgr-ai-label';
+        dialog.className = 'nb-imgmgr-move';
+        dialog.innerHTML =
+            '<div class="nb-imgmgr-move-backdrop"></div>' +
+            '<div class="nb-imgmgr-move-dialog nb-imgmgr-ai-dialog" role="dialog" aria-modal="true" aria-labelledby="nb-imgmgr-ai-title">' +
+                '<div class="nb-imgmgr-move-header">' +
+                    '<h3 id="nb-imgmgr-ai-title">' + escapeHtml(t('media.ai_label')) + '</h3>' +
+                    '<button type="button" class="nb-imgmgr-close" aria-label="' + escapeHtml(t('close')) + '">&times;</button>' +
+                '</div>' +
+                '<div class="nb-imgmgr-move-body">' +
+                    '<p class="nb-imgmgr-move-filename"></p>' +
+                    '<div class="nb-imgmgr-replace-options">' +
+                        option('', t('media.ai_none'), '') +
+                        option('generated', t('media.ai_generated'), t('media.ai_generated_desc')) +
+                        option('modified', t('media.ai_modified'), t('media.ai_modified_desc')) +
+                    '</div>' +
+                    '<p class="nb-imgmgr-ai-hint">' + escapeHtml(t('media.ai_hint')) + '</p>' +
+                '</div>' +
+                '<div class="nb-imgmgr-move-footer">' +
+                    '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--secondary" data-action="cancel">' + escapeHtml(t('cancel')) + '</button>' +
+                    '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--primary" data-action="submit">' + escapeHtml(t('save')) + '</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(dialog);
+
+        dialog.querySelector('.nb-imgmgr-move-backdrop').addEventListener('click', closeAiLabelDialog);
+        dialog.querySelector('.nb-imgmgr-close').addEventListener('click', closeAiLabelDialog);
+        dialog.querySelector('[data-action="cancel"]').addEventListener('click', closeAiLabelDialog);
+        dialog.querySelector('[data-action="submit"]').addEventListener('click', submitAiLabel);
+        dialog.querySelectorAll('input[name="nb-imgmgr-ai-label"]').forEach(function (input) {
+            input.addEventListener('change', function () { selectAiLabelOption(input.value); });
+        });
+    }
+
+    function selectAiLabelOption(value) {
+        var dialog = document.getElementById('nb-imgmgr-ai-label');
+        if (!dialog) return;
+        dialog.querySelectorAll('.nb-imgmgr-replace-option').forEach(function (option) {
+            var active = option.dataset.option === value;
+            option.classList.toggle('selected', active);
+            option.querySelector('input').checked = active;
+        });
+    }
+
+    function openAiLabelDialog(item) {
+        if (!canAiLabel(item) || !item.name || state.mode !== 'library') return;
+        aiLabelTarget = item;
+        var dialog = document.getElementById('nb-imgmgr-ai-label');
+        if (!dialog) { createAiLabelDialog(); dialog = document.getElementById('nb-imgmgr-ai-label'); }
+        dialog.querySelector('.nb-imgmgr-move-filename').textContent = item.name;
+        selectAiLabelOption(item.aiLabel || '');
+        dialog.classList.add('active');
+        var checked = dialog.querySelector('input[name="nb-imgmgr-ai-label"]:checked');
+        if (checked) checked.focus();
+    }
+
+    function closeAiLabelDialog() {
+        var dialog = document.getElementById('nb-imgmgr-ai-label');
+        if (dialog) dialog.classList.remove('active');
+        aiLabelTarget = null;
+    }
+
+    function submitAiLabel() {
+        if (!aiLabelTarget || !aiLabelTarget.name) return;
+        var dialog = document.getElementById('nb-imgmgr-ai-label');
+        var checked = dialog.querySelector('input[name="nb-imgmgr-ai-label"]:checked');
+        var submit = dialog.querySelector('[data-action="submit"]');
+        var formData = new FormData();
+        formData.append('action', 'set-media-ai-label');
+        formData.append('type', aiLabelTarget.type || 'image');
+        formData.append('filename', aiLabelTarget.name);
+        formData.append('label', checked ? checked.value : '');
+        formData.append('csrf_token', config.csrfToken);
+        var target = aiLabelTarget;
+
+        submit.disabled = true;
+        fetch(config.apiUrl, { method: 'POST', body: formData })
+            .then(function (r) { return r.json(); })
+            .then(function (result) {
+                if (result.success) {
+                    config.showToast(t('media.ai_saved'), 'success');
+                    announceAiLabel(target.type || 'image', target.name, result.data ? result.data.aiLabel : (checked ? checked.value : ''));
+                    closeAiLabelDialog();
+                    loadImages();
+                    return;
+                }
+                config.showToast(result.message || t('toast.error'), 'error');
+            })
+            .catch(function (err) {
+                config.showToast(err.message || t('toast.error'), 'error');
+            })
+            .finally(function () {
+                submit.disabled = false;
+            });
     }
 
     function renderRenameReferences(references) {

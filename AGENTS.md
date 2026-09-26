@@ -45,6 +45,16 @@ When the user explicitly asks for Nibbly core behavior, admin UI, API, CLI, back
 - Validate JSON files after editing translation or content JSON.
 - For UI changes, test in the local browser when practical.
 
+## Routing and Deployment Checks
+
+Before changing routing, login destinations or handler directories, read
+[`ROUTING.md`](ROUTING.md). Check for collisions between PHP entry points and
+same-named directories. Preserve route-specific slash handling and test the
+actual login redirect chain, both URL variants and relative assets under
+Apache as well as the PHP development server. Local PHP tests alone are not
+production routing verification. Apply the same checks after authorized uploads
+and report any unperformed Apache/live checks explicitly.
+
 ## Content Model
 
 - JSON is the source of truth for editable content.

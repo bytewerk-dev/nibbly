@@ -75,6 +75,7 @@ return [
     'delete-media-folder' => 'media',
     'move-media' => 'media',
     'rename-media' => 'media',
+    'set-media-ai-label' => 'media',
     'delete-media' => 'media',
     'restore-media' => 'media',
     'delete-media-trash' => 'media',

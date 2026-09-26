@@ -100,6 +100,68 @@ body.edit-mode-active .editable-field {
     gap: 8px;
 }
 
+/* Page backups share one compact toolbar group in browse and edit mode. */
+.admin-bar-backups {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding-inline-end: 24px;
+    margin-inline-end: 16px;
+    border-inline-end: 1px solid rgba(255, 255, 255, .25);
+}
+.admin-bar-backups[hidden] { display: none; }
+#admin-bar.has-page-backups .admin-bar-info { display: none; }
+#admin-bar .admin-bar-backup-select {
+    width: 240px;
+    max-width: 100%;
+    min-width: 0;
+    height: 30px;
+    padding-block: 4px;
+    padding-inline-start: 9px;
+    border: 1px solid rgba(255, 255, 255, .4);
+    border-radius: var(--editor-btn-radius, 6px);
+    background-color: var(--editor-bar-bg, #23282d);
+    color: #fff;
+    color-scheme: dark;
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    --nb-select-caret-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+#admin-bar .admin-bar-backup-select:focus-visible,
+#admin-bar #admin-btn-restore-backup:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+#admin-bar .admin-bar-backup-select:disabled { opacity: .6; cursor: default; }
+@media (max-width: 1100px) {
+    #admin-bar.has-page-backups .admin-bar-inner { flex-wrap: wrap; }
+    #admin-bar.has-page-backups .admin-bar-center {
+        flex: 1 1 100%;
+        order: 3;
+        min-width: 0;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    #admin-bar.has-page-backups .admin-bar-right { margin-inline-start: auto; }
+    #admin-bar.has-page-backups .admin-bar-backups {
+        flex: 1 1 100%;
+        justify-content: center;
+        margin-inline-end: 0;
+        padding: 0 0 12px;
+        margin-bottom: 4px;
+        border-inline-end: 0;
+        border-bottom: 1px solid rgba(255, 255, 255, .25);
+    }
+}
+@media (max-width: 600px) {
+    #admin-bar.has-page-backups .admin-bar-edit-controls { display: contents; }
+    #admin-bar .admin-bar-backup-select,
+    #admin-bar #admin-btn-restore-backup { min-height: 40px; }
+    #admin-bar .admin-bar-backup-select { flex: 1; max-width: 260px; }
+}
+
 .admin-bar-link {
     display: inline-flex;
     align-items: center;
@@ -646,6 +708,42 @@ body.edit-mode-active .editable-section:hover .video-container::after {
     display: flex;
     flex-direction: column;
     animation: slideIn 0.2s ease;
+}
+
+/* Logged-in browsing: invite the user to enable editing without covering other dialogs. */
+dialog.editor-mode-hint {
+    box-sizing: border-box;
+    width: min(540px, calc(100% - 32px));
+    max-height: calc(100dvh - 32px);
+    margin: auto;
+    padding: 28px;
+    overflow: auto;
+    border: 1px solid #dce0e5;
+    border-radius: 12px;
+    background: #fff;
+    color: #333;
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, .2);
+}
+dialog.editor-mode-hint::backdrop { background: rgba(0, 0, 0, .5); }
+dialog.editor-mode-hint h2 {
+    margin: 0 0 12px;
+    color: var(--editor-primary, #2563eb);
+    font-family: inherit;
+    font-size: 22px;
+    line-height: 1.25;
+    font-weight: 600;
+}
+dialog.editor-mode-hint p { margin: 0; font: inherit; color: inherit; }
+.editor-mode-hint__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+dialog.editor-mode-hint .editor-btn { min-height: 42px; }
+dialog.editor-mode-hint .editor-btn:focus-visible { outline: 2px solid var(--editor-primary, #2563eb); outline-offset: 3px; }
+[data-site-theme="dark"] dialog.editor-mode-hint { background: #24272d; color: #f0f0f0; border-color: #454a53; }
+[data-site-theme="dark"] dialog.editor-mode-hint h2 { color: inherit; }
+@media (max-width: 480px) {
+    dialog.editor-mode-hint { padding: 22px; }
+    .editor-mode-hint__actions { flex-direction: column-reverse; }
+    .editor-mode-hint__actions .editor-btn { width: 100%; }
 }
 
 .editor-modal-small {
@@ -1351,7 +1449,9 @@ textarea.editor-html {
     border-radius: var(--editor-btn-radius, 6px);
     background: var(--editor-bar-bg, #23282d);
     color: white;
+    font-family: var(--nb-font-sans, 'Geist', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif);
     font-size: 14px;
+    line-height: 1.45;
     z-index: 30000;
     animation: slideInToast 0.3s ease;
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
@@ -3241,6 +3341,28 @@ body.edit-mode-active .editable-field-wrapper:hover .field-hide-btn {
 }
 
 /* Placeholder for empty/broken images in edit mode */
+/* Wrapper that the editor adds around editable images (zero specificity, so
+   site styles can adapt it without !important) */
+:where(.editable-image-wrapper) {
+    position: relative;
+    display: inline-block;
+}
+
+/* The image filled a static frame via object-fit: keep filling it */
+:where(.editable-image-wrapper--fill) {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* The image was absolutely positioned or filled a positioned frame:
+   the wrapper covers that frame */
+:where(.editable-image-wrapper--positioned) {
+    position: absolute;
+    inset: 0;
+    display: block;
+}
+
 body.edit-mode-active .editable-image-empty {
     min-width: 200px;
     min-height: 120px;

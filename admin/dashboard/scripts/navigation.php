@@ -73,7 +73,7 @@
             const langSelect = document.getElementById('langSelect');
             if (langSelect) {
                 langSelect.value = lang;
-                updatePageSelect();
+                updatePageSelect(slug);
                 const pageSelect = document.getElementById('pageSelect');
                 if (pageSelect) {
                     pageSelect.value = slug;
@@ -104,7 +104,7 @@
             const langSelect = document.getElementById('langSelect');
             if (langSelect) {
                 langSelect.value = lang;
-                updatePageSelect();
+                updatePageSelect(slug);
                 const pageSelect = document.getElementById('pageSelect');
                 if (pageSelect) {
                     pageSelect.value = slug;
@@ -134,7 +134,7 @@
             const lang = e.state.page.substring(0, e.state.page.indexOf('_'));
             const slug = e.state.page.substring(e.state.page.indexOf('_') + 1);
             document.getElementById('langSelect').value = lang;
-            updatePageSelect();
+            updatePageSelect(slug);
             document.getElementById('pageSelect').value = slug;
             loadContent(false);
         } else {

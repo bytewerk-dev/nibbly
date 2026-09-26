@@ -1,8 +1,9 @@
 # Nibbly CMS - .htaccess
 # Apache mod_rewrite required
 #
-# All routing logic lives in route.php — this file is language-agnostic
-# and never needs to be edited when changing SITE_LANG_DEFAULT.
+# Dynamic content routing lives in route.php. Apache security, aliases and
+# file/directory precedence live here; see ROUTING.md before changing them.
+# These core rules are language-agnostic with respect to SITE_LANG_DEFAULT.
 
 RewriteEngine On
 Options -MultiViews
@@ -30,6 +31,25 @@ RewriteRule ^([a-z]{2}/)?news/[a-z0-9-]+/?$ /route.php [END,QSA]
 # ============================================
 # Static files & directories
 # ============================================
+
+# Route-specific canonical URLs; mirror includes/routing-helper.php.
+# /login is a compatibility entry point, never a second asset base directory.
+RewriteRule ^login/?$ /admin/ [R=308,L]
+
+# PHP endpoints win over same-named directories (e.g. dashboard.php alongside
+# dashboard/scripts/). A new implementation directory must not break its URL.
+RewriteCond %{DOCUMENT_ROOT}/$1.php -f
+RewriteCond %{DOCUMENT_ROOT}/$1 -d
+RewriteRule ^(.+?)/?$ /$1.php [R=308,L]
+
+# Slash variants of existing PHP scripts use an explicit file URL.
+RewriteCond %{DOCUMENT_ROOT}/$1.php -f
+RewriteRule ^(.+)/$ /$1.php [R=308,L]
+
+# Directory entry points need a slash for relative assets. 308 preserves POSTs.
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteCond %{REQUEST_FILENAME}/index.php -f
+RewriteRule ^(.*[^/])$ /$1/ [R=308,L]
 
 # Serve existing files directly (CSS, JS, images, fonts, etc.)
 RewriteCond %{REQUEST_FILENAME} -f

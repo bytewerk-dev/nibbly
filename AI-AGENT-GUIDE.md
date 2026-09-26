@@ -53,6 +53,14 @@ php -S localhost:3000 router.php
 
 The `router.php` handles clean URLs, language routing, and news post URLs without requiring Apache.
 
+For routing changes, login destinations, new handler directories and uploads,
+follow [Routing and deployment verification](ROUTING.md). The development server
+does not execute `.htaccess` or Apache's directory handling. Test both slash
+variants and the actual login redirect chain under Apache before claiming
+production routing is verified. In particular, `admin/dashboard.php` shares its
+name with the `admin/dashboard/` fragment directory; keep the explicit PHP login
+destination and compatibility aliases described in that guide.
+
 ## JSON-Backed Public Forms
 
 Nibbly supports simple, flat-file public forms stored in `content/forms/*.json`.
@@ -308,6 +316,17 @@ when adding related UI:
   align at the bottom for quick scanning.
 - **AI dashboard panel**: hide disabled AI tools. If AI services are disabled or
   unconfigured, show only a compact dismissible notice where appropriate.
+
+### Select carets
+
+Load `css/nb-select.css` for admin/editor controls. Enhanced dropdowns and
+`select[data-native-select]` share a 14px caret inset through
+`--nb-select-caret-inset`. The native attribute retains the browser picker and
+keyboard behavior, while CSS draws the closed-state caret with reserved text
+space. Do not restore `appearance: auto` or replace its background shorthand in
+component styles. Multiple/size listboxes are excluded; forced-colors mode
+restores the system arrow. RTL fields move the caret to the left automatically.
+Use `--nb-select-caret-image` only when a theme needs a different caret color.
 
 Admin CSS is cache-busted from `admin/dashboard.php` with `filemtime()` so
 layout changes in `admin/style.css` are visible after reload.
@@ -579,6 +598,19 @@ These types are available in `sections[]` arrays for standard pages:
 
 ## How Inline Editing Works
 
+The frontend admin bar lists persisted backups of the current content page when
+available, in both browse and edit mode. The dropdown uses local timestamps;
+Apply opens a confirmation and warns about unsaved page/shared edits. Restoring
+checks the loaded page revision, backs up the saved state first, reloads the
+server-rendered page, and resumes the previous edit mode. Page backups contain
+content and image references; they do not recover deleted media files. News-post
+pages do not show this page-only control. Keep this separate from session Undo.
+
+While logged in and browsing with editing disabled, two clicks on non-interactive
+page areas open a one-time reminder with an **Activate visual editor** button.
+Links, forms, controls, open dialogs and active edit mode are excluded. Dismissing
+the reminder suppresses it until the next page load; it never saves content.
+
 **This is what Nibbly does.** You take any existing HTML page — hand-built, designed in Figma, or vibe-coded with AI — and make it editable by swapping hardcoded content for Nibbly's PHP helper functions. Each function injects `data-*` attributes that the inline editor JavaScript discovers. Logged-in admins click to edit text, swap images, and change links directly on the page. Content gets stored in JSON files. Visitors see clean HTML with zero editor markup. No database, no migration, no complex setup — just a PHP include and a few function calls turn a static page into a CMS.
 
 **Existing-site rule: preserve, do not rebuild.** When converting an existing
@@ -775,7 +807,49 @@ editableLink($page, $fieldKey, $defaultText = '', $defaultHref = '#', $class = '
 
 editableIcon($page, $fieldKey, $default = '', $class = '')
 // Icon token. Stores a plain text icon key and renders SVG from the icon set.
+
+contentBindAttrs($page, $fieldKey, $type = 'text')
+// Not editable itself: binds an element that repeats a field shown elsewhere
+// (image preview, table-of-contents label) so the visual editor refreshes it live.
+// Admin: data-nb-bind="image|text|html" data-nb-bind-page data-nb-bind-field.
+// Visitor: empty string. Images update their src, text/html their content.
+
+nibblyAiLabelHtml($src, $lang = null)
+// AI disclosure label (EU AI Act, Art. 50) for an image source, or '' when the file
+// is not labelled. editableImage(), editableImageSplit() and the core blocks add it
+// automatically; call it yourself only next to plain <img> output.
 ```
+
+### AI Disclosure Labels
+
+Images created or modified with AI must be disclosed (EU AI Act, Art. 50). Editors
+set the label per file in the media library ("AI label": none, AI-generated,
+AI-modified); uploads with embedded provenance (IPTC digital source type in XMP or
+C2PA) are labelled automatically. Labels are stored in `content/media-meta.json`
+and follow the file when it is renamed, moved, trashed or restored.
+
+Nibbly renders the label right after the image: `<span class="nb-ai-label">` with
+English artwork from `css/ai-labels/` ("AI generated", "AI modified") and an alt
+text in the page language. German artwork ("KI generiert") is optional: with
+Settings → Language → AI labels on images = page language (`settings.json` →
+`general.aiLabelArtwork` = `"page"`), German pages use it; `nibblyAiLabelArtworkMode()`
+reads the choice. `css/ai-labels/en-ai.svg`, a round "AI" badge, ships unused for
+later purposes such as AI-generated news or blog texts. The label is absolutely positioned in the image's parent, so
+place labelled images in a frame (a wrapper that has the image's size) or use
+`nibblyAiLabelAttach($imgHtml, $src, true)`, which wraps image and label in
+`.nb-ai-media`. Default styles in `css/components.css`: bottom right, hidden at
+rest, shown after 600 ms hover; `js/ai-labels.js` reveals labels on touch devices
+once the visitor lingers. Screen readers always get the alt text. Adapt with
+`--nb-ai-label-height`, `--nb-ai-label-inset`, `--nb-ai-label-rest` (e.g. `0.25`
+for a subtle label at rest) and `--nb-ai-label-filter` (`invert(1)` for a light
+label).
+
+In the visual editor, `js/inline-editor.js` keeps labels in sync when an image is
+swapped, on undo/redo and when a label changes in the media library. It reads
+`window.NB_AI_LABELS` (from `nibblyAiLabelEditorConfig()`), which the core footer
+provides; sites with their own `includes/footer.php` add that line to their editor
+script block. Custom templates that repeat an image via `contentBindAttrs()` should
+render `nibblyAiLabelHtml($src)` right after it, as the editor does the same.
 
 Icon keys are resolved through `content/settings/iconset.json` first. That file
 is site-owned and upgrade-safe. Nibbly also ships `includes/default-iconset.json`

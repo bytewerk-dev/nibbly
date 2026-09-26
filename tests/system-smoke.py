@@ -41,6 +41,29 @@ def test_auth(site):
         assert status == 302 and headers["Location"] == "/", f"Unsafe redirect: {target}"
 
 
+def test_admin_routing(site):
+    # Dashboard script fragments occupy a real admin/dashboard directory.
+    # Exercise the login Location itself, not only the direct dashboard.php URL.
+    admin = Client(site)
+    assert admin.request('/admin/')[0] == 200
+    status, headers, _ = admin.request('/admin/', {'username': 'admin', 'password': site.password})
+    assert status == 302 and headers['Location'] == 'dashboard.php', (status, headers)
+    status, _, body = admin.request('/admin/' + headers['Location'])
+    assert status == 200 and b'const CSRF_TOKEN' in body, 'Login did not reach the dashboard'
+    for client in (Client(site), admin):
+        for suffix in ('', '/', '?tab=content&probe=a%2Fb', '/?tab=content&probe=a%2Fb'):
+            query = ('?' + suffix.split('?', 1)[1]) if '?' in suffix else ''
+            status, headers, _ = client.request('/admin/dashboard' + suffix)
+            assert status == 308 and headers['Location'] == '/admin/dashboard.php' + query, (status, headers)
+            status, headers, body = client.request(headers['Location'])
+            if client is admin:
+                assert status == 200 and b'const CSRF_TOKEN' in body
+            else:
+                assert status == 302 and headers['Location'].startswith('index.php?timeout=')
+    assert admin.request('/admin/style.css')[0] == 200
+    assert admin.request('/admin/not-a-dashboard')[0] == 404
+
+
 def test_news(site):
     editor = Client(site).login("editor")
     users_before = (site.root / "content/users.json").read_bytes()
@@ -179,7 +202,7 @@ if __name__ == "__main__":
     with tempfile.TemporaryDirectory(prefix="nibbly-system-smoke-") as folder:
         site = Site(folder).start()
         try:
-            for test in (test_auth, test_news, test_routing, test_forms, test_backups, test_deployment_cli):
+            for test in (test_auth, test_admin_routing, test_news, test_routing, test_forms, test_backups, test_deployment_cli):
                 try:
                     test(site)
                     print("PASS", test.__name__)

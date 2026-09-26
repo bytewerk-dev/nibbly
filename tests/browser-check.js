@@ -12,7 +12,7 @@ const { chromium } = require('playwright');
         await page.locator('#username').fill('admin');
         await page.locator('#password').fill(process.env.REVIEW_PASSWORD);
         await Promise.all([
-            page.waitForURL('**/admin/dashboard'),
+            page.waitForURL('**/admin/dashboard.php'),
             page.locator('form').first().locator('button[type=submit]').click()
         ]);
         await page.waitForLoadState('networkidle');

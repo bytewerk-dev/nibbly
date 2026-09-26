@@ -422,7 +422,7 @@ switch ($action) {
 
         foreach ($backups as $backup) {
             $filename = basename($backup);
-            if (preg_match('/_(\d{4}-\d{2}-\d{2})_(\d{6})(?:_[a-f0-9]{6})?\.json$/', $filename, $matches)) {
+            if (preg_match('/^' . preg_quote($page, '/') . '_(\d{4}-\d{2}-\d{2})_(\d{6})(?:_[a-f0-9]{6})?\.json$/', $filename, $matches)) {
                 $date = $matches[1];
                 $time = substr($matches[2], 0, 2) . ':' . substr($matches[2], 2, 2) . ':' . substr($matches[2], 4, 2);
                 $backupList[] = [
@@ -459,11 +459,18 @@ switch ($action) {
         $page = preg_replace('/_\d{4}-\d{2}-\d{2}_\d{6}(?:_[a-f0-9]{6})?\.json$/', '', $backup);
         $filepath = CONTENT_PATH . $page . '.json';
 
+        if (isset($_POST['page']) && $_POST['page'] !== $page) {
+            http_response_code(400);
+            jsonResponse(false, null, 'Backup does not belong to the requested page');
+        }
+
         // Save current state before restoring
         if (file_exists($filepath)) {
             $timestamp = date('Y-m-d_His') . '_' . bin2hex(random_bytes(3));
             $newBackupPath = BACKUP_PATH . $page . '_' . $timestamp . '.json';
-            copy($filepath, $newBackupPath);
+            if (!copy($filepath, $newBackupPath)) {
+                jsonResponse(false, null, 'Could not create a backup before restoring');
+            }
         }
 
         $restoredData = json_decode((string)file_get_contents($backupPath), true);

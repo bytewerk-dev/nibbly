@@ -111,6 +111,8 @@
         currentContentPage: null,
         isHtmlMode: false,
         contentData: {},
+        contentRevisions: {},
+        saving: false,
         loadedPages: [],
         currentEvent: null,
         currentGroup: null,
@@ -207,6 +209,7 @@
         eyeOpen: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>',
         eyeClosed: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>',
         image: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>',
+        link: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>',
         card: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>',
         upload: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>',
         folder: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>',
@@ -441,7 +444,7 @@
         ModalResize.init(modal.querySelector('.editor-modal-content'));
     }
 
-    function showConfirmDialog(title, message, hint, callback, buttonText = t('delete')) {
+    function showConfirmDialog(title, message, hint, callback, buttonText = t('delete'), buttonClass = 'editor-btn-danger') {
         createConfirmDialog();
         confirmCallback = callback;
 
@@ -450,6 +453,7 @@
         document.getElementById('confirm-dialog-hint').textContent = hint || '';
         document.getElementById('confirm-dialog-hint').style.display = hint ? 'block' : 'none';
         document.getElementById('confirm-dialog-action-btn').textContent = buttonText;
+        document.getElementById('confirm-dialog-action-btn').className = 'editor-btn ' + buttonClass;
 
         const modal = document.getElementById('confirm-dialog-modal');
         modal.classList.add('active');
@@ -612,8 +616,13 @@
         document.querySelectorAll('[data-content-page]').forEach(el => {
             contentPages.add(el.dataset.contentPage);
         });
-        document.querySelectorAll('[data-editable-group][data-page]').forEach(el => {
-            contentPages.add(el.dataset.page);
+        // Custom layouts may reference shared content only through individual
+        // helpers, without a content-area wrapper or editable group. Load the
+        // complete document and its revision before any of those fields can save.
+        document.querySelectorAll('.editable-field[data-page], [data-editable-group][data-page], [data-editable-link][data-page], [data-editable-image][data-page], [data-editable-icon][data-page], [data-editable-list][data-list-page]').forEach(el => {
+            const page = el.dataset.page || el.dataset.listPage;
+            // Event image helpers use the separate events API, not page JSON.
+            if (page && page !== 'events') contentPages.add(page);
         });
 
         // Alle Content-Daten laden
@@ -658,7 +667,68 @@
                 sessionStorage.removeItem('site-edit-mode');
                 enterEditMode();
             }
+            attachEditModeHint();
         });
+    }
+
+    // A reminder for authenticated visitors who try to edit before enabling the editor.
+    let editModeHintReady = false;
+
+    function attachEditModeHint() {
+        if (editModeHintReady || !EditorConfig.csrfToken || !document.getElementById('admin-btn-edit')) return;
+        editModeHintReady = true;
+        let clicks = 0;
+        const interactive = [
+            'a', 'button', 'input', 'textarea', 'select', 'label', 'form', 'summary',
+            'audio', 'video', 'iframe', '[onclick]', '[tabindex]:not([tabindex="-1"])',
+            '[contenteditable]:not([contenteditable="false"])',
+            '[role="button"]', '[role="link"]', '[role="tab"]', '[role="menuitem"]',
+            '[role="checkbox"]', '[role="radio"]', '[role="switch"]', '[role="slider"]',
+            '[role="combobox"]', '[role="option"]', '[aria-controls]', '[aria-haspopup]',
+            '#admin-bar', '#adminAccess', '.editor-modal', '.nb-imgmgr-modal'
+        ].join(', ');
+
+        function onPageClick(event) {
+            if (EditorConfig.editMode) {
+                clicks = 0;
+                return;
+            }
+            if (!event.isTrusted || event.defaultPrevented || event.button !== 0 || event.detail === 0 ||
+                event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+            const target = event.target instanceof Element ? event.target : null;
+            if (!target || target.closest(interactive)) return;
+            // Never cover another dialog, including dialogs supplied by the website.
+            if (Array.from(document.querySelectorAll('dialog[open], [role="dialog"], [aria-modal="true"], .editor-modal.active'))
+                .some(dialog => dialog.getClientRects().length > 0)) return;
+            if (++clicks < 2) return;
+            document.removeEventListener('click', onPageClick);
+            showEditModeHint();
+        }
+
+        document.addEventListener('click', onPageClick);
+    }
+
+    function showEditModeHint() {
+        const dialog = document.createElement('dialog');
+        dialog.className = 'editor-mode-hint';
+        dialog.setAttribute('aria-labelledby', 'editor-mode-hint-title');
+        dialog.setAttribute('aria-describedby', 'editor-mode-hint-message');
+        dialog.innerHTML = `
+            <h2 id="editor-mode-hint-title">${escHtml(tFallback('edit_reminder.title', 'Edit this page?'))}</h2>
+            <p id="editor-mode-hint-message">${escHtml(tFallback('edit_reminder.message', 'You are logged in. Activate the visual editor to edit text and images directly on this page.'))}</p>
+            <div class="editor-mode-hint__actions">
+                <button type="button" class="editor-btn editor-btn-secondary" data-hint-dismiss>${escHtml(tFallback('edit_reminder.dismiss', 'Keep browsing'))}</button>
+                <button type="button" class="editor-btn editor-btn-primary" data-hint-activate autofocus>${escHtml(tFallback('edit_reminder.activate', 'Activate visual editor'))}</button>
+            </div>`;
+        dialog.querySelector('[data-hint-dismiss]').addEventListener('click', () => dialog.close());
+        dialog.querySelector('[data-hint-activate]').addEventListener('click', () => {
+            dialog.close();
+            if (!EditorConfig.editMode) enterEditMode();
+            document.getElementById('admin-btn-cancel')?.focus();
+        });
+        dialog.addEventListener('close', () => dialog.remove(), { once: true });
+        document.body.appendChild(dialog);
+        dialog.showModal();
     }
 
     function attachEditorChromeHoverStates() {
@@ -708,6 +778,7 @@
             const result = await response.json();
             if (result.success) {
                 EditorConfig.contentData[page] = result.data;
+                EditorConfig.contentRevisions[page] = result.revision;
                 EditorConfig.loadedPages.push(page);
             }
         } catch (error) {
@@ -718,6 +789,133 @@
     // ============================================================
     // ADMIN BAR
     // ============================================================
+
+    // Persisted page backups (separate from the current session's undo history).
+    const PageBackups = {
+        items: [], loading: false, restoring: false, loadFailed: false, reloadRequired: false,
+        update() {
+            const group = document.getElementById('admin-page-backups');
+            const select = document.getElementById('admin-backup-select');
+            const button = document.getElementById('admin-btn-restore-backup');
+            if (!group || !select || !button) return;
+            group.hidden = !this.items.length && !this.loadFailed;
+            document.getElementById('admin-bar').classList.toggle('has-page-backups', !group.hidden);
+            const busy = this.loading || this.restoring || EditorConfig.saving;
+            select.disabled = busy || this.loadFailed || this.reloadRequired;
+            button.disabled = busy || this.reloadRequired || (!this.loadFailed && !select.value);
+            button.textContent = t(this.restoring ? 'page_backups.restoring' : this.loadFailed ? 'page_backups.retry' : 'page_backups.apply');
+            button.title = t(this.reloadRequired ? 'page_backups.reload' : 'page_backups.restore_title');
+            group.setAttribute('aria-busy', String(!!busy));
+        },
+        async load() {
+            if (!EditorConfig.currentPage || EditorConfig.isNewsPost || this.loading || this.restoring) return;
+            const select = document.getElementById('admin-backup-select');
+            if (!select) return;
+            this.loading = true;
+            this.update();
+            try {
+                const response = await fetch(`${EditorConfig.apiUrl}?action=backups&page=${encodeURIComponent(EditorConfig.currentPage)}`, {cache: 'no-store'});
+                const result = await response.json();
+                if (!response.ok || !result.success || !Array.isArray(result.data)) throw new Error('Backup list unavailable');
+                // Only show backups of this exact content page, never shared or nested pages.
+                this.items = result.data.filter(item => {
+                    const match = String(item.filename || '').match(/^(.*)_\d{4}-\d{2}-\d{2}_\d{6}(?:_[a-f0-9]{6})?\.json$/);
+                    return match && match[1] === EditorConfig.currentPage;
+                });
+                const selected = select.value;
+                select.replaceChildren();
+                const labels = this.items.map(item => this.label(item));
+                const seen = new Map();
+                this.items.forEach((item, index) => {
+                    const option = document.createElement('option');
+                    let label = labels[index];
+                    if (labels.indexOf(label) !== labels.lastIndexOf(label)) label = this.label(item, true);
+                    const occurrence = (seen.get(label) || 0) + 1;
+                    seen.set(label, occurrence);
+                    option.value = item.filename;
+                    option.textContent = label + (occurrence > 1 ? ` (${occurrence})` : '');
+                    select.appendChild(option);
+                });
+                if (this.items.some(item => item.filename === selected)) select.value = selected;
+                this.loadFailed = false;
+            } catch (error) {
+                this.loadFailed = true;
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = t('page_backups.unavailable');
+                select.replaceChildren(option);
+            } finally {
+                this.loading = false;
+                this.update();
+            }
+        },
+        label(item, seconds = false) {
+            const date = new Date(Number(item.timestamp) * 1000);
+            if (!Number.isFinite(date.getTime())) return `Backup ${item.date || ''} ${item.time || ''}`.trim();
+            const locale = document.documentElement.lang || 'en';
+            const formatted = new Intl.DateTimeFormat(locale, {
+                day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit',
+                ...(seconds ? {second: '2-digit'} : {}), hour12: false
+            }).format(date).replace(/,\s*/g, ' ');
+            return `Backup ${formatted}`;
+        },
+        requestRestore() {
+            if (this.loading || this.restoring || this.reloadRequired || EditorConfig.saving) return;
+            if (this.loadFailed) { void this.load(); return; }
+            const select = document.getElementById('admin-backup-select');
+            const item = this.items.find(backup => backup.filename === select?.value);
+            if (!item) return;
+            flushActiveInlineEdits();
+            const revision = window.NibblyRevisions?.get('page:' + EditorConfig.currentPage)
+                || EditorConfig.contentRevisions[EditorConfig.currentPage];
+            if (!revision) {
+                this.reloadRequired = true;
+                this.update();
+                showToast(t('page_backups.reload'), 'error');
+                return;
+            }
+            const message = t('page_backups.confirm', {backup: select.options[select.selectedIndex].textContent});
+            const hint = t(EditorConfig.dirtyPages.size > 0 ? 'page_backups.unsaved' : 'page_backups.saved_first');
+            showConfirmDialog(t('page_backups.restore_title'), message, hint,
+                () => this.restore(item, revision), t('page_backups.apply'), 'editor-btn-primary');
+        },
+        async restore(item, revision) {
+            if (this.restoring || EditorConfig.saving) return;
+            this.restoring = true;
+            this.update();
+            const controls = Array.from(document.querySelectorAll('#admin-bar .admin-bar-btn'));
+            const disabled = controls.map(control => control.disabled);
+            controls.forEach(control => { control.disabled = true; });
+            try {
+                const formData = new FormData();
+                formData.append('action', 'restore');
+                formData.append('page', EditorConfig.currentPage);
+                formData.append('backup', item.filename);
+                formData.append('revision', revision);
+                formData.append('csrf_token', EditorConfig.csrfToken);
+                const response = await fetch(EditorConfig.apiUrl, {method: 'POST', body: formData});
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    this.reloadRequired = response.status === 409 || response.status === 428;
+                    showToast(this.reloadRequired ? t('page_backups.reload') : t('page_backups.failed'), 'error');
+                    return;
+                }
+                const resumeEditing = EditorConfig.editMode;
+                exitEditModeClean();
+                if (resumeEditing) sessionStorage.setItem('site-edit-mode', 'true');
+                else sessionStorage.removeItem('site-edit-mode');
+                location.reload();
+            } catch (error) {
+                // A failed response may follow a successful write; never repeat it automatically.
+                this.reloadRequired = true;
+                showToast(t('page_backups.unconfirmed'), 'error');
+            } finally {
+                this.restoring = false;
+                controls.forEach((control, index) => { control.disabled = disabled[index]; });
+                this.update();
+            }
+        }
+    };
 
     async function showAdminBar() {
         // Load branding settings
@@ -749,7 +947,7 @@
         const seoA11yLabel = [seoHealth.label || 'SEO', `${Number(seoHealth.score || 0)}/100`].concat(seoIssues).join('. ');
         const contentEditorHref = EditorConfig.isNewsPost
             ? '/admin/dashboard.php?tab=news&post=' + encodeURIComponent(EditorConfig.newsPostId || '')
-            : '/admin/dashboard#page/' + encodeURIComponent(EditorConfig.currentPage || '');
+            : '/admin/dashboard.php#page/' + encodeURIComponent(EditorConfig.currentPage || '');
         const adminBaseUrl = window.NB_ADMIN_BASE_URL || '/admin/';
         const logoutUrl = new URL(adminBaseUrl, window.location.origin);
         logoutUrl.searchParams.set('logout', '1');
@@ -772,6 +970,10 @@
                     <a href="/admin/dashboard" class="admin-bar-link"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg> ${t('dashboard')}</a>
                 </div>
                 <div class="admin-bar-center">
+                    <div class="admin-bar-backups" id="admin-page-backups" role="group" aria-label="${escHtml(t('page_backups.label'))}" hidden>
+                        <select class="admin-bar-backup-select" id="admin-backup-select" data-native-select aria-label="${escHtml(t('page_backups.label'))}"></select>
+                        <button type="button" class="admin-bar-btn" id="admin-btn-restore-backup">${t('page_backups.apply')}</button>
+                    </div>
                     <span class="admin-bar-info" id="admin-bar-info" role="status" aria-live="polite" aria-atomic="true"></span>
                     <div class="admin-bar-edit-controls" style="display:none;">
                         <button type="button" class="admin-bar-btn admin-bar-btn-undo" id="admin-btn-undo" disabled title="${t('undo')} (${navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘' : 'Ctrl'}+Z)">
@@ -796,7 +998,7 @@
                         <button type="button" class="admin-bar-btn admin-bar-btn-edit" id="admin-btn-edit">
                             ${t('visual_editor')}
                         </button>
-                        <a href="${EditorConfig.isNewsPost ? '/admin/dashboard.php?tab=news&post=' + (EditorConfig.newsPostId || '') : '/admin/dashboard?page=' + (EditorConfig.currentPage || '')}" class="admin-bar-btn admin-bar-btn-content-editor" id="admin-btn-content-editor">
+                        <a href="${contentEditorHref}" class="admin-bar-btn admin-bar-btn-content-editor" id="admin-btn-content-editor">
                             ${t('content_editor')}
                         </a>
                     </div>
@@ -828,6 +1030,9 @@
         document.getElementById('admin-btn-cancel').addEventListener('click', () => exitEditMode(false));
         document.getElementById('admin-btn-undo').addEventListener('click', undo);
         document.getElementById('admin-btn-redo').addEventListener('click', redo);
+        document.getElementById('admin-btn-restore-backup').addEventListener('click', () => PageBackups.requestRestore());
+        document.getElementById('admin-backup-select').addEventListener('change', () => PageBackups.update());
+        void PageBackups.load();
     }
 
     function updateAdminBarMode(editing) {
@@ -886,7 +1091,7 @@
             '</div>';
         overlay.querySelector('p').textContent = message || '';
         const style = document.createElement('style');
-        style.textContent = '.nibbly-editor-confirm{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:rgba(17,24,39,.55);padding:20px}.nibbly-editor-confirm__dialog{width:min(430px,100%);background:#fff;border-radius:10px;box-shadow:0 18px 60px rgba(15,23,42,.25);padding:22px}.nibbly-editor-confirm__dialog h3{margin:0 0 10px;font-size:20px}.nibbly-editor-confirm__dialog p{margin:0 0 18px;color:#374151;line-height:1.45}.nibbly-editor-confirm__actions{display:flex;gap:10px;justify-content:flex-end}.nibbly-editor-confirm__btn{border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font:inherit;padding:9px 14px}.nibbly-editor-confirm__btn--primary{background:#5aa6a6;border-color:#5aa6a6;color:#fff}.nibbly-editor-confirm__btn--secondary{background:#fff;color:#111827}';
+        style.textContent = '.nibbly-editor-confirm{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:rgba(17,24,39,.55);padding:20px;font-family:var(--nb-font-sans,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif)}.nibbly-editor-confirm__dialog{width:min(430px,100%);background:#fff;border-radius:10px;box-shadow:0 18px 60px rgba(15,23,42,.25);padding:22px}.nibbly-editor-confirm__dialog h3{margin:0 0 10px;font-family:inherit;font-size:20px;letter-spacing:normal}.nibbly-editor-confirm__dialog p{margin:0 0 18px;color:#374151;line-height:1.45}.nibbly-editor-confirm__actions{display:flex;gap:10px;justify-content:flex-end}.nibbly-editor-confirm__btn{border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font:inherit;padding:9px 14px}.nibbly-editor-confirm__btn--primary{background:#5aa6a6;border-color:#5aa6a6;color:#fff}.nibbly-editor-confirm__btn--secondary{background:#fff;color:#111827}';
         overlay.appendChild(style);
         function close() {
             overlay.remove();
@@ -1017,6 +1222,7 @@
     }
 
     async function saveAllChanges(options = {}) {
+        if (PageBackups.restoring || EditorConfig.saving) return false;
         const exitAfterSave = options.exitAfterSave === true;
         flushActiveInlineEdits();
 
@@ -1034,6 +1240,8 @@
             return;
         }
 
+        EditorConfig.saving = true;
+        PageBackups.update();
         const saveButtons = Array.from(document.querySelectorAll('#admin-btn-save, #admin-btn-save-exit'));
         saveButtons.forEach(saveBtn => {
             saveBtn.disabled = true;
@@ -1100,6 +1308,7 @@
                         body: formData
                     });
                     const result = await response.json();
+                    if (result.success && result.revision) EditorConfig.contentRevisions[page] = result.revision;
 
                     if (!result.success) {
                         showToast(t('toast.error_saving', { page, message: result.message || 'Unknown' }), 'error');
@@ -1110,6 +1319,7 @@
             }
 
             if (allSuccess) {
+                void PageBackups.load();
                 showToast(t('toast.saved'), 'success');
                 if (exitAfterSave) {
                     exitEditModeClean();
@@ -1123,6 +1333,8 @@
             console.error('Save all error:', error);
             showToast(t('toast.error_saving_short'), 'error');
         } finally {
+            EditorConfig.saving = false;
+            PageBackups.update();
             saveButtons.forEach(saveBtn => {
                 saveBtn.disabled = false;
             });
@@ -1361,6 +1573,25 @@
 
             if (value.src) img.setAttribute('src', value.src);
             if (value.alt !== undefined) img.setAttribute('alt', value.alt);
+            syncAiLabel(img);
+        });
+
+        // Update non-editable elements bound to content values via contentBindAttrs(),
+        // e.g. image previews or repeated labels that show the same field elsewhere
+        document.querySelectorAll('[data-nb-bind]').forEach(el => {
+            const pageData = EditorConfig.contentData[el.dataset.nbBindPage];
+            if (!pageData || !el.dataset.nbBindField) return;
+            const value = getNestedValue(pageData, el.dataset.nbBindField);
+            if (value === null || value === undefined) return;
+
+            if (el.dataset.nbBind === 'image') {
+                const src = typeof value === 'object' ? value.src : value;
+                if (src) el.setAttribute('src', src);
+                syncAiLabel(el);
+            } else if (typeof value !== 'object') {
+                if (el.dataset.nbBind === 'html') el.innerHTML = value;
+                else el.textContent = value;
+            }
         });
 
         // Update custom editable icon values
@@ -3076,7 +3307,9 @@
 
         // Update button icon
         btnEl.innerHTML = nowHidden ? Icons.eyeClosed : Icons.eyeOpen;
-        btnEl.title = nowHidden ? t('show') : t('hide');
+        const label = nowHidden ? t('show') : t('hide');
+        btnEl.dataset.editorTooltip = label;
+        btnEl.setAttribute('aria-label', label);
 
         EditorConfig.dirtyPages.add(contentPage);
         updateUndoRedoButtons();
@@ -3840,6 +4073,7 @@
                 if (img && section.src) {
                     img.src = section.src;
                     img.alt = section.alt || '';
+                    syncAiLabel(img);
                 }
                 const caption = sectionEl.querySelector('.block-image figcaption');
                 if (caption) caption.textContent = section.caption || '';
@@ -4920,8 +5154,23 @@
             if (img.closest('.event-card[data-event-id]')) return;
             const wrapper = document.createElement('div');
             wrapper.className = 'editable-image-wrapper';
-            wrapper.style.position = 'relative';
-            wrapper.style.display = 'inline-block';
+            // Styled in inline-editor.css (not inline) so sites can adapt it. Images that
+            // fill their frame (object-fit) or are absolutely positioned keep doing so.
+            const imgStyle = window.getComputedStyle(img);
+            if (imgStyle.position === 'absolute') {
+                wrapper.classList.add('editable-image-wrapper--positioned');
+            } else if (imgStyle.objectFit && imgStyle.objectFit !== 'fill' && img.parentElement) {
+                const box = img.getBoundingClientRect();
+                const frame = img.parentElement.getBoundingClientRect();
+                if (Math.abs(box.width - frame.width) < 2 && Math.abs(box.height - frame.height) < 2) {
+                    // A positioned frame (e.g. an aspect-ratio box) is covered absolutely, because
+                    // percentage heights do not resolve against aspect-ratio heights
+                    const framePosition = window.getComputedStyle(img.parentElement).position;
+                    wrapper.classList.add(framePosition === 'static'
+                        ? 'editable-image-wrapper--fill'
+                        : 'editable-image-wrapper--positioned');
+                }
+            }
             img.parentNode.insertBefore(wrapper, img);
             wrapper.appendChild(img);
 
@@ -5002,6 +5251,7 @@
         // Update DOM
         element.setAttribute('src', newSrc);
         element.setAttribute('alt', newAlt);
+        syncAiLabel(element);
         // Remove empty placeholder class if image was set
         const wrapper = element.closest('.editable-image-wrapper');
         if (wrapper) wrapper.classList.remove('editable-image-empty');
@@ -5010,6 +5260,54 @@
 
         updateUndoRedoButtons();
     }
+
+    // ============================================================
+    // AI DISCLOSURE LABELS
+    // The label next to an AI-generated or AI-modified image follows image swaps
+    // and label changes in the media library right away (window.NB_AI_LABELS).
+    // ============================================================
+
+    function aiLabelKindForSrc(src) {
+        const files = window.NB_AI_LABELS && window.NB_AI_LABELS.files;
+        if (!files || !src) return '';
+        let path;
+        try {
+            path = decodeURIComponent(new URL(src, location.href).pathname);
+        } catch (e) {
+            return '';
+        }
+        for (const [type, marker] of [['image', 'assets/images/'], ['video', 'assets/videos/']]) {
+            const position = path.indexOf(marker);
+            if (position === -1) continue;
+            const name = path.slice(position + marker.length);
+            return files[type] && Object.prototype.hasOwnProperty.call(files[type], name) ? files[type][name] : '';
+        }
+        return '';
+    }
+
+    function syncAiLabel(img) {
+        const markup = window.NB_AI_LABELS && window.NB_AI_LABELS.markup;
+        if (!markup || !img) return;
+        // The label follows the image, or its editor wrapper
+        const anchor = img.closest('.editable-image-wrapper') || img;
+        const next = anchor.nextElementSibling;
+        const label = next && next.classList.contains('nb-ai-label') ? next : null;
+        const kind = aiLabelKindForSrc(img.getAttribute('src'));
+        if (label && kind && label.classList.contains('nb-ai-label--' + kind)) return;
+        if (label) label.remove();
+        if (kind && markup[kind]) anchor.insertAdjacentHTML('afterend', markup[kind]);
+    }
+
+    document.addEventListener('nibbly:ai-label-change', event => {
+        const config = window.NB_AI_LABELS;
+        const detail = event.detail || {};
+        if (!config || !detail.type || !detail.name) return;
+        if (!config.files || Array.isArray(config.files)) config.files = {};
+        if (!config.files[detail.type] || Array.isArray(config.files[detail.type])) config.files[detail.type] = {};
+        if (detail.label) config.files[detail.type][detail.name] = detail.label;
+        else delete config.files[detail.type][detail.name];
+        document.querySelectorAll('img[data-editable-image], img[data-nb-bind="image"]').forEach(syncAiLabel);
+    });
 
     // ============================================================
     // EDITABLE LISTS (Repeatable Items — Add/Delete/Reorder)
@@ -5541,7 +5839,9 @@
 
         // Update button icon
         btnEl.innerHTML = nowHidden ? Icons.eyeClosed : Icons.eyeOpen;
-        btnEl.title = nowHidden ? t('show') : t('hide');
+        const label = nowHidden ? t('show') : t('hide');
+        btnEl.dataset.editorTooltip = label;
+        btnEl.setAttribute('aria-label', label);
 
         EditorConfig.dirtyPages.add(page);
         updateUndoRedoButtons();
@@ -6386,6 +6686,7 @@
             heroEl._newsClickHandler = function() {
                 openImageManager(function(imagePath) {
                     heroEl.src = imagePath;
+                    syncAiLabel(heroEl);
                     EditorConfig.newsPostData.image = imagePath;
                     markNewsPostDirty();
                     closeImageManager();

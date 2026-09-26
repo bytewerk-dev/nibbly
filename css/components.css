@@ -1516,3 +1516,52 @@
 .demo-buttons .btn:hover {
     text-decoration: none;
 }
+
+/* ============================================================
+   AI DISCLOSURE LABELS (EU AI Act, Art. 50)
+   Label in the bottom-right corner of AI-generated or AI-modified images,
+   rendered by nibblyAiLabelHtml(). Hidden at rest (screen readers get the alt
+   text); shown when a visitor lingers: 600 ms hover, or on touch devices
+   js/ai-labels.js (.is-revealed). Adapt with --nb-ai-label-height,
+   --nb-ai-label-inset, --nb-ai-label-rest (e.g. 0.25 for a subtle label at rest)
+   and --nb-ai-label-filter (e.g. invert(1) for a light label on dark images).
+   ============================================================ */
+.nb-ai-media {
+    position: relative;
+    display: block;
+}
+
+:where(:has(> .nb-ai-label)) {
+    position: relative;
+}
+
+.nb-ai-label {
+    position: absolute;
+    z-index: 2;
+    right: var(--nb-ai-label-inset, 20px);
+    bottom: var(--nb-ai-label-inset, 20px);
+    line-height: 0;
+    opacity: var(--nb-ai-label-rest, 0);
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+}
+
+.nb-ai-label > img.nb-ai-label__badge {
+    display: block;
+    width: auto;
+    max-width: none;
+    height: var(--nb-ai-label-height, 22px);
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    object-fit: contain;
+    filter: var(--nb-ai-label-filter, none);
+}
+
+:hover > .nb-ai-label,
+.nb-ai-label.is-revealed {
+    opacity: 1;
+    transition: opacity 2s ease 0.6s;
+}

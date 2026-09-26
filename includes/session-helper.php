@@ -98,6 +98,6 @@ function nibblySessionRedirectUrl(string $url): string {
     if (str_starts_with($url, '//') || preg_match('/[\x00-\x20\x7f\\\\]/', $path)
         || preg_match('#(^|/)\.\.?(/|$)#', $path)) return '/';
     $path = '/' . ltrim($path, '/');
-    if ($path === '/admin' || str_starts_with($path, '/admin/')) return '/';
+    if ($path === '/admin' || str_starts_with($path, '/admin/') || $path === '/login' || $path === '/login/') return '/';
     return str_starts_with($url, '/') || str_starts_with($url, '#') ? $url : '/' . $url;
 }

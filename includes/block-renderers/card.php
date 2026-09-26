@@ -19,13 +19,13 @@ if ($editable) {
     // (sections.N.image, sections.N.alt) — preserves title/content in the same
     // section object. Defaults alt to the title when empty.
     $defaultAlt = $section['alt'] ?? ($title !== '' ? $title : 'Image');
-    $html .= '    ' . editableImageSplit($page, "sections.$index.image", "sections.$index.alt", $image, $defaultAlt) . "\n";
+    $html .= '    ' . nibblyAiLabelFrame(editableImageSplit($page, "sections.$index.image", "sections.$index.alt", $image, $defaultAlt)) . "\n";
     $html .= '    <h3>' . editableText($page, "sections.$index.title", $title) . '</h3>' . "\n";
     $html .= '    <p>' . editableText($page, "sections.$index.content", $content) . '</p>' . "\n";
 } else {
     if (!empty($image)) {
         $alt = !empty($section['alt']) ? $section['alt'] : ($title !== '' ? $title : 'Image');
-        $html .= '    <img src="' . htmlspecialchars($image) . '" alt="' . htmlspecialchars($alt) . '">' . "\n";
+        $html .= '    ' . nibblyAiLabelAttach('<img src="' . htmlspecialchars($image) . '" alt="' . htmlspecialchars($alt) . '">', (string)$image, true) . "\n";
     }
     if ($title !== '') {
         $html .= '    <h3>' . htmlspecialchars($title) . '</h3>' . "\n";

@@ -60,7 +60,9 @@ if ($path !== null) {
         http_response_code(503);
         jsonResponse(false, null, 'Storage is damaged; existing data was preserved');
     }
-    if (in_array($action, ['save', 'save-settings'], true)) {
+    // Existing restore clients remain compatible; revision-aware clients reject stale restores.
+    if (in_array($action, ['save', 'save-settings'], true)
+        || ($action === 'restore' && array_key_exists('revision', $_POST))) {
         $revision = $_POST['revision'] ?? null;
         if (!is_string($revision) || $revision === '') {
             http_response_code(428);

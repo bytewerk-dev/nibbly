@@ -102,10 +102,15 @@ switch ($action) {
 
         if (move_uploaded_file($file['tmp_name'], $targetBase . $filename)) {
             $relativeName = ($folder !== '' ? $folder . '/' : '') . $filename;
+            $aiLabel = in_array($type, ['image', 'video'], true) ? nibblyDetectAiLabel($targetBase . $filename) : '';
+            if ($aiLabel !== '') {
+                nibblySetMediaAiLabel($type, $relativeName, $aiLabel);
+            }
             jsonResponse(true, [
                 'type' => $type,
                 'name' => $relativeName,
                 'path' => $targetPublicBase . $filename,
+                'aiLabel' => $aiLabel,
             ], 'Media uploaded');
         }
 
@@ -209,6 +214,7 @@ switch ($action) {
 
         $targetRelative = uniqueMediaRelativePath($config['path'], $targetRelative);
         if (rename($sourcePath, $config['path'] . $targetRelative)) {
+            nibblyMoveMediaMeta($type, $filename, $type, $targetRelative);
             jsonResponse(true, [
                 'type' => $type,
                 'name' => $targetRelative,
@@ -293,6 +299,7 @@ switch ($action) {
         }
 
         if (rename($sourcePath, $targetPath)) {
+            nibblyMoveMediaMeta($type, $filename, $type, $targetRelative);
             jsonResponse(true, [
                 'type' => $type,
                 'name' => $targetRelative,
@@ -303,6 +310,31 @@ switch ($action) {
         }
 
         jsonResponse(false, null, 'Error renaming media');
+        break;
+
+    case 'set-media-ai-label':
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $type = normalizeMediaType($_POST['type'] ?? 'image');
+        $filename = $_POST['filename'] ?? '';
+        $aiLabel = (string)($_POST['label'] ?? '');
+        $config = getMediaConfig($type);
+        if (!$config || !in_array($type, ['image', 'video'], true) || !validateMediaFilename($filename, $type)) {
+            jsonResponse(false, null, 'Invalid media file');
+        }
+        if ($aiLabel !== '' && !in_array($aiLabel, NIBBLY_AI_LABEL_KINDS, true)) {
+            jsonResponse(false, null, 'Invalid AI label');
+        }
+        if (!is_file($config['path'] . $filename)) {
+            jsonResponse(false, null, 'File not found');
+        }
+        if (!nibblySetMediaAiLabel($type, $filename, $aiLabel)) {
+            jsonResponse(false, null, 'Error saving');
+        }
+
+        jsonResponse(true, ['type' => $type, 'name' => $filename, 'aiLabel' => $aiLabel], 'AI label saved');
         break;
 
     case 'delete-media':
@@ -332,6 +364,7 @@ switch ($action) {
             mkdir($targetDirectory, 0755, true);
         }
         if (rename($sourcePath, $config['trashPath'] . $targetFilename)) {
+            nibblyMoveMediaMeta($type, $filename, $type . '-trash', $targetFilename);
             jsonResponse(true, null, 'Media moved to trash');
         }
 
@@ -361,6 +394,7 @@ switch ($action) {
             mkdir($targetDirectory, 0755, true);
         }
         if (rename($sourcePath, $config['path'] . $targetFilename)) {
+            nibblyMoveMediaMeta($type . '-trash', $filename, $type, $targetFilename);
             jsonResponse(true, [
                 'type' => $type,
                 'name' => $targetFilename,
@@ -389,6 +423,7 @@ switch ($action) {
         }
 
         if (unlink($path)) {
+            nibblyForgetMediaMeta($type . '-trash', $filename);
             jsonResponse(true, null, 'Media permanently deleted');
         }
 
@@ -410,6 +445,7 @@ switch ($action) {
             foreach (listMediaFiles($type, true) as $media) {
                 $path = $config['trashPath'] . $media['name'];
                 if (is_file($path) && unlink($path)) {
+                    nibblyForgetMediaMeta($type . '-trash', $media['name']);
                     $deleted++;
                 }
             }
@@ -556,9 +592,14 @@ switch ($action) {
         }
 
         if (move_uploaded_file($file['tmp_name'], IMAGES_PATH . $filename)) {
+            $detectedAiLabel = nibblyDetectAiLabel(IMAGES_PATH . $filename);
+            if ($detectedAiLabel !== '') {
+                nibblySetMediaAiLabel('image', $filename, $detectedAiLabel);
+            }
             jsonResponse(true, [
                 'name' => $filename,
-                'path' => '../assets/images/' . $filename
+                'path' => '../assets/images/' . $filename,
+                'aiLabel' => nibblyMediaAiLabelFor('image', $filename),
             ], $replaceMode ? 'Image replaced' : 'Image uploaded');
         } else {
             jsonResponse(false, null, 'Error saving');

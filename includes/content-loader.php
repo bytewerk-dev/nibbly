@@ -5,6 +5,7 @@
 
 require_once __DIR__ . '/../admin/lang/i18n.php';
 require_once __DIR__ . '/access-guard.php';
+require_once __DIR__ . '/ai-labels.php';
 
 if (!defined('CONTENT_BASE_PATH')) {
     define('CONTENT_BASE_PATH', __DIR__ . '/../content/pages/');
@@ -450,11 +451,13 @@ function editableImage($page, $fieldKey, $defaultSrc = '', $defaultAlt = '', $cl
     if (isAdminLoggedIn()) {
         $hiddenAttr = $hidden ? ' data-hidden="true"' : '';
         return '<img src="' . htmlspecialchars($src) . '" alt="' . htmlspecialchars($alt) . '"' . $classAttr
-            . ' data-editable-image data-page="' . htmlspecialchars($page) . '" data-field="' . htmlspecialchars($fieldKey) . '"' . $hiddenAttr . '>';
+            . ' data-editable-image data-page="' . htmlspecialchars($page) . '" data-field="' . htmlspecialchars($fieldKey) . '"' . $hiddenAttr . '>'
+            . nibblyAiLabelHtml((string)$src);
     }
 
     if ($hidden) return '';
-    return '<img src="' . htmlspecialchars($src) . '" alt="' . htmlspecialchars($alt) . '"' . $classAttr . '>';
+    return '<img src="' . htmlspecialchars($src) . '" alt="' . htmlspecialchars($alt) . '"' . $classAttr . '>'
+        . nibblyAiLabelHtml((string)$src);
 }
 
 /**
@@ -489,11 +492,13 @@ function editableImageSplit($page, $srcFieldKey, $altFieldKey, $defaultSrc = '',
             . ' data-page="' . htmlspecialchars($page) . '"'
             . ' data-field="' . htmlspecialchars($srcFieldKey) . '"'
             . ' data-alt-field="' . htmlspecialchars($altFieldKey) . '"'
-            . $hiddenAttr . '>';
+            . $hiddenAttr . '>'
+            . nibblyAiLabelHtml((string)$src);
     }
 
     if ($hidden) return '';
-    return '<img src="' . htmlspecialchars($src) . '" alt="' . htmlspecialchars($alt) . '"' . $classAttr . '>';
+    return '<img src="' . htmlspecialchars($src) . '" alt="' . htmlspecialchars($alt) . '"' . $classAttr . '>'
+        . nibblyAiLabelHtml((string)$src);
 }
 
 /**
@@ -678,6 +683,26 @@ function nibblyInferGroupSchemaFromDefaults($defaults, $label = 'Item') {
         'label' => $label,
         'fields' => $fields,
     ];
+}
+
+/**
+ * Bind a non-editable element to a content value, so the visual editor refreshes
+ * it live when that value changes (e.g. image previews or repeated labels that show
+ * a field edited elsewhere). Images update their src; text and html their content.
+ * For visitors: returns an empty string.
+ *
+ * @param string $page     JSON page name (e.g. 'en_home')
+ * @param string $fieldKey Dot-notation key (e.g. 'features.items.0.image')
+ * @param string $type     'image', 'text' or 'html'
+ * @return string HTML attributes string or empty
+ */
+function contentBindAttrs($page, $fieldKey, $type = 'text') {
+    if (!isAdminLoggedIn()) return '';
+    $type = in_array($type, ['image', 'text', 'html'], true) ? $type : 'text';
+
+    return ' data-nb-bind="' . $type . '"'
+        . ' data-nb-bind-page="' . htmlspecialchars($page) . '"'
+        . ' data-nb-bind-field="' . htmlspecialchars($fieldKey) . '"';
 }
 
 /**
@@ -1659,7 +1684,7 @@ function renderNewsList($limit = 0, $lang = 'en') {
         $_isAdmin = isAdminLoggedIn();
         if ($image) {
             $html .= '<div class="news-card__image">';
-            $html .= '<img src="' . $image . '" alt="' . $title . '" loading="lazy">';
+            $html .= '<img src="' . $image . '" alt="' . $title . '" loading="lazy">' . nibblyAiLabelHtml((string)($post['image'] ?? ''));
             $html .= '</div>';
         } elseif ($_isAdmin) {
             $html .= '<div class="news-card__image">';
@@ -1872,6 +1897,7 @@ function renderEvent($event, $lang = 'de', $showImage = true, $editable = false)
         } else {
             $html .= '<img src="' . $imgSrc . '" alt="' . $imgAlt . '">';
         }
+        $html .= nibblyAiLabelHtml((string)($event['image'] ?? ''));
         $html .= '</div>';
     }
 
