@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/../includes/html-sanitizer.php';
+require_once __DIR__ . '/../includes/svg-sanitizer.php';
 require_once __DIR__ . '/../includes/session-helper.php';
 
 function securityAssert(bool $condition, string $message): void {
@@ -29,4 +30,35 @@ securityAssert(nibblySessionRedirectUrl('/services/test?x=1') === '/services/tes
 foreach (['javascript:alert(1)', '//other.invalid/', '/\\other.invalid/', '/admin', '/a/../admin/', 'http://localhost:4000/'] as $url) {
     securityAssert(nibblySessionRedirectUrl($url) === '/', 'Unsafe redirect accepted: ' . $url);
 }
+
+// Stored link targets (editableLink, gallery, event cards): dangerous schemes → "#".
+foreach (['javascript:alert(1)', 'JaVaScRiPt:x', "java\tscript:alert(1)", 'java&#9;script:x',
+    'data:text/html,x', 'vbscript:msgbox(1)', 'file:///etc/passwd'] as $url) {
+    securityAssert(nibblySanitizeHref($url) === '#', 'Unsafe href survived: ' . $url);
+}
+foreach (['https://example.com/?a=1&b=2', '/relative/path', '#anchor', 'about', 'mailto:a@b.c', 'tel:+43123'] as $url) {
+    securityAssert(nibblySanitizeHref($url) === $url, 'Safe href altered: ' . $url);
+}
+
+// Uploaded SVG sanitiser: active content removed, structure kept, DTD refused.
+$svgPath = tempnam(sys_get_temp_dir(), 'nibbly-svg-') . '.svg';
+try {
+    $writeSvg = function (string $svg) use ($svgPath): string {
+        file_put_contents($svgPath, $svg);
+        $ok = nibblySanitizeSvgFile($svgPath);
+        return $ok ? (string)file_get_contents($svgPath) : "\0REJECTED";
+    };
+    $cleaned = $writeSvg('<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"><script>alert(1)</script>'
+        . '<a href="javascript:alert(1)"><path d="M1 1"/></a>'
+        . '<foreignObject><b xmlns="http://www.w3.org/1999/xhtml">x</b></foreignObject></svg>');
+    securityAssert($cleaned !== "\0REJECTED", 'Valid SVG was rejected');
+    securityAssert(!preg_match('/<script|onload|javascript:|foreignObject/i', $cleaned), 'Active SVG content survived: ' . $cleaned);
+    securityAssert(str_contains($cleaned, '<path'), 'SVG drawing content was lost');
+    securityAssert($writeSvg('<?xml version="1.0"?><!DOCTYPE svg [<!ENTITY x SYSTEM "file:///etc/passwd">]>'
+        . '<svg xmlns="http://www.w3.org/2000/svg"><text>&x;</text></svg>') === "\0REJECTED", 'SVG with inline DTD was accepted');
+    securityAssert($writeSvg('not an svg at all') === "\0REJECTED", 'Non-SVG upload was accepted as SVG');
+} finally {
+    @unlink($svgPath);
+}
+
 echo "Security smoke test passed.\n";

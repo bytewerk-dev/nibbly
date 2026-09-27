@@ -9,6 +9,12 @@
  *   php cli/make.php --slug=about --lang=en [options]
  */
 
+// Command-line tools must never run as a web request, even where a server ignores .htaccess.
+if (PHP_SAPI !== 'cli' && isset($_SERVER['REQUEST_METHOD'])) {
+    http_response_code(404);
+    exit;
+}
+
 // Must run from project root
 $projectRoot = dirname(__DIR__);
 require_once $projectRoot . '/includes/page-path.php';

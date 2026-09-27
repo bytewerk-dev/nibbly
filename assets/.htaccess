@@ -1,0 +1,20 @@
+# Uploaded media is served as static files only. Even if an upload check ever
+# regresses, a file placed here must never be executed as code. This is a
+# second layer behind the extension checks in admin/api/media.php.
+#
+# Require all denied needs Apache 2.4 (mod_authz_core); RemoveHandler/RemoveType
+# are core mod_mime. None of these directives error under PHP-FPM the way
+# php_flag would, so this file is safe on shared hosting with AllowOverride All.
+
+<FilesMatch "(?i)\.(php|php[0-9]?|phtml|phtm|pht|phar|phps|cgi|pl|py|shtml|asp|aspx|jsp|htaccess)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+RemoveHandler .php .php3 .php4 .php5 .php7 .phtml .phtm .pht .phar .phps .cgi .pl .py .shtml
+RemoveType .php .php3 .php4 .php5 .php7 .phtml .phtm .pht .phar .phps .cgi .pl .py .shtml

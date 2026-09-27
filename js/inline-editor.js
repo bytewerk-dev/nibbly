@@ -38,6 +38,45 @@
     // HELPERS
     // ============================================================
 
+    /**
+     * Dark single-colour logos (like the default Nibbly icon) turn white on the dark admin bar
+     * (.admin-bar-logo-icon--default); multi-coloured site icons keep their colours. Decided from
+     * the rendered pixels: sites often replace the default file at assets/images/favicon.svg, so
+     * the path alone says nothing. Without pixel access (cross-origin logo) the path is used.
+     */
+    function markAdminBarLogo(img, src) {
+        const decide = () => {
+            let mono = /(^|\/)assets\/images\/favicon\.svg(?:[?#].*)?$/.test(src);
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = canvas.height = 24;
+                const context = canvas.getContext('2d', { willReadFrequently: true });
+                context.drawImage(img, 0, 0, 24, 24);
+                const data = context.getImageData(0, 0, 24, 24).data;
+                const min = [255, 255, 255];
+                const max = [0, 0, 0];
+                let opaque = 0;
+                let luminance = 0;
+                for (let i = 0; i < data.length; i += 4) {
+                    if (data[i + 3] < 200) continue;
+                    opaque++;
+                    for (let c = 0; c < 3; c++) {
+                        min[c] = Math.min(min[c], data[i + c]);
+                        max[c] = Math.max(max[c], data[i + c]);
+                    }
+                    luminance += (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255;
+                }
+                const singleColour = opaque > 0 && max.every((value, c) => value - min[c] <= 24);
+                mono = singleColour && luminance / opaque < 0.5;
+            } catch (e) {
+                // Pixels not readable: keep the path-based guess
+            }
+            img.classList.toggle('admin-bar-logo-icon--default', mono);
+        };
+        if (img.complete && img.naturalWidth) decide();
+        else img.addEventListener('load', decide, { once: true });
+    }
+
     /** Escape a string for safe insertion into HTML via innerHTML / template literals. */
     function escHtml(str) {
         const d = document.createElement('div');
@@ -936,10 +975,9 @@
 
         const bar = document.createElement('div');
         bar.id = 'admin-bar';
-        const isDefaultFavicon = /(^|\/)assets\/images\/favicon\.svg(?:[?#].*)?$/.test(brandLogo);
-        const logoClass = `admin-bar-logo-icon${isDefaultFavicon ? ' admin-bar-logo-icon--default' : ''}`;
+        // Monochrome treatment (--default) is decided from the rendered logo, see markAdminBarLogo()
         const logoHtml = showBranding
-            ? `<img src="${escHtml(brandLogo)}" alt="${escHtml(brandName)}" width="24" height="24" class="${logoClass}">`
+            ? `<img src="${escHtml(brandLogo)}" alt="${escHtml(brandName)}" width="24" height="24" class="admin-bar-logo-icon">`
             : '';
         const seoHealth = window.NB_SEO_HEALTH || { status: 'yellow', score: 0, label: 'SEO prüfen', issues: ['Keine SEO-Prüfung verfügbar.'] };
         const seoIssues = Array.isArray(seoHealth.issues) ? seoHealth.issues : [];
@@ -1010,6 +1048,8 @@
             </div>
         `;
         document.body.insertBefore(bar, document.body.firstChild);
+        const barLogo = bar.querySelector('.admin-bar-logo-icon');
+        if (barLogo) markAdminBarLogo(barLogo, brandLogo);
         document.body.classList.add('has-admin-bar');
 
         const syncAdminBarHeight = () => {

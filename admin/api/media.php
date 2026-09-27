@@ -1,6 +1,8 @@
 <?php
 if (!defined('NIBBLY_ADMIN_DIR')) { http_response_code(404); exit; }
 
+require_once NIBBLY_ADMIN_DIR . '/../includes/svg-sanitizer.php';
+
 // Authenticated dispatcher supplies shared helpers and request context.
 switch ($action) {
     case 'list-images':
@@ -101,6 +103,10 @@ switch ($action) {
         }
 
         if (move_uploaded_file($file['tmp_name'], $targetBase . $filename)) {
+            if (strtolower($extension) === 'svg' && !nibblySanitizeSvgFile($targetBase . $filename)) {
+                @unlink($targetBase . $filename);
+                jsonResponse(false, null, 'SVG could not be processed safely');
+            }
             $relativeName = ($folder !== '' ? $folder . '/' : '') . $filename;
             $aiLabel = in_array($type, ['image', 'video'], true) ? nibblyDetectAiLabel($targetBase . $filename) : '';
             if ($aiLabel !== '') {
@@ -586,12 +592,26 @@ switch ($action) {
             }
         }
 
+        // Final gate: never store a filename whose extension is not an allowed
+        // image type. finfo checks the MIME type, but a polyglot file can carry
+        // valid image magic bytes while keeping a .php name, so the extension
+        // must be validated independently before the file lands in a web-served
+        // directory (assets/images/ has no PHP-execution block).
+        if (!validateMediaFilename($filename, 'image')) {
+            jsonResponse(false, null, 'Invalid file extension');
+        }
+
         $targetDirectory = dirname(IMAGES_PATH . $filename);
         if (!is_dir($targetDirectory)) {
             mkdir($targetDirectory, 0755, true);
         }
 
         if (move_uploaded_file($file['tmp_name'], IMAGES_PATH . $filename)) {
+            if (strtolower(pathinfo($filename, PATHINFO_EXTENSION)) === 'svg'
+                && !nibblySanitizeSvgFile(IMAGES_PATH . $filename)) {
+                @unlink(IMAGES_PATH . $filename);
+                jsonResponse(false, null, 'SVG could not be processed safely');
+            }
             $detectedAiLabel = nibblyDetectAiLabel(IMAGES_PATH . $filename);
             if ($detectedAiLabel !== '') {
                 nibblySetMediaAiLabel('image', $filename, $detectedAiLabel);
@@ -818,6 +838,12 @@ switch ($action) {
         while (file_exists(AUDIO_PATH . $filename)) {
             $filename = $safeName . '-' . $counter . '.' . $extension;
             $counter++;
+        }
+
+        // Validate the final extension independently of the MIME type: a polyglot
+        // can pass the finfo check while keeping an executable .php name.
+        if (!validateMediaFilename($filename, 'audio')) {
+            jsonResponse(false, null, 'Invalid file extension');
         }
 
         if (!is_dir(AUDIO_PATH)) {

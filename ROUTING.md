@@ -68,6 +68,52 @@ the site's explicit detail rules when merging updated core rewrite rules.
   subdirectory hosting works based on a root installation test; verify rewrite
   targets, cookies, assets and redirects under the actual deployment prefix.
 
+## Hosting proxies and internal folders
+
+`.htaccess` protects `content/`, `backups/`, `cli/`, `tests/` and the media
+trash folders only for requests that reach Apache. Some hosting panels put
+nginx in front of Apache and let it deliver static files such as `.json`,
+`.txt` and `.zip` directly from disk. Those requests never reach Apache, so
+`content/users.json` (password hashes), `content/settings.json` (SMTP password,
+web cron token), `content/mails.json` (form submissions) and backup ZIPs become
+public. This happened on a HestiaCP staging server in September 2026: a test
+JSON file in `content/` returned HTTP 200 from nginx, while a PHP file in the
+same folder returned 403 from Apache.
+
+Block the folders in nginx as well. `^~` makes these prefix locations win over
+the panel's regular-expression location for static files:
+
+```nginx
+location ^~ /content/ { deny all; }
+location ^~ /backups/ { deny all; }
+location ^~ /cli/ { deny all; }
+location ^~ /tests/ { deny all; }
+location ^~ /assets/images-trash/ { deny all; }
+location ^~ /assets/audio-trash/ { deny all; }
+location ^~ /assets/videos-trash/ { deny all; }
+location ^~ /assets/documents-trash/ { deny all; }
+```
+
+- **HestiaCP:** save the lines as
+  `/home/<user>/conf/web/<domain>/nginx.ssl.conf_nibbly` (for plain HTTP also
+  as `nginx.conf_nibbly`); HestiaCP includes these files in the domain's
+  server block. Then run `nginx -t && systemctl reload nginx` as root.
+- **Plesk:** the default "Smart static files processing" asks Apache first, so
+  `.htaccess` applies. With "Serve static files directly by nginx" switched on,
+  requests for the listed extensions never reach Apache. Keep the option
+  switched off, or add the lines under "Apache & nginx Settings" → "Additional
+  nginx directives".
+- For an installation in a subdirectory, prefix each path with it.
+
+Check this after the first upload and after hosting changes. Dashboard →
+System status → Security requests short-lived probe files through the site's
+own address and shows these rules for the current installation. A missing file
+is no test: nginx passes unknown files to Apache, which answers 403. To check by
+hand, request an existing file, for example
+`curl -I https://example.com/content/settings.json`, and expect 403 or 404.
+`python3 tests/security-check-smoke.py --apache` reproduces the proxy locally
+in front of Apache and PHP-FPM, with and without these rules.
+
 ## Required verification
 
 For routing or request-handler directory changes, run the focused regression:
@@ -102,6 +148,7 @@ after an authorized upload; local Apache cannot verify hosting proxy rules.
 | Existing news/event listing and detail URLs in each supported language | Established site behavior; detail request reaches its intended handler |
 | Unknown public and admin URLs | HTTP 404, not a successful empty page |
 | Config, content and implementation-only resources | Existing access protections remain effective |
+| Existing internal files through the public address, behind any hosting proxy (`/content/settings.json`, a backup ZIP) | HTTP 403 or 404; System status → Security reports no public folders |
 
 Inspect the first response **and** the followed redirect chain. A final HTTP
 200 alone may be a login or error page, so check the returned content. Use GET

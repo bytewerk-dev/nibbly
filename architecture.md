@@ -948,6 +948,32 @@ News posts are individual JSON files in `content/news/`. Each file contains meta
 
 - `content/`, `backups/`, and trash directories are blocked from direct HTTP access
 - The router.php dev server replicates these blocks
+- A proxy that serves static files itself (nginx on HestiaCP, Plesk's "Serve
+  static files directly by nginx") bypasses `.htaccess`; block the same folders
+  in nginx, see [ROUTING.md](ROUTING.md#hosting-proxies-and-internal-folders)
+- `cli/*.php` answer web requests with 404 in case a server ignores `.htaccess`
+
+### Security Self-Check
+
+`includes/security-check.php` feeds System status → Security. The POST action
+`security-check` (administrators, CSRF) creates short-lived probe files with
+random names in `content/` (`.json`), `backups/` (`.zip`) and the existing media
+trash folders, plus a public control file in `assets/images/`. It requests
+them through the site's own address (cURL, 3–5 s timeouts, unverified TLS only
+as a fallback for self-signed staging certificates) and evaluates only the
+status code: 2xx is public, 403/404/410 is blocked. The control file must
+return 2xx, so a wrong address cannot pass as protected. A public `content/` or
+`backups/` is critical and shows the dashboard banner; public trash folders
+alone are a warning. The action releases
+the session lock first and always deletes its probe files. Results are cached
+per address in `content/security-check.json` (12 hours when protected,
+10 minutes when public, 1 hour otherwise) under a non-blocking lock; the GET
+action `system-status` only reads that cache. Local and intranet hosts run the
+probe on request ("Check now"); the single-threaded PHP development server is
+skipped. The same response reports dashboard use without HTTPS, plain HTTP
+without a redirect, the session cookie's Secure flag, a proxy hiding visitor
+IP addresses, `display_errors` (recorded before the API disables it), the
+development login and the end of PHP's upstream security support.
 
 ### Authentication
 

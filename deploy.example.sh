@@ -24,6 +24,34 @@
 #               --delete), so a deliberate local edit can still ship
 #               but no server file is silently dropped.
 #
+# AFTER THE FIRST UPLOAD — MAKE SURE INTERNAL FOLDERS ARE BLOCKED:
+#   .htaccess protects content/, backups/, cli/, tests/ and the media
+#   trash folders only for requests that reach Apache. If nginx serves
+#   static files itself (HestiaCP; Plesk with "Serve static files
+#   directly by nginx"), password hashes, the SMTP password, form
+#   submissions and backup ZIPs become public. Add to the site's nginx
+#   configuration (prefix the paths for a subdirectory installation):
+#
+#     location ^~ /content/ { deny all; }
+#     location ^~ /backups/ { deny all; }
+#     location ^~ /cli/ { deny all; }
+#     location ^~ /tests/ { deny all; }
+#     location ^~ /assets/images-trash/ { deny all; }
+#     location ^~ /assets/audio-trash/ { deny all; }
+#     location ^~ /assets/videos-trash/ { deny all; }
+#     location ^~ /assets/documents-trash/ { deny all; }
+#
+#   HestiaCP: save as /home/<user>/conf/web/<domain>/nginx.ssl.conf_nibbly
+#             (plain HTTP: also nginx.conf_nibbly), then as root:
+#             nginx -t && systemctl reload nginx
+#   Plesk:    keep "Serve static files directly by nginx" switched off,
+#             or add the lines under "Additional nginx directives".
+#   Then open Dashboard -> System status -> Security and click "Check
+#   now". By hand, test an EXISTING file (nginx passes missing files to
+#   Apache, which answers 403 anyway):
+#     curl -I https://example.com/content/settings.json   # expect 403/404
+#   Details: ROUTING.md, "Hosting proxies and internal folders".
+#
 # PREREQUISITES:
 #   - lftp must be installed:
 #       macOS:  brew install lftp

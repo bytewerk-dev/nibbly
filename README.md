@@ -53,6 +53,10 @@ That's it. Your site is running.
 Before uploading or upgrading a site, follow
 [Routing and deployment verification](ROUTING.md). Local PHP routing and Apache
 can differ, especially when clean URLs share names with physical directories.
+After the first upload, open **System status** in the dashboard: its security
+check confirms that internal folders such as `content/` and `backups/` cannot
+be downloaded. An nginx proxy in front of Apache can bypass `.htaccess`; see
+[Hosting proxies and internal folders](ROUTING.md#hosting-proxies-and-internal-folders).
 
 ## Built for AI
 
@@ -71,7 +75,10 @@ An AI agent can create a new page, build a custom layout, add content blocks, an
 - CI tests PHP 8.1, 8.4 and 8.5. The PHP 8.1 check verifies compatibility;
   it does not extend PHP's upstream security support, which ended on 2025-12-31.
 - PHP extensions: `mbstring`, `dom`, `fileinfo`, `session`; `zip` for backups, `curl` for provider integrations, and `gd` for image conversion.
-- Apache with `mod_rewrite` (production) or PHP built-in server (development)
+- Apache with `mod_rewrite` (production) or PHP built-in server (development).
+  If nginx serves static files in front of Apache (HestiaCP, or Plesk with
+  "Serve static files directly by nginx"), block the internal folders in nginx
+  too; see [ROUTING.md](ROUTING.md#hosting-proxies-and-internal-folders).
 - No Composer, no npm, no database
 
 ## Directory Structure

@@ -84,6 +84,7 @@ body.edit-mode-active .editable-field {
     flex-shrink: 0;
 }
 
+/* Dark single-colour logos (default Nibbly icon) turn white; set by markAdminBarLogo() */
 .admin-bar-logo-icon--default {
     filter: brightness(0) invert(1);
     opacity: 0.85;

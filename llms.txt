@@ -16,7 +16,6 @@
 
 ## Documentation
 
-- [Full documentation for LLMs](llms-full.txt) — complete reference in a single file (< 15k tokens)
 - [CLAUDE.md](CLAUDE.md) — AI agent quick-start guide (block types, template API, theming, rules)
 - [Architecture Reference](architecture.md) — request flow, content format, API endpoints, inline editor internals
 - [AI Agent Skills](SKILLS.md) — step-by-step instructions for common tasks (create page, add section, change theme, etc.)
