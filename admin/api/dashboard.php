@@ -6,7 +6,17 @@ switch ($action) {
     case 'system-status':
         if (!isAdmin()) jsonResponse(false, null, 'Forbidden');
         require_once NIBBLY_ADMIN_DIR . '/../includes/system-status.php';
-        jsonResponse(true, nibblySystemStatus());
+        jsonResponse(true, nibblySystemStatus((string)($_GET['scheme'] ?? '')));
+        break;
+    case 'security-check':
+        if (!isAdmin()) jsonResponse(false, null, 'Forbidden');
+        require_once NIBBLY_ADMIN_DIR . '/../includes/security-check.php';
+        // The probe requests this site over HTTP for a few seconds at most:
+        // release the session lock so other dashboard requests keep working,
+        // and always remove the probe files, even if the browser disconnects.
+        session_write_close();
+        ignore_user_abort(true);
+        jsonResponse(true, nibblySecurityStatus((string)($_POST['scheme'] ?? ''), true, ($_POST['force'] ?? '') === '1'));
         break;
     case 'keepalive':
         if (!validateCsrfToken()) {

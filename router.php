@@ -101,6 +101,13 @@ if (preg_match('#/(config|smtp-config)\.php$#i', $uri)) {
     echo '403 Forbidden';
     return true;
 }
+// Uploaded assets are static only; the built-in server would otherwise execute
+// a .php file placed under assets/. Mirrors assets/.htaccess for production.
+if (preg_match('#^/assets/.+\.(php[0-9]?|phtml|phtm|pht|phar|phps|cgi|pl|py|shtml)$#i', $uri)) {
+    http_response_code(403);
+    echo '403 Forbidden';
+    return true;
+}
 
 // Run the same route-specific normalization as Apache before directory lookup.
 require_once $root . '/includes/routing-helper.php';

@@ -42,6 +42,7 @@ This is the canonical, tool-neutral guide for AI coding agents. `AGENTS.md` and 
 | AI usage/audit | `content/ai-usage.json`, `content/ai-audit/*.jsonl` |
 | AI image history | `content/ai-image-history.json` |
 | Deploy script | `deploy.example.sh` (copy to `deploy.sh` and configure) |
+| Security self-check | `includes/security-check.php` (Dashboard → System status → Security) |
 | Backup CLI | `cli/backup.php` (cron-friendly site backup runner) |
 | Backup helper | `includes/backup-helper.php` |
 
@@ -60,6 +61,13 @@ variants and the actual login redirect chain under Apache before claiming
 production routing is verified. In particular, `admin/dashboard.php` shares its
 name with the `admin/dashboard/` fragment directory; keep the explicit PHP login
 destination and compatibility aliases described in that guide.
+
+After uploading a site, open Dashboard → System status → Security and report
+its result. An nginx proxy that serves static files itself bypasses `.htaccess`
+and can expose `content/` (password hashes, SMTP password, form submissions)
+and `backups/`. The check detects this with short-lived probe files and shows
+the nginx rules; see [Hosting proxies and internal folders](ROUTING.md#hosting-proxies-and-internal-folders).
+Test existing files only: nginx passes missing files to Apache, which answers 403.
 
 ## JSON-Backed Public Forms
 

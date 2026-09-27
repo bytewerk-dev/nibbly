@@ -3,6 +3,7 @@ if (!defined('NIBBLY_ADMIN_DIR')) { http_response_code(404); exit; }
 
 return [
     'system-status' => 'dashboard',
+    'security-check' => 'dashboard',
     'ai-resolve-request' => 'ai',
     'keepalive' => 'dashboard',
     'dashboard-overview' => 'dashboard',

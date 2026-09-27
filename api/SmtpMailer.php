@@ -137,6 +137,9 @@ class SmtpMailer {
 
     private function ehlo() {
         $hostname = isset($_SERVER['SERVER_NAME']) ? $_SERVER['SERVER_NAME'] : 'localhost';
+        // Never let a spoofed Host/SERVER_NAME inject SMTP commands via CR/LF.
+        $hostname = preg_replace('/[^A-Za-z0-9.\-\[\]:]/', '', (string)$hostname);
+        if ($hostname === '') $hostname = 'localhost';
         $response = $this->sendCommand("EHLO $hostname");
         return substr($response, 0, 3) === '250';
     }

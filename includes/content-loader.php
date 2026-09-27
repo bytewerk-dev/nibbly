@@ -6,6 +6,7 @@
 require_once __DIR__ . '/../admin/lang/i18n.php';
 require_once __DIR__ . '/access-guard.php';
 require_once __DIR__ . '/ai-labels.php';
+require_once __DIR__ . '/html-sanitizer.php';
 
 if (!defined('CONTENT_BASE_PATH')) {
     define('CONTENT_BASE_PATH', __DIR__ . '/../content/pages/');
@@ -383,6 +384,9 @@ function editableLink($page, $fieldKey, $defaultText = '', $defaultHref = '#', $
     } elseif (is_string($linkData)) {
         $text = $linkData;
     }
+
+    // Block javascript: and other dangerous schemes stored in the link target.
+    $href = nibblySanitizeHref((string)$href);
 
     $hidden = isFieldHidden($data, $fieldKey);
     $classAttr = $class ? ' class="' . htmlspecialchars($class) . '"' : '';
@@ -1546,7 +1550,7 @@ function renderGallery($page) {
         $alt = $img['alt'] ?? '';
         $caption = $img['caption'] ?? '';
         $html .= '<figure class="gallery-item"' . editableListGroupItemAttrs($page, 'gallery.images', $i, [], $defaults, 'Image') . '>';
-        $html .= '<a href="' . htmlspecialchars($src) . '" class="gallery-item__link" data-gallery>';
+        $html .= '<a href="' . htmlspecialchars(nibblySanitizeHref((string)$src)) . '" class="gallery-item__link" data-gallery>';
         $html .= editableImage($page, "gallery.images.$i", $src, $alt, 'gallery-item__img');
         $html .= '</a>';
         if (!empty($caption)) {
@@ -1931,7 +1935,7 @@ function renderEvent($event, $lang = 'de', $showImage = true, $editable = false)
 
     // Title
     if (!empty($url)) {
-        $html .= '<h3 class="event-card__title"><a href="' . htmlspecialchars($url) . '" target="_blank" rel="noopener">' . htmlspecialchars($title) . '</a></h3>';
+        $html .= '<h3 class="event-card__title"><a href="' . htmlspecialchars(nibblySanitizeHref((string)$url)) . '" target="_blank" rel="noopener">' . htmlspecialchars($title) . '</a></h3>';
     } else {
         $html .= '<h3 class="event-card__title">' . htmlspecialchars($title) . '</h3>';
     }
@@ -1959,7 +1963,7 @@ function renderEvent($event, $lang = 'de', $showImage = true, $editable = false)
     if (!empty($url)) {
         $linkLabels = ['de' => 'Zur Website', 'en' => 'Visit website', 'es' => 'Visitar web'];
         $linkLabel = $linkLabels[$lang] ?? 'Visit website';
-        $html .= '<a href="' . htmlspecialchars($url) . '" target="_blank" rel="noopener" class="event-card__link">' . $linkLabel . ' &rarr;</a>';
+        $html .= '<a href="' . htmlspecialchars(nibblySanitizeHref((string)$url)) . '" target="_blank" rel="noopener" class="event-card__link">' . $linkLabel . ' &rarr;</a>';
     }
     $html .= '</div>';
 

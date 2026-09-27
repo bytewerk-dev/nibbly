@@ -1,8 +1,9 @@
 <?php
 /** Administrative diagnostics; never exposed to visitors or editors. */
-function nibblySystemStatus(): array {
+function nibblySystemStatus(string $scheme = ''): array {
     require_once __DIR__ . '/backup-helper.php';
     require_once __DIR__ . '/ai/ai-helper.php';
+    require_once __DIR__ . '/security-check.php';
     $extensions = [];
     foreach (['json', 'session', 'mbstring', 'dom', 'fileinfo', 'curl', 'zip', 'gd', 'openssl'] as $extension) {
         $extensions[] = ['name' => $extension, 'available' => extension_loaded($extension)];
@@ -26,6 +27,8 @@ function nibblySystemStatus(): array {
     return [
         'php' => PHP_VERSION, 'extensions' => $extensions, 'paths' => $paths,
         'lastBackup' => isset($backups[0]['mtime']) ? date('c', $backups[0]['mtime']) : null,
-        'failedJobs' => $jobs, 'requests' => $requests
+        'failedJobs' => $jobs, 'requests' => $requests,
+        // Cached network probe only; POST action security-check refreshes it.
+        'security' => nibblySecurityStatus($scheme)
     ];
 }

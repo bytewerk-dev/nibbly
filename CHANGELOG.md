@@ -9,6 +9,93 @@ Git milestones and the gaps in publication records.
 
 ## Unreleased
 
+## [2.2.0] — 2026-09-27
+
+### Security
+
+- Reject uploads whose filename extension is not an allowed media type in
+  `upload-image` and `upload-audio`, matching `upload-media`. These handlers
+  previously trusted only the detected MIME type, which a polyglot file can
+  forge (valid image/audio magic bytes plus a `.php` name), letting an
+  authenticated editor write an executable script into the web-served
+  `assets/` tree. As defense in depth, `assets/.htaccess` and `router.php`
+  now refuse to execute code files (`.php`, `.phtml`, `.phar`, `.cgi`, …) from
+  `assets/`.
+- Sanitise uploaded SVG files (`includes/svg-sanitizer.php`): remove
+  `<script>`, `<foreignObject>`, event-handler attributes, `javascript:` links
+  and `url(javascript:/data:)` in paint/style, and refuse SVGs with an inline
+  DTD (XXE and entity expansion). SVG is served inline as `image/svg+xml`, so
+  an unsanitised upload was a stored cross-site-scripting vector.
+- Block dangerous URL schemes (`javascript:`, `data:`, `vbscript:`, …) in link
+  targets stored in page content. `editableLink()` and the gallery and event
+  card renderers output the target through a shared allowlist
+  (`nibblySanitizeHref()`); safe `http(s)`, `mailto`, `tel`, relative and
+  anchor links are unchanged.
+- Strip control characters from the SMTP `EHLO` hostname so a spoofed
+  `SERVER_NAME` cannot inject SMTP commands.
+- Extend `tests/security-smoke.php` with SVG-sanitiser and link-allowlist
+  checks, and add `tests/upload-security-smoke.py` (polyglot rejection, SVG
+  sanitisation, real media still accepted).
+
+### Removed
+
+- Remove the point-in-time audit records `SYSTEM-REVIEW.md` and
+  `SYSTEM-IMPLEMENTATION.md` and the redundant `llms-full.txt` (its content is
+  covered by `architecture.md` and `AI-AGENT-GUIDE.md`; `llms.txt` remains).
+  Updated the backup manifest and `llms.txt` accordingly.
+
+### Added
+
+- Add a security self-check to System status (administrators only). It creates
+  short-lived probe files with random names in `content/` (`.json`), `backups/`
+  (`.zip`) and the existing media trash folders, requests them through the
+  site's own public address and evaluates only the HTTP status. A public control
+  file must be reachable, so a wrong address cannot pass as protected. An nginx
+  proxy that serves static files itself (HestiaCP, or Plesk with "Serve static
+  files directly by nginx") bypasses `.htaccess` and exposes password hashes,
+  the SMTP password, form submissions and backups. A public `content/` or
+  `backups/` shows a warning banner on every dashboard page; public media trash
+  folders alone are a warning in System status. Both list the affected folders
+  with ready-to-copy nginx rules and HestiaCP/Plesk instructions. The check runs in
+  the background after the dashboard loads (short timeouts, session lock
+  released, probe files always removed), caches its result per address in
+  `content/security-check.json` (12 hours when protected, 10 minutes when
+  exposed) and can be repeated with "Check now". Local and intranet addresses
+  are checked only on request; the PHP development server is skipped.
+- Report further security findings in the same panel: dashboard use without
+  HTTPS, plain `http://` without a redirect to `https://`, HTTPS not recognised
+  by PHP (session cookie without `Secure`), a reverse proxy that hides visitor
+  IP addresses (login lockout, form rate limits and statistics then treat all
+  visitors as one), `display_errors` on public pages, the development login on
+  public servers and PHP branches without upstream security support. The
+  System status menu item shows the number of warnings.
+- Add `tests/security-check-smoke.py`: an nginx-like static-file proxy in front
+  of the development server or, with `--apache`, Apache/PHP-FPM with the real
+  `.htaccess` (also run in the Apache CI job), with and without the documented
+  rules, plus self-signed TLS, HTTP redirect, cleanup, cache and API checks.
+
+### Changed
+
+- Documented nginx rules for Nibbly's internal folders (`content/`, `backups/`,
+  `cli/`, `tests/` and the media trash folders) for HestiaCP
+  (`/home/<user>/conf/web/<domain>/nginx.ssl.conf_nibbly`, then
+  `nginx -t && systemctl reload nginx`) and Plesk ("Additional nginx
+  directives", or keep "Serve static files directly by nginx" switched off) in
+  `ROUTING.md`, `README.md`, `architecture.md`, `AI-AGENT-GUIDE.md` and
+  `deploy.example.sh`.
+
+### Fixed
+
+- Refuse web requests to `cli/backup.php`, `cli/convert.php` and `cli/make.php`
+  with HTTP 404 where a server ignores `.htaccess`; cron jobs and shell use are
+  unchanged.
+- Keep the dashboard's security warning banners readable on narrow screens: the
+  title wraps and the call to action moves below the text.
+- Keep site icons visible in the frontend admin bar. The bar turned every logo
+  at `assets/images/favicon.svg` white to suit the default Nibbly icon, which
+  erased multi-coloured site icons stored at that path. It now decides from the
+  rendered pixels: only dark single-colour logos are shown in white.
+
 ## [2.1.0] — 2026-09-26
 
 Compatible features and fixes. The documented API, storage formats, accounts

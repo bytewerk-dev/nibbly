@@ -45,6 +45,12 @@ jobs:
           PHP_FPM: /usr/sbin/php-fpm8.3
           HTTPD_MODULE_DIR: /usr/lib/apache2/modules
         run: python3 tests/routing-smoke.py --apache
+      - name: Check the security self-check behind an nginx-like static-file proxy
+        env:
+          HTTPD: /usr/sbin/apache2
+          PHP_FPM: /usr/sbin/php-fpm8.3
+          HTTPD_MODULE_DIR: /usr/lib/apache2/modules
+        run: python3 tests/security-check-smoke.py --apache
   chromium:
     name: Chromium
     runs-on: ubuntu-24.04

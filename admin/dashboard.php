@@ -273,7 +273,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 <?php echo nbIcon('download'); ?>
                 <span><?php echo t('settings.backup'); ?></span>
             </button>
-                <button class="sidebar-nav-item" data-tab="system" onclick="switchTab('system')"><?php echo nbIcon('alert'); ?><span><?php echo t('system.title'); ?></span></button>
+                <button class="sidebar-nav-item" data-tab="system" onclick="switchTab('system')"><?php echo nbIcon('alert'); ?><span><?php echo t('system.title'); ?></span><span class="mail-badge mail-badge--hidden system-badge" id="systemBadge"></span></button>
             <?php endif; ?>
             <a href="?logout=1" class="sidebar-nav-item sidebar-nav-link sidebar-logout">
                 <?php echo nbIcon('logout'); ?>
@@ -315,6 +315,19 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 </span>
             </span>
             <button type="button" class="info-banner__cta info-banner__cta-button" onclick="switchTab('settings'); document.querySelector('[data-settings-tab=&quot;my-account&quot;]').click(); return false;"><?php echo t('security.change_link'); ?> &rarr;</button>
+        </div>
+    </div>
+    <?php endif; ?>
+    <?php if ($isAdminUser): ?>
+    <!-- Filled by the background security check (dashboard/scripts/system.php). -->
+    <div class="info-banner info-banner--warning mail-config-banner security-warning-banner security-exposure-banner" id="securityExposureWarning" role="alert" hidden>
+        <div class="info-banner__inner">
+            <span class="info-banner__icon"><?php echo nbIcon('alert'); ?></span>
+            <span class="info-banner__content">
+                <strong class="info-banner__title"><?php echo t('security_check.banner_title'); ?></strong>
+                <span class="info-banner__body" id="securityExposureText"></span>
+            </span>
+            <button type="button" class="info-banner__cta info-banner__cta-button" onclick="switchTab('system');"><?php echo t('security_check.banner_cta'); ?> &rarr;</button>
         </div>
     </div>
     <?php endif; ?>

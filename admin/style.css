@@ -9296,6 +9296,35 @@ input.color-hex-input,
 .system-status-grid p, .system-status-row { overflow-wrap: anywhere; }
 .system-request { padding: 16px 0; }
 .system-request-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+/* Security check: full-width first panel with one row per finding. */
+.system-status-grid .system-security { grid-column: 1 / -1; }
+.system-security .dashboard-panel-header { flex-wrap: wrap; }
+.system-security__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.system-check__state::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: var(--nb-border-strong); vertical-align: 1px; }
+.system-check--critical .system-check__state { color: var(--nb-danger); font-weight: 600; }
+[data-site-theme="dark"] .system-check--critical .system-check__state { color: color-mix(in srgb, var(--nb-danger) 60%, #fff); }
+.system-check--warning .system-check__state { color: var(--nb-warning-text, #92400e); font-weight: 600; }
+.system-check--critical .system-check__state::before { background: var(--nb-danger); }
+.system-check--warning .system-check__state::before { background: var(--nb-warning); }
+.system-check--ok .system-check__state::before { background: var(--nb-success); }
+.system-check--note .system-check__state::before { background: var(--nb-primary); }
+.system-check--skipped .system-check__state, .system-check--pending .system-check__state, .system-check--unknown .system-check__state { color: var(--nb-text-muted); }
+.system-check__details { padding: 8px 0 12px; font-size: 0.875rem; line-height: 1.5; }
+.system-check__details summary { cursor: pointer; font-weight: 600; }
+.system-check__details p { margin: 8px 0 0; }
+.system-check--critical .system-check__details { padding-left: 12px; border-left: 3px solid var(--nb-danger); }
+.system-check__probes { margin: 8px 0 0; padding-left: 1.25em; }
+.system-check__rules { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; margin-top: 8px; }
+.system-check__rules pre { flex: 1 1 26rem; min-width: 0; margin: 0; padding: 10px 12px; overflow-x: auto; background: var(--nb-bg-elevated); color: var(--nb-text); border: 1px solid var(--nb-border); border-radius: 6px; font-family: var(--font-mono, ui-monospace, SF Mono, Menlo, Consolas, monospace); font-size: 0.8125rem; line-height: 1.5; }
+.system-badge { background: var(--nb-danger); box-shadow: 0 0 0 2px var(--nb-danger-subtle); }
+.admin-main:has(> .security-exposure-banner:not([hidden])) { padding-top: var(--nb-space-6); }
+@media (max-width: 768px) {
+    /* Security banners: wrap the title and place the call to action below the text. */
+    .security-warning-banner { margin-inline: var(--nb-space-4); }
+    .security-warning-banner .info-banner__inner { grid-template-columns: auto minmax(0, 1fr); }
+    .security-warning-banner .info-banner__title { white-space: normal; }
+    .security-warning-banner .info-banner__cta { grid-column: 2; justify-self: start; }
+}
 
 .settings-panels, .settings-panel, .settings-tabs, .settings-layout { min-width: 0; }
 .settings-panel { container-type: inline-size; container-name: settings; }

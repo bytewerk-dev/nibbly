@@ -19,7 +19,9 @@ require_once NIBBLY_ADMIN_DIR . '/../includes/analytics-helper.php';
 require_once NIBBLY_ADMIN_DIR . '/../includes/forms.php';
 ensureUsersFile();
 
-// Prevent PHP HTML error output from corrupting JSON responses
+// Prevent PHP HTML error output from corrupting JSON responses. The security
+// check reports the configured value that public pages still use.
+define('NIBBLY_INITIAL_DISPLAY_ERRORS', (string)ini_get('display_errors'));
 ini_set('html_errors', '0');
 ini_set('display_errors', '0');
 

@@ -414,7 +414,6 @@ function backupExcludeRootFiles() {
         'SKILLS.md',
         'architecture.md',
         'design-qa.md',
-        'SYSTEM-REVIEW.md', 'SYSTEM-IMPLEMENTATION.md',
     ];
 }
 
@@ -434,6 +433,8 @@ function backupShouldSkipPath($relativePath) {
     $base = basename($relativePath);
     if (in_array($base, backupExcludeFiles(), true)) return true;
     if (str_ends_with($base, '.tmp') || str_ends_with($base, '.swp') || str_ends_with($base, '.lock') || str_starts_with($base, '.nibbly-json-')) return true;
+    // Short-lived probe files of the security check (includes/security-check.php).
+    if (str_starts_with($base, 'nibbly-access-check-')) return true;
     if (preg_match('#(^|/)\.restore-[^/]+(/|$)#', $relativePath)) return true;
 
     // Keep old JSON page backups, but never include generated backup ZIPs/logs.

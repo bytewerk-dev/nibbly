@@ -24,6 +24,12 @@
  *   3  another run is in progress (lock contention)
  */
 
+// Command-line tools must never run as a web request, even where a server ignores .htaccess.
+if (PHP_SAPI !== 'cli' && isset($_SERVER['REQUEST_METHOD'])) {
+    http_response_code(404);
+    exit;
+}
+
 $projectRoot = dirname(__DIR__);
 
 if (!file_exists($projectRoot . '/route.php')) {

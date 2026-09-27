@@ -81,3 +81,19 @@ function nibblySanitizeRichHtml(string $html): string {
     foreach ($body->childNodes as $node) $result .= $document->saveHTML($node);
     return $result;
 }
+
+/**
+ * Neutralise a hyperlink target from stored content. Returns the original URL
+ * when it uses a safe scheme (or is relative/anchor/query), and "#" when it
+ * uses a dangerous scheme such as javascript:, data: or vbscript:. Whitespace
+ * and HTML entities are stripped before the scheme is examined so obfuscated
+ * variants (e.g. "java&#9;script:") cannot slip through.
+ */
+function nibblySanitizeHref(string $url): string {
+    $probe = preg_replace('/[\x00-\x20\x7f]+/', '', html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    if ($probe !== '' && preg_match('/^([a-z][a-z0-9+.\-]*):/i', (string)$probe, $match)
+        && !in_array(strtolower($match[1]), ['http', 'https', 'mailto', 'tel'], true)) {
+        return '#';
+    }
+    return $url;
+}
