@@ -987,6 +987,33 @@ function nibblyAgentChangesetFinalize(string $csId): array {
 }
 
 /**
+ * Pages on which the package can be previewed (the preview works on any page URL with
+ * ?nb_agent_preview=ID). Targets without a page of their own link to the home page.
+ *
+ * @return array<int,array{target:string,url:string}>
+ */
+function nibblyAgentPreviewLinks(array $cs, array $state): array {
+    $default = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
+    $links = [];
+    foreach (nibblyAgentOpTargets($cs['ops']) as $target) {
+        $url = '';
+        if (str_starts_with($target, 'page:') && !in_array($target, ['page:footer', 'page:sidebar'], true)) {
+            $parsed = function_exists('nibblyPageParseContentKey') ? nibblyPageParseContentKey(substr($target, 5)) : null;
+            if ($parsed !== null) $url = nibblyPageUrlPath($parsed['lang'], $parsed['path'], $default);
+        } elseif (str_starts_with($target, 'news:')) {
+            $doc = $state ? nibblyAgentFinalDoc($state, $target) : null;
+            $slug = is_array($doc) ? (string)($doc['slug'] ?? '') : '';
+            $lang = is_array($doc) ? (string)($doc['lang'] ?? $default) : $default;
+            if (preg_match('/^[a-z0-9-]+$/', $slug) && preg_match('/^[a-z]{2}$/', $lang)) $url = ($lang === $default ? '' : '/' . $lang) . '/news/' . $slug;
+        }
+        if ($url === '') $url = '/';
+        $links[$url] ??= ['target' => $target, 'url' => $url];
+        if (count($links) >= 6) break;
+    }
+    return array_values($links);
+}
+
+/**
  * Review data for the panel: every operation with before/after, per-target render check,
  * sources, warnings and the hash the user confirms.
  */
@@ -1000,6 +1027,7 @@ function nibblyAgentChangesetPreview(array $cs): array {
     foreach ($operations as $operation) $groups[$operation['target']][] = $operation;
     return [
         'id' => $cs['id'], 'status' => $cs['status'], 'previewHash' => $cs['previewHash'],
+        'previewLinks' => nibblyAgentPreviewLinks($cs, $replay['state'] ?? []),
         'targets' => $groups,
         'sources' => nibblyAgentPublicSources($cs['sources']),
         'validation' => $cs['validation'],

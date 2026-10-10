@@ -222,7 +222,10 @@ switch ($action) {
             http_response_code(404);
             jsonResponse(false, null, 'Unknown change set');
         }
-        jsonResponse(true, nibblyAgentChangesetPreview($cs) + ['canPublish' => $actor['canPublish']], 'OK');
+        // After the apply the owner needs the items to publish and the undo token, also after a reload.
+        $applied = $cs['status'] === 'applied' && !empty($cs['applied'])
+            ? ['items' => array_values((array)$cs['applied']['items']), 'undoToken' => nibblyAgentUndoToken($cs['id'])] : null;
+        jsonResponse(true, nibblyAgentChangesetPreview($cs) + ['canPublish' => $actor['canPublish'], 'applied' => $applied], 'OK');
         break;
 
     case 'ai-agent-revalidate':
@@ -230,7 +233,10 @@ switch ($action) {
         $id = nibblyAgentApiChangesetId();
         $result = nibblyAgentChangesetRevalidate($id, $actor);
         if (empty($result['ok'])) {
-            jsonResponse(false, ['status' => (nibblyAgentChangesetLoad($id)['status'] ?? 'missing')], (string)($result['error'] ?? 'Revalidation failed'));
+            // The status of a change set is only for its owner (and admins).
+            $current = nibblyAgentChangesetLoad($id);
+            $visible = $current !== null && nibblyAgentCanSeeChangeset($current, $actor);
+            jsonResponse(false, ['status' => $visible ? $current['status'] : 'missing'], (string)($result['error'] ?? 'Revalidation failed'));
         }
         $report = nibblyAgentChangesetFinalize($id);
         jsonResponse(true, ['status' => $report['status'], 'renderCheck' => $report['renderCheck']['status'] ?? 'skipped', 'previewHash' => $report['previewHash']], 'OK');

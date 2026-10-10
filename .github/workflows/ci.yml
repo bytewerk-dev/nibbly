@@ -70,6 +70,7 @@ jobs:
       - run: python3 tests/browser-check.py
       - run: python3 tests/browser-check.py responsive-check.js
       - run: python3 tests/browser-check.py revision-check.js
+      - run: python3 tests/agent-browser-check.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:

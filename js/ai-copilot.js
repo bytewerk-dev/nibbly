@@ -23,6 +23,8 @@
     const imageJobNoticeStorageKey = 'nibbly.aiImageJobNotices.v1';
     const imageJobNoticeLimit = 80;
     let imageJobPollTimer = null;
+    // The agent (js/ai-agent.js) plugs in here; without it the assistant behaves exactly as before.
+    let agentHook = null;
 
     const state = {
         open: false,
@@ -453,9 +455,11 @@
         state.loadingMessage = isLoading ? label(messageKey || 'copilot.working', fallback || 'AI Assistant is working...') : '';
     }
 
-    function renderMessages() {
+    function renderMessages(options) {
         const list = document.querySelector('[data-copilot-messages]');
         if (!list) return;
+        const keepScroll = !!(options && options.keepScroll === true);
+        const scrollTop = list.scrollTop;
         const intro = state.context ? contextIntro(state.context) : '';
         const messages = state.messages.map(message => {
             return '<div class="nb-copilot-msg nb-copilot-msg--' + escHtml(message.role) + '">' +
@@ -465,9 +469,11 @@
         const loading = state.loading
             ? '<div class="nb-copilot-msg nb-copilot-msg--assistant"><div class="nb-copilot-msg__bubble nb-copilot-msg__bubble--loading"><span class="nb-copilot-spinner" aria-hidden="true"></span>' + escHtml(state.loadingMessage || label('copilot.working', 'AI Assistant is working...')) + '</div></div>'
             : '';
-        list.innerHTML = intro + messages + renderContentDraft() + renderCreatedContent() + renderLastImageResult() + renderUndo() + renderProposals() + loading;
+        const agentHtml = agentHook && agentHook.isActive() ? agentHook.render() : '';
+        list.innerHTML = intro + messages + renderContentDraft() + renderCreatedContent() + renderLastImageResult() + renderUndo() + renderProposals() + agentHtml + loading;
         list.setAttribute('aria-busy', state.loading ? 'true' : 'false');
-        list.scrollTop = list.scrollHeight;
+        list.scrollTop = keepScroll ? scrollTop : list.scrollHeight;
+        if (agentHook) agentHook.afterRender(list);
         updateActionAvailability();
         renderModal();
         persistSession();
@@ -819,6 +825,7 @@
         document.body.appendChild(root);
         syncMaximizedState(root);
         bind(root);
+        if (agentHook) agentHook.mount(root, agentHost());
     }
 
     function renderModal() {
@@ -1114,6 +1121,7 @@
             event.preventDefault();
             const value = input.value.trim();
             if (!value || state.loading) return;
+            if (agentHook && agentHook.isActive() && agentHook.isBusy()) return;
             input.value = '';
             updateActionAvailability();
             handleUserMessage(value);
@@ -1354,6 +1362,7 @@
         state.lastApplied = null;
         state.lastInstruction = '';
         state.currentSessionId = newSessionId();
+        if (agentHook) agentHook.reset();
         state.messages = [{
             role: 'assistant',
             content: label('copilot.intro_message', 'I can help with this page and explain how to edit or create content safely. Write what you want to change or create.')
@@ -1404,6 +1413,7 @@
             const chat = result && result.chat ? result.chat : null;
             if (!chat) return;
             state.currentSessionId = chat.id || id;
+            if (agentHook) agentHook.reset();
             state.messages = Array.isArray(chat.messages) ? chat.messages : [];
             state.lastInstruction = chat.lastInstruction || '';
             state.lastImageResult = chat.lastImageResult || null;
@@ -1496,6 +1506,11 @@
 
     async function handleUserMessage(content) {
         syncContentPageFromHost();
+        // In agent mode the agent takes every message. A "yes" never applies a package; only its button does.
+        if (agentHook && agentHook.isActive()) {
+            await agentHook.handleMessage(content);
+            return;
+        }
         if (isConfirmationIntent(content)) {
             if (state.proposals.length) {
                 if (state.proposals.length === 1) {
@@ -2335,7 +2350,8 @@
         const hasPrompt = input ? input.value.trim() !== '' : false;
         const needsPrompt = label('copilot.shortcut_needs_prompt', 'Enter an instruction first.');
         if (sendBtn) {
-            sendBtn.disabled = state.loading || state.sessionExpired || !hasPrompt;
+            const agentBusy = !!(agentHook && agentHook.isActive() && agentHook.isBusy());
+            sendBtn.disabled = state.loading || state.sessionExpired || !hasPrompt || agentBusy;
             sendBtn.title = hasPrompt ? '' : needsPrompt;
         }
         if (input) input.disabled = state.loading || state.sessionExpired;
@@ -2886,11 +2902,41 @@
         });
     }
 
+    // What the agent may use of the assistant: plain helpers and the chat list, nothing else.
+    function agentHost() {
+        return {
+            mode: copilotMode,
+            apiUrl,
+            csrfToken,
+            label,
+            escHtml,
+            post,
+            confirm: confirmCopilot,
+            pushMessage: (role, content) => state.messages.push({ role, content: String(content || '') }),
+            render: renderMessages,
+            updateActions: updateActionAvailability,
+            contentPage: () => contentPage,
+            open: () => setOpen(true)
+        };
+    }
+
+    function registerAgent(hook) {
+        if (agentHook || !hook || copilotMode !== 'frontend') return false;
+        agentHook = hook;
+        const root = document.querySelector('.nb-copilot');
+        if (root) {
+            agentHook.mount(root, agentHost());
+            renderMessages({ keepScroll: true });
+        }
+        return true;
+    }
+
     window.NibblyAiCopilot = {
         open: () => setOpen(true),
         close: () => setOpen(false),
         maximize: () => setMaximized(true),
-        minimize: () => setMaximized(false)
+        minimize: () => setMaximized(false),
+        registerAgent
     };
     window.NibblyAiAssistant = window.NibblyAiCopilot;
 

@@ -101,7 +101,7 @@ function nibblyApiCanUseImageJobs(): bool {
         return true;
     }
     // Editors whose AI agent may generate images run and poll their own agent jobs.
-    $agent = NIBBLY_ADMIN_DIR . '/../includes/ai/agent/settings.php';
+    $agent = NIBBLY_ADMIN_DIR . '/../includes/ai/agent/agent-config.php';
     if (!function_exists('nibblyAgentCan') && is_file($agent)) {
         require_once $agent;
     }
