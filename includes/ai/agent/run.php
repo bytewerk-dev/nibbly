@@ -269,7 +269,7 @@ function nibblyAgentRunBuildMessages(array $run, array $aiSettings, array $tools
 function nibblyAgentToolLabel(array $call): string {
     $args = (array)($call['arguments'] ?? []);
     $parts = [$call['name']];
-    foreach (['target', 'path', 'listKey', 'type', 'query'] as $key) {
+    foreach (['target', 'path', 'listKey', 'type', 'query', 'rid'] as $key) {
         if (isset($args[$key]) && is_string($args[$key])) $parts[] = mb_substr($args[$key], 0, 60, 'UTF-8');
     }
     return implode(' ', $parts);
@@ -326,6 +326,7 @@ function nibblyAgentRunExecutePending(array &$run, array $actor, array $limits, 
         } else {
             $run['failures'][$call['name']] = 0;
         }
+        if (!empty(nibblyAgentToolDefinitions()[$call['name']]['endsStep'])) return; // slow tools (web reads) get a step of their own
         if (!empty($run['end'])) {
             // The run stops here (a question or the review). Calls after it are answered, not executed,
             // so the transcript stays consistent for the next round.

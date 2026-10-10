@@ -31,6 +31,29 @@ const NIBBLY_NET_MAX_URL_LENGTH = 2048;
 const NIBBLY_NET_DEFAULT_MAX_BYTES = 2 * 1024 * 1024;
 const NIBBLY_NET_DEFAULT_CONTENT_TYPES = ['text/html', 'application/xhtml+xml', 'text/plain'];
 
+/**
+ * Test-only network redirection. NIBBLY_AGENT_TEST_NET (JSON) lets the test suite point the
+ * outbound features at loopback mocks: apiBase / braveBase (base URLs), resolve {host: [ip]},
+ * ports, connectMap {ip: ip}. It only works under the CLI and the built-in server.
+ *
+ * @return array{resolve:array,options:array,raw:array}|null
+ */
+function nibblyNetTestConfig(): ?array {
+    $raw = in_array(PHP_SAPI, ['cli', 'cli-server'], true) ? getenv('NIBBLY_AGENT_TEST_NET') : false;
+    $test = is_string($raw) && $raw !== '' ? json_decode($raw, true) : null;
+    if (!is_array($test)) return null;
+    $resolve = (array)($test['resolve'] ?? []);
+    return [
+        'raw' => $test,
+        'resolve' => $resolve,
+        'options' => [
+            'resolver' => static fn(string $host): array => (array)($resolve[$host] ?? []),
+            'testAllowedPorts' => array_map('intval', (array)($test['ports'] ?? [])),
+            'testConnectMap' => (array)($test['connectMap'] ?? []),
+        ],
+    ];
+}
+
 /** IPv4 ranges that are not publicly routable, as [network, prefix length]. */
 function nibblyNetBlockedIpv4Ranges(): array {
     return [
@@ -234,6 +257,14 @@ function nibblyNetPrepareUrl(string $url, array $options = []): array {
     }
     if (isset($options['allowedHosts']) && !in_array($host, array_map('strtolower', (array)$options['allowedHosts']), true)) {
         throw new NibblyNetException('blocked_host', 'This host is not on the allowlist.');
+    }
+
+    if (is_callable($options['hostCheck'] ?? null)) {
+        // The caller's own policy (deny lists, the site's own host), applied to every hop before any lookup.
+        $reason = ($options['hostCheck'])($host);
+        if (is_string($reason) && $reason !== '') {
+            throw new NibblyNetException('blocked_host', $reason);
+        }
     }
 
     if (filter_var($host, FILTER_VALIDATE_IP)) {

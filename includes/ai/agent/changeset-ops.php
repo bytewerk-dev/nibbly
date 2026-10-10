@@ -91,7 +91,10 @@ function nibblyAgentUrlAllowed(string $url, array $cs): bool {
         if (nibblyAgentUrlKey((string)$allowed) === $key) return true;
     }
     foreach ((array)($cs['sources'] ?? []) as $source) {
-        if (is_array($source) && isset($source['url']) && nibblyAgentUrlKey((string)$source['url']) === $key) return true;
+        if (!is_array($source)) continue;
+        foreach (['url', 'canonical', 'resultUrl'] as $field) {
+            if (!empty($source[$field]) && nibblyAgentUrlKey((string)$source[$field]) === $key) return true;
+        }
     }
     return false;
 }
@@ -145,6 +148,13 @@ function nibblyAgentNormalizeValue(array $spec, $value, array $cs, array &$warni
             }
             if (mb_strlen($clean, 'UTF-8') > $max) {
                 throw new NibblyAgentOpException("{$label} is longer than {$max} characters.", 'Shorten the text.');
+            }
+            // The link rule holds inside rich text too: an external address needs the user's word or a source of this run.
+            if (preg_match_all('/<a\b[^>]*?\bhref\s*=\s*(?:"([^"]*)"|\'([^\']*)\')/i', $clean, $links, PREG_SET_ORDER)) {
+                foreach ($links as $link) {
+                    $href = trim(html_entity_decode(($link[1] ?? '') !== '' ? $link[1] : ($link[2] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                    if ($href !== '') nibblyAgentNormalizeHref($href, $cs);
+                }
             }
             return $clean;
         case 'icon':

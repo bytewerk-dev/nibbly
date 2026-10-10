@@ -284,7 +284,7 @@ function nibblyAgentApplyMedia(array $cs, array $changed): array {
     try {
         foreach ($cs['media'] as $ref => $media) {
             if (!str_contains($json, $media['finalPath'])) continue; // staged but not used: stays out of the library
-            $from = nibblyAgentAbsolute((string)$media['stagingFile']);
+            $from = nibblyAgentAbsolute((string)($media['stagingFile'] ?? ''));
             $to = nibblyAgentSiteRoot() . $media['finalPath'];
             if (!is_file($from)) throw new RuntimeException("The staged image {$ref} is missing.");
             if (is_file($to)) throw new RuntimeException('An image named ' . basename($to) . ' already exists in the library.');
@@ -361,17 +361,11 @@ function nibblyAgentStockSettings(): array {
  */
 function nibblyAgentStockNet(): array {
     $net = ['apiBase' => 'https://api.pexels.com', 'secure' => true, 'options' => []];
-    $raw = in_array(PHP_SAPI, ['cli', 'cli-server'], true) ? getenv('NIBBLY_AGENT_TEST_NET') : false;
-    $test = is_string($raw) && $raw !== '' ? json_decode($raw, true) : null;
-    if (is_array($test)) {
-        $resolve = (array)($test['resolve'] ?? []);
-        $net['apiBase'] = (string)($test['apiBase'] ?? $net['apiBase']);
+    $test = nibblyNetTestConfig();
+    if ($test !== null) {
+        $net['apiBase'] = (string)($test['raw']['apiBase'] ?? $net['apiBase']);
         $net['secure'] = false;
-        $net['options'] = [
-            'resolver' => static fn(string $host): array => (array)($resolve[$host] ?? []),
-            'testAllowedPorts' => array_map('intval', (array)($test['ports'] ?? [])),
-            'testConnectMap' => (array)($test['connectMap'] ?? []),
-        ];
+        $net['options'] = $test['options'];
     }
     return $net;
 }
