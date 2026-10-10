@@ -143,6 +143,7 @@ function capSnapshot(string $site): array {
 }
 
 function capRenders(string $site, string $name): int {
+    clearstatcache(); // the worker processes append to the file; never trust a cached size
     return (int)@filesize($site . '/render-count-' . $name . '.txt');
 }
 
