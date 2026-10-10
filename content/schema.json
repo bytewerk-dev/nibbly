@@ -595,22 +595,21 @@
     },
     {
       "title": "News Post",
+      "description": "Single news post (content/news/{id}.json). The id is date-slug, plus -lang for non-primary languages. Body is one sanitised HTML string, not sections.",
       "type": "object",
-      "required": ["slug", "lang", "title", "date", "sections"],
+      "required": ["slug", "title", "date", "content"],
       "properties": {
-        "slug": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-        "lang": { "type": "string", "pattern": "^[a-z]{2}$" },
+        "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "description": "File name without .json: date-slug, plus -lang for non-primary languages." },
+        "slug": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+        "lang": { "type": "string", "pattern": "^[a-z]{2}$", "description": "Defaults to the primary language when missing." },
         "title": { "type": "string" },
-        "excerpt": { "type": "string" },
-        "description": { "type": "string" },
         "date": { "type": "string", "format": "date" },
         "author": { "type": "string" },
-        "image": { "type": "string" },
+        "excerpt": { "type": "string" },
+        "image": { "type": "string", "description": "Cover image: local /assets/images/ path (or an external URL on older posts). Empty = no image." },
+        "content": { "type": "string", "description": "Sanitised rich HTML (no <img>)." },
         "hidden": { "type": "boolean", "default": false },
-        "sections": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/section" }
-        }
+        "lastModified": { "type": "string", "format": "date-time" }
       }
     },
     {

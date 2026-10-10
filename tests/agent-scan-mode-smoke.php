@@ -1,0 +1,168 @@
+<?php
+
+declare(strict_types=1);
+
+// NIBBLY_CONTENT_SCAN / NIBBLY_CONTENT_READONLY / content overlay: rendering must
+// never write, and an overlay must replace stored content without touching disk.
+// Each mode runs in its own PHP process, because the modes are constants.
+//
+//   php tests/agent-scan-mode-smoke.php                  (runs every mode)
+//   php tests/agent-scan-mode-smoke.php worker <mode> <dir>   (internal)
+
+$root = dirname(__DIR__);
+
+function scanAssert(bool $condition, string $message): void {
+    if (!$condition) {
+        fwrite(STDERR, "FAIL: {$message}\n");
+        exit(1);
+    }
+}
+
+/** Every file below a directory with content hash, so new or touched files show up. */
+function scanSnapshot(string $dir): array {
+    $files = [];
+    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS));
+    foreach ($iterator as $file) {
+        if ($file->isFile()) {
+            $files[substr($file->getPathname(), strlen($dir))] = hash_file('sha256', $file->getPathname());
+        }
+    }
+    ksort($files);
+    return $files;
+}
+
+function scanFixturePage(): array {
+    return [
+        'page' => 'en_scan',
+        'lang' => 'en',
+        'title' => 'Scan fixture',
+        'hero' => ['title' => 'Stored title'],
+        'present' => ['title' => 'Stored present'],
+        'features' => ['items' => ['0' => ['title' => 'One'], '1' => ['title' => 'Two']]],
+        'sections' => [
+            ['id' => 'intro', 'type' => 'text', 'content' => '<p>Stored section</p>'],
+            ['id' => 'head', 'type' => 'heading', 'text' => 'Stored heading', 'level' => 2],
+        ],
+    ];
+}
+
+/** Everything a custom layout can call, with fields that are missing from the JSON. */
+function scanRenderFixture(): string {
+    $page = 'en_scan';
+    $html = editableText($page, 'hero.title', 'Default title');
+    $html .= editableHtml($page, 'hero.body', '<p>Default body</p>');
+    $html .= editableLink($page, 'hero.cta', 'Go', '/go');
+    $html .= editableImage($page, 'hero.image', '/assets/images/placeholder-image.webp', 'Alt');
+    $html .= editableImageSplit($page, 'hero.src', 'hero.alt', '/assets/images/placeholder-image.webp', 'Alt');
+    $html .= editableIcon($page, 'hero.icon', 'star');
+    $html .= editableText($page, 'present.title', 'Unused default');
+    $html .= editableListAttrs($page, 'features.items', ['title' => 'New']);
+    foreach (editableListItems($page, 'features.items') as $index => $item) {
+        $html .= editableListItemAttrs($page, 'features.items', $index);
+        $html .= editableText($page, 'features.items.' . $index . '.text', 'Missing item text');
+    }
+    $html .= renderAllSections($page);
+    return $html;
+}
+
+if (($argv[1] ?? '') === 'worker') {
+    [$mode, $dir] = [$argv[2], $argv[3]];
+    ob_start(); // keep headers unsent so a session could start, if anything tried to
+    define('SITE_LANG_DEFAULT', 'en');
+    define('SITE_NAME', 'Scan smoke');
+    define('CONTENT_BASE_PATH', $dir . '/content/pages/');
+    define('NIBBLY_MEDIA_META_PATH', $dir . '/content/media-meta.json');
+    if (in_array($mode, ['scan', 'scan-overlay'], true)) {
+        define('NIBBLY_CONTENT_SCAN', true);
+    }
+    if ($mode === 'readonly') {
+        define('NIBBLY_CONTENT_READONLY', true);
+    }
+    if (in_array($mode, ['readonly', 'overlay', 'control'], true)) {
+        // A real, logged-in editor session (the loopback development login).
+        session_save_path($dir . '/sessions');
+        session_id('scanmodesmoke0123456789abcdef01');
+        session_start();
+        $_SESSION = ['admin_logged_in' => true, 'admin_login_time' => time(), 'admin_user_id' => 'dev_admin',
+            'admin_role' => 'admin', 'nibbly_dev_login' => true];
+        session_write_close();
+        $_COOKIE[session_name()] = 'scanmodesmoke0123456789abcdef01';
+        $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+        $_SERVER['HTTP_HOST'] = 'localhost';
+    }
+    require_once $root . '/includes/content-loader.php';
+    $before = scanSnapshot($dir . '/content');
+    $overlayPage = scanFixturePage();
+    $overlayPage['hero']['title'] = 'Preview title';
+    $overlayPage['sections'][0]['content'] = '<p>Preview section</p>';
+
+    if ($mode === 'scan') {
+        scanAssert(session_status() === PHP_SESSION_NONE && isAdminLoggedIn(), 'scan mode: editor markup without a session');
+        $html = scanRenderFixture();
+        scanAssert(session_status() === PHP_SESSION_NONE, 'scan mode must not start a session');
+        scanAssert(str_contains($html, 'data-field="hero.title"') && str_contains($html, 'Stored title') && str_contains($html, 'Default body'), 'scan mode renders editable markup, stored values and defaults for missing fields');
+        scanAssert(str_contains($html, 'data-field="hero.cta"') && str_contains($html, 'data-field="hero.icon"'), 'scan mode renders link and icon fields');
+        scanAssert(autoGeneratedFields() === [], 'scan mode must not auto-generate');
+        scanAssert(scanSnapshot($dir . '/content') === $before, 'scan mode must leave the content byte-identical and create no files');
+    } elseif ($mode === 'scan-overlay') {
+        nibblyContentOverlaySet('en_scan', $overlayPage);
+        $html = scanRenderFixture();
+        scanAssert(str_contains($html, 'Preview title') && str_contains($html, 'Preview section') && !str_contains($html, 'Stored title'), 'overlay content is rendered in scan mode');
+        scanAssert(scanSnapshot($dir . '/content') === $before && autoGeneratedFields() === [], 'scan with overlay writes nothing');
+    } elseif ($mode === 'readonly') {
+        scanAssert(nibblyContentReadonly() && !nibblyContentScanActive(), 'readonly flag without scan');
+        scanAssert(isAdminLoggedIn() && session_status() === PHP_SESSION_ACTIVE, 'readonly mode keeps the real session login');
+        $html = scanRenderFixture();
+        scanAssert(str_contains($html, 'Stored title') && str_contains($html, 'Default body'), 'readonly mode renders stored content plus defaults');
+        scanAssert(autoGeneratedFields() === [], 'readonly mode must not auto-generate');
+        scanAssert(scanSnapshot($dir . '/content') === $before, 'readonly mode must leave the content byte-identical');
+    } elseif ($mode === 'overlay') {
+        // Logged-in editor, no flags: only the overlay protects the file.
+        $plain = loadContent('en_scan');
+        scanAssert(($plain['hero']['title'] ?? '') === 'Stored title', 'loadContent without overlay reads the file');
+        $cached = loadContentCached('en_scan');
+        scanAssert($cached['hero']['title'] === 'Stored title', 'cache primed with stored content');
+        nibblyContentOverlaySet('en_scan', $overlayPage);
+        scanAssert(loadContent('en_scan')['hero']['title'] === 'Preview title', 'loadContent prefers the overlay');
+        scanAssert(loadContentCached('en_scan')['hero']['title'] === 'Preview title', 'the cache must not serve stored content once an overlay is set');
+        $html = scanRenderFixture();
+        scanAssert(str_contains($html, 'Preview title') && str_contains($html, 'Preview section') && !str_contains($html, 'Stored title'), 'rendering uses the overlay');
+        $second = $overlayPage;
+        $second['hero']['title'] = 'Second preview';
+        nibblyContentOverlaySet('en_scan', $second);
+        scanAssert(str_contains(scanRenderFixture(), 'Second preview'), 'a changed overlay replaces the previous one');
+        scanAssert(autoGeneratedFields() === [], 'an active overlay must not auto-generate');
+        scanAssert(scanSnapshot($dir . '/content') === $before, 'an overlay never writes: logged-in render left the content byte-identical');
+        scanAssert(loadContent('other_page') === ['sections' => []], 'other pages are unaffected by the overlay');
+        nibblyContentOverlayClear();
+        scanAssert(loadContent('en_scan')['hero']['title'] === 'Stored title' && loadContentCached('en_scan')['hero']['title'] === 'Stored title', 'clearing restores the stored content');
+    } elseif ($mode === 'control') {
+        // Proves the harness can see writes: a normal editor render auto-generates the missing fields.
+        $html = scanRenderFixture();
+        scanAssert(autoGeneratedFields() !== [], 'control: editor render auto-generates missing fields');
+        scanAssert(scanSnapshot($dir . '/content') !== $before, 'control: the content changes without the flags');
+        $stored = json_decode((string)file_get_contents($dir . '/content/pages/en_scan.json'), true);
+        scanAssert(($stored['hero']['body'] ?? null) === '<p>Default body</p>', 'control: default written to JSON');
+    }
+    echo "ok {$mode}\n";
+    exit(0);
+}
+
+$modes = ['scan', 'scan-overlay', 'readonly', 'overlay', 'control'];
+$root = dirname(__DIR__);
+foreach ($modes as $mode) {
+    $dir = sys_get_temp_dir() . '/nibbly-scan-smoke-' . bin2hex(random_bytes(4));
+    mkdir($dir . '/content/pages', 0755, true);
+    mkdir($dir . '/sessions', 0700, true);
+    file_put_contents($dir . '/content/pages/en_scan.json', json_encode(scanFixturePage(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    $process = proc_open([PHP_BINARY, __FILE__, 'worker', $mode, $dir], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+    $stdout = stream_get_contents($pipes[1]);
+    $stderr = stream_get_contents($pipes[2]);
+    $code = proc_close($process);
+    exec('rm -rf ' . escapeshellarg($dir));
+    if ($code !== 0 || trim($stdout) !== 'ok ' . $mode) {
+        fwrite(STDERR, "FAIL mode {$mode}: exit {$code}\n{$stdout}{$stderr}\n");
+        exit(1);
+    }
+}
+echo "PASS agent scan mode: scan, scan+overlay, readonly and overlay renders leave content byte-identical; control mode writes\n";

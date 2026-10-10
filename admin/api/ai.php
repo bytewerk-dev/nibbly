@@ -1015,19 +1015,28 @@ switch ($action) {
             $created = nibblyCopilotBuildCreatedContent($type, $draft);
             if ($type === 'event') {
                 $eventsPath = defined('EVENTS_PATH') ? EVENTS_PATH : dirname(CONTENT_PATH) . '/events.json';
-                $data = is_file($eventsPath) ? (json_decode((string)file_get_contents($eventsPath), true) ?: ['events' => []]) : ['events' => []];
-                foreach ($data['events'] ?? [] as $event) {
-                    if (($event['id'] ?? '') === ($created['id'] ?? '')) {
-                        throw new RuntimeException('An event with this ID already exists.');
+                $duplicate = false;
+                $saved = nibblyJsonUpdate($eventsPath, static function (array &$data) use ($created, $eventsPath, &$duplicate) {
+                    if (!is_array($data['events'] ?? null)) {
+                        $data['events'] = [];
                     }
+                    foreach ($data['events'] as $event) {
+                        if (($event['id'] ?? '') === ($created['id'] ?? '')) {
+                            $duplicate = true;
+                            return false;
+                        }
+                    }
+                    if (is_file($eventsPath)) {
+                        copy($eventsPath, BACKUP_PATH . 'events_' . date('Y-m-d_His') . '.json');
+                    }
+                    $data['events'][] = $created;
+                    $data['lastModified'] = date('c');
+                    return true;
+                }, ['events' => []]);
+                if ($duplicate) {
+                    throw new RuntimeException('An event with this ID already exists.');
                 }
-                if (is_file($eventsPath)) {
-                    $timestamp = date('Y-m-d_His');
-                    copy($eventsPath, BACKUP_PATH . 'events_' . $timestamp . '.json');
-                }
-                $data['events'][] = $created;
-                $data['lastModified'] = date('c');
-                if (file_put_contents($eventsPath, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX) === false) {
+                if (!$saved) {
                     throw new RuntimeException('Could not save event draft.');
                 }
                 $response = [
@@ -1171,14 +1180,15 @@ switch ($action) {
                 if (!is_file($eventsPath)) {
                     throw new RuntimeException('Events file not found.');
                 }
-                $data = json_decode((string)file_get_contents($eventsPath), true);
-                if (!is_array($data) || !is_array($data['events'] ?? null)) {
-                    throw new RuntimeException('Invalid events JSON.');
-                }
-                $timestamp = date('Y-m-d_His');
-                copy($eventsPath, BACKUP_PATH . 'events_' . $timestamp . '.json');
-                $data = nibblyCopilotPublishEventData($data, $id);
-                if (file_put_contents($eventsPath, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX) === false) {
+                $saved = nibblyJsonUpdate($eventsPath, static function (array &$data) use ($eventsPath, $id) {
+                    if (!is_array($data['events'] ?? null)) {
+                        throw new RuntimeException('Invalid events JSON.');
+                    }
+                    copy($eventsPath, BACKUP_PATH . 'events_' . date('Y-m-d_His') . '.json');
+                    $data = nibblyCopilotPublishEventData($data, $id);
+                    return true;
+                });
+                if (!$saved) {
                     throw new RuntimeException('Could not publish event.');
                 }
                 $response = [
