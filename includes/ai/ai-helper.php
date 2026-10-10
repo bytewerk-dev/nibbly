@@ -9,6 +9,7 @@
 require_once dirname(__DIR__) . '/json-store.php';
 require_once dirname(__DIR__) . '/ai-labels.php';
 require_once __DIR__ . '/agent/net.php';
+require_once __DIR__ . '/agent/tool-gateway.php';
 require_once __DIR__ . '/request-ledger.php';
 require_once __DIR__ . '/model-catalog.php';
 
@@ -1374,12 +1375,8 @@ function nibblyAiKieClaudeChatRequest(array $settings, array $headers, array $bo
         'usage' => ['prompt_tokens' => (int)($response['usage']['input_tokens'] ?? 0), 'completion_tokens' => (int)($response['usage']['output_tokens'] ?? 0)]];
 }
 
-/**
- * Translate an OpenAI-style chat request to the Anthropic Messages API and
- * map the response back, so all callers keep one response shape.
- */
-function nibblyAiAnthropicChatRequest(array $settings, array $body): array {
-    $url = rtrim((string)$settings['baseUrl'], '/') . '/messages';
+/** Messages API endpoint and headers; shared by the text mapping and the tool gateway. */
+function nibblyAiAnthropicRequestTarget(array $settings): array {
     $headers = [
         'Content-Type: application/json',
         'Accept: application/json',
@@ -1389,6 +1386,15 @@ function nibblyAiAnthropicChatRequest(array $settings, array $body): array {
     if ($key !== '') {
         $headers[] = 'x-api-key: ' . $key;
     }
+    return [rtrim((string)$settings['baseUrl'], '/') . '/messages', $headers];
+}
+
+/**
+ * Translate an OpenAI-style chat request to the Anthropic Messages API and
+ * map the response back, so all callers keep one response shape.
+ */
+function nibblyAiAnthropicChatRequest(array $settings, array $body): array {
+    [$url, $headers] = nibblyAiAnthropicRequestTarget($settings);
 
     $system = [];
     $messages = [];
