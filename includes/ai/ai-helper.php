@@ -7,6 +7,8 @@
  */
 
 require_once dirname(__DIR__) . '/json-store.php';
+require_once dirname(__DIR__) . '/ai-labels.php';
+require_once __DIR__ . '/agent/net.php';
 require_once __DIR__ . '/request-ledger.php';
 require_once __DIR__ . '/model-catalog.php';
 
@@ -2287,7 +2289,19 @@ function nibblyAiStoreGeneratedImage(string $binary, string $hint, string $size 
     if (file_put_contents($path, $binary, LOCK_EX) === false) {
         throw new RuntimeException('Could not save generated image.');
     }
+    nibblyAiLabelStoredImage($filename);
     return '/assets/images/generated/' . $filename;
+}
+
+/**
+ * Mark a stored AI image as "generated" in the media metadata so the disclosure
+ * label renders wherever the image is used. A failed label write is logged, not
+ * fatal: the (paid) image must not be lost, and the Media Library can still set it.
+ */
+function nibblyAiLabelStoredImage(string $filename): void {
+    if (!nibblySetMediaAiLabel('image', 'generated/' . $filename, 'generated')) {
+        error_log('Nibbly: could not store the AI label for generated/' . $filename);
+    }
 }
 
 /**
@@ -2469,16 +2483,35 @@ function nibblyAiIsLocalBaseUrl(string $url): bool {
     return is_string($host) && nibblyAiIsPrivateHost($host);
 }
 
+/**
+ * True when a configured host is local or non-public. Every resolved address is
+ * checked against the CIDR list in agent/net.php (IPv4 and IPv6); one private
+ * address is enough. Hosts that cannot be resolved are not reported as private.
+ */
 function nibblyAiIsPrivateHost(string $host): bool {
-    $host = strtolower(trim($host, '[] '));
-    if ($host === 'localhost' || $host === '::1') {
-        return true;
-    }
-    $ip = filter_var($host, FILTER_VALIDATE_IP) ? $host : gethostbyname($host);
-    if (!filter_var($ip, FILTER_VALIDATE_IP)) {
+    $host = strtolower(trim($host, '[] .'));
+    if ($host === '') {
         return false;
     }
-    return !filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE);
+    if ($host === 'localhost' || str_ends_with($host, '.localhost')) {
+        return true;
+    }
+    if (filter_var($host, FILTER_VALIDATE_IP)) {
+        return !nibblyNetIsPublicIp($host);
+    }
+    $legacy = nibblyNetParseLegacyIpv4($host);
+    if ($legacy !== null) {
+        return !nibblyNetIsPublicIp($legacy);
+    }
+    if (preg_match('/^(0x[0-9a-f]*|[0-9]+)(\.(0x[0-9a-f]*|[0-9]+)){0,3}$/i', $host)) {
+        return true; // Numeric notation that is not a valid address: never treat as public.
+    }
+    foreach (nibblyNetResolveHost($host) as $ip) {
+        if (!nibblyNetIsPublicIp($ip)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function nibblyAiCleanModel(string $model): string {

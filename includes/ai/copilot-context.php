@@ -1,5 +1,6 @@
 <?php
 require_once dirname(__DIR__) . '/page-path.php';
+require_once __DIR__ . '/agent/net.php';
 /**
  * Safe context builder for the frontend AI Assistant.
  *
@@ -1307,137 +1308,37 @@ function nibblyCopilotIsExternalImageUrl(string $url): bool {
 }
 
 function nibblyCopilotAssertPublicImageUrl(string $url): void {
-    $url = trim($url);
-    if ($url === '' || strlen($url) > 2048 || preg_match('/[\x00-\x1F\x7F]/', $url)) {
-        throw new RuntimeException('Invalid reference image URL.');
+    try {
+        nibblyNetAssertPublicUrl($url);
+    } catch (NibblyNetException $e) {
+        throw new RuntimeException('Reference image URL rejected: ' . $e->getMessage(), 0, $e);
     }
-    $parts = parse_url($url);
-    if (!is_array($parts) || !in_array(strtolower((string)($parts['scheme'] ?? '')), ['http', 'https'], true) || empty($parts['host'])) {
-        throw new RuntimeException('Reference image URL must be HTTP or HTTPS.');
-    }
-    if (!empty($parts['user']) || !empty($parts['pass'])) {
-        throw new RuntimeException('Reference image URL credentials are not allowed.');
-    }
-    $host = trim((string)$parts['host'], '[] ');
-    $lowerHost = strtolower($host);
-    if ($lowerHost === 'localhost' || str_ends_with($lowerHost, '.localhost')) {
-        throw new RuntimeException('Reference image URL must be publicly reachable.');
-    }
-    $ips = [];
-    if (filter_var($host, FILTER_VALIDATE_IP)) {
-        $ips[] = $host;
-    } elseif (function_exists('dns_get_record')) {
-        $records = @dns_get_record($host, DNS_A + DNS_AAAA);
-        if (is_array($records)) {
-            foreach ($records as $record) {
-                if (!empty($record['ip'])) $ips[] = (string)$record['ip'];
-                if (!empty($record['ipv6'])) $ips[] = (string)$record['ipv6'];
-            }
-        }
-    }
-    if (!$ips) {
-        $resolved = @gethostbynamel($host);
-        if (is_array($resolved)) {
-            $ips = array_merge($ips, $resolved);
-        } else {
-            $fallback = @gethostbyname($host);
-            if (is_string($fallback) && $fallback !== $host) $ips[] = $fallback;
-        }
-    }
-    $ips = array_values(array_unique(array_filter($ips)));
-    if (!$ips) {
-        throw new RuntimeException('Reference image URL host could not be resolved.');
-    }
-    foreach ($ips as $ip) {
-        if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
-            throw new RuntimeException('Reference image URL must not resolve to a private or reserved address.');
-        }
-    }
-}
-
-function nibblyCopilotResolveRedirectUrl(string $baseUrl, string $location): string {
-    $location = trim($location);
-    if ($location === '') {
-        throw new RuntimeException('Invalid reference image redirect.');
-    }
-    if (preg_match('#^https?://#i', $location)) {
-        return $location;
-    }
-    $base = parse_url($baseUrl);
-    if (!is_array($base) || empty($base['scheme']) || empty($base['host'])) {
-        throw new RuntimeException('Invalid reference image redirect base.');
-    }
-    if (str_starts_with($location, '//')) {
-        return $base['scheme'] . ':' . $location;
-    }
-    $origin = $base['scheme'] . '://' . $base['host'] . (isset($base['port']) ? ':' . $base['port'] : '');
-    if (str_starts_with($location, '/')) {
-        return $origin . $location;
-    }
-    $path = (string)($base['path'] ?? '/');
-    $dir = preg_replace('#/[^/]*$#', '/', $path) ?: '/';
-    return $origin . $dir . $location;
 }
 
 function nibblyCopilotDownloadExternalReferenceImage(string $url): string {
-    if (!function_exists('curl_init')) {
-        throw new RuntimeException('External reference image downloads require curl.');
-    }
-    $currentUrl = trim($url);
-    $maxBytes = 15 * 1024 * 1024;
-    for ($redirect = 0; $redirect <= 3; $redirect++) {
-        nibblyCopilotAssertPublicImageUrl($currentUrl);
-        $ch = curl_init($currentUrl);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HEADER => true,
-            CURLOPT_FOLLOWLOCATION => false,
-            CURLOPT_CONNECTTIMEOUT => 5,
-            CURLOPT_TIMEOUT => 25,
-            CURLOPT_USERAGENT => 'nibbly-ai-assistant/1.0',
-            CURLOPT_HTTPHEADER => ['Accept: image/avif,image/webp,image/png,image/jpeg,image/gif;q=0.8,*/*;q=0.1'],
+    try {
+        $response = nibblyNetSafeFetch($url, [
+            'maxBytes' => 15 * 1024 * 1024,
+            'allowedContentTypes' => ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+            'timeout' => 25,
+            'userAgent' => 'nibbly-ai-assistant/1.0',
+            'accept' => 'image/avif,image/webp,image/png,image/jpeg,image/gif;q=0.8',
         ]);
-        if (defined('CURLOPT_PROTOCOLS')) {
-            curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
-        }
-        if (defined('CURLOPT_REDIR_PROTOCOLS')) {
-            curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
-        }
-        $raw = curl_exec($ch);
-        $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $headerSize = (int)curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-        $contentType = (string)curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
-        $error = curl_error($ch);
-        unset($ch);
-        if ($raw === false || $raw === '') {
-            throw new RuntimeException($error !== '' ? 'Could not download reference image: ' . $error : 'Could not download reference image.');
-        }
-        $headerText = substr($raw, 0, $headerSize);
-        $body = substr($raw, $headerSize);
-        if ($status >= 300 && $status < 400 && preg_match('/^Location:\s*(.+)$/im', $headerText, $match)) {
-            $currentUrl = nibblyCopilotResolveRedirectUrl($currentUrl, trim($match[1]));
-            continue;
-        }
-        if ($status < 200 || $status >= 300) {
-            throw new RuntimeException('Reference image download failed.');
-        }
-        if (strlen($body) > $maxBytes) {
-            throw new RuntimeException('Reference image is too large.');
-        }
-        $tmp = tempnam(sys_get_temp_dir(), 'nibbly-copilot-ref-');
-        if ($tmp === false) {
-            throw new RuntimeException('Could not create temporary reference image.');
-        }
-        file_put_contents($tmp, $body);
-        $info = @getimagesize($tmp);
-        $mime = is_array($info) ? (string)($info['mime'] ?? '') : strtolower(trim(explode(';', $contentType)[0] ?? ''));
-        if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'], true)) {
-            @unlink($tmp);
-            throw new RuntimeException('Reference URL did not return a supported image.');
-        }
-        return $tmp;
+    } catch (NibblyNetException $e) {
+        throw new RuntimeException('Could not download reference image: ' . $e->getMessage(), 0, $e);
     }
-    throw new RuntimeException('Reference image URL redirected too many times.');
+    $tmp = tempnam(sys_get_temp_dir(), 'nibbly-copilot-ref-');
+    if ($tmp === false) {
+        throw new RuntimeException('Could not create temporary reference image.');
+    }
+    file_put_contents($tmp, $response['body']);
+    $info = @getimagesize($tmp);
+    $mime = is_array($info) ? (string)($info['mime'] ?? '') : '';
+    if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'], true)) {
+        @unlink($tmp);
+        throw new RuntimeException('Reference URL did not return a supported image.');
+    }
+    return $tmp;
 }
 
 function nibblyCopilotBuildImagePrompt(array $context, array $field, string $instruction, string $imageMode = 'generate'): string {

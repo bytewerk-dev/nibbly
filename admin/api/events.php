@@ -2,6 +2,51 @@
 if (!defined('NIBBLY_ADMIN_DIR')) { http_response_code(404); exit; }
 
 // Authenticated dispatcher supplies shared helpers and request context.
+
+if (!function_exists('nibblyEventsBackup')) {
+    /** Copy the current events file into the backup folder and drop the oldest copies. */
+    function nibblyEventsBackup(): void {
+        if (!is_file(EVENTS_PATH)) {
+            return;
+        }
+        copy(EVENTS_PATH, BACKUP_PATH . 'events_' . date('Y-m-d_His') . '.json');
+        $backups = glob(BACKUP_PATH . 'events_*.json') ?: [];
+        usort($backups, function($a, $b) {
+            return filemtime($b) - filemtime($a);
+        });
+        while (count($backups) > MAX_BACKUPS) {
+            unlink(array_pop($backups));
+        }
+    }
+
+    /**
+     * One locked read-modify-write of events.json. The callback edits the data by
+     * reference and returns null to write, or an error message to abort.
+     *
+     * @return true|string|false true = written, string = callback error, false = storage failure
+     */
+    function nibblyEventsMutate(callable $change, bool $backup = false) {
+        $error = null;
+        $ok = nibblyJsonUpdate(EVENTS_PATH, function (array &$data) use ($change, $backup, &$error) {
+            if (!isset($data['events']) || !is_array($data['events'])) {
+                $data['events'] = [];
+            }
+            $error = $change($data);
+            if ($error !== null) {
+                return false;
+            }
+            if ($backup) {
+                nibblyEventsBackup();
+            }
+            return true;
+        }, ['events' => []]);
+        if ($error !== null) {
+            return $error;
+        }
+        return $ok;
+    }
+}
+
 switch ($action) {
     case 'load-events':
         if (!file_exists(EVENTS_PATH)) {
@@ -34,26 +79,6 @@ switch ($action) {
             jsonResponse(false, null, 'Date and title are required');
         }
 
-        $data = file_exists(EVENTS_PATH)
-            ? json_decode(file_get_contents(EVENTS_PATH), true)
-            : ['events' => []];
-
-        // Create backup
-        if (file_exists(EVENTS_PATH)) {
-            $timestamp = date('Y-m-d_His');
-            $backupPath = BACKUP_PATH . 'events_' . $timestamp . '.json';
-            copy(EVENTS_PATH, $backupPath);
-
-            $backups = glob(BACKUP_PATH . 'events_*.json');
-            usort($backups, function($a, $b) {
-                return filemtime($b) - filemtime($a);
-            });
-            while (count($backups) > MAX_BACKUPS) {
-                $oldBackup = array_pop($backups);
-                unlink($oldBackup);
-            }
-        }
-
         if (empty($event['id'])) {
             // Use default language title for ID, fallback to first available
             $titleForId = $event['title'][$defaultLang] ?? reset($event['title']);
@@ -61,27 +86,22 @@ switch ($action) {
         }
 
         $found = false;
-        foreach ($data['events'] as $index => $existing) {
-            if ($existing['id'] === $event['id']) {
-                $data['events'][$index] = $event;
-                $found = true;
-                break;
+        $result = nibblyEventsMutate(function (array &$data) use ($event, &$found) {
+            foreach ($data['events'] as $index => $existing) {
+                if (($existing['id'] ?? null) === $event['id']) {
+                    $data['events'][$index] = $event;
+                    $found = true;
+                    break;
+                }
             }
-        }
+            if (!$found) {
+                $data['events'][] = $event;
+            }
+            $data['lastModified'] = date('c');
+            return null;
+        }, true);
 
-        if (!$found) {
-            $data['events'][] = $event;
-        }
-
-        $data['lastModified'] = date('c');
-
-        $result = file_put_contents(
-            EVENTS_PATH,
-            json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
-            LOCK_EX
-        );
-
-        if ($result === false) {
+        if ($result !== true) {
             jsonResponse(false, null, 'Error saving');
         }
 
@@ -102,44 +122,34 @@ switch ($action) {
             jsonResponse(false, null, 'No events found');
         }
 
-        $data = json_decode(file_get_contents(EVENTS_PATH), true);
-        if (!isset($data['trash']) || !is_array($data['trash'])) {
-            $data['trash'] = [];
-        }
-
-        $timestamp = date('Y-m-d_His');
-        $backupPath = BACKUP_PATH . 'events_' . $timestamp . '.json';
-        copy(EVENTS_PATH, $backupPath);
-
-        // Move event to trash array (instead of deleting)
-        $movedEvent = null;
-        foreach ($data['events'] as $idx => $existing) {
-            if ($existing['id'] === $eventId) {
-                $movedEvent = $existing;
-                array_splice($data['events'], $idx, 1);
-                break;
+        $result = nibblyEventsMutate(function (array &$data) use ($eventId) {
+            if (!isset($data['trash']) || !is_array($data['trash'])) {
+                $data['trash'] = [];
             }
-        }
 
-        if ($movedEvent === null) {
-            jsonResponse(false, null, 'Event not found');
-        }
+            // Move event to trash array (instead of deleting)
+            $movedEvent = null;
+            foreach ($data['events'] as $idx => $existing) {
+                if (($existing['id'] ?? null) === $eventId) {
+                    $movedEvent = $existing;
+                    array_splice($data['events'], $idx, 1);
+                    break;
+                }
+            }
+            if ($movedEvent === null) {
+                return 'Event not found';
+            }
 
-        $data['trash'][] = [
-            'event' => $movedEvent,
-            'deletedAt' => date('c'),
-        ];
+            $data['trash'][] = [
+                'event' => $movedEvent,
+                'deletedAt' => date('c'),
+            ];
+            $data['lastModified'] = date('c');
+            return null;
+        }, true);
 
-        $data['lastModified'] = date('c');
-
-        $result = file_put_contents(
-            EVENTS_PATH,
-            json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
-            LOCK_EX
-        );
-
-        if ($result === false) {
-            jsonResponse(false, null, 'Error moving event to trash');
+        if ($result !== true) {
+            jsonResponse(false, null, is_string($result) ? $result : 'Error moving event to trash');
         }
 
         jsonResponse(true, null, 'Event moved to trash');
@@ -172,40 +182,35 @@ switch ($action) {
             jsonResponse(false, null, 'No events found');
         }
 
-        $data = json_decode(file_get_contents(EVENTS_PATH), true);
-        if (!isset($data['trash']) || !is_array($data['trash'])) {
-            jsonResponse(false, null, 'Event not in trash');
-        }
-
         $restored = null;
-        foreach ($data['trash'] as $idx => $item) {
-            if (($item['event']['id'] ?? null) === $eventId) {
-                $restored = $item['event'];
-                array_splice($data['trash'], $idx, 1);
-                break;
+        $result = nibblyEventsMutate(function (array &$data) use ($eventId, &$restored) {
+            if (!isset($data['trash']) || !is_array($data['trash'])) {
+                return 'Event not in trash';
             }
-        }
 
-        if ($restored === null) {
-            jsonResponse(false, null, 'Event not found in trash');
-        }
+            foreach ($data['trash'] as $idx => $item) {
+                if (($item['event']['id'] ?? null) === $eventId) {
+                    $restored = $item['event'];
+                    array_splice($data['trash'], $idx, 1);
+                    break;
+                }
+            }
+            if ($restored === null) {
+                return 'Event not found in trash';
+            }
 
-        // Avoid id collision: if restored id already exists, append a suffix
-        $existingIds = array_map(function($e) { return $e['id'] ?? ''; }, $data['events']);
-        if (in_array($restored['id'], $existingIds, true)) {
-            $restored['id'] = $restored['id'] . '-restored-' . time();
-        }
-        $data['events'][] = $restored;
-        $data['lastModified'] = date('c');
+            // Avoid id collision: if restored id already exists, append a suffix
+            $existingIds = array_map(function($e) { return $e['id'] ?? ''; }, $data['events']);
+            if (in_array($restored['id'], $existingIds, true)) {
+                $restored['id'] = $restored['id'] . '-restored-' . time();
+            }
+            $data['events'][] = $restored;
+            $data['lastModified'] = date('c');
+            return null;
+        });
 
-        $result = file_put_contents(
-            EVENTS_PATH,
-            json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
-            LOCK_EX
-        );
-
-        if ($result === false) {
-            jsonResponse(false, null, 'Error restoring event');
+        if ($result !== true) {
+            jsonResponse(false, null, is_string($result) ? $result : 'Error restoring event');
         }
 
         jsonResponse(true, ['id' => $restored['id']], 'Event restored');
@@ -225,32 +230,22 @@ switch ($action) {
             jsonResponse(false, null, 'No events found');
         }
 
-        $data = json_decode(file_get_contents(EVENTS_PATH), true);
-        if (!isset($data['trash']) || !is_array($data['trash'])) {
-            jsonResponse(false, null, 'Event not in trash');
-        }
-
-        $found = false;
-        foreach ($data['trash'] as $idx => $item) {
-            if (($item['event']['id'] ?? null) === $eventId) {
-                array_splice($data['trash'], $idx, 1);
-                $found = true;
-                break;
+        $result = nibblyEventsMutate(function (array &$data) use ($eventId) {
+            if (!isset($data['trash']) || !is_array($data['trash'])) {
+                return 'Event not in trash';
             }
-        }
 
-        if (!$found) {
-            jsonResponse(false, null, 'Event not found in trash');
-        }
+            foreach ($data['trash'] as $idx => $item) {
+                if (($item['event']['id'] ?? null) === $eventId) {
+                    array_splice($data['trash'], $idx, 1);
+                    return null;
+                }
+            }
+            return 'Event not found in trash';
+        });
 
-        $result = file_put_contents(
-            EVENTS_PATH,
-            json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
-            LOCK_EX
-        );
-
-        if ($result === false) {
-            jsonResponse(false, null, 'Error deleting event permanently');
+        if ($result !== true) {
+            jsonResponse(false, null, is_string($result) ? $result : 'Error deleting event permanently');
         }
 
         jsonResponse(true, null, 'Event permanently deleted');
@@ -265,16 +260,12 @@ switch ($action) {
             jsonResponse(true, null, 'Trash is empty');
         }
 
-        $data = json_decode(file_get_contents(EVENTS_PATH), true);
-        $data['trash'] = [];
+        $result = nibblyEventsMutate(function (array &$data) {
+            $data['trash'] = [];
+            return null;
+        });
 
-        $result = file_put_contents(
-            EVENTS_PATH,
-            json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
-            LOCK_EX
-        );
-
-        if ($result === false) {
+        if ($result !== true) {
             jsonResponse(false, null, 'Error emptying trash');
         }
 
@@ -295,37 +286,25 @@ switch ($action) {
             jsonResponse(false, null, 'No events found');
         }
 
-        $data = json_decode(file_get_contents(EVENTS_PATH), true);
-
-        $found = false;
         $nowHidden = false;
-        foreach ($data['events'] as $index => $existing) {
-            if ($existing['id'] === $eventId) {
-                $nowHidden = empty($existing['hidden']);
-                if ($nowHidden) {
-                    $data['events'][$index]['hidden'] = true;
-                } else {
-                    unset($data['events'][$index]['hidden']);
+        $result = nibblyEventsMutate(function (array &$data) use ($eventId, &$nowHidden) {
+            foreach ($data['events'] as $index => $existing) {
+                if (($existing['id'] ?? null) === $eventId) {
+                    $nowHidden = empty($existing['hidden']);
+                    if ($nowHidden) {
+                        $data['events'][$index]['hidden'] = true;
+                    } else {
+                        unset($data['events'][$index]['hidden']);
+                    }
+                    $data['lastModified'] = date('c');
+                    return null;
                 }
-                $found = true;
-                break;
             }
-        }
+            return 'Event not found';
+        });
 
-        if (!$found) {
-            jsonResponse(false, null, 'Event not found');
-        }
-
-        $data['lastModified'] = date('c');
-
-        $result = file_put_contents(
-            EVENTS_PATH,
-            json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
-            LOCK_EX
-        );
-
-        if ($result === false) {
-            jsonResponse(false, null, 'Error saving');
+        if ($result !== true) {
+            jsonResponse(false, null, is_string($result) ? $result : 'Error saving');
         }
 
         jsonResponse(true, ['hidden' => $nowHidden], $nowHidden ? 'Event hidden' : 'Event visible');
