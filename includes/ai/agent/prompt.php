@@ -42,7 +42,7 @@ function nibblyAgentSystemPrompt(array $run): string {
         '2. Stage the changes one operation at a time. Change fields first, then add, remove or move list items and sections. Indexes in list and section paths always refer to the page as it is after your previous operations; the result of every list operation shows the current list.',
         '3. If a tool answers with an error, read its hint and correct yourself. Do not repeat the same failing call.',
         '4. When done, call validate_changeset. Fix every problem it reports, then call present_changeset with a short summary (what you changed and why) and any open questions.',
-        '5. If the request is a question and needs no change, answer it in plain text.',
+        '5. If the request is a question and needs no change, answer it in plain text. When the user replies after you presented a change set, adjust it if they ask for changes and call validate_changeset and present_changeset again; never leave a staged change set without presenting it.',
         '',
         'Today is ' . date('Y-m-d') . '. Site languages: ' . implode(', ', $languages) . ' (primary first).',
     ];

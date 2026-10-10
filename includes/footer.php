@@ -702,6 +702,20 @@ $_footerSummary = [
             && !empty($_aiPublicSettings['features']['backendAssistant'])
             && (!isset($_aiPublicSettings['assistantSurfaces']['visualEditor']) || !empty($_aiPublicSettings['assistantSurfaces']['visualEditor']));
     }
+    // The agent (js/ai-agent.js) is offered only when it is switched on, the provider can call tools and the user may chat with it.
+    $_aiAgentConfig = null;
+    if ($_aiCopilotAvailable && is_file(__DIR__ . '/ai/agent/agent-config.php')) {
+        require_once __DIR__ . '/ai/agent/agent-config.php';
+        $_aiAgentReason = '';
+        if (nibblyAgentAvailable($_aiAgentReason) && nibblyAgentCan('chat')) {
+            $_aiAgentConfig = [
+                'available' => true,
+                'rights' => array_combine(NIBBLY_AGENT_RIGHTS, array_map('nibblyAgentCan', NIBBLY_AGENT_RIGHTS)),
+                'maxUploadFiles' => 6,
+                'maxUploadBytes' => function_exists('getMediaConfig') ? (int)(getMediaConfig('image')['maxSize'] ?? 10485760) : 10485760,
+            ];
+        }
+    }
     ?>
     <link rel="stylesheet" href="<?php echo $basePath; ?>css/nibbly-admin-tokens.css">
     <link rel="stylesheet" href="<?php echo $_v('css/image-manager.css'); ?>">
@@ -725,6 +739,9 @@ $_footerSummary = [
     window.NB_SEO_HEALTH = <?php echo json_encode($_seoHealth ?? ['status' => 'yellow', 'score' => 0, 'label' => 'SEO prüfen', 'issues' => ['SEO-Daten konnten nicht berechnet werden.']], JSON_UNESCAPED_UNICODE); ?>;
     window.NB_AI_FEATURES_ENABLED = <?php echo json_encode($_aiModuleEnabled); ?>;
     window.NB_AI_COPILOT_AVAILABLE = <?php echo json_encode($_aiCopilotAvailable); ?>;
+    <?php if ($_aiAgentConfig !== null): ?>
+    window.NB_AI_AGENT = <?php echo json_encode($_aiAgentConfig, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG); ?>;
+    <?php endif; ?>
     window.NB_AI_ASSISTANT_LANGUAGE = <?php echo json_encode(function_exists('_nbAdminLang') ? _nbAdminLang() : ($currentLang ?? (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en'))); ?>;
     window.NB_ADMIN_API_URL = <?php echo json_encode($basePath . 'admin/api.php', JSON_UNESCAPED_SLASHES); ?>;
     window.NB_ADMIN_BASE_URL = <?php echo $_adminAccessBaseJson; ?>;
@@ -766,6 +783,9 @@ $_footerSummary = [
     <script src="<?php echo $_v('js/inline-editor.js'); ?>"></script>
     <?php if ($_aiCopilotAvailable && file_exists(__DIR__ . '/../js/ai-copilot.js')): ?>
     <script src="<?php echo $_v('js/ai-copilot.js'); ?>"></script>
+    <?php if ($_aiAgentConfig !== null && file_exists(__DIR__ . '/../js/ai-agent.js')): ?>
+    <script src="<?php echo $_v('js/ai-agent.js'); ?>"></script>
+    <?php endif; ?>
     <?php endif; ?>
     <?php endif; ?>
 </body>
