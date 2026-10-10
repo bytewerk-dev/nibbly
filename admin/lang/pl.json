@@ -1587,5 +1587,7 @@
     "system.agent_stock": "Klucz do zdjęć stockowych",
     "system.agent_storage_note": "Agent przechowuje dane w content/; powyższa kontrola bezpieczeństwa pokazuje, że ten folder nie jest publiczny.",
     "system.configured": "Skonfigurowano",
-    "system.not_configured": "Nie skonfigurowano"
+    "system.not_configured": "Nie skonfigurowano",
+    "agent.step.read_url": "Czyta {detail}",
+    "ai.agent_research_hint": "Bez klucza Brave agent nadal może czytać adresy internetowe, które użytkownik wpisze w czacie."
 }

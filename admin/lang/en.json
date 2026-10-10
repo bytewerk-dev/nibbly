@@ -1739,5 +1739,7 @@
     "system.agent_stock": "Stock photo key",
     "system.agent_storage_note": "The agent keeps its data under content/, which the security check above proves is not public.",
     "system.configured": "Configured",
-    "system.not_configured": "Not configured"
+    "system.not_configured": "Not configured",
+    "agent.step.read_url": "Reading {detail}",
+    "ai.agent_research_hint": "Without a Brave key the agent can still read web addresses that the user writes in the chat."
 }

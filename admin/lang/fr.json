@@ -1587,5 +1587,7 @@
     "system.agent_stock": "Clé de photos libres",
     "system.agent_storage_note": "L’agent stocke ses données sous content/ ; le contrôle de sécurité ci-dessus montre que ce dossier n’est pas public.",
     "system.configured": "Configuré",
-    "system.not_configured": "Non configuré"
+    "system.not_configured": "Non configuré",
+    "agent.step.read_url": "Lit {detail}",
+    "ai.agent_research_hint": "Sans clé Brave, l’agent peut quand même lire les adresses web que l’utilisateur écrit dans le chat."
 }

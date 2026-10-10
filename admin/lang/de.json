@@ -1739,5 +1739,7 @@
     "system.agent_stock": "Key für Stockfotos",
     "system.agent_storage_note": "Der Agent legt seine Daten unter content/ ab; die Sicherheitsprüfung oben zeigt, dass dieser Ordner nicht öffentlich ist.",
     "system.configured": "Eingerichtet",
-    "system.not_configured": "Nicht eingerichtet"
+    "system.not_configured": "Nicht eingerichtet",
+    "agent.step.read_url": "Liest {detail}",
+    "ai.agent_research_hint": "Auch ohne Brave-Key kann der Agent Webadressen lesen, die du im Chat nennst."
 }

@@ -27,7 +27,7 @@
     const visibleSteps = 6;
     const TOOL_STEPS = [
         'get_site_overview', 'get_page_capabilities', 'read_content', 'list_content', 'list_media', 'list_run_media', 'search_stock_images', 'import_stock_image',
-        'generate_image', 'search_web', 'read_web_result', 'stage_set_field', 'stage_set_image', 'stage_add_list_item', 'stage_hide_list_item', 'stage_remove_list_item',
+        'generate_image', 'search_web', 'read_web_result', 'read_url', 'stage_set_field', 'stage_set_image', 'stage_add_list_item', 'stage_hide_list_item', 'stage_remove_list_item',
         'stage_move_list_item', 'stage_add_section', 'stage_create_news', 'stage_create_event', 'stage_create_page', 'stage_revert_op', 'validate_changeset', 'ask_user', 'present_changeset'
     ];
 
@@ -517,6 +517,13 @@
         const raw = String(event.label || '');
         const tool = String(event.tool || '');
         if (tool === 'read_web_result') return '';
+        if (tool === 'read_url') {
+            try {
+                return new URL(raw.slice(tool.length).trim()).hostname;
+            } catch (error) {
+                return '';
+            }
+        }
         return raw.indexOf(tool) === 0 ? raw.slice(tool.length).trim() : '';
     }
 

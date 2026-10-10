@@ -2060,6 +2060,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         <div class="form-group"><label class="toggle-label"><span><?php echo t('ai.agent_credit_in_news'); ?></span><div class="toggle-switch"><input type="checkbox" id="aiAgentCreditInNews"><span class="toggle-slider"></span></div></label></div>
 
                         <h4 class="ai-subheading"><?php echo t('ai.agent_research'); ?></h4>
+                        <p class="form-hint"><?php echo t('ai.agent_research_hint'); ?></p>
                         <div class="form-group">
                             <label for="aiBraveApiKey"><?php echo t('ai.agent_brave_key'); ?></label>
                             <input type="password" id="aiBraveApiKey" autocomplete="new-password">

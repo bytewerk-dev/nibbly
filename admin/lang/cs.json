@@ -1587,5 +1587,7 @@
     "system.agent_stock": "Klíč pro stockové fotografie",
     "system.agent_storage_note": "Agent ukládá data do content/; bezpečnostní kontrola výše ukazuje, že tato složka není veřejná.",
     "system.configured": "Nastaveno",
-    "system.not_configured": "Nenastaveno"
+    "system.not_configured": "Nenastaveno",
+    "agent.step.read_url": "Čte {detail}",
+    "ai.agent_research_hint": "I bez klíče Brave může agent číst webové adresy, které uživatel napíše do chatu."
 }

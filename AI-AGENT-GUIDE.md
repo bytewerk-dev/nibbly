@@ -342,7 +342,7 @@ apply on top of the gateway's daily and monthly limits.
 
 Tools (`nibblyAgentToolDefinitions()`): read tools (`get_site_overview`,
 `get_page_capabilities`, `read_content`, `list_content`, `list_media`,
-`list_run_media`), research (`search_web`, `read_web_result`), images
+`list_run_media`), research (`search_web`, `read_web_result`, `read_url`), images
 (`search_stock_images`, `import_stock_image`, `generate_image`), stage tools
 (`stage_set_field`, `stage_set_image`, `stage_add_list_item`,
 `stage_hide_list_item`, `stage_remove_list_item`, `stage_move_list_item`,
@@ -365,6 +365,11 @@ Security rules for agent work (read before touching `includes/ai/agent/`):
   may only answer with a strict JSON schema. URLs, code, instructions and
   quotes that are not in the page are dropped; instruction-like pages get a
   warning on the source. The agent receives only that JSON, marked untrusted.
+- `read_url` reads a page whose address the **user typed** in this run (goal or
+  replies), matched against the user's own messages; addresses the model found,
+  built or took from a page are refused. It needs no search key, goes through the
+  same safe fetch, robots.txt, domain lists, reading step and warnings, and
+  counts towards the page-read limit.
 - External links in written content are allowed only when the user typed the
   address or a source of the run was actually fetched. The rule also covers
   links inside rich text.
