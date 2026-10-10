@@ -248,7 +248,7 @@ capAssert($three['cache'] === 'remix' && capField($three['descriptor'], 'hero.ti
 
 capEditJson($pageFile, static function (&$data) { $data['features']['items'][3] = ['title' => 'Four', 'text' => 'More', 'image' => ['src' => '', 'alt' => ''], 'icon' => 'star']; });
 $four = capRun($site, 'caps', 'page:en_scan-custom');
-capAssert($four['cache'] === 'rescan' && capList($four['descriptor'], 'features.items')['count'] === 4 && capRenders($site, 'custom') === 2, 'a list that no longer matches the scan is scanned again');
+capAssert($four['cache'] === 'rescan' && capList($four['descriptor'], 'features.items')['count'] === 4 && capRenders($site, 'custom') === 2, 'a list that no longer matches the scan is scanned again: ' . json_encode([$four['cache'] ?? null, isset($four['descriptor']) ? capList($four['descriptor'], 'features.items')['count'] ?? null : null, capRenders($site, 'custom'), $four['warnings'] ?? $four]));
 capAssert(capRun($site, 'caps', 'page:en_scan-custom')['cache'] === 'hit', 'and cached afterwards');
 
 capEditJson($pageFile, static function (&$data) { $data['hero']['video'] = 'abc'; });
