@@ -621,5 +621,6 @@ function nibblyAgentCleanup(?int $now = null): array {
             $removed['snapshots']++;
         }
     }
+    if (function_exists('nibblyAgentRunCleanup')) $removed['runs'] = nibblyAgentRunCleanup($now);
     return $removed;
 }
