@@ -1,0 +1,30 @@
+{
+    "page": "en_scan-custom",
+    "lang": "en",
+    "title": "Scan custom",
+    "hero": {
+        "title": "Welcome",
+        "body": "<p>Hello <strong>world</strong></p>",
+        "cta": {"text": "Start", "href": "/start"},
+        "image": {"src": "/assets/images/hero.webp", "alt": "Hero"},
+        "photo": "/assets/images/photo.webp",
+        "photoAlt": "A photo",
+        "icon": "star",
+        "note": "Hidden note",
+        "note__hidden": true,
+        "type": "banner"
+    },
+    "gallery": {"cover": "/assets/images/cover.webp"},
+    "contact": {"apiKey": "SECRET-KEY-123", "email": "team@example.org"},
+    "seo": {"title": "SEO title"},
+    "visibility": {"mode": "public", "passwordHash": "$2y$10$FixtureHashValueThatMustNeverLeak"},
+    "features": {
+        "heading": "Features",
+        "items": {
+            "0": {"title": "One", "text": "First", "image": {"src": "/assets/images/a.webp", "alt": "A"}, "icon": "star"},
+            "1": {"title": "Two", "text": "Second", "image": {"src": "", "alt": ""}, "icon": "bolt", "hidden": true},
+            "2": {"title": "Three", "text": "Third", "image": {"src": "/assets/images/c.webp", "alt": "C"}, "icon": "heart"}
+        }
+    },
+    "about": {"paragraphs": {"0": {"content": "<p>Para one</p>"}, "1": {"content": "<p>Para two</p>"}}}
+}

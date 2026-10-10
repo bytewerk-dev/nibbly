@@ -1,0 +1,11 @@
+{
+    "page": "en_scan-standard",
+    "lang": "en",
+    "title": "Scan standard",
+    "sections": [
+        {"id": "h1", "type": "heading", "text": "Standard heading", "level": "h1", "subtitle": "Sub"},
+        {"id": "t1", "type": "text", "title": "A text", "content": "<p>Body text</p>", "titleTag": "h2"},
+        {"id": "i1", "type": "image", "src": "/assets/images/x.webp", "alt": "X", "caption": "Cap", "width": "full"},
+        {"id": "c1", "type": "card", "title": "Card", "content": "Card body", "image": "/assets/images/card.webp", "hidden": true}
+    ]
+}

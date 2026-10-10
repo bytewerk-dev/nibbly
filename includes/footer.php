@@ -42,24 +42,26 @@ $copyrightRaw = is_array($copyrightVal) ? ($copyrightVal[$currentLang] ?? $copyr
  * Parse shortcode-like syntax: [id="foo"]content[/id] → <span id="foo">content</span>
  * Supports: [id="..."], [class="..."], combined [id="..." class="..."]
  */
-function parseFooterShortcodes($text) {
-    // [id="value" class="value"]content[/id] or [/class]
-    return preg_replace_callback(
-        '/\[([^\]]+)\](.*?)\[\/\w+\]/s',
-        function ($m) {
-            $attrs = $m[1];
-            $content = $m[2];
-            $htmlAttrs = '';
-            if (preg_match('/id="([^"]*)"/', $attrs, $id)) {
-                $htmlAttrs .= ' id="' . htmlspecialchars($id[1]) . '"';
-            }
-            if (preg_match('/class="([^"]*)"/', $attrs, $cls)) {
-                $htmlAttrs .= ' class="' . htmlspecialchars($cls[1]) . '"';
-            }
-            return '<span' . $htmlAttrs . '>' . $content . '</span>';
-        },
-        $text
-    );
+if (!function_exists('parseFooterShortcodes')) {
+    function parseFooterShortcodes($text) {
+        // [id="value" class="value"]content[/id] or [/class]
+        return preg_replace_callback(
+            '/\[([^\]]+)\](.*?)\[\/\w+\]/s',
+            function ($m) {
+                $attrs = $m[1];
+                $content = $m[2];
+                $htmlAttrs = '';
+                if (preg_match('/id="([^"]*)"/', $attrs, $id)) {
+                    $htmlAttrs .= ' id="' . htmlspecialchars($id[1]) . '"';
+                }
+                if (preg_match('/class="([^"]*)"/', $attrs, $cls)) {
+                    $htmlAttrs .= ' class="' . htmlspecialchars($cls[1]) . '"';
+                }
+                return '<span' . $htmlAttrs . '>' . $content . '</span>';
+            },
+            $text
+        );
+    }
 }
 
 $copyrightHtml = parseFooterShortcodes($copyrightRaw);
