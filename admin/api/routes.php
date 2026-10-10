@@ -73,6 +73,7 @@ return [
     'ai-agent-publish' => 'agent',
     'ai-agent-upload' => 'agent',
     'ai-agent-media' => 'agent',
+    'ai-agent-clear-cache' => 'agent',
     'load-events' => 'events',
     'save-event' => 'events',
     'delete-event' => 'events',

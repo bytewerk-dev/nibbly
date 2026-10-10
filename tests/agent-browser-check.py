@@ -106,7 +106,7 @@ try:
     uploads = [r for r in requests if "[flow:upload]" in json.dumps(r["messages"])]
     assert uploads and "[Attached images:" in uploads[0]["messages"][-1]["content"], "the attached image is announced to the agent"
     assert all("<script" not in json.dumps(r) for r in requests), "no markup from the UI reaches the provider"
-    print("PASS agent browser: panel, mode switch, run, review card, preview, apply, publish rights, undo, cancel, request changes, upload chips, resume after reload, mobile layout")
+    print("PASS agent browser: panel, mode switch, run, review card, preview, apply, publish rights, undo, cancel, request changes, upload chips, resume after reload, mobile layout, dashboard settings")
 finally:
     print("Screenshots:", screenshots)
     site.close()

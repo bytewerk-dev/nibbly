@@ -26,7 +26,8 @@ function blockFor(action) {
 const readActions = ['ai-agent-status', 'ai-agent-changeset', 'ai-agent-media'];
 const writeActions = ['ai-agent-start', 'ai-agent-step', 'ai-agent-reply', 'ai-agent-cancel', 'ai-agent-revalidate', 'ai-agent-apply', 'ai-agent-discard', 'ai-agent-undo', 'ai-agent-publish', 'ai-agent-upload'];
 const modelActions = ['ai-agent-start', 'ai-agent-step', 'ai-agent-reply', 'ai-agent-upload'];
-const all = readActions.concat(writeActions);
+const adminAction = 'ai-agent-clear-cache'; // settings area: administrators only, no model, no run
+const all = readActions.concat(writeActions, [adminAction]);
 
 // The route table knows exactly these actions, and the agent file serves exactly these.
 const routed = Array.from(routes.matchAll(/'(ai-agent-[a-z-]+)' => 'agent'/g)).map(match => match[1]).sort();
@@ -42,14 +43,23 @@ assertContains(contracts, "$_SERVER['REQUEST_METHOD'] === 'GET' && !$readOnly", 
 assertContains(contracts, "$_SERVER['REQUEST_METHOD'] !== 'GET' && !validateCsrfToken()", 'Every non-GET request must carry the CSRF token.');
 assertContains(contracts, 'http_response_code(405)', 'GET on a write action should answer 405.');
 
-for (const action of all) {
+for (const action of all.filter(action => action !== adminAction)) {
     const block = blockFor(action);
     assertContains(block, 'nibblyAgentApiGuard(', action + ' should go through the shared guard (module gate, chat right, user).');
 }
+{
+    const block = blockFor(adminAction);
+    assertContains(block, 'dashboardAiModuleEnabled()', adminAction + ' respects the AI module gate.');
+    assertContains(block, '!isAdmin()', adminAction + ' is for administrators only.');
+    assertContains(block, 'http_response_code(403)', adminAction + ' answers 403 to everyone else.');
+    assertContains(block, "nibblyAgentAudit('agent-cache-clear'", adminAction + ' is audited.');
+    if (readOnlyListText().includes("'" + adminAction + "'")) fail(adminAction + ' must not be allowed over GET.');
+}
+function readOnlyListText() { return contracts.slice(contracts.indexOf('$readOnly'), contracts.indexOf('$oauthCallback')); }
 assertContains(agent, 'dashboardAiModuleEnabled()', 'The guard should respect the global AI module gate.');
 assertContains(agent, "nibblyAgentCan('chat')", 'The guard should check the agent right.');
 for (const action of modelActions) assertContains(blockFor(action), 'nibblyAgentApiGuard(true)', action + ' needs the model, so it should check availability.');
-for (const action of all.filter(action => !modelActions.includes(action))) assertContains(blockFor(action), 'nibblyAgentApiGuard(false)', action + ' should not need the model.');
+for (const action of all.filter(action => !modelActions.includes(action) && action !== adminAction)) assertContains(blockFor(action), 'nibblyAgentApiGuard(false)', action + ' should not need the model.');
 
 // Rate limits
 assertContains(blockFor('ai-agent-start'), "nibblyAgentApiRateLimit($actor, 'runs')", 'Starting runs is rate limited per user.');
@@ -83,7 +93,7 @@ for (const field of ['messages', 'transcript', 'toolResults', 'model', 'tools'])
 }
 
 // Audit: every state change leaves a record, without content
-for (const action of ['agent-run-start', 'agent-run-cancelled', 'agent-run-failed', 'agent-tool', 'agent-apply', 'agent-undo', 'agent-publish', 'agent-discard', 'agent-upload', 'agent-research-search', 'agent-research-read', 'agent-image-job']) {
+for (const action of ['agent-run-start', 'agent-run-cancelled', 'agent-run-failed', 'agent-tool', 'agent-apply', 'agent-undo', 'agent-publish', 'agent-discard', 'agent-upload', 'agent-research-search', 'agent-research-read', 'agent-image-job', 'agent-cache-clear']) {
     assertContains(includes + agent, "nibblyAgentAudit('" + action + "'", 'Missing audit record: ' + action);
 }
 assertContains(includes, "'argsHash' => hash('sha256'", 'Tool calls are audited with a hash of the arguments, not the arguments.');

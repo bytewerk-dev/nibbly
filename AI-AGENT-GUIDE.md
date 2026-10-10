@@ -299,6 +299,119 @@ suggestions show preview cards before saving, apply creates a backup and undo
 works, page/news/event creation starts as draft/private/hidden, publish requires
 confirmation, and image generation respects the edit-vs-generate choice.
 
+### AI Agent (Frontend Copilot)
+
+The agent is an optional mode of the frontend Copilot. The editor describes a
+goal in the chat; the server works through it with a fixed set of tools, stages
+all changes in a **change set** (a package of operations) and presents it. The
+editor reviews it (before/after, images, sources, checks), can open a preview
+and applies it with one confirmed click. Nothing is written live by the agent.
+Classic Copilot flows stay available through the Agent/Classic switch and are
+the fallback when the provider cannot call tools.
+
+The agent is off by default. Admins enable it in Dashboard → Settings → AI
+Settings → "AI agent" (limits per run, what editors may do, Brave and Pexels
+keys, media folder, credit behaviour, "clear page scan cache"). It needs a
+provider/model with tool calling (OpenAI-compatible and Anthropic are
+supported; Kie.ai is not) and the agent code reads only `content/ai-settings.json`
+sections `agent`, `research` and `stock`. API keys of these sections are never
+returned by `load-ai-settings`; an empty key field on save keeps the saved key.
+
+Files (all under `includes/ai/agent/` unless noted):
+
+| File | Role |
+|---|---|
+| `agent-config.php`, `settings.php` | Settings, rights (`nibblyAgentCan()`), availability. Light enough for every page view. |
+| `tool-gateway.php` | `nibblyAiChatWithTools()`: tool calling for OpenAI and Anthropic with argument validation, paired history, per-turn request ledger. |
+| `net.php` | `nibblyNetSafeFetch()`: the only way to fetch external URLs (public addresses only, pinned DNS, manual redirects, size/type limits). |
+| `render-scan.php`, `capabilities.php`, `schemas.php` | Render scan of a page template to a capability map (fields, lists, limits). Site overrides in `content/ai-schema/`. |
+| `changeset*.php`, `preview.php` | Operations, validation, render check, apply with locks/backups/journal, undo, publish, owner-only preview. |
+| `run.php`, `tools.php`, `prompt.php` | The loop: step requests from the browser, tool whitelist, system prompt. |
+| `media.php` | Image ingest (re-encoding, metadata removal), staging, stock photos, credits. |
+| `research.php` | Brave search, page extraction, the tool-less reading step, sources. |
+| `admin/api/agent.php` | The `ai-agent-*` actions. |
+| `js/ai-agent.js` | Cards, timeline, upload, resume; plugs into `js/ai-copilot.js` through `registerAgent()`. |
+
+How a run works: the browser calls `ai-agent-start`, then `ai-agent-step`
+repeatedly (each step does one model turn or executes pending tool calls and is
+safe against parallel steps). State and transcript live on the server in
+`content/ai-agent/runs/`; the browser only sends ids and the user's own words.
+Slow tools end the step (web reads); image generation waits in `waiting_jobs`.
+Limits per round (turns, tool calls, failures, runtime) and a cost cap per run
+apply on top of the gateway's daily and monthly limits.
+
+Tools (`nibblyAgentToolDefinitions()`): read tools (`get_site_overview`,
+`get_page_capabilities`, `read_content`, `list_content`, `list_media`,
+`list_run_media`), research (`search_web`, `read_web_result`), images
+(`search_stock_images`, `import_stock_image`, `generate_image`), stage tools
+(`stage_set_field`, `stage_set_image`, `stage_add_list_item`,
+`stage_hide_list_item`, `stage_remove_list_item`, `stage_move_list_item`,
+`stage_add_section`, `stage_create_news`, `stage_create_event`,
+`stage_create_page`, `stage_revert_op`) and the flow tools (`validate_changeset`,
+`ask_user`, `present_changeset`). Every tool has a JSON schema, a right and a
+handler; no tool takes a file path, runs code or writes outside the change set.
+A new tool needs: a definition with schema and right, a handler, an
+`agent.step.<name>` text in all `admin/lang/*.json`, an entry in
+`TOOL_STEPS` of `js/ai-agent.js`, and a test.
+
+Security rules for agent work (read before touching `includes/ai/agent/`):
+
+- The model output and everything it reads (page content, search results, web
+  pages, image metadata) is untrusted. Tool results are data, never
+  instructions; the system prompt says so and the tools enforce it.
+- Web pages are never shown to the agent. The server fetches a result with
+  `nibblyNetSafeFetch()` (robots.txt, domain lists, no own host), extracts text
+  with DOMDocument and gives it to a separate model call **without tools** that
+  may only answer with a strict JSON schema. URLs, code, instructions and
+  quotes that are not in the page are dropped; instruction-like pages get a
+  warning on the source. The agent receives only that JSON, marked untrusted.
+- External links in written content are allowed only when the user typed the
+  address or a source of the run was actually fetched. The rule also covers
+  links inside rich text.
+- Targets are keys checked by regex and the capability map (`page:{key}`,
+  `news:{id}`, `event:{id}`); no paths, no `__proto__`-style keys, no
+  structural fields such as `visibility.passwordHash`. Private pages enter the
+  context only when the user names them, and their password hash never does.
+- New news, events and pages are created hidden/private; list items and
+  sections start hidden. Publishing is a separate right and a separate click.
+- Images are validated (type, size, pixels), re-encoded without metadata and
+  staged in `content/ai-agent/staging/`; only images that the applied package
+  uses move into `assets/images/`, with credit and AI label. Uploaded SVG and GIF
+  are refused. The AI label is read before re-encoding.
+- Every state change is audited (`nibblyAgentAudit()`): ids, hashes and counts,
+  never goal text, page content, fetched text or keys. Search queries are logged
+  readably because they leave the server.
+- All actions are POST with CSRF except the read-only `ai-agent-status`,
+  `ai-agent-changeset` and `ai-agent-media` (GET); runs, change sets and staged
+  images belong to their owner (admins see all); rate limits apply per user.
+- `content/ai-agent/` must stay non-public (it lives under `content/`, which
+  `.htaccess` and the dashboard security check cover). Do not log it, do not
+  link to it, and do not expose staging paths to the browser (the review shows
+  thumbnails through `ai-agent-media`).
+- Test-only network redirection (`NIBBLY_AGENT_TEST_NET`, `testTransport`, ...)
+  works only under the CLI and the built-in server.
+
+Site builders can restrict what the agent may do per page with
+`content/ai-schema/` (see SKILLS.md → "ai-schema-override"). Overrides only
+restrict: they can lower limits, mark paths read-only, require fields and add
+hints; they cannot make something editable.
+
+Verification for agent changes:
+
+```bash
+python3 tests/run-smoke.py            # includes all agent-*-smoke suites
+python3 tests/agent-browser-check.py  # Chromium (Playwright): panel, review, apply, undo, settings
+node --check js/ai-agent.js
+```
+
+The agent suites in `tests/`: `agent-net`, `agent-scan-mode`, `agent-gateway`,
+`agent-capabilities`, `agent-changeset`, `agent-preview`, `agent-tools`,
+`agent-loop`, `agent-media-ingest`, `agent-media`, `agent-research-extract`,
+`agent-research`, `agent-settings` (PHP and HTTP), `agent-rate-limit`,
+`agent-image-label`, `agent-api`, `agent-js` and `agent-security`, plus the
+Copilot i18n check for the `agent.*` and `ai.agent_*` texts in all nine
+languages.
+
 ## Admin UI Conventions Added in 1.4.x
 
 Recent dashboard work tightened several admin surfaces. Preserve these patterns

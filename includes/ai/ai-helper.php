@@ -169,6 +169,9 @@ function nibblyAiLoadSettings(bool $public = false): array {
             ];
         }
         unset($settings['apiKey']);
+        // The agent, research and stock sections: limits and rights yes, keys never.
+        require_once __DIR__ . '/agent/agent-config.php';
+        $settings = array_replace($settings, nibblyAgentSettingsForPublic($settings));
     }
 
     return $settings;
@@ -260,6 +263,9 @@ function nibblyAiSaveSettings(array $input, array $existing = []): array {
             'seo' => substr(trim((string)($input['systemPrompts']['seo'] ?? $defaults['systemPrompts']['seo'])), 0, 4000)
         ]
     ];
+
+    require_once __DIR__ . '/agent/agent-config.php';
+    $settings = array_merge($settings, nibblyAgentSettingsForSave($input, $existing));
 
     if ($newApiKeyProvided && !$hadProviderApiKey && empty($input['clearApiKey'])) {
         $settings['enabled'] = true;

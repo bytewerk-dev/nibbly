@@ -2,6 +2,7 @@
 if (!defined('NIBBLY_ADMIN_DIR')) { http_response_code(404); exit; }
 
 // Authenticated dispatcher supplies shared helpers and request context.
+require_once NIBBLY_ADMIN_DIR . '/../includes/ai/agent/agent-config.php';
 switch ($action) {
     case 'ai-resolve-request':
         if (!isAdmin()) jsonResponse(false, null, 'Forbidden');
@@ -17,8 +18,10 @@ switch ($action) {
                 'usage' => null
             ]);
         }
+        $loaded = nibblyAiLoadSettings(true);
+        if (isAdmin()) $loaded['agentStatus'] = nibblyAgentStatusForAdmin();
         jsonResponse(true, [
-            'settings' => nibblyAiLoadSettings(true),
+            'settings' => $loaded,
             'usage' => nibblyAiUsageSummary()
         ]);
         break;
@@ -103,6 +106,7 @@ switch ($action) {
         }
         try {
             $saved = nibblyAiSaveSettings($settings);
+            $saved['agentStatus'] = nibblyAgentStatusForAdmin();
             jsonResponse(true, [
                 'settings' => $saved,
                 'usage' => nibblyAiUsageSummary()
