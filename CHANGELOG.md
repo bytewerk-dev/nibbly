@@ -25,6 +25,9 @@ Git milestones and the gaps in publication records.
   new safe fetch, extracts text, and a separate tool-less model call returns
   only validated facts; the agent never sees a web page. Sources are kept with
   the change set and can be appended to news posts.
+- `read_url`: the agent can read web addresses the user writes in the chat, with
+  or without a Brave key. Only addresses typed by the user are accepted; the
+  same protections as for search results apply.
 - Images for the agent: upload by button or drag and drop (re-encoded without
   metadata), Pexels stock photos with credit, generated images with the AI
   label. Images stay in a staging folder until a package that uses them is

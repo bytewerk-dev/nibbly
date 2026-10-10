@@ -1587,5 +1587,7 @@
     "system.agent_stock": "Chiave per le foto stock",
     "system.agent_storage_note": "L’agente conserva i suoi dati in content/; il controllo di sicurezza qui sopra mostra che questa cartella non è pubblica.",
     "system.configured": "Configurato",
-    "system.not_configured": "Non configurato"
+    "system.not_configured": "Non configurato",
+    "agent.step.read_url": "Legge {detail}",
+    "ai.agent_research_hint": "Anche senza chiave Brave, l’agente può leggere gli indirizzi web che l’utente scrive nella chat."
 }

@@ -79,7 +79,7 @@ assertContains(agent, 'failures >= 3', 'A flaky connection is retried a few time
 assertContains(agent, "data.status === 'busy'", 'A busy run is polled again instead of failing.');
 assertContains(agent, "'waiting_jobs'", 'Image jobs are waited for.');
 assertContains(agent, "state.run.status === 'waiting_jobs' ? 2500 : 150", 'Waiting for images polls slowly.');
-for (const tool of ['search_web', 'read_web_result', 'generate_image', 'import_stock_image', 'stage_create_news', 'present_changeset']) {
+for (const tool of ['search_web', 'read_web_result', 'read_url', 'generate_image', 'import_stock_image', 'stage_create_news', 'present_changeset']) {
     assertContains(agent, "'" + tool + "'", tool + ' has a timeline text.');
 }
 

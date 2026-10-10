@@ -398,6 +398,71 @@ with tempfile.TemporaryDirectory(prefix="nibbly-agent-research-") as folder:
         assert state["status"] == "needs_input", state
         assert len(read_requests) - reads_before == 8 and "page reading limit" in last_tool_message("r8")["error"], "eight reads per run"
 
+        # ---- Addresses the user names (read_url), with and without a search key ------------------------------------------------------------
+        configure(research=False, agent={"limits": {"maxToolFailures": 10}})  # several refusals in one run are the point here
+        owner = Client(site).login("editor")
+        port = web.server_port
+        news = f"http://news.example.test:{port}"
+
+        def url_run(goal, *calls_):
+            queue[:] = [turn(*[call("read_url", {"url": u, "question": "What was decided?"}, f"u{i}") for i, u in enumerate(calls_)]), say("ok")]
+            web_log.clear()
+            read_requests.clear()
+            state = run_to_end(owner, start(goal), max_steps=60)
+            return state
+
+        url_run(f"Please read {news}/bridge and summarise it.", f"{news}/bridge")
+        assert "read_url" in tool_names() and "search_web" not in tool_names() and "read_web_result" not in tool_names(), "without a search key only read_url is offered: " + str(tool_names())
+        assert "read_url reads a page whose address the user wrote" in chat_requests[-1]["messages"][0]["content"] and "search_web finds" not in chat_requests[-1]["messages"][0]["content"], "the prompt matches the tools"
+        seen = last_tool_message("u0")
+        assert seen["untrusted"] is True and seen["source"]["url"] == f"{news}/bridge" and seen["source"]["title"] == "Bridge approved & funded" and seen["facts"], seen
+        assert not [r for r in web_log if r[0] == "api.search.brave.com"] and len(read_requests) == 1, "no search was needed"
+        assert [r[1] for r in web_log if r[0] == "news.example.test"][:2] == ["/robots.txt", "/bridge"], "robots.txt is respected for named pages too"
+        # variations of the same address still match; others do not
+        url_run(f"Look at {news}/bridge.", f"{news}/bridge/", f"HTTP://NEWS.EXAMPLE.TEST:{port}/bridge")
+        assert "facts" in last_tool_message("u0") and "facts" in last_tool_message("u1"), "trailing slash and letter case do not matter"
+        url_run(f"Look at {news}/bridge.", f"{news}/injected", f"{news}/bridge?x=1", f"http://other.example.test:{port}/bridge", "javascript:alert(1)", "/bridge", "news.example.test/bridge")
+        for i in range(6):
+            message = last_tool_message(f"u{i}")
+            assert "addresses that the user wrote" in message.get("error", "") or "error" in message, ("an address the user did not write is refused", i, message)
+        assert not [r for r in web_log if r[1] in ("/injected",)], "the refused address was never fetched"
+        # an address that only appears in a page is not one the user wrote
+        queue[:] = [turn(call("read_url", {"url": f"{news}/bridge", "question": "Links?"}, "p1")),
+                    turn(call("read_url", {"url": "http://evil.example.test/offer", "question": "x"}, "p2")), say("ok")]
+        run_to_end(owner, start(f"Read {news}/injected for me."), max_steps=60)
+        assert "addresses that the user wrote" in last_tool_message("p1").get("error", ""), "the page the user named is /injected, not /bridge"
+        # the user names more addresses in a reply, they become readable
+        queue[:] = [say("Which page should I read?"), turn(call("read_url", {"url": f"{news}/bridge", "question": "Facts?"}, "r1")), say("ok")]
+        run = start("I want a news post about the bridge.")
+        state = run_to_end(owner, run)
+        assert state["status"] == "needs_input", state
+        status, payload = api(owner, "ai-agent-reply", runId=run, message=f"Use {news}/bridge please")
+        assert payload["success"], payload
+        run_to_end(owner, run, max_steps=60)
+        assert "facts" in last_tool_message("r1"), "an address from a later reply works"
+        # what the user may name is still limited by the same rules
+        for typed, expected in [("http://127.0.0.1/x", "not external sources"), ("http://10.0.0.5/x", "cannot be read"), (f"http://private.example.test:{port}/x", "cannot be read"), (f"{news}/secret/page", "robots.txt"), (f"{news}/pdf", "not a web page"), (f"http://user:pass@news.example.test:{port}/bridge", "cannot be read")]:
+            url_run(f"Read {typed}", typed)
+            assert expected in last_tool_message("u0")["error"], (typed, last_tool_message("u0"))
+        configure(research={"denyDomains": ["news.example.test"]})
+        owner = Client(site).login("editor")
+        url_run(f"Read {news}/bridge", f"{news}/bridge")
+        assert "blocked" in last_tool_message("u0")["error"], "the deny list also applies to named addresses"
+        configure(research={"allowDomains": ["blog.example.test"]})
+        owner = Client(site).login("editor")
+        url_run(f"Read {news}/bridge", f"{news}/bridge")
+        assert "allow list" in last_tool_message("u0")["error"], "and so does the allow list"
+        configure(agent={"roles": {"editor": {"research": False}}}, research=False)
+        owner = Client(site).login("editor")
+        queue[:] = [say("ok")]
+        run_to_end(owner, start("Nothing"))
+        assert "read_url" not in tool_names(), "editors without the research right do not get it"
+        configure()
+        owner = Client(site).login("editor")
+        queue[:] = [say("ok")]
+        run_to_end(owner, start("Both"))
+        assert {"read_url", "search_web", "read_web_result"} <= set(tool_names()), "with a key both ways are offered"
+
         # ---- Availability and rights ---------------------------------------------------------------------------------------------------------
         queue[:] = [say("ok")]
         run_to_end(owner, start("Tools with key"))
@@ -426,7 +491,7 @@ with tempfile.TemporaryDirectory(prefix="nibbly-agent-research-") as folder:
             message = last_tool_message("s1")
             assert expected in message["error"] and BRAVE_KEY not in json.dumps(chat_requests[-1]), message
         brave_mode["mode"] = "ok"
-        print("PASS agent research: Brave request, robots.txt, extraction, tool-less reading step, strict schema, fact filter, warnings, sources and the sources block, link rule, limits, rights")
+        print("PASS agent research: Brave request, robots.txt, extraction, tool-less reading step, strict schema, fact filter, warnings, sources and the sources block, link rule, addresses named by the user, limits, rights")
     finally:
         site.close()
         chat.shutdown()

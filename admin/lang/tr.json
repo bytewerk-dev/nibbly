@@ -1587,5 +1587,7 @@
     "system.agent_stock": "Stok fotoğraf anahtarı",
     "system.agent_storage_note": "Ajan verilerini content/ altında saklar; yukarıdaki güvenlik kontrolü bu klasörün herkese açık olmadığını gösterir.",
     "system.configured": "Ayarlandı",
-    "system.not_configured": "Ayarlanmadı"
+    "system.not_configured": "Ayarlanmadı",
+    "agent.step.read_url": "{detail} sayfasını okuyor",
+    "ai.agent_research_hint": "Brave anahtarı olmasa da ajan, kullanıcının sohbete yazdığı web adreslerini okuyabilir."
 }

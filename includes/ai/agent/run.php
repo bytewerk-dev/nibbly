@@ -269,7 +269,7 @@ function nibblyAgentRunBuildMessages(array $run, array $aiSettings, array $tools
 function nibblyAgentToolLabel(array $call): string {
     $args = (array)($call['arguments'] ?? []);
     $parts = [$call['name']];
-    foreach (['target', 'path', 'listKey', 'type', 'query', 'rid'] as $key) {
+    foreach (['target', 'path', 'listKey', 'type', 'query', 'rid', 'url'] as $key) {
         if (isset($args[$key]) && is_string($args[$key])) $parts[] = mb_substr($args[$key], 0, 60, 'UTF-8');
     }
     return implode(' ', $parts);
