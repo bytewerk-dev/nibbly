@@ -671,8 +671,8 @@ $_footerSummary = [
     <script src="<?php echo $basePath; ?>js/email-obfuscator.js"></script>
     <?php endif; ?>
 
-    <?php if ($isAdminLoggedIn): ?>
-    <!-- Inline Editor for logged-in admins -->
+    <?php if ($isAdminLoggedIn && empty($GLOBALS['nibblyAgentPreview']['active'])): ?>
+    <!-- Inline Editor for logged-in admins (not in an AI change set preview: nothing staged may be saved) -->
     <meta name="csrf-token" content="<?php echo htmlspecialchars($csrfToken); ?>">
     <?php if (isset($contentPage)): ?>
     <meta name="content-page" content="<?php echo htmlspecialchars($contentPage); ?>">

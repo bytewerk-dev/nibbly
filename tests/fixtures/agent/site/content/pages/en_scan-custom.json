@@ -6,6 +6,7 @@
         "title": "Welcome",
         "body": "<p>Hello <strong>world</strong></p>",
         "cta": {"text": "Start", "href": "/start"},
+        "more": {"text": "More", "href": "/more", "target": "_blank"},
         "image": {"src": "/assets/images/hero.webp", "alt": "Hero"},
         "photo": "/assets/images/photo.webp",
         "photoAlt": "A photo",

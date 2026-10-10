@@ -49,7 +49,18 @@ function nibblyContentScanEnd(): void {
 }
 
 function nibblyContentReadonly(): bool {
-    return nibblyContentScanActive() || (defined('NIBBLY_CONTENT_READONLY') && NIBBLY_CONTENT_READONLY);
+    return nibblyContentScanActive()
+        || (defined('NIBBLY_CONTENT_READONLY') && NIBBLY_CONTENT_READONLY)
+        || !empty($GLOBALS['nibblyContentReadonlyRuntime']); // preview: set when the request is known to be one
+}
+
+/** News posts and events replaced in memory (preview, render check): id => record, null = removed. */
+function nibblyNewsOverlay(): array {
+    return is_array($GLOBALS['nibblyNewsOverlay'] ?? null) ? $GLOBALS['nibblyNewsOverlay'] : [];
+}
+
+function nibblyEventsOverlay(): array {
+    return is_array($GLOBALS['nibblyEventsOverlay'] ?? null) ? $GLOBALS['nibblyEventsOverlay'] : [];
 }
 
 /**
@@ -1671,6 +1682,18 @@ function loadNewsPosts($limit = 0, $lang = '') {
         $posts[] = $post;
     }
 
+    // Overlay (preview, render check): replaces or adds posts by id; previewed posts are shown even when hidden.
+    $overlay = nibblyNewsOverlay();
+    if ($overlay) {
+        $posts = array_values(array_filter($posts, static fn($post) => !array_key_exists((string)($post['id'] ?? ''), $overlay)));
+        foreach ($overlay as $post) {
+            if (!is_array($post)) continue;
+            $post['hidden'] = false;
+            if ($lang && ($post['lang'] ?? $defaultLang) !== $lang) continue;
+            $posts[] = $post;
+        }
+    }
+
     usort($posts, function($a, $b) {
         return strcmp($b['date'] ?? '', $a['date'] ?? '');
     });
@@ -1793,12 +1816,22 @@ if (!defined('EVENTS_FILE_PATH')) {
  * @return array Array of events, sorted by date (newest first)
  */
 function loadEvents() {
-    if (!file_exists(EVENTS_FILE_PATH)) {
+    if (!file_exists(EVENTS_FILE_PATH) && !nibblyEventsOverlay()) {
         return [];
     }
 
-    $data = json_decode(file_get_contents(EVENTS_FILE_PATH), true);
-    $events = $data['events'] ?? [];
+    $data = file_exists(EVENTS_FILE_PATH) ? json_decode(file_get_contents(EVENTS_FILE_PATH), true) : [];
+    $events = is_array($data['events'] ?? null) ? $data['events'] : [];
+    $overlay = nibblyEventsOverlay();
+    if ($overlay) {
+        $events = array_values(array_filter($events, static fn($event) => !array_key_exists((string)($event['id'] ?? ''), $overlay)));
+        foreach ($overlay as $event) {
+            if (is_array($event)) {
+                unset($event['hidden']); // previewed events are shown
+                $events[] = $event;
+            }
+        }
+    }
 
     usort($events, function($a, $b) {
         return strcmp($b['date'], $a['date']);

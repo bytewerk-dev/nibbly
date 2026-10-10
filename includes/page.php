@@ -29,14 +29,20 @@ if (!defined('SITE_LANG_DEFAULT')) {
     require_once $_includeBase . 'admin/config.php';
 }
 
+if (isset($_GET['nb_agent_preview']) && is_file($_includeBase . 'includes/ai/agent/preview.php')) {
+    require_once $_includeBase . 'includes/ai/agent/preview.php'; // owner-only preview of an AI change set
+    nibblyAgentPreviewBoot();
+}
+$_previewData = function_exists('nibblyContentOverlayFor') ? nibblyContentOverlayFor($contentPage) : null;
+
 $jsonPath = nibblyPageJsonPath(dirname(__DIR__), $lang, $slug);
-if (!file_exists($jsonPath)) {
+if (!file_exists($jsonPath) && $_previewData === null) {
     http_response_code(404);
     include $_includeBase . '404.php';
     return;
 }
 
-$data = json_decode(file_get_contents($jsonPath), true);
+$data = $_previewData ?? json_decode(file_get_contents($jsonPath), true);
 if (!$data) {
     http_response_code(500);
     echo 'Failed to parse content file';
