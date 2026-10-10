@@ -37,6 +37,7 @@ function nibblyAgentDefaultSettings(): array {
         ]],
         'mediaFolder' => 'agent',
         'creditInNews' => true,
+        'sourcesInNews' => true,
     ];
 }
 
@@ -62,7 +63,9 @@ function nibblyAgentSettings(): array {
             $settings['roles']['editor'][$right] = (bool)$raw['roles']['editor'][$right];
         }
     }
-    if (array_key_exists('creditInNews', $raw)) $settings['creditInNews'] = (bool)$raw['creditInNews'];
+    foreach (['creditInNews', 'sourcesInNews'] as $flag) {
+        if (array_key_exists($flag, $raw)) $settings[$flag] = (bool)$raw[$flag];
+    }
     if (isset($raw['mediaFolder']) && is_string($raw['mediaFolder']) && preg_match('/^[a-z0-9_-]{1,40}$/', $raw['mediaFolder'])) {
         $settings['mediaFolder'] = $raw['mediaFolder'];
     }

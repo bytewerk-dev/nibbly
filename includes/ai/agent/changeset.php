@@ -119,7 +119,7 @@ const NIBBLY_AGENT_REQUEST_KEYS = [
     'list_remove' => ['type', 'target', 'listKey', 'index', 'titlePrefix'],
     'list_move' => ['type', 'target', 'listKey', 'from', 'to'],
     'section_insert' => ['type', 'target', 'position', 'sectionType', 'fields'],
-    'create_news' => ['type', 'lang', 'title', 'slug', 'date', 'author', 'excerpt', 'contentHtml', 'imageRef', 'imagePath', 'sourceRids'],
+    'create_news' => ['type', 'lang', 'title', 'slug', 'date', 'author', 'excerpt', 'contentHtml', 'imageRef', 'imagePath'],
     'create_event' => ['type', 'lang', 'title', 'date', 'time', 'location', 'description', 'admission', 'url', 'endDate', 'endTime'],
     'create_page' => ['type', 'lang', 'slug', 'title', 'description', 'sections'],
     'revert_op' => ['type', 'opId'],
@@ -307,6 +307,7 @@ function nibblyAgentBuildOp(array $cs, array $request, array $state): array {
     $type = (string)($request['type'] ?? '');
     $allowed = NIBBLY_AGENT_REQUEST_KEYS[$type] ?? null;
     if ($allowed === null || $type === 'revert_op') throw new NibblyAgentOpException("Unknown operation '{$type}'.");
+    $allowed = array_values(array_unique(array_merge($allowed, ['sourceRids'])));
     foreach (array_keys($request) as $key) {
         if (!in_array($key, $allowed, true)) throw new NibblyAgentOpException("'{$key}' is not an argument of {$type}.", 'Allowed: ' . implode(', ', array_slice($allowed, 1)) . '.');
     }
@@ -477,6 +478,21 @@ function nibblyAgentBuildOp(array $cs, array $request, array $state): array {
             ];
             break;
     }
+    if (!empty($request['sourceRids'])) {
+        $selected = [];
+        foreach (array_values(array_unique(array_map('strval', (array)$request['sourceRids']))) as $rid) {
+            $found = null;
+            foreach ($cs['sources'] as $source) {
+                if (($source['rid'] ?? '') === $rid) $found = $source;
+            }
+            if ($found === null) throw new NibblyAgentOpException("Unknown source {$rid}.", 'Use a rid that read_web_result returned in this run.');
+            $selected[] = $found;
+        }
+        $op['sources'] = array_column($selected, 'rid');
+        if ($type === 'create_news' && isset($op['post']) && (!function_exists('nibblyAgentSettings') || nibblyAgentSettings()['sourcesInNews'])) {
+            $op['post']['content'] .= nibblyAgentSourcesHtml($selected, (string)$op['post']['lang']);
+        }
+    }
     return ['op' => $op, 'warnings' => $warnings];
 }
 
@@ -608,6 +624,10 @@ function nibblyAgentChangesetStage(string $csId, array $request): array {
         }
         $cs['base'] = $base;
         $cs['ops'] = $ops;
+        foreach ($cs['sources'] as &$source) {
+            if (in_array($source['rid'] ?? '', (array)($op['sources'] ?? []), true)) $source['ops'] = array_values(array_unique(array_merge((array)($source['ops'] ?? []), [$op['id']])));
+        }
+        unset($source);
         $cs['validation'] = null;
         $cs['renderCheck'] = null;
         $cs['previewHash'] = '';
@@ -637,6 +657,10 @@ function nibblyAgentRevertOpIn(array &$cs, string $opId): array {
         return ['error' => 'Later operations depend on ' . $opId . ': ' . reset($replay['errors'])['message'], 'hint' => 'Revert the later operations first.'];
     }
     $cs['ops'] = $remaining;
+    foreach ($cs['sources'] as &$source) {
+        $source['ops'] = array_values(array_diff((array)($source['ops'] ?? []), [$opId]));
+    }
+    unset($source);
     $cs['base'] = array_intersect_key($cs['base'], array_flip(nibblyAgentOpTargets($remaining)));
     $cs['validation'] = null;
     $cs['renderCheck'] = null;
@@ -977,7 +1001,7 @@ function nibblyAgentChangesetPreview(array $cs): array {
     return [
         'id' => $cs['id'], 'status' => $cs['status'], 'previewHash' => $cs['previewHash'],
         'targets' => $groups,
-        'sources' => $cs['sources'],
+        'sources' => nibblyAgentPublicSources($cs['sources']),
         'validation' => $cs['validation'],
         'renderCheck' => $cs['renderCheck'],
         'conflicts' => nibblyAgentConflicts($cs),
@@ -1053,4 +1077,34 @@ function nibblyAgentChangesetDiscard(string $csId, array $actor): bool {
         nibblyAgentAudit('agent-discard', true, ['cs' => $csId]);
     }
     return $done;
+}
+
+// ---------------------------------------------------------------------------
+// Sources of a change set
+// ---------------------------------------------------------------------------
+
+/** What the review shows about a source (no internal fields). */
+function nibblyAgentPublicSources(array $sources): array {
+    $out = [];
+    foreach ($sources as $source) {
+        if (!is_array($source)) continue;
+        $out[] = ['rid' => (string)($source['rid'] ?? ''), 'url' => (string)($source['url'] ?? ''), 'title' => (string)($source['title'] ?? ''), 'host' => (string)($source['host'] ?? ''),
+            'date' => $source['date'] ?? null, 'warning' => !empty($source['warning']), 'warnings' => array_values((array)($source['warnings'] ?? [])), 'ops' => array_values((array)($source['ops'] ?? []))];
+    }
+    return $out;
+}
+
+const NIBBLY_AGENT_SOURCES_HEADINGS = ['de' => 'Quellen', 'en' => 'Sources', 'fr' => 'Sources', 'es' => 'Fuentes', 'it' => 'Fonti', 'pt' => 'Fontes', 'pl' => 'Źródła', 'cs' => 'Zdroje', 'tr' => 'Kaynaklar'];
+
+/** The "Sources" block appended to a news post: only URLs the run actually fetched. */
+function nibblyAgentSourcesHtml(array $sources, string $lang): string {
+    if (!$sources) return '';
+    $items = '';
+    foreach ($sources as $source) {
+        $url = (string)($source['url'] ?? '');
+        if (!preg_match('#^https?://#i', $url) || preg_match('/["\'<>]/', $url)) continue;
+        $label = (string)($source['title'] ?? '') !== '' ? (string)$source['title'] : (string)($source['host'] ?? $url);
+        $items .= '<li><a href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '" rel="noopener noreferrer">' . htmlspecialchars(mb_substr($label, 0, 120, 'UTF-8'), ENT_QUOTES, 'UTF-8') . '</a></li>';
+    }
+    return $items === '' ? '' : '<h2>' . (NIBBLY_AGENT_SOURCES_HEADINGS[$lang] ?? 'Sources') . '</h2><ul>' . $items . '</ul>';
 }
