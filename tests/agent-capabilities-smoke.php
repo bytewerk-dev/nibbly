@@ -100,6 +100,7 @@ foreach (['admin/config.php', 'admin/smtp-config.php', 'includes/nav-config.php'
     @unlink($site . '/' . $local); // never inherit a developer's local configuration
 }
 exec('cp -R ' . escapeshellarg($root . '/tests/fixtures/agent/site/.') . ' ' . escapeshellarg($site . '/'));
+rename($site . '/lang-en', $site . '/en'); // the repository ignores en/, so the fixture is stored as lang-en/
 copy(__FILE__, $site . '/tests/agent-capabilities-smoke.php');
 mkdir($site . '/content/news', 0755, true);
 file_put_contents($site . '/content/news/2026-10-01-demo-post.json', json_encode([
