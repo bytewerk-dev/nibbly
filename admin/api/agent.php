@@ -68,7 +68,11 @@ switch ($action) {
         }
         nibblyAgentApiRateLimit($actor, 'runs');
         try {
-            $run = nibblyAgentRunStart($actor, (string)($_POST['goal'] ?? ''));
+            $attached = (string)($_POST['changesetId'] ?? '');
+            if ($attached !== '' && !nibblyAgentValidChangesetId($attached)) {
+                jsonResponse(false, null, 'Invalid change set');
+            }
+            $run = nibblyAgentRunStart($actor, (string)($_POST['goal'] ?? ''), $attached);
         } catch (InvalidArgumentException $e) {
             jsonResponse(false, null, $e->getMessage());
         }
@@ -102,6 +106,75 @@ switch ($action) {
         }
         jsonResponse(true, $result['state'], 'OK');
         break;
+
+    case 'ai-agent-upload':
+        $actor = nibblyAgentApiGuard(true);
+        if (!nibblyAgentCan('uploadImages')) {
+            http_response_code(403);
+            jsonResponse(false, null, 'Forbidden');
+        }
+        $limits = nibblyAgentSettings()['limits'];
+        $rate = nibblyAgentRateLimit($actor['userKey'], 'uploads', ['limit' => $limits['uploadsPer10Minutes'], 'window' => 600]);
+        if (!$rate['allowed']) {
+            http_response_code(429);
+            header('Retry-After: ' . $rate['retryAfter']);
+            jsonResponse(false, ['retryAfter' => $rate['retryAfter']], 'Too many uploads. Please wait a moment and try again.');
+        }
+        $file = $_FILES['image'] ?? $_FILES['file'] ?? null;
+        if (!is_array($file) || !is_string($file['tmp_name'] ?? null) || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name'])) {
+            jsonResponse(false, null, 'Upload error');
+        }
+        $imageConfig = getMediaConfig('image');
+        $extension = strtolower(pathinfo((string)$file['name'], PATHINFO_EXTENSION));
+        if (!in_array($extension, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+            jsonResponse(false, null, 'Only JPEG, PNG and WebP images are accepted.');
+        }
+        if ((int)$file['size'] > (int)$imageConfig['maxSize']) {
+            jsonResponse(false, null, 'File too large');
+        }
+        $attached = (string)($_POST['changesetId'] ?? '');
+        if ($attached !== '') {
+            $target = nibblyAgentValidChangesetId($attached) ? nibblyAgentChangesetLoad($attached) : null;
+            if ($target === null || (string)$target['owner'] !== $actor['userKey'] || $target['status'] !== 'staging') {
+                jsonResponse(false, null, 'Unknown change set');
+            }
+        } else {
+            $attached = nibblyAgentChangesetCreate(['owner' => $actor['userKey']])['id'];
+        }
+        try {
+            $image = nibblyAgentIngestImage($file['tmp_name'], ['maxBytes' => (int)$imageConfig['maxSize']]);
+            $record = nibblyAgentMediaRegister($attached, $image, ['source' => 'upload', 'name' => (string)$file['name'], 'ai' => $image['ai']]);
+        } catch (RuntimeException $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        nibblyAgentAudit('agent-upload', true, ['cs' => $attached, 'ref' => $record['ref'], 'bytes' => $record['bytes']]);
+        jsonResponse(true, ['changesetId' => $attached, 'media' => nibblyAgentMediaSummary($record['ref'], $record),
+            'thumbnail' => 'admin/api.php?action=ai-agent-media&id=' . $attached . '&ref=' . $record['ref']], 'Uploaded');
+        break;
+
+    case 'ai-agent-media':
+        // Staged images (uploads, stock photos, generated images) for the review panel; owner and admins only.
+        $actor = nibblyAgentApiGuard(false);
+        $cs = nibblyAgentChangesetLoad(nibblyAgentApiChangesetId());
+        $ref = (string)($_GET['ref'] ?? '');
+        $media = ($cs !== null && preg_match('/^m_[a-f0-9]{8}$/', $ref)) ? ($cs['media'][$ref] ?? null) : null;
+        if ($cs === null || $media === null || !nibblyAgentCanSeeChangeset($cs, $actor)) {
+            http_response_code(404);
+            jsonResponse(false, null, 'Unknown image');
+        }
+        $stagingDir = realpath(nibblyAgentMediaStagingDir($cs['id']));
+        $file = realpath(nibblyAgentAbsolute((string)$media['stagingFile']));
+        if ($stagingDir === false || $file === false || !str_starts_with($file, $stagingDir . DIRECTORY_SEPARATOR) || !is_file($file)) {
+            http_response_code(404);
+            jsonResponse(false, null, 'The image is no longer staged');
+        }
+        header_remove('Content-Type');
+        header('Content-Type: ' . ($media['mime'] ?? 'image/webp'));
+        header('X-Content-Type-Options: nosniff');
+        header('Cache-Control: private, max-age=300');
+        header('Content-Length: ' . filesize($file));
+        readfile($file);
+        exit;
 
     case 'ai-agent-status':
         $actor = nibblyAgentApiGuard(false);

@@ -91,7 +91,21 @@ function nibblyApiCurrentAiUser(): string {
 }
 
 function nibblyApiCanUseImageJobs(): bool {
-    return isAdmin() || (dashboardAiModuleEnabled() && nibblyCopilotCan('generateImage'));
+    if (isAdmin()) {
+        return true;
+    }
+    if (!dashboardAiModuleEnabled()) {
+        return false;
+    }
+    if (nibblyCopilotCan('generateImage')) {
+        return true;
+    }
+    // Editors whose AI agent may generate images run and poll their own agent jobs.
+    $agent = NIBBLY_ADMIN_DIR . '/../includes/ai/agent/settings.php';
+    if (!function_exists('nibblyAgentCan') && is_file($agent)) {
+        require_once $agent;
+    }
+    return function_exists('nibblyAgentCan') && nibblyAgentCan('generateImages');
 }
 
 function nibblyApiAssertImageJobAccess(array $job): void {

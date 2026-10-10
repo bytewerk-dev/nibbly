@@ -36,6 +36,7 @@ function nibblyAgentDefaultSettings(): array {
             'structural' => true, 'createPages' => true, 'createNews' => true, 'createEvents' => true, 'editSharedContent' => false,
         ]],
         'mediaFolder' => 'agent',
+        'creditInNews' => true,
     ];
 }
 
@@ -61,6 +62,7 @@ function nibblyAgentSettings(): array {
             $settings['roles']['editor'][$right] = (bool)$raw['roles']['editor'][$right];
         }
     }
+    if (array_key_exists('creditInNews', $raw)) $settings['creditInNews'] = (bool)$raw['creditInNews'];
     if (isset($raw['mediaFolder']) && is_string($raw['mediaFolder']) && preg_match('/^[a-z0-9_-]{1,40}$/', $raw['mediaFolder'])) {
         $settings['mediaFolder'] = $raw['mediaFolder'];
     }

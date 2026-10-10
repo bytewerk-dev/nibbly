@@ -685,7 +685,8 @@ function nibblyAiGenerateImageExecute(string $prompt, array $options = []): arra
             'outputFormat' => $outputFormat,
             'outputCompression' => $outputCompression,
             'referencePaths' => $referencePaths,
-            'filenameHint' => $options['filenameHint'] ?? 'ai-image'
+            'filenameHint' => $options['filenameHint'] ?? 'ai-image',
+            'storageDir' => (string)($options['storageDir'] ?? '')
         ]);
         nibblyAiRecordUsage('image', nibblyAiEstimateTokens($prompt), 0, $cost);
         $actualMeta = nibblyAiActualImageMeta($paths);
@@ -722,7 +723,8 @@ function nibblyAiGenerateImageExecute(string $prompt, array $options = []): arra
             'outputFormat' => $outputFormat,
             'outputCompression' => $outputCompression,
             'referencePaths' => $referencePaths,
-            'filenameHint' => $options['filenameHint'] ?? 'ai-image'
+            'filenameHint' => $options['filenameHint'] ?? 'ai-image',
+            'storageDir' => (string)($options['storageDir'] ?? '')
         ]);
         nibblyAiRecordUsage('image', nibblyAiEstimateTokens($prompt), 0, $cost);
         nibblyAiAudit('image', true, [
@@ -810,7 +812,7 @@ function nibblyAiGenerateImageExecute(string $prompt, array $options = []): arra
         } else {
             continue;
         }
-        $paths[] = nibblyAiStoreGeneratedImage($binary, $options['filenameHint'] ?? 'ai-image', $size, count($paths) + 1, $outputFormat, $outputCompression);
+        $paths[] = nibblyAiStoreGeneratedImage($binary, $options['filenameHint'] ?? 'ai-image', $size, count($paths) + 1, $outputFormat, $outputCompression, (string)($options['storageDir'] ?? ''));
     }
     if (!$paths) {
         throw new RuntimeException('AI provider returned no usable image data.');
@@ -980,6 +982,11 @@ function nibblyAiRecordImageHistory(array $entry): array {
         'durationMs' => max(0, (int)($entry['durationMs'] ?? 0)),
         'user' => (string)($_SESSION['admin_username'] ?? ($_SESSION['admin_user_id'] ?? ''))
     ];
+    foreach ($item['outputs'] as $output) {
+        if (str_starts_with((string)$output, '/content/ai-agent/staging/')) {
+            return $item; // images of an agent run are not in the library yet; the history lists library images only
+        }
+    }
     $saved = nibblyJsonUpdate(NIBBLY_AI_IMAGE_HISTORY_PATH, function (array &$history) use ($item): void {
         array_unshift($history['items'], $item);
     }, ['items' => []]);
@@ -1015,7 +1022,7 @@ function nibblyAiCreateImageJob(string $kind, array $payload): array {
     $payload = nibblyAiPersistImageJobReferences($payload, $jobDir);
     $job = [
         'id' => $id,
-        'kind' => in_array($kind, ['dashboard', 'copilot'], true) ? $kind : 'dashboard',
+        'kind' => in_array($kind, ['dashboard', 'copilot', 'agent'], true) ? $kind : 'dashboard',
         'status' => 'queued',
         'createdAt' => gmdate('c'),
         'updatedAt' => gmdate('c'),
@@ -1783,7 +1790,7 @@ function nibblyAiGenerateKieImages(array $settings, array $options): array {
     if (!$urls) throw new RuntimeException($failures[0] ?? 'Kie.ai returned no usable image.');
     $paths = [];
     foreach (array_slice($urls, 0, $count) as $url) {
-        $paths[] = nibblyAiStoreGeneratedImage(nibblyAiDownloadProviderImage((string)$url), (string)($options['filenameHint'] ?? 'ai-image'), (string)($options['size'] ?? 'auto'), count($paths) + 1, (string)($options['outputFormat'] ?? ''), (int)($options['outputCompression'] ?? 75));
+        $paths[] = nibblyAiStoreGeneratedImage(nibblyAiDownloadProviderImage((string)$url), (string)($options['filenameHint'] ?? 'ai-image'), (string)($options['size'] ?? 'auto'), count($paths) + 1, (string)($options['outputFormat'] ?? ''), (int)($options['outputCompression'] ?? 75), (string)($options['storageDir'] ?? ''));
     }
     if ($requestId !== '') nibblyAiRequestPatch($requestId, ['outputs' => $paths]);
     return [$paths, []];
@@ -1848,7 +1855,7 @@ function nibblyAiGenerateOpenRouterImages(array $settings, array $options): arra
             }
             foreach ($payloads as $payload) {
                 $binary = nibblyAiProviderImagePayloadToBinary($payload);
-                $paths[] = nibblyAiStoreGeneratedImage($binary, (string)($options['filenameHint'] ?? 'ai-image'), (string)($options['size'] ?? 'auto'), count($paths) + 1, (string)($options['outputFormat'] ?? ''), (int)($options['outputCompression'] ?? 70));
+                $paths[] = nibblyAiStoreGeneratedImage($binary, (string)($options['filenameHint'] ?? 'ai-image'), (string)($options['size'] ?? 'auto'), count($paths) + 1, (string)($options['outputFormat'] ?? ''), (int)($options['outputCompression'] ?? 70), (string)($options['storageDir'] ?? ''));
                 if (count($paths) >= $count) {
                     break 2;
                 }
@@ -2228,7 +2235,7 @@ function nibblyAiConvertImageBinary(string $binary, int $targetType, int $qualit
     return is_string($out) && $out !== '' ? $out : null;
 }
 
-function nibblyAiStoreGeneratedImage(string $binary, string $hint, string $size = 'auto', int $index = 1, string $requestedFormat = '', int $quality = 70): string {
+function nibblyAiStoreGeneratedImage(string $binary, string $hint, string $size = 'auto', int $index = 1, string $requestedFormat = '', int $quality = 70, string $storageDir = ''): string {
     if (strlen($binary) > 15 * 1024 * 1024) {
         throw new RuntimeException('Generated image is too large.');
     }
@@ -2262,8 +2269,20 @@ function nibblyAiStoreGeneratedImage(string $binary, string $hint, string $size 
         IMAGETYPE_WEBP => 'webp',
         default => 'png'
     };
-    if (!is_dir(NIBBLY_AI_GENERATED_IMAGE_DIR)) {
-        mkdir(NIBBLY_AI_GENERATED_IMAGE_DIR, 0755, true);
+    // Agent runs store into their staging folder (content/ai-agent/staging/...); the library gets the file when the change set is applied.
+    $targetDir = NIBBLY_AI_GENERATED_IMAGE_DIR;
+    $publicBase = '/assets/images/generated/';
+    if ($storageDir !== '') {
+        $stagingRoot = realpath(dirname(__DIR__, 2) . '/content/ai-agent/staging');
+        $real = realpath($storageDir);
+        if ($stagingRoot === false || $real === false || !str_starts_with($real, $stagingRoot . DIRECTORY_SEPARATOR)) {
+            throw new RuntimeException('Invalid image storage folder.');
+        }
+        $targetDir = $real;
+        $publicBase = '/content/ai-agent/staging/' . substr($real, strlen($stagingRoot) + 1) . '/';
+    }
+    if (!is_dir($targetDir)) {
+        mkdir($targetDir, 0755, true);
     }
     $slugSource = trim((string)$hint);
     $slugSource = strtr($slugSource, [
@@ -2285,18 +2304,20 @@ function nibblyAiStoreGeneratedImage(string $binary, string $hint, string $size 
     $indexSlug = $index > 1 ? '-v' . min(99, $index) : '';
     $baseName = $slug . $indexSlug;
     $filename = $baseName . '.' . $ext;
-    $path = NIBBLY_AI_GENERATED_IMAGE_DIR . '/' . $filename;
+    $path = $targetDir . '/' . $filename;
     $counter = 2;
     while (file_exists($path)) {
         $filename = $baseName . '-' . $counter . '.' . $ext;
-        $path = NIBBLY_AI_GENERATED_IMAGE_DIR . '/' . $filename;
+        $path = $targetDir . '/' . $filename;
         $counter++;
     }
     if (file_put_contents($path, $binary, LOCK_EX) === false) {
         throw new RuntimeException('Could not save generated image.');
     }
-    nibblyAiLabelStoredImage($filename);
-    return '/assets/images/generated/' . $filename;
+    if ($storageDir === '') {
+        nibblyAiLabelStoredImage($filename);
+    }
+    return $publicBase . $filename;
 }
 
 /**

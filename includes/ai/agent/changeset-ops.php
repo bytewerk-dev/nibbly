@@ -362,6 +362,13 @@ function nibblyAgentApplyOp(array &$state, array $op): void {
             } else {
                 nibblyAgentWriteImage($doc, (array)$op['spec'], $path, (string)$op['src'], (string)($op['alt'] ?? ''));
                 $after = getNestedValue($doc, $path);
+                if (!empty($op['creditPath']) && !empty($op['creditText'])) {
+                    // The credit goes into the caption; an existing caption keeps its text and gets the credit appended.
+                    $caption = trim((string)getNestedValue($doc, (string)$op['creditPath']));
+                    if (!str_contains($caption, (string)$op['creditText'])) {
+                        setNestedValue($doc, (string)$op['creditPath'], $caption === '' ? $op['creditText'] : $caption . ' – ' . $op['creditText']);
+                    }
+                }
             }
             unset($doc);
             break;

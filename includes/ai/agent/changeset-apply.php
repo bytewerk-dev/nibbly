@@ -334,9 +334,6 @@ function nibblyAgentChangesetApply(string $csId, string $previewHash, array $act
     if ($previewHash === '' || !hash_equals((string)$cs['previewHash'], $previewHash)) {
         return ['ok' => false, 'status' => 'ready', 'error' => 'The change set changed after the preview. Review it again before applying.'];
     }
-    if ($cs['media'] && !function_exists('nibblyAgentApplyMedia')) {
-        return ['ok' => false, 'status' => 'ready', 'error' => 'Images in change sets are not supported yet.'];
-    }
 
     $global = nibblyAgentGlobalLock();
     if ($global === false) return ['ok' => false, 'status' => 'ready', 'error' => 'Another change is being applied. Try again in a moment.'];
@@ -370,10 +367,13 @@ function nibblyAgentChangesetApply(string $csId, string $previewHash, array $act
         foreach ($changed as $file => $change) {
             if ($change['exists']) nibblyAgentBackupFile($file);
         }
+        $movedMedia = [];
         try {
-            if ($cs['media']) nibblyAgentApplyMedia($cs);
+            // Images the package uses move into the library first; if the files cannot be written they move back.
+            if ($cs['media']) $movedMedia = nibblyAgentApplyMedia($cs, $changed);
             nibblyAgentWriteTransaction($csId, 'apply', $changes, $options);
         } catch (Throwable $error) {
+            if ($movedMedia) nibblyAgentRollbackMedia($movedMedia);
             nibblyAgentChangesetMutate($csId, static function (array &$cs) use ($error) {
                 $cs['status'] = 'failed';
                 $cs['error'] = mb_substr($error->getMessage(), 0, 300, 'UTF-8');
@@ -391,13 +391,15 @@ function nibblyAgentChangesetApply(string $csId, string $previewHash, array $act
             $fileInfo[$relative] = ['existed' => $change['exists'], 'kind' => nibblyAgentTargetKindOfFile($file)];
         }
         $applied = ['at' => date('c'), 'by' => (string)($actor['userKey'] ?? ''), 'revisions' => $revisions, 'files' => $fileInfo,
-            'items' => nibblyAgentPublishableItems($cs, $replay['state'])];
+            'items' => nibblyAgentPublishableItems($cs, $replay['state']),
+            'media' => array_map(static fn($m) => ['ref' => $m['ref'], 'name' => $m['name']], $movedMedia)];
         nibblyAgentChangesetMutate($csId, static function (array &$cs) use ($applied) {
             $cs['status'] = 'applied';
             $cs['applied'] = $applied;
             unset($cs['error']);
             return true;
         });
+        nibblyAgentRemoveTree(nibblyAgentDir() . '/staging/' . $csId); // images the package did not use are not kept
         nibblyAgentAudit('agent-apply', true, [
             'cs' => $csId, 'run' => $cs['runId'], 'targets' => nibblyAgentOpTargets($cs['ops']),
             'operations' => array_map(static fn($op) => ['id' => $op['id'], 'type' => $op['type'], 'path' => $op['path'] ?? ($op['listKey'] ?? null), 'valueHash' => nibblyAgentValueHash($op['value'] ?? ($op['item'] ?? ($op['post'] ?? ($op['page'] ?? ($op['event'] ?? ($op['src'] ?? null))))))], $cs['ops']),
@@ -458,6 +460,7 @@ function nibblyAgentChangesetUndo(string $csId, string $token, array $actor, arr
             } else {
                 // News posts have no trash: keep a copy next to the snapshots.
                 $keep = nibblyAgentDir() . '/snapshots/' . $csId . '/undone-' . basename($file);
+                if (!is_dir(dirname($keep)) && !@mkdir(dirname($keep), 0775, true)) return ['ok' => false, 'status' => 'applied', 'error' => 'Could not keep a copy of ' . basename($file) . '.'];
                 if (!@copy($file, $keep)) return ['ok' => false, 'status' => 'applied', 'error' => 'Could not keep a copy of ' . basename($file) . '.'];
                 $changes[] = ['file' => $file, 'remove' => true];
             }
@@ -476,7 +479,8 @@ function nibblyAgentChangesetUndo(string $csId, string $token, array $actor, arr
             $cs['undone'] = ['at' => date('c'), 'by' => (string)($actor['userKey'] ?? '')];
             return true;
         });
-        nibblyAgentAudit('agent-undo', true, ['cs' => $csId, 'files' => array_keys($applied['revisions'])]);
+        $trashed = nibblyAgentUndoMedia((array)($applied['media'] ?? []));
+        nibblyAgentAudit('agent-undo', true, ['cs' => $csId, 'files' => array_keys($applied['revisions']), 'images' => count($trashed)]);
         return ['ok' => true, 'status' => 'undone'];
     } finally {
         nibblyAgentUnlock($locks);
@@ -624,3 +628,5 @@ function nibblyAgentCleanup(?int $now = null): array {
     if (function_exists('nibblyAgentRunCleanup')) $removed['runs'] = nibblyAgentRunCleanup($now);
     return $removed;
 }
+
+require_once __DIR__ . '/media.php';

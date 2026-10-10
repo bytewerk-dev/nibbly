@@ -78,6 +78,31 @@ function nibblySetMediaAiLabel(string $type, string $name, string $kind): bool {
     return $ok;
 }
 
+/**
+ * Source and licence of an imported image: media-meta[type][name]['credit'].
+ * Keys: source, author, authorUrl, sourceUrl, license, attribution, importedAt, importedBy.
+ */
+function nibblySetMediaCredit(string $type, string $name, array $credit): bool {
+    $clean = [];
+    foreach (['source', 'author', 'authorUrl', 'sourceUrl', 'license', 'attribution', 'importedAt', 'importedBy'] as $key) {
+        if (isset($credit[$key]) && is_string($credit[$key]) && $credit[$key] !== '') {
+            $clean[$key] = mb_substr($credit[$key], 0, 300, 'UTF-8');
+        }
+    }
+    $ok = nibblyJsonUpdate(nibblyMediaMetaPath(), function (array &$data) use ($type, $name, $clean) {
+        if ($clean) $data[$type][$name]['credit'] = $clean; else unset($data[$type][$name]['credit']);
+        nibblyMediaMetaPrune($data, $type, $name);
+        return true;
+    });
+    nibblyMediaMeta(true);
+    return $ok;
+}
+
+function nibblyMediaCreditFor(string $type, string $name): array {
+    $credit = nibblyMediaMeta()[$type][$name]['credit'] ?? [];
+    return is_array($credit) ? $credit : [];
+}
+
 /** Carry metadata along when a media file is renamed, moved, trashed or restored. */
 function nibblyMoveMediaMeta(string $fromType, string $fromName, string $toType, string $toName): bool {
     if (!isset(nibblyMediaMeta()[$fromType][$fromName]) || ($fromType === $toType && $fromName === $toName)) return true;

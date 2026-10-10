@@ -54,6 +54,12 @@ function nibblyAgentPreviewBoot(): bool {
     $GLOBALS['nibblyEventsOverlay'] = $events;
     $GLOBALS['nibblyContentReadonlyRuntime'] = true;
     $GLOBALS['nibblyAgentPreview'] = ['active' => true, 'id' => $id];
+    // Staged images are not in the library yet: the page loads them from the review endpoint instead.
+    $staged = [];
+    foreach ((array)$cs['media'] as $ref => $media) {
+        $staged[(string)$media['finalPath']] = '/admin/api.php?action=ai-agent-media&amp;id=' . $id . '&amp;ref=' . $ref; // inside HTML attributes
+    }
+    if ($staged) ob_start(static fn(string $html): string => strtr($html, $staged));
     if (!headers_sent()) {
         header('X-Robots-Tag: noindex, nofollow');
         header('Cache-Control: no-store, max-age=0');

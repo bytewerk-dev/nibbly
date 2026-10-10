@@ -71,6 +71,8 @@ return [
     'ai-agent-discard' => 'agent',
     'ai-agent-undo' => 'agent',
     'ai-agent-publish' => 'agent',
+    'ai-agent-upload' => 'agent',
+    'ai-agent-media' => 'agent',
     'load-events' => 'events',
     'save-event' => 'events',
     'delete-event' => 'events',

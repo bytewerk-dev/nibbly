@@ -46,6 +46,15 @@ function nibblyAgentSystemPrompt(array $run): string {
         '',
         'Today is ' . date('Y-m-d') . '. Site languages: ' . implode(', ', $languages) . ' (primary first).',
     ];
+    $toolNames = array_column(nibblyAgentToolsForUser(), 'name');
+    $imageHints = array_filter([
+        in_array('search_stock_images', $toolNames, true) ? 'search_stock_images and import_stock_image bring in free stock photos' : null,
+        in_array('generate_image', $toolNames, true) ? 'generate_image creates an AI image, only when the user asks for one or nothing else fits' : null,
+    ]);
+    $lines[] = '';
+    $lines[] = 'Images: use images from the media library (list_media) first. Images the user attached are listed by list_run_media.'
+        . ($imageHints ? ' ' . implode('; ', $imageHints) . '.' : '')
+        . ' Every image needs an alt text that describes what is in it. Credits of stock photos are added automatically.';
     if ($rights) {
         $lines[] = 'This user may not: ' . implode('; ', $rights) . '. Do not try; tell them if a request needs it.';
     }
