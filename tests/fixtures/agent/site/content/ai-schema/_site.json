@@ -1,0 +1,7 @@
+{
+    "hints": ["Write in a friendly tone", "Never mention competitors"],
+    "news": {"requireImage": true},
+    "readOnly": ["contact.*"],
+    "fields": {"hero.title": {"maxLength": 5}},
+    "colour": "ignored"
+}

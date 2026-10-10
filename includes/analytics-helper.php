@@ -111,6 +111,8 @@ function nibblyAnalyticsEnabled(): bool {
 
 function nibblyAnalyticsShouldTrack(): bool {
     if (!nibblyAnalyticsEnabled()) return false;
+    // Rendering a page to read its structure is not a visit.
+    if (function_exists('nibblyContentScanActive') && nibblyContentScanActive()) return false;
     $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
     if (preg_match('#^/(admin|api|assets|css|js|content|backups)(/|$)#', $path)) {
         return false;

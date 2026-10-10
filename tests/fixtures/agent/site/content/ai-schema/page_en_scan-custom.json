@@ -1,0 +1,20 @@
+{
+    "fields": {
+        "hero.title": {"maxLength": 40, "required": true},
+        "hero.body": {"maxLength": 99999, "required": false, "readOnly": false},
+        "hero.tagline": {"maxLength": 25},
+        "hero.image": {"imageAspect": "16:9", "creditPath": "hero.credit"},
+        "hero.cta": {"readOnly": true},
+        "gallery.cover": {"imageAspect": "wide"},
+        "does.not.exist": {"maxLength": 3, "required": true}
+    },
+    "lists": {
+        "features.items": {"minItems": 2, "maxItems": 6},
+        "about.paragraphs": {"maxItems": 100, "minItems": -4},
+        "faq.items": {"minItems": 9, "maxItems": 3},
+        "missing.list": {"maxItems": 1}
+    },
+    "readOnly": ["hero.icon"],
+    "hints": ["Titles have at most four words"],
+    "unknownKey": {"anything": true}
+}

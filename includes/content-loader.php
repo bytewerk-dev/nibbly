@@ -12,6 +12,12 @@ if (!defined('CONTENT_BASE_PATH')) {
     define('CONTENT_BASE_PATH', __DIR__ . '/../content/pages/');
 }
 
+// Page templates load this file with a plain include. If it is already loaded (the admin
+// process, a render scan) a second include must do nothing instead of redeclaring every
+// function, so everything below sits in one block that runs once.
+if (!defined('NIBBLY_CONTENT_LOADER_LOADED')) {
+define('NIBBLY_CONTENT_LOADER_LOADED', true);
+
 /**
  * Allowed HTML tags for content areas (XSS protection)
  */
@@ -27,7 +33,19 @@ function sanitizeHtml($html) {
  *  - NIBBLY_CONTENT_READONLY: render (e.g. a preview) without writing to content.
  */
 function nibblyContentScanActive(): bool {
-    return defined('NIBBLY_CONTENT_SCAN') && NIBBLY_CONTENT_SCAN;
+    return (defined('NIBBLY_CONTENT_SCAN') && NIBBLY_CONTENT_SCAN) || !empty($GLOBALS['nibblyContentScanDepth']);
+}
+
+/**
+ * Scan mode for part of a request (the constant switches a whole process).
+ * Calls nest; always end in a finally block.
+ */
+function nibblyContentScanBegin(): void {
+    $GLOBALS['nibblyContentScanDepth'] = (int)($GLOBALS['nibblyContentScanDepth'] ?? 0) + 1;
+}
+
+function nibblyContentScanEnd(): void {
+    $GLOBALS['nibblyContentScanDepth'] = max(0, (int)($GLOBALS['nibblyContentScanDepth'] ?? 0) - 1);
 }
 
 function nibblyContentReadonly(): bool {
@@ -2061,3 +2079,5 @@ function renderEventList($events, $lang = 'de', $showImages = true, $showAddButt
 
     return $html;
 }
+
+} // NIBBLY_CONTENT_LOADER_LOADED
