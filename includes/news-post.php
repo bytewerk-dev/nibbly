@@ -13,6 +13,10 @@ if (!defined('SITE_LANG_DEFAULT') && is_file($_includeBase . 'admin/config.php')
 }
 
 include_once $_includeBase . 'includes/content-loader.php';
+if (isset($_GET['nb_agent_preview']) && is_file($_includeBase . 'includes/ai/agent/preview.php')) {
+    require_once $_includeBase . 'includes/ai/agent/preview.php'; // owner-only preview of an AI change set
+    nibblyAgentPreviewBoot();
+}
 
 $currentLang = $currentLang ?? (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en');
 $currentPage = 'news';
@@ -50,6 +54,14 @@ if (is_dir($newsDir)) {
         if ($postLang !== $currentLang) continue;
         $post = $p;
         break;
+    }
+}
+
+// Preview of an unapplied change set: its posts replace the stored ones (shown even when hidden).
+foreach (function_exists('nibblyNewsOverlay') ? nibblyNewsOverlay() : [] as $_overlayPost) {
+    if (is_array($_overlayPost) && ($_overlayPost['slug'] ?? '') === $slug && ($_overlayPost['lang'] ?? $_defaultLang) === $currentLang) {
+        $_overlayPost['hidden'] = false;
+        $post = $_overlayPost;
     }
 }
 

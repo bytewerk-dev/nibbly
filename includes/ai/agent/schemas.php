@@ -53,7 +53,7 @@ function nibblyAgentEventSchema(array $languages): array {
         ['path' => 'time', 't' => 'time', 'req' => true],
         ['path' => 'end-date', 't' => 'date'],
         ['path' => 'end-time', 't' => 'time'],
-        ['path' => 'url', 't' => 'link', 'max' => 500],
+        ['path' => 'url', 't' => 'link', 'fmt' => 'string', 'max' => 500],
         ['path' => 'image', 't' => 'image', 'fmt' => 'string'],
     ];
     foreach (['title' => ['text', 180, true], 'location' => ['text', 240, true], 'description' => ['html', 20000, false], 'admission' => ['text', 160, false]] as $key => [$type, $max, $required]) {

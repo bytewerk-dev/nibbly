@@ -18,6 +18,10 @@
 
 require_once __DIR__ . '/access-guard.php';
 require_once __DIR__ . '/page-path.php';
+if (isset($_GET['nb_agent_preview']) && is_file(__DIR__ . '/ai/agent/preview.php')) {
+    require_once __DIR__ . '/ai/agent/preview.php'; // owner-only preview of an AI change set
+    nibblyAgentPreviewBoot();
+}
 nibblyAccessEnforceMaintenance();
 if (!empty($contentPage)) {
     nibblyAccessEnforceCurrentTemplatePage((string)$contentPage);
@@ -264,6 +268,7 @@ nibblyStartEmailObfuscation();
     </script>
 </head>
 <body class="<?php echo $isHomepage ? 'page-home' : 'page-subpage'; ?><?php echo isset($pageClass) ? ' ' . $pageClass : ''; ?><?php echo $_nibblyDevLogin ? ' has-dev-login' : ''; ?>"<?php echo $_nibblyDevLogin ? ' data-dev-login="true"' : ''; ?>>
+    <?php if (!empty($GLOBALS['nibblyAgentPreview']['active'])) echo nibblyAgentPreviewBanner(); ?>
     <a class="skip-link" href="#main-content">Skip to main content</a>
 
     <!-- Fixed Header -->

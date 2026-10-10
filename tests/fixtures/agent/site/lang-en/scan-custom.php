@@ -24,6 +24,7 @@ $featureSchema = ['label' => 'Feature', 'fields' => [
         <p><?php echo editableText($_p, 'hero.tagline', 'Default tagline'); ?></p>
         <div><?php echo editableHtml($_p, 'hero.body', '<p>Default</p>'); ?></div>
         <?php echo editableLink($_p, 'hero.cta', 'Go', '#', 'btn'); ?>
+        <?php echo editableLink($_p, 'hero.more', 'More', '/more'); ?>
         <?php echo editableImage($_p, 'hero.image', '/assets/images/placeholder-image.webp', 'Hero alt', 'hero__img'); ?>
         <?php echo editableImageSplit($_p, 'hero.photo', 'hero.photoAlt', '/assets/images/placeholder-image.webp', 'Photo alt'); ?>
         <?php echo editableImage($_p, 'gallery.cover', '/assets/images/placeholder-image.webp', 'Cover'); ?>
@@ -56,7 +57,11 @@ $featureSchema = ['label' => 'Feature', 'fields' => [
     </section>
 
     <section class="faq">
-        <div<?php echo editableListAttrs($_p, 'faq.items', ['question' => 'Question?', 'answer' => '', 'link' => ['text' => '', 'href' => '']]); ?>></div>
+        <div<?php echo editableListAttrs($_p, 'faq.items', ['question' => 'Question?', 'answer' => '', 'link' => ['text' => '', 'href' => '']]); ?>>
+            <?php foreach (editableListItems($_p, 'faq.items') as $i => $item): ?>
+                <div<?php echo editableListItemAttrs($_p, 'faq.items', $i); ?>><?php echo editableText($_p, "faq.items.$i.question", ''); ?></div>
+            <?php endforeach; ?>
+        </div>
     </section>
 </main>
 <?php include '../includes/footer.php'; ?>

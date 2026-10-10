@@ -58,6 +58,7 @@ function nibblyAgentPrefix(string $text, int $max): string {
 }
 
 function nibblyAgentReadJsonFile(string $file): ?array {
+    clearstatcache(true, $file); // other requests and processes write these files
     if (!is_file($file)) return null;
     $data = json_decode((string)file_get_contents($file), true);
     return is_array($data) ? $data : null;
@@ -538,7 +539,7 @@ function nibblyAgentBuildFixedMap(array $info, array $data, array $schema, strin
         }
         $extra = ['req' => !empty($spec['req'])];
         if (isset($spec['max'])) $extra['max'] = $spec['max'];
-        if ($spec['t'] === 'image') $extra['format'] = 'string';
+        if ($spec['t'] === 'image' || ($spec['t'] === 'link' && ($spec['fmt'] ?? '') === 'string')) $extra['format'] = 'string';
         $map['fields'][$path] = nibblyAgentFieldEntry($path, $spec['t'], $stored ?? '', $extra);
     }
     foreach (['id', 'hidden', 'lastModified'] as $structural) {

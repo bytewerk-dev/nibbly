@@ -28,6 +28,12 @@ require_once $configPath;
 require_once __DIR__ . '/includes/page-path.php';
 require_once __DIR__ . '/includes/access-guard.php';
 nibblyAccessEnforceMaintenance();
+// Owner-only preview of an AI change set: its new pages exist only as overlay, so the router must know them.
+if (isset($_GET['nb_agent_preview']) && is_file(__DIR__ . '/includes/ai/agent/preview.php')) {
+    require_once __DIR__ . '/includes/ai/agent/preview.php';
+    nibblyAgentPreviewBoot();
+}
+$nibblyPreviewHas = static fn(string $key): bool => function_exists('nibblyContentOverlayFor') && nibblyContentOverlayFor($key) !== null;
 require_once __DIR__ . '/includes/seo-helper.php';
 
 // Apply migration redirects before any other routing — a redirected URL
@@ -59,7 +65,7 @@ if (preg_match('/^[a-z]{2}$/D', $cleanUri) && isset($SITE_LANGUAGES[$cleanUri]))
         include $langHome;
         exit;
     }
-    if (is_file(nibblyPageJsonPath(__DIR__, $lang, $slug))) {
+    if (is_file(nibblyPageJsonPath(__DIR__, $lang, $slug)) || $nibblyPreviewHas(nibblyPageContentKey($lang, $slug))) {
         include __DIR__ . '/includes/page.php';
         exit;
     }
@@ -121,7 +127,7 @@ if (preg_match('#^([a-z]{2})/(' . nibblyPagePathPattern() . ')$#', $cleanUri, $m
 
     // 2. JSON content → front controller
     $jsonFile = nibblyPageJsonPath(__DIR__, $lang, $slug);
-    if (is_file($jsonFile)) {
+    if (is_file($jsonFile) || $nibblyPreviewHas($contentPage)) {
         $basePath = nibblyPageBasePath($slug, true);
         include __DIR__ . '/includes/page.php';
         exit;
@@ -147,7 +153,7 @@ if (preg_match('#^' . nibblyPagePathPattern() . '$#', $cleanUri)) {
 
     // 2. JSON content → front controller
     $jsonFile = nibblyPageJsonPath(__DIR__, $lang, $slug);
-    if (is_file($jsonFile)) {
+    if (is_file($jsonFile) || $nibblyPreviewHas($contentPage)) {
         $basePath = nibblyPageBasePath($slug, false);
         include __DIR__ . '/includes/page.php';
         exit;
