@@ -9,7 +9,7 @@ if (!in_array($_SERVER['REQUEST_METHOD'], ['GET', 'POST'], true)) {
 $readOnly = preg_match('/^(load|list|get)-/', $action) || in_array($action, [
     'load', 'backups', 'preview-backup', 'keepalive', 'dashboard-overview', 'system-status',
     'iconify-search', 'ai-image-history', 'ai-image-jobs', 'ai-copilot-context',
-    'ai-copilot-history-list', 'ai-copilot-history-load', 'ai-openrouter-models',
+    'ai-copilot-history-list', 'ai-copilot-history-load', 'ai-openrouter-models', 'ai-agent-status', 'ai-agent-changeset',
     'media-trash-file', 'image-trash-file', 'unread-mail-count', 'download-site-backup',
     'backup-status', 'backup-list', 'backup-remote-list'
 ], true);

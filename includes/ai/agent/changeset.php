@@ -986,6 +986,30 @@ function nibblyAgentChangesetRevalidate(string $csId, array $actor): array {
     return $outcome;
 }
 
+/** After a review the user wants changes: a ready change set goes back to staging. */
+function nibblyAgentChangesetReopen(string $csId, array $actor): bool {
+    $done = false;
+    nibblyAgentChangesetMutate($csId, static function (array &$cs) use ($actor, &$done) {
+        if (!nibblyAgentCanSeeChangeset($cs, $actor) || !in_array($cs['status'], ['ready', 'staging', 'conflict'], true)) return false;
+        $cs['status'] = 'staging';
+        $cs['validation'] = null;
+        $cs['renderCheck'] = null;
+        $cs['previewHash'] = '';
+        $done = true;
+        return true;
+    });
+    return $done;
+}
+
+/** URLs the user typed later in the conversation become usable as external links. */
+function nibblyAgentChangesetAllowUrls(string $csId, array $urls): void {
+    if (!$urls) return;
+    nibblyAgentChangesetMutate($csId, static function (array &$cs) use ($urls) {
+        $cs['allowedUrls'] = array_values(array_unique(array_merge($cs['allowedUrls'], $urls)));
+        return true;
+    });
+}
+
 function nibblyAgentChangesetDiscard(string $csId, array $actor): bool {
     $done = false;
     nibblyAgentChangesetMutate($csId, static function (array &$cs) use ($actor, &$done) {
