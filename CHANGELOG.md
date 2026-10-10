@@ -9,6 +9,50 @@ Git milestones and the gaps in publication records.
 
 ## Unreleased
 
+### Added
+
+- **AI agent in the frontend Copilot (off by default).** An optional agent mode
+  works through a request with a fixed set of tools, stages all changes in a
+  change set and presents it for review: before/after per operation, images with
+  credit and AI badge, sources with warnings, validation and render checks, a
+  preview on the real page (owner only), one confirmed click to apply, a backup
+  and journal for every apply, undo, and a separate publish step. New news,
+  events and pages stay hidden or private until published. A chat "yes" never
+  applies anything.
+- Page structure is learned from the rendered template (capability map with a
+  cache) plus optional restricting overrides in `content/ai-schema/`.
+- Web research with the Brave Search API: the server fetches pages through the
+  new safe fetch, extracts text, and a separate tool-less model call returns
+  only validated facts; the agent never sees a web page. Sources are kept with
+  the change set and can be appended to news posts.
+- Images for the agent: upload by button or drag and drop (re-encoded without
+  metadata), Pexels stock photos with credit, generated images with the AI
+  label. Images stay in a staging folder until a package that uses them is
+  applied.
+- Settings in Dashboard → Settings → AI Settings → "AI agent": enable, limits
+  per run, what editors may do, Brave and Pexels keys (masked, kept when empty),
+  media folder, credits and sources in news, clearing the scan cache. System
+  status shows what the agent needs (tool calling, GD and WebP, keys, storage).
+- Texts for the agent in all nine admin languages.
+
+### Changed
+
+- `nibblyNetSafeFetch()` (`includes/ai/agent/net.php`) is now the only way to
+  fetch external URLs: public addresses only (IPv4 and IPv6 ranges), DNS pinning,
+  manual redirects, size and content-type limits. Existing external fetches use it.
+- Generated images get the AI label automatically; events are written through
+  the locked JSON update; a file-based rate limiter backs the agent's limits.
+- Saving the AI settings keeps the `agent`, `research` and `stock` sections when
+  a caller does not send them.
+
+### Security
+
+- External links written by the agent must come from the user or from a fetched
+  source of the run, also inside rich text.
+- The status of a foreign change set is no longer revealed by `ai-agent-revalidate`.
+- Added `agent-security-smoke.py`, `agent-api-smoke.js` and a Chromium check
+  (`tests/agent-browser-check.py`, also run in CI).
+
 ## [2.2.0] — 2026-09-27
 
 ### Security

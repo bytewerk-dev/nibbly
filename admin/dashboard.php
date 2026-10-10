@@ -2015,6 +2015,72 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </div>
                     </fieldset>
 
+                    <fieldset class="settings-section" id="aiAgentSection">
+                        <legend><?php echo t('ai.agent_title'); ?></legend>
+                        <p class="form-hint ai-section-hint"><?php echo t('ai.agent_hint'); ?></p>
+                        <div class="ai-status-box" id="aiAgentStatus" hidden></div>
+                        <div class="form-group ai-enable-row">
+                            <label class="toggle-label"><span><?php echo t('ai.agent_enable'); ?></span><div class="toggle-switch"><input type="checkbox" id="aiAgentEnabled"><span class="toggle-slider"></span></div></label>
+                        </div>
+
+                        <h4 class="ai-subheading"><?php echo t('ai.agent_limits'); ?></h4>
+                        <div class="form-row-inline">
+                            <div class="form-group"><label for="aiAgentRunsPerHour"><?php echo t('ai.agent_runs_per_hour'); ?></label><input type="number" id="aiAgentRunsPerHour" min="1" max="200" value="10"></div>
+                            <div class="form-group"><label for="aiAgentMaxTurns"><?php echo t('ai.agent_max_turns'); ?></label><input type="number" id="aiAgentMaxTurns" min="1" max="40" value="14"></div>
+                            <div class="form-group"><label for="aiAgentMaxToolCalls"><?php echo t('ai.agent_max_tool_calls'); ?></label><input type="number" id="aiAgentMaxToolCalls" min="1" max="200" value="40"></div>
+                        </div>
+                        <div class="form-row-inline">
+                            <div class="form-group"><label for="aiAgentMaxCost"><?php echo t('ai.agent_max_cost'); ?></label><input type="number" id="aiAgentMaxCost" min="1" max="10000" value="100"></div>
+                            <div class="form-group"><label for="aiAgentMaxRuntime"><?php echo t('ai.agent_max_runtime'); ?></label><input type="number" id="aiAgentMaxRuntime" min="1" max="60" value="15"></div>
+                            <div class="form-group"><label for="aiAgentUploads"><?php echo t('ai.agent_uploads'); ?></label><input type="number" id="aiAgentUploads" min="1" max="100" value="10"></div>
+                        </div>
+
+                        <h4 class="ai-subheading"><?php echo t('ai.agent_roles'); ?></h4>
+                        <p class="form-hint"><?php echo t('ai.agent_roles_hint'); ?></p>
+                        <div class="form-group access-toggle-row ai-feature-toggle-grid">
+                            <?php foreach (['publish', 'stockImages', 'uploadImages', 'generateImages', 'research', 'structural', 'createPages', 'createNews', 'createEvents', 'editSharedContent'] as $_agentRight): ?>
+                            <label class="toggle-label"><span><?php echo t('ai.agent_right_' . $_agentRight); ?></span><div class="toggle-switch"><input type="checkbox" id="aiAgentRight_<?php echo $_agentRight; ?>" data-agent-right="<?php echo $_agentRight; ?>"><span class="toggle-slider"></span></div></label>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <h4 class="ai-subheading"><?php echo t('ai.agent_images'); ?></h4>
+                        <div class="form-row-inline">
+                            <div class="form-group">
+                                <label for="aiAgentMediaFolder"><?php echo t('ai.agent_media_folder'); ?></label>
+                                <input type="text" id="aiAgentMediaFolder" maxlength="40" pattern="[a-z0-9_\-]{1,40}" placeholder="agent">
+                                <small class="form-hint"><?php echo t('ai.agent_media_folder_hint'); ?></small>
+                            </div>
+                            <div class="form-group">
+                                <label for="aiPexelsApiKey"><?php echo t('ai.agent_pexels_key'); ?></label>
+                                <input type="password" id="aiPexelsApiKey" autocomplete="new-password">
+                                <small class="form-hint" id="aiPexelsApiKeyHint"></small>
+                                <label class="checkbox-label"><input type="checkbox" id="aiClearPexelsApiKey"> <?php echo t('ai.agent_clear_key'); ?></label>
+                            </div>
+                        </div>
+                        <div class="form-group"><label class="toggle-label"><span><?php echo t('ai.agent_credit_in_news'); ?></span><div class="toggle-switch"><input type="checkbox" id="aiAgentCreditInNews"><span class="toggle-slider"></span></div></label></div>
+
+                        <h4 class="ai-subheading"><?php echo t('ai.agent_research'); ?></h4>
+                        <div class="form-group">
+                            <label for="aiBraveApiKey"><?php echo t('ai.agent_brave_key'); ?></label>
+                            <input type="password" id="aiBraveApiKey" autocomplete="new-password">
+                            <small class="form-hint" id="aiBraveApiKeyHint"></small>
+                            <label class="checkbox-label"><input type="checkbox" id="aiClearBraveApiKey"> <?php echo t('ai.agent_clear_key'); ?></label>
+                        </div>
+                        <div class="form-row-inline">
+                            <div class="form-group"><label for="aiAgentAllowDomains"><?php echo t('ai.agent_allow_domains'); ?></label><textarea id="aiAgentAllowDomains" rows="3" spellcheck="false" placeholder="example.org"></textarea></div>
+                            <div class="form-group"><label for="aiAgentDenyDomains"><?php echo t('ai.agent_deny_domains'); ?></label><textarea id="aiAgentDenyDomains" rows="3" spellcheck="false" placeholder="example.com"></textarea></div>
+                        </div>
+                        <div class="form-group access-toggle-row ai-feature-toggle-grid">
+                            <label class="toggle-label"><span><?php echo t('ai.agent_respect_robots'); ?></span><div class="toggle-switch"><input type="checkbox" id="aiAgentRespectRobots"><span class="toggle-slider"></span></div></label>
+                            <label class="toggle-label"><span><?php echo t('ai.agent_sources_in_news'); ?></span><div class="toggle-switch"><input type="checkbox" id="aiAgentSourcesInNews"><span class="toggle-slider"></span></div></label>
+                        </div>
+
+                        <div class="form-group">
+                            <button type="button" class="btn btn-secondary btn-sm" id="aiAgentClearCache"><?php echo t('ai.agent_clear_cache'); ?></button>
+                            <small class="form-hint"><?php echo t('ai.agent_cache_hint'); ?></small>
+                        </div>
+                    </fieldset>
+
                     <div class="settings-actions-row">
                         <button type="submit" class="btn btn-primary" id="saveAiSettingsBtn"><?php echo t('ai.save_settings'); ?></button>
                         <button type="button" class="btn btn-secondary" id="testAiBtn"><?php echo t('ai.test_connection'); ?></button>

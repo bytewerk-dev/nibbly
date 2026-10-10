@@ -37,6 +37,7 @@ includes/
   content-loader.php  Template API (editable fields, render components)
   forms.php            JSON-backed public forms
   ai/               AI provider gateway, limits, usage, audit, generated images
+  ai/agent/         AI agent: tool gateway, safe fetch, capability map, change sets, loop, images, research
   block-types.php     Block type registry
   block-renderers/    One PHP file per block type
   nav-config.php      Navigation items + page mapping
@@ -280,6 +281,23 @@ Usage counters live in `content/ai-usage.json`; request audit lines live in
 future core features should use the AI gateway functions or `admin/api.php` AI
 actions so limits, audit logging, key handling, and generated-file storage stay
 centralized.
+
+The file also holds the sections `agent` (enable, limits per run, `roles.editor`
+rights, `mediaFolder`, `creditInNews`, `sourcesInNews`), `research` (`brave.apiKey`,
+`allowDomains`, `denyDomains`, `respectRobots`) and `stock` (`pexels.apiKey`) for the
+AI agent. They are written through `nibblyAiSaveSettings()` (keys are only replaced
+when a new one is typed; sections a caller does not send are kept) and appear in
+`load-ai-settings` without keys (`hasBraveApiKey`, `hasPexelsApiKey`). The agent's
+own data lives under `content/ai-agent/` (runs, change sets, staging, scan cache,
+rate counters) and `content/ai-schema/` holds optional per-page restrictions; both
+are covered by the protection of `content/`.
+
+The AI agent is described in `AI-AGENT-GUIDE.md` → "AI Agent (Frontend Copilot)".
+Its main stored objects: a **run** (`content/ai-agent/runs/run_*.json`: transcript,
+status, counters; only the owner and admins can read it), a **change set**
+(`content/ai-agent/changesets/cs_*.json`: operations, base revisions, sources,
+staged images, validation, apply result) and **snapshots** of every file an apply
+changes (`content/ai-agent/snapshots/`).
 
 The dashboard uses the gateway for assistant chat, text generation, SEO/AEO field
 prefill, image generation, and image-to-image workflows. Local/private provider

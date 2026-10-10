@@ -152,6 +152,18 @@ switch ($action) {
             'thumbnail' => 'admin/api.php?action=ai-agent-media&id=' . $attached . '&ref=' . $record['ref']], 'Uploaded');
         break;
 
+    case 'ai-agent-clear-cache':
+        // The cached scan of the page templates; rebuilt on demand. Settings area, administrators only.
+        if (!dashboardAiModuleEnabled()) jsonResponse(false, null, 'AI module is disabled');
+        if (!isAdmin()) {
+            http_response_code(403);
+            jsonResponse(false, null, 'Forbidden');
+        }
+        $removed = nibblyAgentClearCapabilityCache();
+        nibblyAgentAudit('agent-cache-clear', true, ['files' => $removed]);
+        jsonResponse(true, ['removed' => $removed], 'Cache cleared');
+        break;
+
     case 'ai-agent-media':
         // Staged images (uploads, stock photos, generated images) for the review panel; owner and admins only.
         $actor = nibblyAgentApiGuard(false);

@@ -197,6 +197,41 @@ async function mainFlow(browser, user) {
         assert(JSON.parse(fs.readFileSync(path.join(siteRoot, 'content/news', newsFiles()[0]), 'utf8')).hidden !== true, 'publishing makes the news post visible');
         await context.close();
 
+        // ---- Dashboard: the agent section of the AI settings ------------------------------------------------------------------------------
+        ({ context, page } = await login(browser, 'admin'));
+        await page.locator('.sidebar-nav-item[data-tab="settings"]').click();
+        await page.locator('.settings-tab-btn[data-settings-tab="ai"]').click();
+        await page.locator('#aiAgentSection').waitFor({ state: 'visible' });
+        await page.waitForFunction(() => document.getElementById('aiAgentEnabled').checked === true, null, { timeout: 15000 });
+        assert((await page.locator('#aiAgentStatus').textContent()).includes('ready'), 'the status says the agent is ready: ' + await page.locator('#aiAgentStatus').textContent());
+        assert(await page.locator('#aiBraveApiKeyHint').textContent().then(text => /No API key stored/.test(text)), 'no research key yet');
+        await page.fill('#aiBraveApiKey', 'BSA-browser-brave-key-1234');
+        await page.fill('#aiAgentRunsPerHour', '5');
+        await page.fill('#aiAgentAllowDomains', 'Example.org\nhttps://www.example.net/page');
+        for (const [id, wanted] of [['aiAgentRight_createEvents', false], ['aiAgentRight_publish', true]]) {
+            if (await page.locator('#' + id).isChecked() !== wanted) await page.locator('label.toggle-label', { has: page.locator('#' + id) }).click();
+            assert(await page.locator('#' + id).isChecked() === wanted, id + ' toggles');
+        }
+        await page.screenshot({ path: path.join(shots, 'agent-settings.png'), fullPage: false });
+        await page.locator('#saveAiSettingsBtn').click();
+        await page.locator('#aiBraveApiKeyHint', { hasText: 'An API key is stored' }).waitFor({ state: 'visible', timeout: 20000 });
+        assert((await page.locator('#aiBraveApiKey').inputValue()) === '', 'the key field is empty again after saving');
+        assert(!(await page.content()).includes('BSA-browser-brave-key'), 'the key is never rendered back');
+        assert((await page.locator('#aiAgentAllowDomains').inputValue()) === 'example.org\nexample.net', 'domains are shown normalised');
+        const savedSettings = JSON.parse(fs.readFileSync(path.join(siteRoot, 'content/ai-settings.json'), 'utf8'));
+        assert(savedSettings.research.brave.apiKey === 'BSA-browser-brave-key-1234' && savedSettings.agent.limits.runsPerHour === 5 && savedSettings.agent.roles.editor.createEvents === false && savedSettings.agent.roles.editor.publish === true, 'the form saved what was entered');
+        // saving again without typing the key keeps it
+        await page.locator('#saveAiSettingsBtn').click();
+        await page.waitForTimeout(1500);
+        assert(JSON.parse(fs.readFileSync(path.join(siteRoot, 'content/ai-settings.json'), 'utf8')).research.brave.apiKey === 'BSA-browser-brave-key-1234', 'an empty key field keeps the saved key');
+        await page.locator('#aiAgentClearCache').click();
+        await page.locator('.toast, [role="status"]', { hasText: 'Cache cleared' }).first().waitFor({ state: 'visible', timeout: 10000 });
+        // The system status lists what the agent needs, never a key
+        await page.locator('.sidebar-nav-item[data-tab="system"]').click().catch(() => null);
+        const systemText = await page.evaluate(async () => (await (await fetch('api.php?action=system-status&scheme=http')).text()));
+        assert(systemText.includes('"agent"') && !systemText.includes('BSA-browser'), 'system status without keys');
+        await context.close();
+
         if (errors.length) throw new Error(errors.join('\n'));
         console.log('agent-check ok');
     } catch (error) {

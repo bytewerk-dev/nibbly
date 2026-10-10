@@ -1054,6 +1054,7 @@
             if (el) el.value = values[id];
         });
         updateAiImageModelControl(settings);
+        populateAgentSettings(settings);
         var keyInput = document.getElementById('aiApiKey');
         if (keyInput) keyInput.value = '';
         var clearKey = document.getElementById('aiClearApiKey');
@@ -1096,6 +1097,7 @@
         if (imagePicker) {
             document.getElementById('aiImageModel').value = imagePicker.value;
         }
+        var agentPart = collectAgentSettings();
         return {
             enabled: document.getElementById('aiEnabled').checked,
             provider: provider,
@@ -1130,9 +1132,150 @@
                 inputCentsPerMillion: parseInt(document.getElementById('aiInputPrice').value || '0', 10),
                 outputCentsPerMillion: parseInt(document.getElementById('aiOutputPrice').value || '0', 10),
                 imageCentsPerRequest: parseInt(document.getElementById('aiImagePrice').value || '0', 10)
+            },
+            agent: agentPart.agent,
+            research: agentPart.research,
+            stock: agentPart.stock
+        };
+    }
+
+    // ---- AI agent section ----------------------------------------------------------------------------------
+    var agentRightIds = ['publish', 'stockImages', 'uploadImages', 'generateImages', 'research', 'structural', 'createPages', 'createNews', 'createEvents', 'editSharedContent'];
+
+    function agentInt(id, fallback) {
+        var value = parseInt(document.getElementById(id)?.value || '', 10);
+        return Number.isFinite(value) ? value : fallback;
+    }
+
+    function collectAgentSettings() {
+        var roles = {};
+        agentRightIds.forEach(function(right) {
+            var el = document.getElementById('aiAgentRight_' + right);
+            if (el) roles[right] = el.checked;
+        });
+        return {
+            agent: {
+                enabled: !!document.getElementById('aiAgentEnabled')?.checked,
+                limits: {
+                    runsPerHour: agentInt('aiAgentRunsPerHour', 10),
+                    maxTurns: agentInt('aiAgentMaxTurns', 14),
+                    maxToolCalls: agentInt('aiAgentMaxToolCalls', 40),
+                    maxCostCentsPerRun: agentInt('aiAgentMaxCost', 100),
+                    maxRuntimeSeconds: agentInt('aiAgentMaxRuntime', 15) * 60,
+                    uploadsPer10Minutes: agentInt('aiAgentUploads', 10)
+                },
+                roles: { editor: roles },
+                mediaFolder: (document.getElementById('aiAgentMediaFolder')?.value || '').trim() || 'agent',
+                creditInNews: !!document.getElementById('aiAgentCreditInNews')?.checked,
+                sourcesInNews: !!document.getElementById('aiAgentSourcesInNews')?.checked
+            },
+            research: {
+                braveApiKey: (document.getElementById('aiBraveApiKey')?.value || '').trim(),
+                clearBraveApiKey: !!document.getElementById('aiClearBraveApiKey')?.checked,
+                allowDomains: document.getElementById('aiAgentAllowDomains')?.value || '',
+                denyDomains: document.getElementById('aiAgentDenyDomains')?.value || '',
+                respectRobots: !!document.getElementById('aiAgentRespectRobots')?.checked
+            },
+            stock: {
+                pexelsApiKey: (document.getElementById('aiPexelsApiKey')?.value || '').trim(),
+                clearPexelsApiKey: !!document.getElementById('aiClearPexelsApiKey')?.checked
             }
         };
     }
+
+    function populateAgentSettings(settings) {
+        var agent = settings.agent || {};
+        var limits = agent.limits || {};
+        var editor = (agent.roles && agent.roles.editor) || {};
+        var research = settings.research || {};
+        var stock = settings.stock || {};
+        var checks = {
+            aiAgentEnabled: !!agent.enabled,
+            aiAgentCreditInNews: agent.creditInNews !== false,
+            aiAgentSourcesInNews: agent.sourcesInNews !== false,
+            aiAgentRespectRobots: research.respectRobots !== false
+        };
+        Object.keys(checks).forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.checked = checks[id];
+        });
+        agentRightIds.forEach(function(right) {
+            var el = document.getElementById('aiAgentRight_' + right);
+            if (el) el.checked = editor[right] === true;
+        });
+        var values = {
+            aiAgentRunsPerHour: limits.runsPerHour ?? 10,
+            aiAgentMaxTurns: limits.maxTurns ?? 14,
+            aiAgentMaxToolCalls: limits.maxToolCalls ?? 40,
+            aiAgentMaxCost: limits.maxCostCentsPerRun ?? 100,
+            aiAgentMaxRuntime: Math.max(1, Math.round((limits.maxRuntimeSeconds ?? 900) / 60)),
+            aiAgentUploads: limits.uploadsPer10Minutes ?? 10,
+            aiAgentMediaFolder: agent.mediaFolder || 'agent',
+            aiAgentAllowDomains: (research.allowDomains || []).join('\n'),
+            aiAgentDenyDomains: (research.denyDomains || []).join('\n'),
+            // Keys are never sent back: the fields stay empty and the hints say whether a key is saved.
+            aiBraveApiKey: '',
+            aiPexelsApiKey: ''
+        };
+        Object.keys(values).forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.value = values[id];
+        });
+        ['aiClearBraveApiKey', 'aiClearPexelsApiKey'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.checked = false;
+        });
+        var braveHint = document.getElementById('aiBraveApiKeyHint');
+        if (braveHint) braveHint.textContent = research.hasBraveApiKey ? t('ai.api_key_saved') : t('ai.api_key_missing');
+        var pexelsHint = document.getElementById('aiPexelsApiKeyHint');
+        if (pexelsHint) pexelsHint.textContent = stock.hasPexelsApiKey ? t('ai.api_key_saved') : t('ai.api_key_missing');
+        renderAgentStatus(settings);
+    }
+
+    function renderAgentStatus(settings) {
+        var box = document.getElementById('aiAgentStatus');
+        if (!box) return;
+        var status = settings.agentStatus;
+        if (!status) {
+            box.hidden = true;
+            return;
+        }
+        var messages = [];
+        if (!(settings.agent && settings.agent.enabled)) {
+            messages.push(t('ai.agent_status_off'));
+        } else if (!settings.enabled || !settings.hasApiKey) {
+            messages.push(t('ai.agent_status_ai_off'));
+        } else if (!status.toolCalling) {
+            messages.push(t('ai.agent_status_no_tools'));
+        } else {
+            messages.push(t('ai.agent_status_ready'));
+        }
+        if (!status.gd) messages.push(t('ai.agent_status_no_gd'));
+        else if (!status.webp) messages.push(t('ai.agent_status_no_webp'));
+        if (settings.agent && settings.agent.enabled && status.limits && (status.limits.maxInputTokens < 40000 || (status.limits.dailyRequests > 0 && status.limits.dailyRequests < 100))) {
+            messages.push(t('ai.agent_status_limits', { requests: status.limits.dailyRequests, tokens: status.limits.maxInputTokens }));
+        }
+        box.textContent = messages.join(' ');
+        box.hidden = false;
+    }
+
+    document.getElementById('aiAgentClearCache')?.addEventListener('click', async function() {
+        var button = this;
+        button.disabled = true;
+        try {
+            var formData = new FormData();
+            formData.append('action', 'ai-agent-clear-cache');
+            formData.append('csrf_token', CSRF_TOKEN);
+            var response = await fetch('api.php', { method: 'POST', body: formData });
+            var result = await response.json();
+            if (!result.success) throw new Error(result.message);
+            showToast(t('ai.agent_cache_cleared', { count: result.data.removed }), 'success');
+        } catch (error) {
+            showToast(error.message, 'error');
+        } finally {
+            button.disabled = false;
+        }
+    });
 
     document.getElementById('aiProvider')?.addEventListener('change', function() {
         var baseUrl = document.getElementById('aiBaseUrl');

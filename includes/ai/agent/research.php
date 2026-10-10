@@ -16,6 +16,7 @@
 
 require_once __DIR__ . '/net.php';
 require_once __DIR__ . '/settings.php';
+require_once __DIR__ . '/agent-config.php';
 
 const NIBBLY_AGENT_MAX_WEB_SEARCHES = 4;
 const NIBBLY_AGENT_MAX_WEB_READS = 8;
@@ -47,22 +48,6 @@ function nibblyAgentResearchSettings(): array {
         'denyDomains' => nibblyAgentResearchDomains($raw['denyDomains'] ?? []),
         'respectRobots' => !array_key_exists('respectRobots', $raw) || !empty($raw['respectRobots']),
     ];
-}
-
-/** @return string[] lowercase host names (without scheme, path, port or a leading www.) */
-function nibblyAgentResearchDomains($value): array {
-    if (is_string($value)) $value = preg_split('/[\s,;]+/', $value) ?: [];
-    $domains = [];
-    foreach ((array)$value as $entry) {
-        if (!is_string($entry)) continue;
-        $entry = strtolower(trim($entry));
-        $entry = preg_replace('#^[a-z][a-z0-9+.-]*://#', '', $entry) ?? '';
-        $entry = preg_replace('#[/:?\#].*$#', '', $entry) ?? '';
-        $entry = preg_replace('/^www\./', '', $entry) ?? '';
-        if (preg_match('/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/', $entry)) $domains[$entry] = true;
-        if (count($domains) >= 100) break;
-    }
-    return array_keys($domains);
 }
 
 function nibblyAgentResearchAvailable(): bool {

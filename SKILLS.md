@@ -401,6 +401,53 @@ Customize the site's colors, fonts, and spacing via CSS Custom Properties.
 
 ---
 
+## Skill: ai-schema-override
+
+### Description
+Restrict what the AI agent (the Copilot's agent mode) may change on a page you built. The agent learns a page's fields by rendering its template and reading the `data-*` attributes (the "capability map"), so a correctly built Nibbly page needs no extra file. Add an override only when a site needs tighter rules than the template shows: a headline that must stay short, a legally relevant paragraph the agent must not touch, a card list with a maximum, or a hint such as "write in the formal tone". Overrides can only **restrict**; they can never make a field editable or lift a limit.
+
+### Prerequisites
+- Read `AI-AGENT-GUIDE.md` → "AI Agent (Frontend Copilot)"
+- The page is already editable (see `make-page-editable`); override the paths its `editableText()`, `editableHtml()`, `editableImage()` and list helpers produce.
+
+### Steps
+1. Find the paths the agent sees: open the page as editor, ask the agent in the chat to "list what can be edited on this page", or read the `data-field` values of the rendered page.
+2. Create `content/ai-schema/{target}.json`. The file name is the target with `:` replaced by `_`:
+   - page `en_services__test` (the content key; `/` becomes `__`) → `page_en_services__test.json`
+   - news post `2026-10-10-launch` → `news_2026-10-10-launch.json`
+   - shared footer / sidebar → `page_footer.json` / `page_sidebar.json`
+3. Describe the restrictions:
+   ```json
+   {
+     "fields": {
+       "hero.title": { "maxLength": 60, "required": true },
+       "legal.notice": { "readOnly": true },
+       "team.image": { "imageAspect": "1:1", "creditPath": "team.imageCredit" }
+     },
+     "lists": {
+       "team.items": { "minItems": 1, "maxItems": 8 }
+     },
+     "readOnly": ["pricing.*", "legal.*"],
+     "hints": ["Address visitors formally.", "Never mention competitors."],
+     "news": { "requireImage": true }
+   }
+   ```
+   - `fields.{path}`: `maxLength` (lowers the limit), `required`, `readOnly`, `imageAspect` (e.g. `16:9`), `creditPath` (field that receives photo credits; by default the agent uses the caption of image sections).
+   - `lists.{listKey}`: `minItems` and `maxItems` (0–1000).
+   - `readOnly`: path patterns in shell style (`*` matches any characters, e.g. `pricing.*` covers every field and list below `pricing`; letters, digits, `_`, `.`, `-`, `*` are allowed); matching fields and lists are not editable by the agent.
+   - `hints`: up to 10 short sentences (200 characters each) that go into the agent's view of the page. Hints are guidance, not security: the agent's text is still validated.
+   - `news.requireImage`: new news posts need a cover image (only used for news targets).
+4. Optional site-wide file `content/ai-schema/_site.json` may use only `readOnly`, `hints` and `news`; `fields` and `lists` are ignored there because they are page specific.
+5. Clear the page scan cache after you changed a **template** (Dashboard → Settings → AI Settings → "AI agent" → "Clear page scan cache"). Changing an override file takes effect immediately.
+
+### Validation
+- `php -r 'json_decode(file_get_contents("content/ai-schema/page_en_home.json"), true) ?: exit(1);'` (valid JSON; an invalid file is ignored and the agent mentions it)
+- Ask the agent to change a read-only field: it must answer that the field cannot be edited, and a staged operation must fail validation.
+- `python3 tests/run-smoke.py` stays green (`agent-capabilities-smoke.php` covers the restriction rules).
+- `content/ai-schema/` is under `content/` and therefore not public.
+
+---
+
 ## Skill: add-language
 
 ### Description

@@ -185,6 +185,17 @@
             const runtime = group(t('system.runtime'));
             runtime.append(row('PHP', data.php));
             for (const ext of data.extensions) runtime.append(row(ext.name, t(ext.available ? 'system.available' : 'system.missing')));
+            if (data.agent) {
+                const agent = group(t('system.agent'));
+                agent.append(row(t('system.agent_state'), t(data.agent.enabled ? 'system.agent_on' : 'system.agent_off')));
+                agent.append(row(t('system.agent_tools'), t(data.agent.toolCalling ? 'system.available' : 'system.missing')));
+                agent.append(row(t('system.agent_gd'), t(data.agent.gd ? 'system.available' : 'system.missing')));
+                agent.append(row(t('system.agent_webp'), t(data.agent.webp ? 'system.available' : 'system.missing')));
+                agent.append(row(t('system.agent_research'), t(data.agent.research ? 'system.configured' : 'system.not_configured')));
+                agent.append(row(t('system.agent_stock'), t(data.agent.stock ? 'system.configured' : 'system.not_configured')));
+                agent.append(row('content/ai-agent/', t(data.agent.storageWritable ? 'system.writable' : 'system.not_writable')));
+                const note = document.createElement('p'); note.textContent = t('system.agent_storage_note'); agent.append(note);
+            }
             const storage = group(t('system.storage'));
             for (const path of data.paths) storage.append(row(path.name, t(path.writable ? 'system.writable' : 'system.not_writable')));
             storage.append(row(t('system.last_backup'), data.lastBackup ? new Date(data.lastBackup).toLocaleString() : t('system.no_backup')));
