@@ -239,6 +239,18 @@ function nibblyAgentDynamicFieldSpec(array $map, string $path, string $usedFor, 
     return $spec;
 }
 
+/** Where the credit of an image goes: the override's creditPath, or the caption of an image section. */
+function nibblyAgentCreditPath(array $map, string $path, array $state, string $target): ?string {
+    $field = $map['fields'][$path] ?? null;
+    if ($field !== null && !empty($field['creditPath'])) return (string)$field['creditPath'];
+    if (preg_match('/^sections\.(\d+)\.(src|image)$/', $path, $m)) {
+        $doc = nibblyAgentFinalDoc($state, $target) ?? [];
+        $type = (string)($doc['sections'][(int)$m[1]]['type'] ?? '');
+        if ($type === 'image') return 'sections.' . $m[1] . '.caption';
+    }
+    return null;
+}
+
 function nibblyAgentListSpec(array $map, string $listKey): array {
     $list = $map['lists'][$listKey] ?? null;
     if ($list === null || !empty($list['readOnly'])) {
@@ -324,7 +336,19 @@ function nibblyAgentBuildOp(array $cs, array $request, array $state): array {
             $op['spec'] = nibblyAgentFieldSpec($map, $op['path'], 'set_image', $state, $target);
             $op['src'] = nibblyAgentResolveImage($request['mediaRef'] ?? $request['libraryPath'] ?? null, $cs, $op['path']);
             $op['alt'] = $op['spec']['fmt'] === 'string' ? '' : nibblyAgentNormalizeAlt($request['alt'] ?? '', $op['path'] . '.alt');
-            if (!empty($request['mediaRef'])) $op['mediaRef'] = (string)$request['mediaRef'];
+            if (!empty($request['mediaRef'])) {
+                $op['mediaRef'] = (string)$request['mediaRef'];
+                $credit = nibblyAgentCreditText((array)($cs['media'][$op['mediaRef']]['credit'] ?? []), (string)($map['lang'] ?? ''));
+                if ($credit !== '') {
+                    $creditPath = nibblyAgentCreditPath($map, $op['path'], $state, $target);
+                    if ($creditPath !== null) {
+                        $op['creditPath'] = $creditPath;
+                        $op['creditText'] = $credit;
+                    } else {
+                        $warnings[] = "This image needs the credit \"{$credit}\", but {$op['path']} has no caption field; it is stored in the media library.";
+                    }
+                }
+            }
             break;
 
         case 'list_insert':
@@ -390,7 +414,13 @@ function nibblyAgentBuildOp(array $cs, array $request, array $state): array {
                 'hidden' => true,
             ];
             if ($title === '') throw new NibblyAgentOpException('The news title is empty.');
-            if (!empty($request['imageRef'])) $op['mediaRef'] = (string)$request['imageRef'];
+            if (!empty($request['imageRef'])) {
+                $op['mediaRef'] = (string)$request['imageRef'];
+                $credit = nibblyAgentCreditText((array)($cs['media'][$op['mediaRef']]['credit'] ?? []), $lang);
+                if ($credit !== '' && (!function_exists('nibblyAgentSettings') || nibblyAgentSettings()['creditInNews'])) {
+                    $op['post']['content'] .= '<p><em>' . htmlspecialchars($credit, ENT_QUOTES, 'UTF-8') . '</em></p>';
+                }
+            }
             break;
 
         case 'create_event':

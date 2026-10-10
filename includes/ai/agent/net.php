@@ -232,6 +232,9 @@ function nibblyNetPrepareUrl(string $url, array $options = []): array {
     if ($host === null) {
         throw new NibblyNetException('invalid_host', 'Invalid host name.');
     }
+    if (isset($options['allowedHosts']) && !in_array($host, array_map('strtolower', (array)$options['allowedHosts']), true)) {
+        throw new NibblyNetException('blocked_host', 'This host is not on the allowlist.');
+    }
 
     if (filter_var($host, FILTER_VALIDATE_IP)) {
         $ips = [$host];
@@ -330,7 +333,8 @@ function nibblyNetNormalizeContentType(string $contentType): string {
 /**
  * Fetch a public URL with GET.
  *
- * Options: maxBytes (2 MB), allowedContentTypes (html/xhtml/plain), maxRedirects (3, at
+ * Options: headers (extra request headers, first host only), maxBytes (2 MB), allowedContentTypes (html/xhtml/plain), allowedHosts (every hop,
+ * redirects included, must be one of them), maxRedirects (3, at
  * most 3), connectTimeout (5 s), timeout (15 s), userAgent, accept, resolver (callable
  * host => string[], for tests and alternative resolvers). Under the CLI SAPIs the tests
  * may also pass testAllowedPorts, testConnectMap (validated IP => IP actually dialled)
@@ -352,6 +356,11 @@ function nibblyNetSafeFetch(string $url, array $options = []): array {
 
     $current = $url;
     $redirects = [];
+    $firstHost = null;
+    $extraHeaders = [];
+    foreach ((array)($options['headers'] ?? []) as $header) {
+        if (is_string($header) && preg_match('/^[A-Za-z0-9-]{1,40}: [^\r\n]{0,400}$/', $header)) $extraHeaders[] = $header;
+    }
     for ($hop = 0; $hop <= $maxRedirects; $hop++) {
         $target = nibblyNetPrepareUrl($current, $options);
         $request = [
@@ -366,7 +375,10 @@ function nibblyNetSafeFetch(string $url, array $options = []): array {
             'timeout' => (int)($options['timeout'] ?? 15),
             'userAgent' => (string)($options['userAgent'] ?? 'nibbly-fetch/1.0'),
             'accept' => (string)($options['accept'] ?? 'text/html,application/xhtml+xml,text/plain;q=0.8'),
+            // Extra request headers (an API key) go to the host the caller named, never to a redirect target.
+            'headers' => ($hop === 0 || ($target['host'] === ($firstHost ?? null))) ? $extraHeaders : [],
         ];
+        $firstHost ??= $target['host'];
         $response = $transport !== null ? nibblyNetRunTransport($transport, $request) : nibblyNetCurlRequest($request);
 
         $status = (int)$response['status'];
@@ -498,7 +510,7 @@ function nibblyNetCurlRequest(array $request): array {
         CURLOPT_CONNECTTIMEOUT => $request['connectTimeout'],
         CURLOPT_TIMEOUT => $request['timeout'],
         CURLOPT_USERAGENT => $request['userAgent'],
-        CURLOPT_HTTPHEADER => ['Accept: ' . $request['accept']],
+        CURLOPT_HTTPHEADER => array_merge(['Accept: ' . $request['accept']], $request['headers']),
         CURLOPT_ENCODING => 'gzip,deflate',
         CURLOPT_SSL_VERIFYPEER => true,
         CURLOPT_SSL_VERIFYHOST => 2,

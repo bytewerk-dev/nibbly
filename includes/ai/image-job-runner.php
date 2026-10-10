@@ -78,6 +78,9 @@ function nibblyAiRunImageJobClaimed(string $jobId, ?callable $assertAccess = nul
         if ($prompt === '') {
             throw new RuntimeException('Image job prompt is missing.');
         }
+        if ($kind === 'agent' && empty($options['storageDir'])) {
+            throw new RuntimeException('An agent image job needs its staging folder.');
+        }
         $result = nibblyAiGenerateImage($prompt, $options);
         return nibblyAiFinishImageJob($jobId, $result);
     } catch (Throwable $e) {

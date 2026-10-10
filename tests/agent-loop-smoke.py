@@ -140,7 +140,7 @@ with tempfile.TemporaryDirectory(prefix="nibbly-agent-loop-") as folder:
         assert first["messages"][0]["role"] == "system" and "Nibbly CMS" in first["messages"][0]["content"] and time.strftime("%Y-%m-%d") in first["messages"][0]["content"], "system prompt"
         names = [t["function"]["name"] for t in first["tools"]]
         assert "stage_set_field" in names and "validate_changeset" in names and "present_changeset" in names, names
-        assert not [n for n in names if "search_web" in n or "generate_image" in n or "import_stock" in n], "tools of later phases are not offered"
+        assert not [n for n in names if "search_web" in n or "stock" in n], "tools of later phases (research) and unconfigured stock photos are not offered"
         assert first["messages"][-1] == {"role": "user", "content": "Update the services page and write a news post about it. SECRET-GOAL-TEXT"}
         second = json.dumps(requests[1]["messages"])
         assert "en_services__test" in second and "latestNews" in second, "the overview is handed back as a tool result"

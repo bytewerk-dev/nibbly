@@ -61,10 +61,23 @@ function nibblyAgentRunFail(array &$run, string $code, string $message): void {
 // ---------------------------------------------------------------------------
 
 /** Start a run for a goal the user typed. The caller checks rights and rate limits. */
-function nibblyAgentRunStart(array $actor, string $goal): array {
+function nibblyAgentRunStart(array $actor, string $goal, string $changesetId = ''): array {
     $goal = trim($goal);
     if (mb_strlen($goal, 'UTF-8') < 3) throw new InvalidArgumentException('Please describe what the agent should do.');
     $goal = mb_substr($goal, 0, 2000, 'UTF-8');
+    $message = $goal;
+    if ($changesetId !== '') {
+        // Images the user dropped into the chat before sending were registered in a change set of their own.
+        $attached = nibblyAgentChangesetLoad($changesetId);
+        if ($attached === null || (string)$attached['owner'] !== (string)$actor['userKey'] || $attached['status'] !== 'staging' || $attached['runId'] !== '') {
+            throw new InvalidArgumentException('The attached images are no longer available. Attach them again.');
+        }
+        $names = [];
+        foreach ($attached['media'] as $ref => $media) {
+            $names[] = $ref . ' (' . ($media['name'] !== '' ? $media['name'] . ', ' : '') . $media['width'] . '×' . $media['height'] . ')';
+        }
+        if ($names) $message .= "\n\n[Attached images: " . implode('; ', $names) . '. Use them with their mediaRef.]';
+    }
     $run = [
         'id' => 'run_' . bin2hex(random_bytes(8)),
         'owner' => (string)$actor['userKey'],
@@ -73,12 +86,16 @@ function nibblyAgentRunStart(array $actor, string $goal): array {
         'roundStartedAt' => time(),
         'roundTurns' => 0, 'roundToolCalls' => 0,
         'turns' => 0, 'toolCalls' => 0, 'costCents' => 0, 'nextTurn' => 0,
-        'failures' => [], 'transcript' => [['role' => 'user', 'content' => $goal]], 'pending' => [],
-        'events' => [], 'eventSeq' => 0, 'changesetId' => '', 'question' => '', 'summary' => '', 'openQuestions' => [], 'finalText' => '', 'error' => '',
+        'failures' => [], 'transcript' => [['role' => 'user', 'content' => $message]], 'pending' => [],
+        'events' => [], 'eventSeq' => 0, 'changesetId' => $changesetId, 'question' => '', 'summary' => '', 'openQuestions' => [], 'finalText' => '', 'error' => '',
     ];
     if ($run['owner'] === '') throw new InvalidArgumentException('A run needs a signed-in user.');
     nibblyAgentRunEvent($run, 'start');
     nibblyAgentRunSave($run);
+    if ($changesetId !== '') {
+        nibblyAgentChangesetMutate($changesetId, static function (array &$cs) use ($run) { $cs['runId'] = $run['id']; return true; });
+        nibblyAgentChangesetAllowUrls($changesetId, nibblyAgentExtractUrls($goal));
+    }
     nibblyAgentAudit('agent-run-start', true, ['run' => $run['id'], 'goalHash' => hash('sha256', $goal), 'goalLength' => mb_strlen($goal, 'UTF-8')]);
     return $run;
 }
@@ -172,6 +189,7 @@ function nibblyAgentRunPublicState(array $run, int $after = 0): array {
         'usage' => ['turns' => $run['turns'], 'toolCalls' => $run['toolCalls'], 'costCents' => $run['costCents'],
             'limits' => ['maxTurns' => $limits['maxTurns'], 'maxToolCalls' => $limits['maxToolCalls'], 'maxCostCentsPerRun' => $limits['maxCostCentsPerRun']]],
     ];
+    if ($run['status'] === 'waiting_jobs') $state['jobs'] = array_values((array)($run['jobs'] ?? []));
     if ($run['status'] === 'needs_input') $state['question'] = $run['question'] !== '' ? $run['question'] : $run['finalText'];
     if ($run['status'] === 'awaiting_review') $state += ['summary' => $run['summary'], 'openQuestions' => $run['openQuestions']];
     if ($run['status'] === 'failed') $state += ['error' => $run['error'], 'errorCode' => $run['errorCode'] ?? ''];
@@ -271,6 +289,11 @@ function nibblyAgentRunExecutePending(array &$run, array $actor, array $limits, 
         } else {
             try {
                 $outcome = nibblyAgentExecuteTool($run, $call, $actor);
+            } catch (NibblyAgentToolWaiting $e) {
+                $run['status'] = 'waiting_jobs';
+                $run['jobs'] = [$e->jobId];
+                nibblyAgentRunEvent($run, 'waiting', ['label' => 'image']);
+                return; // the next step looks at the job again
             } catch (NibblyAgentToolDeferred $e) {
                 $run['pending'][0]['deferrals'] = (int)($call['deferrals'] ?? 0) + 1;
                 if ($run['pending'][0]['deferrals'] > NIBBLY_AGENT_RUN_MAX_DEFERRALS) {
@@ -282,6 +305,10 @@ function nibblyAgentRunExecutePending(array &$run, array $actor, array $limits, 
             }
         }
         array_shift($run['pending']);
+        if ($run['status'] === 'waiting_jobs') {
+            $run['status'] = 'running';
+            $run['jobs'] = [];
+        }
         $run['toolCalls']++;
         $run['roundToolCalls']++;
         $run['transcript'][] = ['role' => 'tool', 'toolCallId' => $call['id'], 'content' => $outcome['content'], 'digest' => $outcome['digest'], 'isError' => $outcome['isError']];
@@ -363,7 +390,7 @@ function nibblyAgentRunStep(string $runId, array $actor, array $options = []): a
             @unlink($marker);
             return nibblyAgentRunApplyCancel($run, $actor);
         }
-        if ($run['status'] !== 'running') return ['idle' => true];
+        if (!in_array($run['status'], ['running', 'waiting_jobs'], true)) return ['idle' => true];
         $limits = nibblyAgentSettings()['limits'];
         $max = (int)ini_get('max_execution_time');
         $seconds = (int)($options['deadlineSeconds'] ?? ($max > 0 ? min(50, $max - 15) : 50));

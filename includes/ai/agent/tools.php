@@ -13,6 +13,8 @@
 
 require_once __DIR__ . '/settings.php';
 require_once __DIR__ . '/changeset-apply.php';
+require_once __DIR__ . '/media.php';
+require_once dirname(__DIR__) . '/image-job-runner.php';
 
 if (!class_exists('NibblyAgentToolDeferred', false)) {
     /** The tool cannot finish in this request (e.g. a second template render); retry in the next step. */
@@ -20,7 +22,22 @@ if (!class_exists('NibblyAgentToolDeferred', false)) {
     }
 }
 
+if (!class_exists('NibblyAgentToolWaiting', false)) {
+    /** The tool started something slow (an image job) and finishes in a later step; the run waits. */
+    class NibblyAgentToolWaiting extends RuntimeException {
+        public string $jobId;
+
+        public function __construct(string $jobId) {
+            parent::__construct('Waiting for an image job.');
+            $this->jobId = $jobId;
+        }
+    }
+}
+
 const NIBBLY_AGENT_TOOL_RESULT_CHARS = 11000;
+const NIBBLY_AGENT_MAX_STOCK_SEARCHES = 6;
+const NIBBLY_AGENT_MAX_STOCK_IMPORTS = 6;
+const NIBBLY_AGENT_MAX_GENERATED_IMAGES = 2;
 
 // ---------------------------------------------------------------------------
 // Definitions
@@ -52,6 +69,13 @@ function nibblyAgentToolDefinitions(): array {
             'parameters' => $object(['query' => $text(80), 'folder' => $text(80), 'limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 24]]), 'right' => null, 'handler' => 'nibblyAgentToolListMedia'],
         'list_run_media' => ['description' => 'Images collected during this run (uploads, imported or generated images) as m_* references.',
             'parameters' => $object([]), 'right' => null, 'handler' => 'nibblyAgentToolListRunMedia'],
+
+        'search_stock_images' => ['description' => 'Search free stock photos (Pexels). Returns result ids (sid), descriptions and sizes; import one with import_stock_image. At most ' . NIBBLY_AGENT_MAX_STOCK_SEARCHES . ' searches per run.',
+            'parameters' => $object(['query' => $text(200), 'orientation' => ['type' => 'string', 'enum' => ['landscape', 'portrait', 'square']], 'count' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 8]], ['query']), 'right' => 'stockImages', 'handler' => 'nibblyAgentToolStockSearch', 'available' => 'nibblyAgentStockAvailable'],
+        'import_stock_image' => ['description' => 'Download a stock photo from the last search results into this run. Returns a mediaRef for set_image, stage_create_news (imageRef) or list items. You write the alt text yourself.',
+            'parameters' => $object(['sid' => $text(20)], ['sid']), 'right' => 'stockImages', 'handler' => 'nibblyAgentToolStockImport', 'available' => 'nibblyAgentStockAvailable'],
+        'generate_image' => ['description' => 'Generate an image from a description (AI). The image is labelled as AI-generated on the site. It takes a while; at most ' . NIBBLY_AGENT_MAX_GENERATED_IMAGES . ' per run, so use it only when no photo fits or the user asked for it. Returns a mediaRef.',
+            'parameters' => $object(['prompt' => $text(1500), 'aspect' => ['type' => 'string', 'enum' => ['1:1', '3:2', '2:3', '16:9']]], ['prompt']), 'right' => 'generateImages', 'handler' => 'nibblyAgentToolGenerateImage', 'available' => 'nibblyAgentImagesAvailable'],
 
         'stage_set_field' => ['description' => 'Change one text, rich text (HTML), link or icon field. Value: a string, or {text, href} for links. Paths below lists and sections use the indexes of the change set as it is now.',
             'parameters' => $object(['target' => $target, 'path' => $text(160), 'value' => ['description' => 'New value.']], ['target', 'path', 'value']), 'right' => 'edit', 'handler' => 'nibblyAgentToolStage'],
@@ -90,6 +114,7 @@ function nibblyAgentToolsForUser(): array {
     $tools = [];
     foreach (nibblyAgentToolDefinitions() as $name => $tool) {
         if ($tool['right'] !== null && !nibblyAgentCan($tool['right'])) continue;
+        if (!empty($tool['available']) && !($tool['available'])()) continue;
         $tools[] = ['name' => $name, 'description' => $tool['description'], 'parameters' => $tool['parameters']];
     }
     return $tools;
@@ -120,7 +145,7 @@ function nibblyAgentExecuteTool(array &$run, array $call, array $actor): array {
     $name = (string)$call['name'];
     try {
         $tool = $definitions[$name] ?? null;
-        if ($tool === null) throw new NibblyAgentOpException("Unknown tool '{$name}'.");
+        if ($tool === null || (!empty($tool['available']) && !($tool['available'])())) throw new NibblyAgentOpException("Unknown tool '{$name}'.");
         if ($tool['right'] !== null && !nibblyAgentCan($tool['right'])) {
             throw new NibblyAgentOpException("You are not allowed to use {$name}.", 'The signed-in user does not have the right for this. Do it differently or explain it to the user.');
         }
@@ -129,6 +154,8 @@ function nibblyAgentExecuteTool(array &$run, array $call, array $actor): array {
     } catch (NibblyAgentOpException $e) {
         $result = ['error' => $e->getMessage()] + ($e->hint !== '' ? ['hint' => $e->hint] : []);
         $isError = true;
+    } catch (NibblyAgentToolWaiting $e) {
+        throw $e;
     } catch (NibblyAgentToolDeferred | NibblyAgentScanDeferred $e) {
         throw new NibblyAgentToolDeferred($e->getMessage());
     } catch (Throwable $e) {
@@ -362,7 +389,7 @@ function nibblyAgentToolListRunMedia(string $name, array $args, array &$run, arr
     $cs = !empty($run['changesetId']) ? nibblyAgentChangesetLoad($run['changesetId']) : null;
     $items = [];
     foreach ((array)($cs['media'] ?? []) as $ref => $media) {
-        $items[] = ['mediaRef' => $ref] + array_intersect_key((array)$media, array_flip(['source', 'credit', 'ai', 'width', 'height']));
+        $items[] = nibblyAgentMediaSummary((string)$ref, (array)$media);
     }
     return ['items' => $items];
 }
@@ -440,4 +467,117 @@ function nibblyAgentToolPresent(string $name, array $args, array &$run, array $a
     $run['openQuestions'] = array_values(array_map('strval', (array)($args['openQuestions'] ?? [])));
     $run['end'] = 'awaiting_review';
     return ['ok' => true, 'note' => 'The change set is with the user for review.'];
+}
+
+// ---------------------------------------------------------------------------
+// Image tools
+// ---------------------------------------------------------------------------
+
+function nibblyAgentStockAvailable(): bool {
+    return nibblyAgentStockSettings()['available'];
+}
+
+function nibblyAgentImagesAvailable(): bool {
+    $ai = nibblyAiLoadSettings(false);
+    return !empty($ai['features']['imageGeneration']) && !empty(nibblyAiModelCatalog()[nibblyAiProviderKey($ai)]['capabilities']['images']);
+}
+
+function nibblyAgentToolStockSearch(string $name, array $args, array &$run, array $actor): array {
+    if ((int)($run['stockSearches'] ?? 0) >= NIBBLY_AGENT_MAX_STOCK_SEARCHES) {
+        throw new NibblyAgentOpException('The stock photo search limit of this run is used up.', 'Choose from the results you already have, or use the media library.');
+    }
+    $run['stockSearches'] = (int)($run['stockSearches'] ?? 0) + 1;
+    try {
+        $photos = nibblyAgentStockSearch((string)$args['query'], (string)($args['orientation'] ?? ''), (int)($args['count'] ?? 6));
+    } catch (RuntimeException $e) {
+        throw new NibblyAgentOpException($e->getMessage(), 'Continue without stock photos or ask the user.');
+    }
+    $results = [];
+    foreach ($photos as $photo) {
+        do {
+            $sid = 's_' . bin2hex(random_bytes(3));
+        } while (isset($run['stockResults'][$sid]));
+        $run['stockResults'][$sid] = $photo;
+        $results[] = ['sid' => $sid, 'description' => $photo['alt'], 'width' => $photo['width'], 'height' => $photo['height'], 'by' => $photo['photographer']];
+    }
+    $run['stockResults'] = array_slice($run['stockResults'] ?? [], -40, null, true); // the model can only import what it was shown recently
+    return ['count' => count($results), 'results' => $results] + ($results ? [] : ['hint' => 'Try other or fewer words.']);
+}
+
+function nibblyAgentToolStockImport(string $name, array $args, array &$run, array $actor): array {
+    $photo = $run['stockResults'][(string)$args['sid']] ?? null;
+    if ($photo === null) throw new NibblyAgentOpException('Unknown search result.', 'Use a sid from the latest search_stock_images result.');
+    if ((int)($run['stockImports'] ?? 0) >= NIBBLY_AGENT_MAX_STOCK_IMPORTS) {
+        throw new NibblyAgentOpException('The image import limit of this run is used up.');
+    }
+    $run['stockImports'] = (int)($run['stockImports'] ?? 0) + 1;
+    $csId = nibblyAgentRunChangeset($run, $actor);
+    try {
+        $fetched = nibblyAgentStockFetch($photo);
+        $record = nibblyAgentMediaRegister($csId, $fetched['image'], ['source' => 'stock', 'name' => $photo['alt'] !== '' ? $photo['alt'] : 'stock-photo', 'credit' => $fetched['credit'], 'ai' => $fetched['image']['ai']]);
+    } catch (RuntimeException $e) {
+        throw new NibblyAgentOpException($e->getMessage(), 'Try another search result.');
+    }
+    unset($run['stockResults'][(string)$args['sid']]);
+    return nibblyAgentMediaSummary($record['ref'], $record) + ['note' => 'Write an alt text that describes the image when you use it.'];
+}
+
+/** Pixel size and aspect ratio option for the provider. */
+function nibblyAgentImageSize(string $aspect): array {
+    return match ($aspect) {
+        '3:2' => ['1536x1024', '3:2'], '2:3' => ['1024x1536', '2:3'], '16:9' => ['1536x1024', '16:9'], default => ['1024x1024', '1:1']
+    };
+}
+
+function nibblyAgentToolGenerateImage(string $name, array $args, array &$run, array $actor): array {
+    $call = &$run['pending'][0];
+    if (empty($call['jobId'])) {
+        if ((int)($run['imagesRequested'] ?? 0) >= NIBBLY_AGENT_MAX_GENERATED_IMAGES) {
+            throw new NibblyAgentOpException('The image generation limit of this run is used up.', 'Use a stock photo or the media library.');
+        }
+        $csId = nibblyAgentRunChangeset($run, $actor);
+        $dir = nibblyAgentMediaStagingDir($csId);
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true)) throw new NibblyAgentOpException('Could not prepare the image folder.');
+        [$size, $ratio] = nibblyAgentImageSize((string)($args['aspect'] ?? '3:2'));
+        $job = nibblyAiCreateImageJob('agent', [
+            'prompt' => trim((string)$args['prompt']),
+            'runId' => $run['id'], 'csId' => $csId,
+            'options' => ['count' => 1, 'size' => $size, 'aspectRatio' => $ratio, 'outputFormat' => 'webp', 'quality' => 'auto', 'filenameHint' => 'generated', 'storageDir' => $dir],
+        ]);
+        $call['jobId'] = $job['id'];
+        $run['imagesRequested'] = (int)($run['imagesRequested'] ?? 0) + 1;
+        nibblyAgentAudit('agent-image-job', true, ['run' => $run['id'], 'job' => $job['id'], 'promptHash' => hash('sha256', (string)$args['prompt'])]);
+        throw new NibblyAgentToolWaiting($job['id']);
+    }
+    // The job exists: run it here unless someone else (the browser) is already running it.
+    $jobId = (string)$call['jobId'];
+    $job = nibblyAiRefreshImageJobState(nibblyAiLoadImageJob($jobId));
+    if (in_array($job['status'], ['queued', 'running'], true)) {
+        try {
+            $job = nibblyAiRunImageJobCore($jobId);
+        } catch (Throwable $e) {
+            $job = nibblyAiLoadImageJob($jobId);
+        }
+    }
+    $job = nibblyAiLoadImageJob($jobId);
+    if (in_array($job['status'] ?? '', ['queued', 'running'], true)) throw new NibblyAgentToolWaiting($jobId);
+    if (($job['status'] ?? '') !== 'success') {
+        throw new NibblyAgentOpException('The image could not be generated: ' . mb_substr((string)($job['error'] ?? 'unknown error'), 0, 200, 'UTF-8'), 'Use a stock photo or the media library instead.');
+    }
+    $csId = (string)($job['payload']['csId'] ?? $run['changesetId']);
+    $staged = (string)($job['result']['paths'][0] ?? '');
+    $real = $staged !== '' ? realpath(nibblyAgentSiteRoot() . $staged) : false;
+    $dir = realpath(nibblyAgentMediaStagingDir($csId));
+    if ($real === false || $dir === false || !str_starts_with($real, $dir . DIRECTORY_SEPARATOR) || $csId !== $run['changesetId']) {
+        throw new NibblyAgentOpException('The generated image is not available.');
+    }
+    try {
+        $image = nibblyAgentIngestImage($real);
+        $record = nibblyAgentMediaRegister($csId, $image, ['source' => 'generated', 'name' => mb_substr((string)$job['payload']['prompt'], 0, 40, 'UTF-8'), 'ai' => 'generated']);
+    } catch (RuntimeException $e) {
+        throw new NibblyAgentOpException($e->getMessage());
+    } finally {
+        @unlink($real);
+    }
+    return nibblyAgentMediaSummary($record['ref'], $record) + ['note' => 'AI-generated: the site labels it automatically. Write an alt text when you use it.'];
 }

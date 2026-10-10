@@ -436,7 +436,7 @@ csOk($g, ['type' => 'set_image', 'target' => $std, 'path' => 'sections.2.src', '
 $ready = nibblyAgentChangesetFinalize($g);
 $before = csContent($site);
 $res = nibblyAgentChangesetApply($g, $ready['previewHash'], $owner);
-csAssert($ready['status'] === 'ready' && !$res['ok'] && str_contains($res['error'], 'Images in change sets') && csContent($site) === $before, 'images of a run need the media step; until then the apply is refused without side effects');
+csAssert($ready['status'] === 'ready' && !$res['ok'] && str_contains($res['error'], 'staged image m_test1 is missing') && csContent($site) === $before && nibblyAgentChangesetLoad($g)['status'] === 'failed', 'a staged image that is gone fails the apply without side effects: ' . json_encode($res));
 
 // ---- Ownership, discard, cleanup ----------------------------------------------------------------------
 $o = csNew();
