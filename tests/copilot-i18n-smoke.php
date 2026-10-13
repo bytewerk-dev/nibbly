@@ -119,7 +119,7 @@ foreach ($toolNames as $tool) {
 }
 
 // ---- Agent settings and system status in the dashboard ----------------------------------------------------------------
-$dashboardKeys = array_values(array_filter(array_keys($english), fn($key) => str_starts_with((string)$key, 'ai.agent_') || str_starts_with((string)$key, 'system.agent') || in_array($key, ['system.configured', 'system.not_configured'], true)));
+$dashboardKeys = array_values(array_filter(array_keys($english), fn($key) => str_starts_with((string)$key, 'ai.agent_') || str_starts_with((string)$key, 'ai.limit') || str_starts_with((string)$key, 'ai.models_') || str_starts_with((string)$key, 'system.agent') || in_array($key, ['system.configured', 'system.not_configured'], true)));
 sort($dashboardKeys);
 if (count($dashboardKeys) < 50) fail('The agent settings texts are missing from en.json.');
 foreach ($mainLangFiles as $file) {
@@ -134,15 +134,18 @@ foreach ($dashboardKeys as $key) {
     if (preg_match('/\b(Sie|Ihr|Ihre|Ihren|Ihrem|Ihrer|Ihnen)\b/u', $text)) fail('German settings text must use "du": ' . $key . ' = ' . $text);
     if (preg_match('/\p{L}[:*_]innen|\p{L}[:*_]in\b|\p{Ll}Innen\b/u', $text)) fail('German settings text must not use gender special characters: ' . $key . ' = ' . $text);
 }
-$dashboardSources = (string)file_get_contents($root . '/admin/dashboard.php') . (string)file_get_contents($root . '/admin/dashboard/scripts/overview-ai.php') . (string)file_get_contents($root . '/admin/dashboard/scripts/system.php');
-preg_match_all("/['\"]((?:ai\.agent_|system\.agent)[a-zA-Z_]*|system\.configured|system\.not_configured)['\"]/", $dashboardSources, $usedMatches);
-$usedDashboardKeys = array_values(array_unique(array_filter($usedMatches[1] ?? [], fn($key) => $key !== 'ai.agent_right_'))); // the rights are looped over below
+$dashboardSources = (string)file_get_contents($root . '/js/ai-copilot.js') . (string)file_get_contents($root . '/admin/dashboard.php') . (string)file_get_contents($root . '/admin/dashboard/scripts/overview-ai.php') . (string)file_get_contents($root . '/admin/dashboard/scripts/system.php');
+preg_match_all("/['\"]((?:ai\.agent_|ai\.limit|ai\.models_|system\.agent)[a-zA-Z_]*|system\.configured|system\.not_configured)['\"]/", $dashboardSources, $usedMatches);
+$usedDashboardKeys = array_values(array_unique(array_filter($usedMatches[1] ?? [], fn($key) => !in_array($key, ['ai.agent_right_', 'ai.limit_kind_'], true)))); // the rights are looped over below
 $unknownDashboardKeys = array_values(array_diff($usedDashboardKeys, $dashboardKeys));
 if ($unknownDashboardKeys) fail('The dashboard uses texts that are missing: ' . implode(', ', $unknownDashboardKeys));
 foreach (['publish', 'stockImages', 'uploadImages', 'generateImages', 'research', 'structural', 'createPages', 'createNews', 'createEvents', 'editSharedContent'] as $right) {
     if (!isset($english['ai.agent_right_' . $right])) fail('No settings text for the right ' . $right);
 }
-$unusedDashboardKeys = array_values(array_filter(array_diff($dashboardKeys, $usedDashboardKeys), fn($key) => !str_starts_with($key, 'ai.agent_right_')));
+foreach (['month', 'requests', 'text', 'images'] as $kind) {
+    if (!isset($english['ai.limit_kind_' . $kind])) fail('No text for the limit kind ' . $kind);
+}
+$unusedDashboardKeys = array_values(array_filter(array_diff($dashboardKeys, $usedDashboardKeys), fn($key) => !str_starts_with($key, 'ai.agent_right_') && !str_starts_with($key, 'ai.limit_kind_')));
 if ($unusedDashboardKeys) fail('Settings texts that nothing uses: ' . implode(', ', $unusedDashboardKeys));
 
 echo json_encode([

@@ -40,6 +40,27 @@ Git milestones and the gaps in publication records.
 
 ### Changed
 
+- AI limits are guides: a request that starts below a daily request limit or the
+  monthly budget may finish, and a request of an agent run already under way
+  (second turn on, reading steps) may use up to 10 % more before it is stopped.
+  The first request of a run, standalone requests and the image limit stay strict.
+- Warning bars appear in the dashboard, the AI settings and the assistant when a
+  limit (monthly budget, daily requests, text or image requests) is 80 % used or
+  reached; admins can raise the limits from there.
+- Default limits fit the agent: 64,000 input tokens, 16,000 output tokens, 300
+  requests and 250 text requests per day. Saved values are not changed.
+- Newer OpenAI models: `max_completion_tokens` is sent to api.openai.com, and a
+  provider that rejects `max_tokens`, `max_completion_tokens` or a custom
+  `temperature` is asked again without it; the finding is remembered per model.
+- The agent talks to api.openai.com through the Responses API (`/v1/responses`):
+  reasoning models cannot combine function tools with reasoning on
+  chat/completions. Reasoning comes back encrypted (`store: false`, nothing is kept
+  at OpenAI) and goes into the next turn. Other OpenAI-compatible hosts keep
+  chat/completions and switch to `/responses` for a model whose request was refused
+  with "use /v1/responses" (remembered per model).
+- The AI settings load the provider's model list for the model fields, keep the
+  save bar in view and fold the rarely used agent groups; long model lists in
+  the dropdown stay readable.
 - `nibblyNetSafeFetch()` (`includes/ai/agent/net.php`) is now the only way to
   fetch external URLs: public addresses only (IPv4 and IPv6 ranges), DNS pinning,
   manual redirects, size and content-type limits. Existing external fetches use it.

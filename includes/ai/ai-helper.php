@@ -77,11 +77,11 @@ function nibblyAiDefaults(): array {
         ],
         'limits' => [
             'monthlyBudgetCents' => 1000,
-            'dailyRequests' => 100,
-            'dailyTextRequests' => 80,
+            'dailyRequests' => 300,
+            'dailyTextRequests' => 250,
             'dailyImageRequests' => 10,
-            'maxInputTokens' => 24000,
-            'maxOutputTokens' => 4096,
+            'maxInputTokens' => 64000,
+            'maxOutputTokens' => 16000,
             'requestTimeoutSeconds' => 300
         ],
         'pricing' => [
@@ -246,11 +246,11 @@ function nibblyAiSaveSettings(array $input, array $existing = []): array {
         ],
         'limits' => [
             'monthlyBudgetCents' => nibblyAiClampInt($input['limits']['monthlyBudgetCents'] ?? 1000, 0, 1000000),
-            'dailyRequests' => nibblyAiClampInt($input['limits']['dailyRequests'] ?? 100, 0, 10000),
-            'dailyTextRequests' => nibblyAiClampInt($input['limits']['dailyTextRequests'] ?? 80, 0, 10000),
+            'dailyRequests' => nibblyAiClampInt($input['limits']['dailyRequests'] ?? 300, 0, 10000),
+            'dailyTextRequests' => nibblyAiClampInt($input['limits']['dailyTextRequests'] ?? 250, 0, 10000),
             'dailyImageRequests' => nibblyAiClampInt($input['limits']['dailyImageRequests'] ?? 10, 0, 1000),
-            'maxInputTokens' => nibblyAiClampInt($input['limits']['maxInputTokens'] ?? 24000, 100, 200000),
-            'maxOutputTokens' => nibblyAiClampInt($input['limits']['maxOutputTokens'] ?? 4096, 16, 32000),
+            'maxInputTokens' => nibblyAiClampInt($input['limits']['maxInputTokens'] ?? 64000, 100, 200000),
+            'maxOutputTokens' => nibblyAiClampInt($input['limits']['maxOutputTokens'] ?? 16000, 16, 32000),
             'requestTimeoutSeconds' => nibblyAiClampInt($input['limits']['requestTimeoutSeconds'] ?? 300, 5, 600)
         ],
         'pricing' => [
@@ -296,7 +296,8 @@ function nibblyAiUsageSummary(): array {
         'reservations' => array_diff_key(nibblyAiReservationSummary($usage), ['unresolved' => true]),
         'today' => $usage['days'][$today] ?? nibblyAiEmptyUsageBucket(),
         'month' => $usage['months'][$month] ?? nibblyAiEmptyUsageBucket(),
-        'updatedAt' => $usage['updatedAt'] ?? null
+        'updatedAt' => $usage['updatedAt'] ?? null,
+        'warnings' => nibblyAiLimitWarnings(nibblyAiLoadSettings(false), $usage)
     ];
 }
 
@@ -448,13 +449,13 @@ function nibblyAiChatStreamExecute(array $messages, array $options, callable $on
         if (!empty($settings['organization'])) {
             $headers[] = 'OpenAI-Organization: ' . $settings['organization'];
         }
-        $body = [
+        $body = nibblyAiApplyModelQuirks($settings, [
             'model' => $model,
             'messages' => $cleanMessages,
             'max_tokens' => $maxOutput,
             'temperature' => $temperature,
             'stream' => true
-        ];
+        ]);
     }
 
     $timeout = nibblyAiRequestTimeout($settings);
@@ -881,25 +882,73 @@ function nibblyAiAssertWithinLimits(array $settings, string $type, int $estimate
     if ($id !== '') { nibblyAiReserve($settings, $type, $estimatedCostCents, $id); return; }
     nibblyAiCheckLimits($settings, $type, $estimatedCostCents, nibblyAiReservedUsage(nibblyAiLoadUsage()));
 }
+/**
+ * Limits are guides, not hard walls. A request that starts below a limit may finish, and a request that
+ * belongs to an agent run already under way (second turn on, reading steps) may run up to 10 % past a
+ * daily request limit or the monthly budget so a run is not cut off in the middle. The first request of a
+ * run and every standalone request need room below the limit; image requests stay strict.
+ */
+const NIBBLY_AI_LIMIT_TOLERANCE = 0.10;
+
+function nibblyAiIsAgentContinuation(): bool {
+    $id = (string)($GLOBALS['nibblyAiRequestId'] ?? '');
+    return preg_match('/^agent_(read_)?run_[a-z0-9]+_(\d+)$/', $id, $match) === 1 && (!empty($match[1]) || (int)$match[2] > 1);
+}
+
 function nibblyAiCheckLimits(array $settings, string $type, int $estimatedCostCents, array $usage): void {
     $today = gmdate('Y-m-d');
     $month = gmdate('Y-m');
     $dayBucket = $usage['days'][$today] ?? nibblyAiEmptyUsageBucket();
     $monthBucket = $usage['months'][$month] ?? nibblyAiEmptyUsageBucket();
     $limits = $settings['limits'];
+    $continuation = nibblyAiIsAgentContinuation();
+    $room = static fn(int $limit): int => $continuation ? max($limit + 1, (int)ceil($limit * (1 + NIBBLY_AI_LIMIT_TOLERANCE))) : $limit;
 
-    if ((int)$limits['dailyRequests'] > 0 && ($dayBucket['requests'] + 1) > (int)$limits['dailyRequests']) {
+    if ((int)$limits['dailyRequests'] > 0 && ($dayBucket['requests'] + 1) > $room((int)$limits['dailyRequests'])) {
         throw new RuntimeException('Daily AI request limit reached.');
     }
-    if ($type === 'text' && (int)$limits['dailyTextRequests'] > 0 && ($dayBucket['textRequests'] + 1) > (int)$limits['dailyTextRequests']) {
+    if ($type === 'text' && (int)$limits['dailyTextRequests'] > 0 && ($dayBucket['textRequests'] + 1) > $room((int)$limits['dailyTextRequests'])) {
         throw new RuntimeException('Daily AI text request limit reached.');
     }
     if ($type === 'image' && (int)$limits['dailyImageRequests'] > 0 && ($dayBucket['imageRequests'] + 1) > (int)$limits['dailyImageRequests']) {
         throw new RuntimeException('Daily AI image request limit reached.');
     }
-    if ((int)$limits['monthlyBudgetCents'] > 0 && ($monthBucket['estimatedCostCents'] + $estimatedCostCents) > (int)$limits['monthlyBudgetCents']) {
-        throw new RuntimeException('Monthly AI budget limit reached.');
+    $budget = (int)$limits['monthlyBudgetCents'];
+    if ($budget > 0) {
+        $spent = (int)$monthBucket['estimatedCostCents'];
+        $ceiling = (int)floor($budget * (1 + NIBBLY_AI_LIMIT_TOLERANCE));
+        // Spent includes what running requests have reserved. The worst case of this request only has to fit under the ceiling.
+        if (($continuation ? $spent >= $ceiling : $spent >= $budget) || ($spent + $estimatedCostCents) > $ceiling) {
+            throw new RuntimeException('Monthly AI budget limit reached.');
+        }
     }
+}
+
+/**
+ * Limits that are nearly or fully used, for the warning bars (dashboard, settings, assistant).
+ *
+ * @return array<int,array{kind:string,level:string,used:int,limit:int,percent:int}>
+ */
+function nibblyAiLimitWarnings(array $settings, array $usage): array {
+    $usage = nibblyAiReservedUsage($usage);
+    $day = $usage['days'][gmdate('Y-m-d')] ?? nibblyAiEmptyUsageBucket();
+    $month = $usage['months'][gmdate('Y-m')] ?? nibblyAiEmptyUsageBucket();
+    $limits = (array)($settings['limits'] ?? []);
+    $warnings = [];
+    foreach ([
+        ['month', (int)$month['estimatedCostCents'], (int)($limits['monthlyBudgetCents'] ?? 0)],
+        ['requests', (int)$day['requests'], (int)($limits['dailyRequests'] ?? 0)],
+        ['text', (int)$day['textRequests'], (int)($limits['dailyTextRequests'] ?? 0)],
+        ['images', (int)$day['imageRequests'], (int)($limits['dailyImageRequests'] ?? 0)],
+    ] as [$kind, $used, $limit]) {
+        if ($limit <= 0) continue;
+        $percent = (int)floor($used * 100 / $limit);
+        if ($used >= $limit) $level = 'reached';
+        elseif ($percent >= 80) $level = 'warning';
+        else continue;
+        $warnings[] = ['kind' => $kind, 'level' => $level, 'used' => $used, 'limit' => $limit, 'percent' => $percent];
+    }
+    return $warnings;
 }
 
 function nibblyAiRecordUsage(string $type, int $inputTokens, int $outputTokens, int $costCents): void {
@@ -1303,7 +1352,54 @@ function nibblyAiProviderRequest(array $settings, string $path, array $body): ar
         $headers[] = 'OpenAI-Organization: ' . $settings['organization'];
     }
 
-    return nibblyAiExecuteJsonRequest($settings, $url, $headers, $body);
+    return nibblyAiCompatRequest($settings, $url, $headers, $body);
+}
+
+/**
+ * The model ids the configured provider offers (GET {baseUrl}/models), for the settings dropdowns.
+ * Only chat-like models are kept; the list is a convenience, any model name can still be typed.
+ *
+ * @return string[]
+ * @throws RuntimeException
+ */
+function nibblyAiListProviderModels(array $settings): array {
+    $baseUrl = rtrim((string)($settings['baseUrl'] ?? ''), '/');
+    if ($baseUrl === '') throw new RuntimeException('AI base URL is missing.');
+    nibblyAiValidateBaseUrl($baseUrl, !empty($settings['allowLocalProvider']));
+    if (nibblyAiIsKieSettings($settings)) return [];
+    $headers = ['Accept: application/json'];
+    $key = trim((string)($settings['apiKey'] ?? ''));
+    if (nibblyAiIsAnthropicSettings($settings)) {
+        $headers[] = 'anthropic-version: 2023-06-01';
+        if ($key !== '') $headers[] = 'x-api-key: ' . $key;
+    } elseif ($key !== '') {
+        $headers[] = 'Authorization: Bearer ' . $key;
+    }
+    if (!empty($settings['organization'])) $headers[] = 'OpenAI-Organization: ' . $settings['organization'];
+    if (!function_exists('curl_init')) throw new RuntimeException('Listing models requires cURL support.');
+    $ch = curl_init($baseUrl . '/models' . (nibblyAiIsAnthropicSettings($settings) ? '?limit=1000' : ''));
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPHEADER => $headers, CURLOPT_CONNECTTIMEOUT => 8, CURLOPT_TIMEOUT => 20,
+        CURLOPT_FOLLOWLOCATION => false, CURLOPT_MAXFILESIZE => 5 * 1024 * 1024, CURLOPT_NOSIGNAL => true]);
+    $raw = curl_exec($ch);
+    $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
+    unset($ch);
+    if ($raw === false) throw new RuntimeException($error !== '' ? $error : 'The provider did not answer.');
+    $data = json_decode((string)$raw, true);
+    if ($status < 200 || $status >= 300) {
+        throw new RuntimeException(is_array($data) ? (string)($data['error']['message'] ?? $data['message'] ?? 'AI provider error') : 'AI provider error (HTTP ' . $status . ')');
+    }
+    $ids = [];
+    foreach ((array)($data['data'] ?? $data['models'] ?? []) as $model) {
+        $id = is_array($model) ? (string)($model['id'] ?? $model['name'] ?? '') : (string)$model;
+        $id = preg_replace('#^models/#', '', trim($id)) ?? '';
+        if ($id === '' || strlen($id) > 120 || !preg_match('/^[A-Za-z0-9._:\/-]+$/', $id)) continue;
+        if (preg_match('/embed|whisper|tts|dall-e|moderation|image|audio|realtime|transcribe|speech|sora|search-preview|rerank/i', $id)) continue;
+        $ids[$id] = true;
+    }
+    $ids = array_keys($ids);
+    sort($ids, SORT_NATURAL | SORT_FLAG_CASE);
+    return array_slice($ids, 0, 300);
 }
 
 function nibblyAiIsAnthropicSettings(array $settings): bool {
@@ -1469,6 +1565,115 @@ function nibblyAiAnthropicChatRequest(array $settings, array $body): array {
     ];
 }
 
+if (!class_exists('NibblyAiProviderRejected', false)) {
+    /** The provider answered with an HTTP error: it rejected the request, so nothing was generated. */
+    class NibblyAiProviderRejected extends RuntimeException {
+        public int $status;
+
+        public function __construct(string $message, int $status) {
+            parent::__construct($message);
+            $this->status = $status;
+        }
+    }
+}
+
+/**
+ * Per-model request quirks. Newer OpenAI models want max_completion_tokens instead of max_tokens
+ * and some (reasoning models) accept only the default temperature. Providers say so in a 400
+ * answer; the request is repeated once without the offending parameter (a rejected request has
+ * generated nothing, so this is no ambiguous paid retry) and the finding is remembered per
+ * host and model in content/ai-model-quirks.json.
+ */
+function nibblyAiQuirksPath(): string {
+    return dirname(NIBBLY_AI_SETTINGS_PATH) . '/ai-model-quirks.json';
+}
+
+function nibblyAiQuirksKey(array $settings, array $body): string {
+    return strtolower((string)parse_url((string)($settings['baseUrl'] ?? ''), PHP_URL_HOST)) . '|' . strtolower((string)($body['model'] ?? ''));
+}
+
+/** What is known about a model from earlier rejected requests (see nibblyAiStoreQuirk). */
+function nibblyAiKnownQuirks(array $settings, string $model): array {
+    if (!is_file(nibblyAiQuirksPath())) return [];
+    $stored = json_decode((string)file_get_contents(nibblyAiQuirksPath()), true);
+    $known = is_array($stored) ? ($stored[nibblyAiQuirksKey($settings, ['model' => $model])] ?? null) : null;
+    return is_array($known) ? $known : [];
+}
+
+function nibblyAiStoreQuirk(array $settings, string $model, array $learned): void {
+    if (!$learned) return;
+    $key = nibblyAiQuirksKey($settings, ['model' => $model]);
+    nibblyJsonUpdate(nibblyAiQuirksPath(), static function (&$quirks) use ($key, $learned) {
+        if (!is_array($quirks)) $quirks = [];
+        $quirks[$key] = array_replace((array)($quirks[$key] ?? []), $learned);
+        if (count($quirks) > 200) $quirks = array_slice($quirks, -200, null, true);
+    });
+}
+
+function nibblyAiApplyModelQuirks(array $settings, array $body): array {
+    $known = nibblyAiKnownQuirks($settings, (string)($body['model'] ?? ''));
+    $official = strtolower((string)parse_url((string)($settings['baseUrl'] ?? ''), PHP_URL_HOST)) === 'api.openai.com';
+    $wantsCompletionTokens = ($known['tokenParam'] ?? ($official ? 'max_completion_tokens' : 'max_tokens')) === 'max_completion_tokens';
+    if ($wantsCompletionTokens && isset($body['max_tokens'])) {
+        $body['max_completion_tokens'] = $body['max_tokens'];
+        unset($body['max_tokens']);
+    } elseif (!$wantsCompletionTokens && isset($body['max_completion_tokens'])) {
+        $body['max_tokens'] = $body['max_completion_tokens'];
+        unset($body['max_completion_tokens']);
+    }
+    if (!empty($known['noTemperature'])) unset($body['temperature']);
+    if (!empty($known['noInclude'])) unset($body['include']);
+    return $body;
+}
+
+/** The request without the parameter the provider rejected, or null when this error is not about a parameter. */
+function nibblyAiAdaptRejectedBody(array $body, NibblyAiProviderRejected $error, array &$quirk): ?array {
+    if (!in_array($error->status, [400, 422], true)) return null;
+    $message = $error->getMessage();
+    $unsupported = '/unsupported|not supported|does not support|unrecognized|unknown parameter|only the default/i';
+    if (isset($body['max_tokens']) && preg_match('/max_tokens/i', $message) && preg_match($unsupported, $message)) {
+        $body['max_completion_tokens'] = $body['max_tokens'];
+        unset($body['max_tokens']);
+        $quirk['tokenParam'] = 'max_completion_tokens';
+        return $body;
+    }
+    if (isset($body['max_completion_tokens']) && preg_match('/max_completion_tokens/i', $message) && preg_match($unsupported, $message)) {
+        $body['max_tokens'] = $body['max_completion_tokens'];
+        unset($body['max_completion_tokens']);
+        $quirk['tokenParam'] = 'max_tokens';
+        return $body;
+    }
+    if (array_key_exists('include', $body) && preg_match('/\binclude\b|encrypted_content/i', $message) && preg_match($unsupported, $message)) {
+        unset($body['include']);
+        $quirk['noInclude'] = true;
+        return $body;
+    }
+    if (array_key_exists('temperature', $body) && preg_match('/temperature/i', $message) && preg_match($unsupported, $message)) {
+        unset($body['temperature']);
+        $quirk['noTemperature'] = true;
+        return $body;
+    }
+    return null;
+}
+
+/** An OpenAI-compatible JSON request with the model quirks applied and learned. */
+function nibblyAiCompatRequest(array $settings, string $url, array $headers, array $body): array {
+    $body = nibblyAiApplyModelQuirks($settings, $body);
+    $learned = [];
+    for ($attempt = 0; ; $attempt++) {
+        try {
+            $response = nibblyAiExecuteJsonRequest($settings, $url, $headers, $body);
+            break;
+        } catch (NibblyAiProviderRejected $error) {
+            $adapted = $attempt < 3 ? nibblyAiAdaptRejectedBody($body, $error, $learned) : null;
+            if ($adapted === null) throw $error;
+            $body = $adapted;
+        }
+    }
+    nibblyAiStoreQuirk($settings, (string)($body['model'] ?? ''), $learned);
+    return $response;
+}
+
 function nibblyAiExecuteJsonRequest(array $settings, string $url, array $headers, array $body): array {
     $timeout = nibblyAiRequestTimeout($settings);
     nibblyAiExtendExecutionTime($timeout + 10);
@@ -1502,7 +1707,7 @@ function nibblyAiExecuteJsonRequest(array $settings, string $url, array $headers
         if ($status < 200 || $status >= 300) {
             $message = is_array($data) ? ($data['error']['message'] ?? $data['message'] ?? 'AI provider error') : 'AI provider error';
             nibblyAiAudit('provider-error', false, ['status' => $status, 'message' => $message]);
-            throw new RuntimeException($message);
+            throw new NibblyAiProviderRejected((string)$message, (int)$status);
         }
         if (is_array($data)) {
             return $data;

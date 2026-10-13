@@ -1262,6 +1262,7 @@
                 var result = await fetchJsonWithTimeout('api.php', { method: 'POST', body: formData }, imageTimeoutMs);
                 if (!result.success) throw new Error(result.message);
                 currentAiSettings = result.data.settings;
+                aiLiveModels = {}; // the key or provider may have changed: ask the provider again
                 populateAiSettings(currentAiSettings);
                 updateAiUsage(result.data.usage);
                 showToast(t('ai.settings_saved'), 'success');

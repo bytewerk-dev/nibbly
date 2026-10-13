@@ -187,6 +187,7 @@
         const previous = state.run && state.run.runId === data.runId ? state.run.status : '';
         state.run = Object.assign({}, state.run && state.run.runId === data.runId ? state.run : {}, data);
         if (data.status !== 'needs_input' && data.status !== 'awaiting_review') state.awaitingChanges = false;
+        if (Array.isArray(data.limitWarnings) && host.setLimitWarnings) host.setLimitWarnings(data.limitWarnings);
         if (live !== false && data.status === 'needs_input' && previous !== 'needs_input') {
             const text = String(data.question || '').trim();
             if (text) host.pushMessage('assistant', text);

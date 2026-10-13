@@ -8658,6 +8658,7 @@ input.color-hex-input,
     overflow: hidden;
     text-overflow: ellipsis;
     font-variant-numeric: tabular-nums;
+    flex: 0 0 auto;
 }
 
 .nb-combobox__option:hover,
@@ -9374,3 +9375,37 @@ input.color-hex-input,
     .backup-remote__add { width: 100%; }
 }
 .access-maintenance-grid > .form-group.access-wide { grid-column: 1 / -1; }
+
+
+/* AI settings: the long form keeps its save bar in reach, rarely used agent groups fold away. */
+.settings-actions-row--sticky {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin-left: calc(var(--nb-space-4) * -1);
+    margin-right: calc(var(--nb-space-4) * -1);
+    padding: var(--nb-space-3) var(--nb-space-4);
+    border-top: 1px solid var(--nb-border);
+    background: var(--nb-surface, var(--nb-bg, #fff));
+}
+
+.ai-agent-details {
+    margin: var(--nb-space-3) 0;
+    border: 1px solid var(--nb-border);
+    border-radius: var(--nb-radius-lg);
+    padding: 0 var(--nb-space-4);
+}
+
+.ai-agent-details > summary {
+    padding: var(--nb-space-3) 0;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.ai-agent-details[open] > summary {
+    margin-bottom: var(--nb-space-2);
+}
+
+.ai-limit-banner .ai-limit-banner__line { margin: 0 0 var(--nb-space-2); }
+.ai-limit-banner .ai-limit-banner__line--reached { font-weight: 700; }
+.ai-limit-banner .ai-limit-banner__actions { margin-top: var(--nb-space-2); }

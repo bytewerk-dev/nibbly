@@ -755,6 +755,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     </div>
                 </div>
 
+                <div class="info-banner info-banner--warning info-banner--contained ai-limit-banner" id="aiLimitBanner" data-ai-limit-banner="dashboard" hidden></div>
+
                 <div class="info-banner info-banner--warning info-banner--contained" id="aiUnavailableBanner">
                     <div class="info-banner__inner">
                         <strong class="info-banner__title"><?php echo nbIcon('alert'); ?> <?php echo t('ai.not_configured_title'); ?></strong>
@@ -1956,6 +1958,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     <fieldset class="settings-section">
                         <legend><?php echo t('ai.models'); ?></legend>
                         <p class="form-hint ai-section-hint"><?php echo t('ai.models_hint'); ?></p>
+                        <p class="form-hint ai-section-hint" id="aiModelsHint" aria-live="polite"></p>
                         <div class="form-row-inline">
                             <div class="form-group">
                                 <label for="aiChatModel"><?php echo t('ai.chat_model'); ?></label>
@@ -1993,15 +1996,17 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
                     <fieldset class="settings-section">
                         <legend><?php echo t('ai.limits'); ?></legend>
+                        <p class="form-hint ai-section-hint"><?php echo t('ai.limits_hint'); ?></p>
+                        <div class="info-banner info-banner--warning info-banner--contained ai-limit-banner" id="aiLimitBannerSettings" data-ai-limit-banner="settings" hidden></div>
                         <div class="form-row-inline">
                             <div class="form-group"><label for="aiMonthlyBudget"><?php echo t('ai.monthly_budget'); ?></label><input type="number" id="aiMonthlyBudget" min="0" value="1000"></div>
-                            <div class="form-group"><label for="aiDailyRequests"><?php echo t('ai.daily_requests'); ?></label><input type="number" id="aiDailyRequests" min="0" value="100"></div>
-                            <div class="form-group"><label for="aiDailyTextRequests"><?php echo t('ai.daily_text_requests'); ?></label><input type="number" id="aiDailyTextRequests" min="0" value="80"></div>
+                            <div class="form-group"><label for="aiDailyRequests"><?php echo t('ai.daily_requests'); ?></label><input type="number" id="aiDailyRequests" min="0" value="300"></div>
+                            <div class="form-group"><label for="aiDailyTextRequests"><?php echo t('ai.daily_text_requests'); ?></label><input type="number" id="aiDailyTextRequests" min="0" value="250"></div>
                             <div class="form-group"><label for="aiDailyImageRequests"><?php echo t('ai.daily_image_requests'); ?></label><input type="number" id="aiDailyImageRequests" min="0" value="10"></div>
                         </div>
                         <div class="form-row-inline">
-                            <div class="form-group"><label for="aiMaxInputTokens"><?php echo t('ai.max_input_tokens'); ?></label><input type="number" id="aiMaxInputTokens" min="100" value="24000"><small class="form-hint"><?php echo t('ai.max_input_tokens_hint'); ?></small></div>
-                            <div class="form-group"><label for="aiMaxOutputTokens"><?php echo t('ai.max_output_tokens'); ?></label><input type="number" id="aiMaxOutputTokens" min="16" value="4096"><small class="form-hint"><?php echo t('ai.max_output_tokens_hint'); ?></small></div>
+                            <div class="form-group"><label for="aiMaxInputTokens"><?php echo t('ai.max_input_tokens'); ?></label><input type="number" id="aiMaxInputTokens" min="100" value="64000"><small class="form-hint"><?php echo t('ai.max_input_tokens_hint'); ?></small></div>
+                            <div class="form-group"><label for="aiMaxOutputTokens"><?php echo t('ai.max_output_tokens'); ?></label><input type="number" id="aiMaxOutputTokens" min="16" value="16000"><small class="form-hint"><?php echo t('ai.max_output_tokens_hint'); ?></small></div>
                             <div class="form-group"><label for="aiRequestTimeout"><?php echo t('ai.request_timeout'); ?></label><input type="number" id="aiRequestTimeout" min="5" max="600" value="300"><small class="form-hint"><?php echo t('ai.request_timeout_hint'); ?></small></div>
                         </div>
                     </fieldset>
@@ -2023,7 +2028,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             <label class="toggle-label"><span><?php echo t('ai.agent_enable'); ?></span><div class="toggle-switch"><input type="checkbox" id="aiAgentEnabled"><span class="toggle-slider"></span></div></label>
                         </div>
 
-                        <h4 class="ai-subheading"><?php echo t('ai.agent_limits'); ?></h4>
+                        <details class="ai-agent-details">
+                        <summary><?php echo t('ai.agent_limits'); ?></summary>
                         <div class="form-row-inline">
                             <div class="form-group"><label for="aiAgentRunsPerHour"><?php echo t('ai.agent_runs_per_hour'); ?></label><input type="number" id="aiAgentRunsPerHour" min="1" max="200" value="10"></div>
                             <div class="form-group"><label for="aiAgentMaxTurns"><?php echo t('ai.agent_max_turns'); ?></label><input type="number" id="aiAgentMaxTurns" min="1" max="40" value="14"></div>
@@ -2034,8 +2040,11 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             <div class="form-group"><label for="aiAgentMaxRuntime"><?php echo t('ai.agent_max_runtime'); ?></label><input type="number" id="aiAgentMaxRuntime" min="1" max="60" value="15"></div>
                             <div class="form-group"><label for="aiAgentUploads"><?php echo t('ai.agent_uploads'); ?></label><input type="number" id="aiAgentUploads" min="1" max="100" value="10"></div>
                         </div>
+                        <div class="form-group"><button type="button" class="btn btn-secondary btn-sm" id="aiAgentRecommendedLimits"><?php echo t('ai.agent_recommended_limits'); ?></button><small class="form-hint"><?php echo t('ai.agent_recommended_limits_hint'); ?></small></div>
+                        </details>
 
-                        <h4 class="ai-subheading"><?php echo t('ai.agent_roles'); ?></h4>
+                        <details class="ai-agent-details">
+                        <summary><?php echo t('ai.agent_roles'); ?></summary>
                         <p class="form-hint"><?php echo t('ai.agent_roles_hint'); ?></p>
                         <div class="form-group access-toggle-row ai-feature-toggle-grid">
                             <?php foreach (['publish', 'stockImages', 'uploadImages', 'generateImages', 'research', 'structural', 'createPages', 'createNews', 'createEvents', 'editSharedContent'] as $_agentRight): ?>
@@ -2043,7 +2052,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             <?php endforeach; ?>
                         </div>
 
-                        <h4 class="ai-subheading"><?php echo t('ai.agent_images'); ?></h4>
+                        </details>
+
+                        <details class="ai-agent-details">
+                        <summary><?php echo t('ai.agent_images'); ?></summary>
                         <div class="form-row-inline">
                             <div class="form-group">
                                 <label for="aiAgentMediaFolder"><?php echo t('ai.agent_media_folder'); ?></label>
@@ -2059,7 +2071,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </div>
                         <div class="form-group"><label class="toggle-label"><span><?php echo t('ai.agent_credit_in_news'); ?></span><div class="toggle-switch"><input type="checkbox" id="aiAgentCreditInNews"><span class="toggle-slider"></span></div></label></div>
 
-                        <h4 class="ai-subheading"><?php echo t('ai.agent_research'); ?></h4>
+                        </details>
+
+                        <details class="ai-agent-details">
+                        <summary><?php echo t('ai.agent_research'); ?></summary>
                         <p class="form-hint"><?php echo t('ai.agent_research_hint'); ?></p>
                         <div class="form-group">
                             <label for="aiBraveApiKey"><?php echo t('ai.agent_brave_key'); ?></label>
@@ -2076,13 +2091,15 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             <label class="toggle-label"><span><?php echo t('ai.agent_sources_in_news'); ?></span><div class="toggle-switch"><input type="checkbox" id="aiAgentSourcesInNews"><span class="toggle-slider"></span></div></label>
                         </div>
 
+                        </details>
+
                         <div class="form-group">
                             <button type="button" class="btn btn-secondary btn-sm" id="aiAgentClearCache"><?php echo t('ai.agent_clear_cache'); ?></button>
                             <small class="form-hint"><?php echo t('ai.agent_cache_hint'); ?></small>
                         </div>
                     </fieldset>
 
-                    <div class="settings-actions-row">
+                    <div class="settings-actions-row settings-actions-row--sticky">
                         <button type="submit" class="btn btn-primary" id="saveAiSettingsBtn"><?php echo t('ai.save_settings'); ?></button>
                         <button type="button" class="btn btn-secondary" id="testAiBtn"><?php echo t('ai.test_connection'); ?></button>
                     </div>

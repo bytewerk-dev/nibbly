@@ -186,6 +186,7 @@ function nibblyAgentRunPublicState(array $run, int $after = 0): array {
         'events' => array_values(array_filter($run['events'], static fn($e) => $e['seq'] > $after)),
         'cursor' => (int)($run['eventSeq'] ?? 0),
         'changesetId' => $run['changesetId'] !== '' ? $run['changesetId'] : null,
+        'limitWarnings' => nibblyAiUsageSummary()['warnings'],
         'usage' => ['turns' => $run['turns'], 'toolCalls' => $run['toolCalls'], 'costCents' => $run['costCents'],
             'limits' => ['maxTurns' => $limits['maxTurns'], 'maxToolCalls' => $limits['maxToolCalls'], 'maxCostCentsPerRun' => $limits['maxCostCentsPerRun']]],
     ];
@@ -238,7 +239,10 @@ function nibblyAgentRunBuildMessages(array $run, array $aiSettings, array $tools
         $out = [];
         foreach ($transcript as $index => $message) {
             $entry = ['role' => $message['role'], 'content' => $message['content']];
-            if ($message['role'] === 'assistant' && !empty($message['toolCalls'])) $entry['toolCalls'] = $message['toolCalls'];
+            if ($message['role'] === 'assistant' && !empty($message['toolCalls'])) {
+                $entry['toolCalls'] = $message['toolCalls'];
+                if (!empty($message['reasoningItems'])) $entry['reasoningItems'] = $message['reasoningItems'];
+            }
             if ($message['role'] === 'tool') {
                 $entry['toolCallId'] = $message['toolCallId'];
                 $entry['isError'] = !empty($message['isError']);

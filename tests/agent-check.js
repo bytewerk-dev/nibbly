@@ -197,12 +197,49 @@ async function mainFlow(browser, user) {
         assert(JSON.parse(fs.readFileSync(path.join(siteRoot, 'content/news', newsFiles()[0]), 'utf8')).hidden !== true, 'publishing makes the news post visible');
         await context.close();
 
+        // ---- Limit warnings: the dashboard, the settings and the assistant tell before a limit is reached ----------------------------------
+        const settingsFile = path.join(siteRoot, 'content/ai-settings.json');
+        const originalSettings = fs.readFileSync(settingsFile, 'utf8');
+        const tight = JSON.parse(originalSettings);
+        tight.limits.monthlyBudgetCents = 1000;
+        fs.writeFileSync(settingsFile, JSON.stringify(tight));
+        const today = new Date().toISOString().slice(0, 10);
+        fs.writeFileSync(path.join(siteRoot, 'content/ai-usage.json'), JSON.stringify({
+            days: { [today]: { requests: 5, textRequests: 5, imageRequests: 0, inputTokens: 0, outputTokens: 0, estimatedCostCents: 0 } },
+            months: { [today.slice(0, 7)]: { requests: 5, textRequests: 5, imageRequests: 0, inputTokens: 0, outputTokens: 0, estimatedCostCents: 900 } }
+        }));
+        ({ context, page } = await login(browser, 'editor'));
+        await openAssistant(page);
+        await page.locator('.nb-copilot-limit').waitFor({ state: 'visible', timeout: 15000 });
+        const barText = await page.locator('.nb-copilot-limit').textContent();
+        assert(barText.includes('Monthly AI budget') && barText.includes('9.00 EUR of 10.00 EUR') && barText.includes('administrator'), 'the assistant shows the nearly used budget: ' + barText);
+        await context.close();
+        ({ context, page } = await login(browser, 'admin'));
+        await page.waitForSelector('#aiLimitBanner:not([hidden])', { timeout: 15000 });
+        assert((await page.locator('#aiLimitBanner').textContent()).includes('Monthly AI budget'), 'the dashboard shows the warning');
+        await page.locator('#aiLimitBanner button', { hasText: 'Adjust limits' }).click();
+        await page.locator('#aiLimitBannerSettings:not([hidden])').waitFor({ state: 'visible', timeout: 10000 });
+        const budgetBefore = Number(await page.locator('#aiMonthlyBudget').inputValue());
+        await page.locator('#aiLimitBannerSettings button', { hasText: 'Raise by 50' }).click();
+        assert(Number(await page.locator('#aiMonthlyBudget').inputValue()) === Math.ceil(budgetBefore * 1.5), 'the button raises the limit by half');
+        await page.screenshot({ path: path.join(shots, 'agent-limit-banner.png') });
+        await context.close();
+        fs.writeFileSync(path.join(siteRoot, 'content/ai-usage.json'), JSON.stringify({ days: {}, months: {} }));
+        fs.writeFileSync(settingsFile, originalSettings);
+
         // ---- Dashboard: the agent section of the AI settings ------------------------------------------------------------------------------
         ({ context, page } = await login(browser, 'admin'));
         await page.locator('.sidebar-nav-item[data-tab="settings"]').click();
         await page.locator('.settings-tab-btn[data-settings-tab="ai"]').click();
         await page.locator('#aiAgentSection').waitFor({ state: 'visible' });
         await page.waitForFunction(() => document.getElementById('aiAgentEnabled').checked === true, null, { timeout: 15000 });
+        // The groups are folded; the save bar stays in reach however long the page is.
+        assert(!(await page.locator('#aiBraveApiKey').isVisible()), 'the research group starts folded');
+        for (const summary of await page.locator('.ai-agent-details > summary').all()) await summary.click();
+        assert(await page.locator('#aiBraveApiKey').isVisible(), 'a folded group opens');
+        await page.locator('#aiAgentSection').scrollIntoViewIfNeeded();
+        const saveBox = await page.locator('#saveAiSettingsBtn').boundingBox();
+        assert(saveBox && saveBox.y + saveBox.height <= 900 + 1, 'the save button is on screen without scrolling to the end of the form: ' + JSON.stringify(saveBox));
         assert((await page.locator('#aiAgentStatus').textContent()).includes('ready'), 'the status says the agent is ready: ' + await page.locator('#aiAgentStatus').textContent());
         assert(await page.locator('#aiBraveApiKeyHint').textContent().then(text => /No API key stored/.test(text)), 'no research key yet');
         await page.fill('#aiBraveApiKey', 'BSA-browser-brave-key-1234');

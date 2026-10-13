@@ -175,7 +175,9 @@ switch ($action) {
         $contentPage = trim((string)($_POST['contentPage'] ?? $_GET['contentPage'] ?? ''));
         $settings = nibblyAiLoadSettings(true);
         $settings['assistantUiLanguage'] = dashboardCopilotUiLanguage();
-        jsonResponse(true, nibblyCopilotBuildContext($contentPage, $settings));
+        $context = nibblyCopilotBuildContext($contentPage, $settings);
+        $context['limitWarnings'] = nibblyAiUsageSummary()['warnings'];
+        jsonResponse(true, $context);
         break;
 
     case 'ai-copilot-history-list':
@@ -1428,6 +1430,22 @@ switch ($action) {
         } catch (Throwable $e) {
             nibblyAiAudit('seo-generate', false, ['message' => $e->getMessage(), 'field' => $field]);
             jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
+    case 'ai-list-models':
+        // The models the saved provider offers, for the dropdowns of the settings form (admins only).
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        try {
+            $current = nibblyAiLoadSettings(false);
+            jsonResponse(true, ['provider' => (string)$current['provider'], 'models' => nibblyAiListProviderModels($current)]);
+        } catch (Throwable $e) {
+            jsonResponse(false, null, 'Could not load the model list: ' . $e->getMessage());
         }
         break;
 

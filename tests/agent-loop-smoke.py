@@ -137,7 +137,7 @@ with tempfile.TemporaryDirectory(prefix="nibbly-agent-loop-") as folder:
         assert cs_id and cs_id.startswith("cs_")
         # What the provider saw
         first = requests[0]
-        assert first["messages"][0]["role"] == "system" and "Nibbly CMS" in first["messages"][0]["content"] and time.strftime("%Y-%m-%d") in first["messages"][0]["content"], "system prompt"
+        assert first["messages"][0]["role"] == "system" and "Nibbly CMS" in first["messages"][0]["content"] and (time.strftime("%Y-%m-%d") in first["messages"][0]["content"] or time.strftime("%Y-%m-%d", time.gmtime()) in first["messages"][0]["content"]), "system prompt (the date in local time or UTC, depending on the PHP time zone)"
         names = [t["function"]["name"] for t in first["tools"]]
         assert "stage_set_field" in names and "validate_changeset" in names and "present_changeset" in names, names
         assert not [n for n in names if "search_web" in n or "stock" in n], "tools of later phases (research) and unconfigured stock photos are not offered"
