@@ -284,6 +284,10 @@ csAssert($review['status'] === 'ready' && $review['conflicts'] === [] && $review
 $first = $review['targets'][$std][0];
 csAssert($first['opId'] === 'op_1' && $first['before'] === 'A text' && str_starts_with($first['after'], 'A bold headline') && $first['html'] === false, 'before/after of a text change');
 csAssert(count($review['targets']) === 7 && $review['targets']['page:en_agent__page'][0]['type'] === 'create_page', 'operations are grouped by target');
+$labels = array_map(static fn($ops) => array_column($ops, 'label'), $review['targets']);
+csAssert($labels[$std][0] === 'Change “Title” in section 2 (text): “A text”', 'a review label says what changes and where: ' . $labels[$std][0]);
+csAssert($labels[$std][2] === 'Set image “Image” in section 3 (image)' && $labels[$std][3] === 'Add text section', 'image and section labels: ' . json_encode($labels[$std]));
+csAssert($labels['page:en_agent__page'][0] === 'Create page' && !str_contains(implode('|', $labels[$std]), 'sections.'), 'no raw paths in the labels');
 $encoded = json_encode($review, JSON_UNESCAPED_SLASHES);
 csAssert(str_contains($encoded, '<p>Hello <strong>world</strong>') && !preg_match('/onclick|<script|<iframe|javascript:/i', $encoded), 'HTML values in the review are the sanitised ones');
 

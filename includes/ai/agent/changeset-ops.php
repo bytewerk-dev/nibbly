@@ -222,6 +222,52 @@ function nibblyAgentNormalizeAlt($alt, string $label): string {
     return $alt;
 }
 
+/** A short readable piece of (possibly HTML) text. */
+function nibblyAgentSnippet(string $text, int $max = 40): string {
+    $text = preg_replace('~</?(p|h[1-6]|li|ul|ol|div|br|blockquote|tr|td)\b[^>]*>~i', ' ', $text);
+    $text = trim((string)preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags((string)$text), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+    return mb_strlen($text, 'UTF-8') > $max ? rtrim(mb_substr($text, 0, $max - 1, 'UTF-8')) . '…' : $text;
+}
+
+/** What a person would call a section: its title, its first heading or the start of its text. */
+function nibblyAgentSectionTitle(array $section): string {
+    foreach (['title', 'heading', 'headline', 'name'] as $key) {
+        if (isset($section[$key]) && is_string($section[$key]) && nibblyAgentSnippet($section[$key]) !== '') return nibblyAgentSnippet($section[$key]);
+    }
+    foreach ($section as $value) {
+        if (is_string($value) && preg_match('~<h[1-6][^>]*>(.*?)</h[1-6]>~is', $value, $m) && nibblyAgentSnippet($m[1]) !== '') return nibblyAgentSnippet($m[1]);
+    }
+    foreach (['content', 'text', 'description', 'quote'] as $key) {
+        if (isset($section[$key]) && is_string($section[$key]) && nibblyAgentSnippet($section[$key]) !== '') return nibblyAgentSnippet($section[$key]);
+    }
+    return '';
+}
+
+/**
+ * Where a path points, in terms a person understands: the field, and the section (position, type,
+ * title) and list item it sits in. Used for the review texts only.
+ *
+ * @return array{field:string,section:?array{n:int,type:string,title:string},item:?int}
+ */
+function nibblyAgentFieldContext(array $doc, string $path): array {
+    $parts = explode('.', $path);
+    $context = ['field' => $path, 'section' => null, 'item' => null];
+    if (count($parts) >= 3 && $parts[0] === 'sections' && ctype_digit($parts[1])) {
+        $section = getNestedValue($doc, 'sections.' . $parts[1]);
+        if (is_array($section)) {
+            $context['section'] = ['n' => (int)$parts[1] + 1, 'type' => (string)($section['type'] ?? ''), 'title' => nibblyAgentSectionTitle($section)];
+            $rest = array_slice($parts, 2);
+            if (count($rest) >= 3 && ctype_digit($rest[1])) {
+                $context['item'] = (int)$rest[1] + 1;
+                $context['field'] = implode('.', array_slice($rest, 2));
+            } else {
+                $context['field'] = implode('.', $rest);
+            }
+        }
+    }
+    return $context;
+}
+
 /** Text that identifies a list item to a human (used to confirm removals). */
 function nibblyAgentItemLabel($item): string {
     if (!is_array($item)) return trim(strip_tags((string)$item));
@@ -351,6 +397,7 @@ function nibblyAgentApplyOp(array &$state, array $op): void {
     $before = null;
     $after = null;
     $effectivePosition = null;
+    $context = null;
 
     switch ($type) {
         case 'set_field':
@@ -362,6 +409,7 @@ function nibblyAgentApplyOp(array &$state, array $op): void {
                 throw new NibblyAgentOpException("'{$path}': {$op['spec']['mustExist']} no longer exists at this point of the change set.", 'Indexes refer to the page after the previous changes.');
             }
             $before = getNestedValue($doc, $path);
+            $context = nibblyAgentFieldContext($doc, $path);
             if ($type === 'set_field') {
                 $value = $op['value'];
                 if (is_array($value) && is_array($before) && !array_is_list($before)) {
@@ -391,6 +439,7 @@ function nibblyAgentApplyOp(array &$state, array $op): void {
             $listKey = (string)$op['listKey'];
             if (!nibblyAgentPathValid($listKey)) throw new NibblyAgentOpException('Invalid list key.');
             $items = nibblyAgentListItemsOf($doc, $listKey);
+            $context = nibblyAgentFieldContext($doc, $listKey);
             $tokens = nibblyAgentTokensFor($state, $target, $listKey, $items);
             $count = count($items);
             if ($type === 'list_insert') {
@@ -485,7 +534,7 @@ function nibblyAgentApplyOp(array &$state, array $op): void {
     if (in_array($type, ['create_news', 'create_page', 'create_event'], true)) {
         $state['created'][$target] = $op['id'];
     }
-    $state['results'][$op['id']] = ['before' => $before, 'after' => $after, 'position' => $effectivePosition];
+    $state['results'][$op['id']] = ['before' => $before, 'after' => $after, 'position' => $effectivePosition, 'context' => $context];
 }
 
 /**

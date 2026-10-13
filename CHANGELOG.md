@@ -52,6 +52,15 @@ Git milestones and the gaps in publication records.
 - Newer OpenAI models: `max_completion_tokens` is sent to api.openai.com, and a
   provider that rejects `max_tokens`, `max_completion_tokens` or a custom
   `temperature` is asked again without it; the finding is remembered per model.
+- Agent review: changes are named in plain words ("Change “Text” in section 14
+  (text): “Loslegen”" instead of `sections.14.content`), in the admin language. The
+  apply dialog and the note after applying say that changes to existing content are
+  live at once and only new pages, posts, events, sections and list items stay
+  hidden until published (it used to say this for every package).
+- Agent review: a package of up to four changes shows its before and after right
+  away; block ends in rich text no longer run together. The preview bar (in the
+  admin language) has "Apply changes" and "Back to the assistant": apply opens the
+  assistant's own confirmation in the other tab, the preview itself writes nothing.
 - The agent talks to api.openai.com through the Responses API (`/v1/responses`):
   reasoning models cannot combine function tools with reasoning on
   chat/completions. Reasoning comes back encrypted (`store: false`, nothing is kept
