@@ -3,6 +3,7 @@ if (!defined('NIBBLY_ADMIN_DIR')) { http_response_code(404); exit; }
 
 // Authenticated dispatcher supplies shared helpers and request context.
 require_once NIBBLY_ADMIN_DIR . '/../includes/ai/agent/agent-config.php';
+require_once NIBBLY_ADMIN_DIR . '/../includes/ai/dashboard-actions.php';
 switch ($action) {
     case 'ai-resolve-request':
         if (!isAdmin()) jsonResponse(false, null, 'Forbidden');
@@ -177,6 +178,8 @@ switch ($action) {
         $settings['assistantUiLanguage'] = dashboardCopilotUiLanguage();
         $context = nibblyCopilotBuildContext($contentPage, $settings);
         $context['limitWarnings'] = nibblyAiUsageSummary()['warnings'];
+        // The dashboard assistant can offer actions (open a section, change the look) when the provider takes tool calls.
+        $context['dashboardActions'] = ($_POST['mode'] ?? '') === 'dashboard' && nibblyDashboardActionsAvailable();
         jsonResponse(true, $context);
         break;
 
@@ -369,18 +372,42 @@ switch ($action) {
             $settings['assistantUiLanguage'] = dashboardCopilotUiLanguage();
             $context = nibblyCopilotBuildContext($contentPage, $settings);
             $system = nibblyCopilotSystemPrompt($context);
+            $withActions = ($_POST['mode'] ?? '') === 'dashboard' && nibblyDashboardActionsAvailable();
+            if ($withActions) $system .= nibblyDashboardActionPrompt(isAdmin());
             array_unshift($cleanMessages, ['role' => 'system', 'content' => $system]);
-            $result = nibblyAiChat($cleanMessages, [
-                'feature' => 'backendAssistant',
-                'maxOutputTokens' => $_POST['maxOutputTokens'] ?? 900,
-                'temperature' => 0.25
-            ]);
+            $actions = [];
+            if ($withActions) {
+                // One turn with the dashboard tools: an answer, or cards the person confirms. Nothing is changed here.
+                $turn = nibblyAiChatWithTools($cleanMessages, nibblyDashboardActionTools(isAdmin(), true), [
+                    'feature' => 'backendAssistant',
+                    'maxOutputTokens' => 4000,
+                    'temperature' => 0.25
+                ]);
+                $actions = $turn['kind'] === 'tool_calls'
+                    ? nibblyDashboardActionsFromCalls($turn['toolCalls'], isAdmin(), true, nibblyDashboardCurrentSettings())
+                    : [];
+                $replyText = $turn['text'];
+                if ($turn['kind'] === 'tool_calls' && !$actions) {
+                    $replyText = $replyText !== '' ? $replyText : t('copilot.dash_not_possible');
+                } elseif ($actions && $replyText === '') {
+                    $replyText = t('copilot.dash_actions_ready');
+                }
+                $result = ['text' => $replyText, 'usage' => $turn['usage'], 'limits' => ['warnings' => nibblyAiUsageSummary()['warnings']]];
+            } else {
+                $result = nibblyAiChat($cleanMessages, [
+                    'feature' => 'backendAssistant',
+                    'maxOutputTokens' => $_POST['maxOutputTokens'] ?? 900,
+                    'temperature' => 0.25
+                ]);
+            }
             nibblyAiAudit('copilot-chat', true, [
                 'contentPage' => $contentPage,
-                'messages' => count($cleanMessages) - 1
+                'messages' => count($cleanMessages) - 1,
+                'actions' => array_column($actions, 'type')
             ]);
             jsonResponse(true, [
                 'reply' => (string)($result['text'] ?? ''),
+                'actions' => $actions,
                 'usage' => $result['usage'] ?? null,
                 'limits' => $result['limits'] ?? null,
                 'context' => $context

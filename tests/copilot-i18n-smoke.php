@@ -118,6 +118,20 @@ foreach ($toolNames as $tool) {
     if (!str_contains($agentJs, "'" . $tool . "'")) fail('js/ai-agent.js does not list tool ' . $tool . ' in TOOL_STEPS.');
 }
 
+// ---- Dashboard actions: every text the server and the dashboard script use exists, in every language ---------------------------
+$dashboardActionSources = (string)file_get_contents($root . '/includes/ai/dashboard-actions.php') . (string)file_get_contents($root . '/admin/dashboard/scripts/settings.php') . (string)file_get_contents($root . '/admin/api/ai.php');
+preg_match_all("/['\"](copilot\.dash_[a-z_A-Z]+)['\"]/", $dashboardActionSources, $dashMatches);
+$dashKeys = array_values(array_filter(array_unique($dashMatches[1] ?? []), fn($key) => !in_array($key, ['copilot.dash_setting_', 'copilot.dash_value_'], true)));
+foreach (['adminTheme', 'primaryColor', 'accentColor', 'adminLanguage'] as $setting) $dashKeys[] = 'copilot.dash_setting_' . $setting; // built from the setting name
+foreach (['light', 'dark', 'system'] as $value) $dashKeys[] = 'copilot.dash_value_' . $value;
+if (count($dashKeys) < 20) fail('Could not read the dashboard action texts (' . count($dashKeys) . ').');
+foreach ($mainLangFiles as $file) {
+    $strings = json_decode((string)file_get_contents($file), true);
+    foreach ($dashKeys as $key) {
+        if (!isset($strings[$key]) || trim((string)$strings[$key]) === '') fail('Dashboard action text ' . $key . ' is missing in ' . basename($file));
+    }
+}
+
 // ---- Agent settings and system status in the dashboard ----------------------------------------------------------------
 $dashboardKeys = array_values(array_filter(array_keys($english), fn($key) => str_starts_with((string)$key, 'ai.agent_') || str_starts_with((string)$key, 'ai.limit') || str_starts_with((string)$key, 'ai.models_') || str_starts_with((string)$key, 'system.agent') || in_array($key, ['system.configured', 'system.not_configured'], true)));
 sort($dashboardKeys);
