@@ -12,7 +12,7 @@ function nibblyAgentSystemPrompt(array $run): string {
     $languages = nibblyAgentSiteLanguages();
     $rights = [];
     foreach (['structural' => 'add, remove, hide and move list items and sections', 'createNews' => 'create news posts', 'createEvents' => 'create events',
-        'createPages' => 'create pages', 'editSharedContent' => 'change shared content (footer, sidebar)'] as $right => $what) {
+        'createPages' => 'create pages', 'editSharedContent' => 'change shared content (footer, sidebar)', 'editMenus' => 'put pages into menus or take them out'] as $right => $what) {
         if (!nibblyAgentCan($right)) $rights[] = $what;
     }
     $pages = [];
@@ -55,6 +55,10 @@ function nibblyAgentSystemPrompt(array $run): string {
     $lines[] = 'Images: use images from the media library (list_media) first. Images the user attached are listed by list_run_media.'
         . ($imageHints ? ' ' . implode('; ', $imageHints) . '.' : '')
         . ' Every image needs an alt text that describes what is in it. Credits of stock photos are added automatically.';
+    if (in_array('stage_set_page_menus', $toolNames, true)) {
+        $lines[] = '';
+        $lines[] = 'Menus: stage_set_page_menus shows a page in a menu or takes it out ("header" is the main menu). The page must exist, so create it first in the same change set. A page you create is private until published; tell the user that it appears in the menu only once it is published.';
+    }
     $canSearch = in_array('search_web', $toolNames, true);
     $canReadUrl = in_array('read_url', $toolNames, true);
     if ($canSearch || $canReadUrl) {

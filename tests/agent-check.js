@@ -76,6 +76,7 @@ async function mainFlow(browser, user) {
     await send(page, 'Update the services page and write a news post about it.');
     await page.locator('.nb-agent-run').waitFor({ state: 'visible', timeout: 30000 });
     await waitForPackage(page);
+    assert((await page.locator('.nb-copilot-msg--assistant .nb-copilot-msg__bubble', { hasText: 'Updated the services page and drafted a news post' }).count()) === 1, 'what the agent prepared is also in the chat, so the history keeps it');
     const card = page.locator('.nb-agent-package').first();
     const text = await card.textContent();
     assert(text.includes('Updated the services page and drafted a news post.'), 'the summary is shown');
@@ -93,112 +94,28 @@ async function mainFlow(browser, user) {
     await page.locator('.nb-agent-summary', { hasText: 'Nothing is applied by a chat reply.' }).waitFor({ state: 'visible', timeout: 60000 });
     assert(newsFiles().length === 0 && !(await (await page.request.get(base + '/services/test/')).text()).includes('Updated by the agent'), 'a "yes" in the chat does not apply the package');
 
-    // Preview opens the page with the staged content, for the owner only
-    const [preview] = await Promise.all([
-        context.waitForEvent('page'),
-        page.locator('[data-agent-action="preview"]').first().click()
-    ]);
-    await preview.waitForLoadState('load');
-    assert(await preview.locator('.nb-agent-preview-banner').count() === 1, 'preview banner');
-    assert((await preview.locator('body').textContent()).includes('Updated by the agent'), 'preview shows the staged text');
-    assert(!(await preview.locator('#admin-bar').count()), 'no editor in the preview');
-    // The bar offers the way on: "Apply changes" opens the assistant's own confirmation in the other tab
-    assert((await preview.locator('[data-nb-preview="apply"]').textContent()).trim() === 'Apply changes' && (await preview.locator('[data-nb-preview="back"]').textContent()).trim() === 'Back to the assistant', 'preview bar buttons');
-    await preview.locator('[data-nb-preview="apply"]').click();
-    await page.locator('.nb-copilot-modal').waitFor({ state: 'visible', timeout: 10000 });
-    await preview.waitForEvent('close', { timeout: 10000 });
-    assert(newsFiles().length === 0 && !(await (await page.request.get(base + '/services/test/')).text()).includes('Updated by the agent'), 'the preview itself applies nothing');
-    await page.locator('.nb-copilot-modal-cancel').click();
-    await page.locator('.nb-copilot-modal').waitFor({ state: 'detached' });
-
-    return { context, page };
-}
-
-async function openAssistant(page) {
-    await page.goto(base + '/services/test/');
-    await page.waitForLoadState('networkidle');
-    await page.locator('.nb-copilot-toggle').click();
-    await page.locator('#nb-copilot-panel').waitFor({ state: 'visible' });
-}
-
-async function send(page, text) {
-    const input = page.locator('.nb-copilot-input');
-    await input.fill(text);
-    await input.press('Enter');
-}
-
-async function waitForPackage(page) {
-    await page.locator('.nb-agent-package:not(.nb-agent-package--applied):not(.nb-agent-package--quiet)').waitFor({ state: 'visible', timeout: 60000 });
-}
-
-async function confirmModal(page) {
-    await page.locator('.nb-copilot-modal').waitFor({ state: 'visible' });
-    await page.locator('.nb-copilot-modal-confirm').click();
-    await page.locator('.nb-copilot-modal').waitFor({ state: 'detached' });
-}
-
-function newsFiles() {
-    const dir = path.join(siteRoot, 'content/news');
-    return fs.existsSync(dir) ? fs.readdirSync(dir).filter(name => name.endsWith('.json')) : [];
-}
-
-async function mainFlow(browser, user) {
-    const { context, page } = await login(browser, user);
-    await openAssistant(page);
-
-    // The agent is the default; the classic shortcuts are out of the way.
-    assert(await page.locator('[data-agent-action="mode"][data-arg="agent"]').getAttribute('aria-pressed') === 'true', 'agent mode is on by default');
-    assert(!(await page.locator('.nb-copilot-draft').isVisible()), 'classic shortcuts are hidden in agent mode');
-    assert((await page.locator('.nb-agent-intro').textContent()).includes('Nothing goes live until you apply it'), 'intro explains the review');
-
-    // Mode switch
-    await page.locator('[data-agent-action="mode"][data-arg="classic"]').click();
-    assert(await page.locator('.nb-copilot-draft').isVisible() && !(await page.locator('.nb-agent-intro').count()), 'classic mode shows the classic shortcuts and no agent cards');
-    await page.locator('[data-agent-action="mode"][data-arg="agent"]').click();
-    assert(await page.locator('.nb-agent-intro').count() === 1, 'agent mode is back');
-
-    // Run: the timeline, then the package
-    await send(page, 'Update the services page and write a news post about it.');
-    await page.locator('.nb-agent-run').waitFor({ state: 'visible', timeout: 30000 });
+    // Preview opens the page with the staged content in this tab, for the owner only
+    const assistantUrl = page.url();
+    await Promise.all([page.waitForNavigation(), page.locator('[data-agent-action="preview"]').first().click()]);
+    assert(await page.locator('.nb-agent-preview-banner').count() === 1, 'preview banner');
+    assert((await page.locator('body').textContent()).includes('Updated by the agent'), 'preview shows the staged text');
+    assert(!(await page.locator('#admin-bar').count()), 'no editor in the preview');
+    assert((await page.locator('[data-nb-preview="apply"]').textContent()).trim() === 'Apply changes' && (await page.locator('[data-nb-preview="back"]').textContent()).trim() === 'Back to the assistant', 'preview bar buttons');
+    // "Back" returns to the page the assistant was on; the open package is still there
+    await Promise.all([page.waitForNavigation(), page.locator('[data-nb-preview="back"]').click()]);
+    assert(page.url().split('#')[0] === assistantUrl.split('#')[0] && !page.url().includes('nb_agent'), 'back leads to the page the person came from: ' + page.url());
+    await page.locator('#nb-copilot-panel').waitFor({ state: 'visible', timeout: 20000 });
     await waitForPackage(page);
-    const card = page.locator('.nb-agent-package').first();
-    const text = await card.textContent();
-    assert(text.includes('Updated the services page and drafted a news post.'), 'the summary is shown');
-    assert(text.includes('Page: en_services__test') && text.includes('News post: 2026-10-10-agent-news'), 'targets are grouped: ' + text.slice(0, 300));
-    assert(text.includes('All checks passed'), 'validation status is shown');
-    assert(await page.locator('.nb-agent-steps-details summary').textContent().then(value => /\d+ steps/.test(value)), 'finished runs fold the steps');
-    assert(await page.locator('.nb-agent-op details').first().evaluate(node => node.open), 'a small package shows before and after right away');
-    assert(await page.locator('.nb-agent-diff').first().isVisible() && (await page.locator('.nb-agent-diff').first().textContent()).includes('Updated by the agent'), 'before/after is shown');
-    assert(!(await page.locator('.nb-agent-package script, .nb-agent-package iframe, .nb-agent-package img[src="x"]').count()), 'no markup is injected');
-    assert((await page.locator('.nb-agent-summary').first().textContent()).includes('<img src=x onerror="window.__xss=1">') && await page.evaluate(() => window.__xss === undefined), 'text from the agent is shown as text and never runs');
-    await page.screenshot({ path: path.join(shots, 'agent-review-' + user + '.png') });
-
-    // A "yes" in the chat never applies anything
-    await send(page, 'yes');
-    await page.locator('.nb-agent-summary', { hasText: 'Nothing is applied by a chat reply.' }).waitFor({ state: 'visible', timeout: 60000 });
-    assert(newsFiles().length === 0 && !(await (await page.request.get(base + '/services/test/')).text()).includes('Updated by the agent'), 'a "yes" in the chat does not apply the package');
-
-    // Preview opens the page with the staged content, for the owner only
-    const [preview] = await Promise.all([
-        context.waitForEvent('page'),
-        page.locator('[data-agent-action="preview"]').first().click()
-    ]);
-    await preview.waitForLoadState('load');
-    assert(await preview.locator('.nb-agent-preview-banner').count() === 1, 'preview banner');
-    assert((await preview.locator('body').textContent()).includes('Updated by the agent'), 'preview shows the staged text');
-    assert(!(await preview.locator('#admin-bar').count()), 'no editor in the preview');
-    // The bar offers the way on: "Apply changes" opens the assistant's own confirmation in the other tab
-    assert((await preview.locator('[data-nb-preview="apply"]').textContent()).trim() === 'Apply changes' && (await preview.locator('[data-nb-preview="back"]').textContent()).trim() === 'Back to the assistant', 'preview bar buttons');
-    await preview.locator('[data-nb-preview="apply"]').click();
-    await page.locator('.nb-copilot-modal').waitFor({ state: 'visible', timeout: 10000 });
-    await preview.waitForEvent('close', { timeout: 10000 });
-    assert(newsFiles().length === 0 && !(await (await page.request.get(base + '/services/test/')).text()).includes('Updated by the agent'), 'the preview itself applies nothing');
+    assert(!page.url().includes('#nb-agent'), 'the hash is cleaned up');
+    // "Apply changes" returns and asks for the assistant's own confirmation; the preview itself applies nothing
+    await Promise.all([page.waitForNavigation(), page.locator('[data-agent-action="preview"]').first().click()]);
+    await Promise.all([page.waitForNavigation(), page.locator('[data-nb-preview="apply"]').click()]);
+    await page.locator('.nb-copilot-modal').waitFor({ state: 'visible', timeout: 20000 });
+    assert((await page.locator('.nb-copilot-modal').textContent()).includes('Apply this package'), 'the assistant asks for the confirmation');
+    assert(newsFiles().length === 0 && !(await (await page.request.get(base + '/services/test/')).text()).includes('Updated by the agent'), 'nothing is applied before the confirmation');
     await page.locator('.nb-copilot-modal-cancel').click();
     await page.locator('.nb-copilot-modal').waitFor({ state: 'detached' });
-    // Without an assistant tab that answers, the bar says so instead of doing nothing
-    const lonely = await context.newPage();
-    await lonely.goto(preview.url().replace(/nb_agent_preview=[^&]+/, 'nb_agent_preview=' + await page.evaluate(() => JSON.parse(sessionStorage.getItem('nibbly-ai-agent:run') || localStorage.getItem('nibbly-ai-agent:run') || '{}').changesetId || '')));
-    await lonely.close();
+    await waitForPackage(page);
 
     return { context, page };
 }
@@ -278,11 +195,28 @@ async function mainFlow(browser, user) {
         await send(page, '[flow:upload] put my images on the page');
         await page.locator('.nb-copilot-msg__bubble', { hasText: 'I can see your image' }).waitFor({ state: 'visible', timeout: 60000 });
         assert(!(await page.locator('.nb-agent-chip').count()), 'chips are cleared once the request is sent');
+        // The answer is also kept when the page loses it: it comes back after a reload (a new login, a closed tab)
+        await page.evaluate(() => {
+            Object.keys(sessionStorage).filter(key => key.startsWith('nibbly-ai-assistant:')).forEach(key => {
+                const stored = JSON.parse(sessionStorage.getItem(key));
+                stored.messages = stored.messages.filter(message => !message.content.includes('I can see your image'));
+                sessionStorage.setItem(key, JSON.stringify(stored));
+            });
+        });
+        await page.reload();
+        await page.locator('.nb-copilot-msg__bubble', { hasText: 'I can see your image' }).waitFor({ state: 'visible', timeout: 30000 });
+        assert((await page.locator('.nb-copilot-msg__bubble', { hasText: 'I can see your image' }).count()) === 1, 'the answer is back once, not twice');
+        await page.reload();
+        await page.locator('.nb-copilot-msg__bubble', { hasText: 'I can see your image' }).first().waitFor({ state: 'visible', timeout: 30000 });
+        assert((await page.locator('.nb-copilot-msg__bubble', { hasText: 'I can see your image' }).count()) === 1, 'and a second reload does not add it again');
         await context.close();
 
         // ---- Admin: may publish ------------------------------------------------------------------------------------------------------------------
         ({ context, page } = await mainFlow(browser, 'admin'));
-        await page.locator('[data-agent-action="apply"]').click();
+        // Applying from the preview: the bar leads back, the assistant asks, one confirmation applies it
+        await Promise.all([page.waitForNavigation(), page.locator('[data-agent-action="preview"]').first().click()]);
+        await Promise.all([page.waitForNavigation(), page.locator('[data-nb-preview="apply"]').click()]);
+        await page.locator('.nb-copilot-modal').waitFor({ state: 'visible', timeout: 30000 });
         await confirmModal(page);
         await page.locator('.nb-agent-package--applied').waitFor({ state: 'visible', timeout: 20000 });
         assert(newsFiles().length === 1 && JSON.parse(fs.readFileSync(path.join(siteRoot, 'content/news', newsFiles()[0]), 'utf8')).hidden === true, 'new news is hidden after the apply');

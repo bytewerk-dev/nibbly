@@ -202,6 +202,12 @@ which fills the existing theme or language form and submits it. To allow another
 add it to `NIBBLY_DASHBOARD_SETTINGS`, validate it in `nibblyDashboardActionFromCall()`, add
 its texts, and handle it in the runner.
 
+The package preview (`?nb_agent_preview={id}&nb_agent_return={local path}`) opens in the same
+tab. Its bar only holds links back to the return path: `#nb-agent-open` and
+`#nb-agent-apply={id}`. `js/ai-agent.js` reads that hash once the open package is loaded and
+opens the panel or its own apply confirmation. Never add cross-tab messaging or CSRF tokens to
+the preview page.
+
 Dashboard AI UI should honor both global module visibility and AI feature flags.
 If AI features are disabled, hide AI buttons and tools throughout the admin UI.
 If AI is enabled but a capability lacks a model or key, show a clear disabled

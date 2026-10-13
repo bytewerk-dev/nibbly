@@ -9,7 +9,7 @@
  * value and the hash of the value it replaced.
  *
  * Operations: set_field, set_image, list_insert, list_hide, list_remove, list_move,
- * section_insert, create_news, create_event, create_page.
+ * section_insert, set_page_menus, create_news, create_event, create_page.
  *
  * Lists are normalised to JSON arrays when an operation touches them. The editor writes
  * numbered objects ({"0": …}) and PHP reads both forms; arrays are what json_encode()
@@ -493,6 +493,18 @@ function nibblyAgentApplyOp(array &$state, array $op): void {
             array_splice($sections, $position, 0, [$op['section']]);
             $doc['sections'] = $sections;
             $after = $op['section'];
+            unset($doc);
+            break;
+
+        case 'set_page_menus':
+            $doc = &nibblyAgentDocRef($state, $target);
+            $current = array_values(array_map('strval', (array)($doc['nav'] ?? ['header'])));
+            $menus = array_values(array_unique(array_merge($current, $op['add'])));
+            $menus = array_values(array_diff($menus, $op['remove']));
+            $label = static fn(array $ids): string => $ids ? implode(', ', array_map(static fn($id) => function_exists('getMenuLabel') ? getMenuLabel($id, (string)($doc['lang'] ?? 'en')) : $id, $ids)) : '–';
+            $before = $label($current);
+            $doc['nav'] = $menus;
+            $after = $label($menus);
             unset($doc);
             break;
 

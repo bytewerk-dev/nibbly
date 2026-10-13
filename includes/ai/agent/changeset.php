@@ -122,6 +122,7 @@ const NIBBLY_AGENT_REQUEST_KEYS = [
     'create_news' => ['type', 'lang', 'title', 'slug', 'date', 'author', 'excerpt', 'contentHtml', 'imageRef', 'imagePath'],
     'create_event' => ['type', 'lang', 'title', 'date', 'time', 'location', 'description', 'admission', 'url', 'endDate', 'endTime'],
     'create_page' => ['type', 'lang', 'slug', 'title', 'description', 'sections'],
+    'set_page_menus' => ['type', 'target', 'add', 'remove'],
     'revert_op' => ['type', 'opId'],
 ];
 
@@ -449,6 +450,28 @@ function nibblyAgentBuildOp(array $cs, array $request, array $state): array {
             $op['event'] = $event;
             break;
 
+        case 'set_page_menus':
+            // Which menus show a page. Administrators only (the tool's right); the page's own "nav" list is not an editable field.
+            nibblyAgentRequireKeys($request, ['target']);
+            $target = (string)$request['target'];
+            $info = nibblyAgentParseTarget($target);
+            if ($info === null || $info['kind'] !== 'page') throw new NibblyAgentOpException('Menus belong to pages.', 'Use a page target such as page:de_about.');
+            $doc = nibblyAgentFinalDoc($state, $target);
+            if ($doc === null) throw new NibblyAgentOpException("{$target} does not exist.", 'Create the page first, or use get_site_overview to find it.');
+            if (!function_exists('getRegisteredMenuIds')) require_once nibblyAgentSiteRoot() . '/includes/menu-helpers.php';
+            $registered = getRegisteredMenuIds();
+            foreach (['add', 'remove'] as $key) {
+                $ids = array_values(array_unique(array_map('strval', (array)($request[$key] ?? []))));
+                foreach ($ids as $id) {
+                    if (!in_array($id, $registered, true)) throw new NibblyAgentOpException("'{$id}' is not a menu of this site.", 'Menus: ' . implode(', ', $registered) . '. "header" is the main menu.');
+                }
+                $op[$key] = $ids;
+            }
+            if (!$op['add'] && !$op['remove']) throw new NibblyAgentOpException('Name at least one menu to add or remove.');
+            if (array_intersect($op['add'], $op['remove'])) throw new NibblyAgentOpException('A menu cannot be added and removed at once.');
+            $op['target'] = $target;
+            break;
+
         case 'create_page':
             nibblyAgentRequireKeys($request, ['lang', 'slug', 'title']);
             $lang = nibblyAgentLanguageOrFail($request['lang']);
@@ -461,7 +484,10 @@ function nibblyAgentBuildOp(array $cs, array $request, array $state): array {
             $sections = [];
             foreach ((array)($request['sections'] ?? []) as $index => $section) {
                 if (!is_array($section) || !isset($section['type'])) throw new NibblyAgentOpException("sections[{$index}] needs a type.");
-                $sections[] = nibblyAgentBuildSection((string)$section['type'], (array)($section['fields'] ?? []), $cs, $warnings, "sections[{$index}]", false);
+                $built = nibblyAgentBuildSection((string)$section['type'], (array)($section['fields'] ?? []), $cs, $warnings, "sections[{$index}]", false);
+                // The level is not the agent's to choose; the heading that opens a page is the page title.
+                if ($index === 0 && ($built['type'] ?? '') === 'heading') $built['level'] = 'h1';
+                $sections[] = $built;
             }
             if (!$sections) throw new NibblyAgentOpException('A new page needs at least one section.', 'Add a heading and a text section.');
             $op['target'] = 'page:' . $key;
@@ -564,6 +590,7 @@ function nibblyAgentOpLabel(array $op, array $result): string {
         'create_news' => nibblyAgentOpText('agent.op.create_news', 'Create news post'),
         'create_event' => nibblyAgentOpText('agent.op.create_event', 'Create event'),
         'create_page' => nibblyAgentOpText('agent.op.create_page', 'Create page'),
+        'set_page_menus' => nibblyAgentOpText('agent.op.set_page_menus', 'Change the menus of this page'),
         default => $type
     };
     $section = $context['section'] ?? null;
@@ -750,6 +777,14 @@ function nibblyAgentValidate(array $cs, array $replay, bool $final): array {
                 $min = (int)$op['listSpec']['min'];
                 if ($count > $max) $add("{$op['listKey']} would have {$count} items; at most {$max} are allowed.", $op['id'], 'Remove or hide items, or add fewer.');
                 if ($final && $count < $min) $add("{$op['listKey']} would have {$count} items; at least {$min} are required.", $op['id']);
+                break;
+            case 'set_page_menus':
+                $doc = nibblyAgentFinalDoc($state, $target);
+                if ($doc === null) {
+                    $add("{$target} does not exist at the end of the change set.", $op['id']);
+                } elseif (in_array('header', (array)($doc['nav'] ?? []), true) && ($doc['visibility']['status'] ?? '') === 'private') {
+                    $warnings[] = ['message' => 'The page is private until it is published, but it shows in the main menu: visitors would find a link they cannot open yet.', 'opId' => $op['id'], 'hint' => 'Publish the page after applying, or leave it out of the menu until then.'];
+                }
                 break;
             case 'create_news':
             case 'create_event':
