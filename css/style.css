@@ -115,20 +115,21 @@ img {
     top: 12px;
     left: 12px;
     z-index: 10000;
-    transform: translateY(-160%);
+    transform: translateY(calc(-100% - 24px)); /* fully off screen, shadow included */
     padding: 10px 14px;
     border-radius: 6px;
     background: var(--color-primary);
     color: var(--color-white);
     font-weight: 700;
     text-decoration: none;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+    box-shadow: none;
     transition: transform var(--transition-fast);
 }
 
 .skip-link:focus,
 .skip-link:focus-visible {
     transform: translateY(0);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
     color: var(--color-white);
     outline: 3px solid var(--color-primary-light);
     outline-offset: 2px;
