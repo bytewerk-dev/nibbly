@@ -61,6 +61,13 @@ Git milestones and the gaps in publication records.
   away; block ends in rich text no longer run together. The preview bar (in the
   admin language) has "Apply changes" and "Back to the assistant": apply opens the
   assistant's own confirmation in the other tab, the preview itself writes nothing.
+- Dashboard assistant: it can offer actions as cards the person confirms: open a
+  dashboard area or settings tab, and (administrators only) change the dashboard
+  theme (light/dark/system), main and accent colour and language. The model only
+  picks from a fixed catalogue (`includes/ai/dashboard-actions.php`), the server
+  validates every call against the role, and the dashboard performs the change
+  through its own settings form, so contrast rules, rights and CSRF still apply.
+  Needs a provider with tool calling; the frontend assistant is unchanged.
 - The agent talks to api.openai.com through the Responses API (`/v1/responses`):
   reasoning models cannot combine function tools with reasoning on
   chat/completions. Reasoning comes back encrypted (`store: false`, nothing is kept

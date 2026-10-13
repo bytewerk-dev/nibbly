@@ -60,6 +60,20 @@ def scripted_turn(goal, messages):
     return steps[since] if since < len(steps) else say("Done.")
 
 
+def dashboard_turn(messages):
+    """The dashboard assistant: cards instead of answers."""
+    text = messages[-1]["content"].lower() if messages[-1]["role"] == "user" else ""
+    if "dark" in text:
+        return turn(call("change_setting", {"setting": "adminTheme", "value": "dark"}, "d1"))
+    if "language settings" in text:
+        return turn(call("open_section", {"section": "settings", "settingsTab": "language"}, "d2"))
+    if "german" in text:
+        return turn(call("change_setting", {"setting": "adminLanguage", "value": "de"}, "d3"))
+    if "blue" in text:
+        return turn(call("change_setting", {"setting": "accentColor", "value": "#0b5cad"}, "d4"))
+    return say("Plain dashboard answer.")
+
+
 class Provider(BaseHTTPRequestHandler):
     def log_message(self, *_):
         pass
@@ -70,7 +84,8 @@ class Provider(BaseHTTPRequestHandler):
             handle.write(json.dumps(body) + "\n")
         messages = body["messages"]
         goal = next((m["content"] for m in messages if m["role"] == "user"), "")
-        payload = scripted_turn(goal, messages)
+        names = {tool["function"]["name"] for tool in body.get("tools", [])}
+        payload = dashboard_turn(messages) if "open_section" in names else scripted_turn(goal, messages)
         data = json.dumps(payload).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")

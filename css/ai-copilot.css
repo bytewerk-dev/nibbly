@@ -1857,3 +1857,78 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     margin-bottom: 0 !important;
     color: #92400e;
 }
+
+/* Dashboard actions: cards the person confirms (open a section, change the dashboard look) */
+.nb-copilot-dash-list {
+    display: grid;
+    gap: 8px;
+    margin: 4px 0 12px;
+}
+
+.nb-copilot-dash {
+    display: grid;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.nb-copilot-dash strong {
+    display: block;
+    color: #0f172a;
+    font-size: 13px;
+}
+
+.nb-copilot-dash span {
+    display: block;
+    margin-top: 2px;
+    color: #475569;
+    font-size: 12px;
+}
+
+.nb-copilot-dash footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.nb-copilot-dash footer em {
+    flex: 1 1 100%;
+    color: #475569;
+    font-size: 12px;
+    font-style: normal;
+}
+
+.nb-copilot-dash footer .nb-copilot-dash__ok {
+    color: #166534;
+}
+
+.nb-copilot-dash footer .nb-copilot-dash__error {
+    color: #b91c1c;
+}
+
+.nb-copilot-dash button {
+    min-height: 32px;
+    padding: 0 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    color: #172033;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.nb-copilot-dash .nb-copilot-dash-run {
+    border-color: #1e3a8a;
+    background: #1e3a8a;
+    color: #fff;
+}
+
+.nb-copilot-dash button:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}

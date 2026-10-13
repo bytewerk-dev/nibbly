@@ -2788,3 +2788,74 @@
             btn.textContent = t('settings.test_email');
         }
     });
+
+    // ============================================================
+    // ACTIONS OF THE AI ASSISTANT
+    // Cards the assistant offers (open a section, change the dashboard look) run here after the
+    // person clicked. Settings go through the same forms and the same save as a manual change.
+    // ============================================================
+
+    window.NibblyDashboardActions = {
+        run: async function(action) {
+            action = action || {};
+            if (action.type === 'open') {
+                var section = String(action.section || '');
+                var allowed = Array.prototype.map.call(document.querySelectorAll('.sidebar-nav-item[data-tab]'), function(item) { return item.getAttribute('data-tab'); });
+                if (allowed.indexOf(section) === -1) throw new Error(t('copilot.dash_failed'));
+                var tab = String(action.settingsTab || '');
+                if (section === 'settings' && tab && document.querySelector('.settings-tab-btn[data-settings-tab="' + tab.replace(/[^a-z-]/g, '') + '"]')) {
+                    switchTab('settings', { settingsTab: tab });
+                } else {
+                    switchTab(section);
+                }
+                return { message: t('copilot.dash_opened') };
+            }
+            if (action.type !== 'setting') throw new Error(t('copilot.dash_failed'));
+
+            if (!settingsLoaded) await loadSettings();
+            if (!settingsLoaded || !currentSettings) throw new Error(t('copilot.dash_failed'));
+            var key = String(action.setting || '');
+            var value = String(action.value || '');
+            var waitForSave = async function(button) {
+                // The form handler disables its button while it saves; wait until it is done.
+                for (var i = 0; i < 100; i++) {
+                    await new Promise(function(resolve) { setTimeout(resolve, 100); });
+                    if (!button.disabled) return;
+                }
+            };
+
+            if (key === 'adminLanguage') {
+                var languageSelect = document.getElementById('settingsAdminLanguage');
+                var languageForm = document.getElementById('languageForm');
+                if (!languageSelect || !languageForm || !Array.prototype.some.call(languageSelect.options, function(option) { return option.value === value; })) throw new Error(t('copilot.dash_failed'));
+                languageSelect.value = value;
+                window.nbSelectSync?.(languageSelect);
+                languageForm.requestSubmit();
+                return { message: t('copilot.dash_language_reload') }; // the page reloads itself after saving
+            }
+
+            var themeForm = document.getElementById('themeForm');
+            var saveButton = document.getElementById('saveThemeBtn');
+            if (!themeForm || !saveButton) throw new Error(t('copilot.dash_failed'));
+            if (key === 'adminTheme') {
+                if (['light', 'dark', 'system'].indexOf(value) === -1) throw new Error(t('copilot.dash_failed'));
+                document.getElementById('settingsAdminTheme').value = value;
+                document.querySelectorAll('.theme-option').forEach(function(option) { option.classList.toggle('selected', option.dataset.theme === value); });
+            } else if (key === 'primaryColor' || key === 'accentColor') {
+                if (!/^#[0-9a-fA-F]{6}$/.test(value)) throw new Error(t('copilot.dash_failed'));
+                var field = document.getElementById('settings' + key.charAt(0).toUpperCase() + key.slice(1));
+                var picker = document.getElementById('settings' + key.charAt(0).toUpperCase() + key.slice(1) + 'Picker');
+                if (!field) throw new Error(t('copilot.dash_failed'));
+                field.value = value;
+                if (picker) picker.value = value;
+            } else {
+                throw new Error(t('copilot.dash_failed'));
+            }
+            themeForm.requestSubmit();
+            await waitForSave(saveButton);
+            var saved = currentSettings && currentSettings.theme ? String(currentSettings.theme[key] || '').toLowerCase() : '';
+            if (saved === '') throw new Error(t('copilot.dash_failed'));
+            if (saved !== value.toLowerCase()) return { message: t('copilot.dash_adjusted') };
+            return { message: t('copilot.dash_saved') };
+        }
+    };

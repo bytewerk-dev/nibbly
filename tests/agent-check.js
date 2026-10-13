@@ -323,6 +323,46 @@ async function mainFlow(browser, user) {
         fs.writeFileSync(path.join(siteRoot, 'content/ai-usage.json'), JSON.stringify({ days: {}, months: {} }));
         fs.writeFileSync(settingsFile, originalSettings);
 
+        // ---- Dashboard assistant: cards that open an area or change the dashboard look -------------------------------------------------------
+        ({ context, page } = await login(browser, 'admin'));
+        await page.locator('.nb-copilot-toggle').click();
+        await page.locator('#nb-copilot-panel').waitFor({ state: 'visible' });
+        await send(page, 'Please switch the dashboard to dark mode');
+        await page.locator('.nb-copilot-dash', { hasText: 'Change dashboard theme' }).waitFor({ state: 'visible', timeout: 30000 });
+        assert((await page.locator('.nb-copilot-dash').first().textContent()).includes('Light → Dark'), 'the card says what changes');
+        const themeNow = () => JSON.parse(fs.readFileSync(path.join(siteRoot, 'content/settings.json'), 'utf8')).theme || {};
+        assert(themeNow().adminTheme !== 'dark', 'nothing changes before the click');
+        await page.screenshot({ path: path.join(shots, 'dashboard-action-card.png') });
+        await page.locator('.nb-copilot-dash-run').first().click();
+        await page.locator('.nb-copilot-dash__ok').first().waitFor({ state: 'visible', timeout: 30000 });
+        await page.waitForFunction(() => document.documentElement.getAttribute('data-site-theme') === 'dark', null, { timeout: 10000 });
+        assert(themeNow().adminTheme === 'dark', 'the theme is saved');
+        await send(page, 'Make the accent colour blue');
+        await page.locator('.nb-copilot-dash', { hasText: 'accent colour' }).waitFor({ state: 'visible', timeout: 30000 });
+        await page.locator('.nb-copilot-dash-run').last().click();
+        await page.locator('.nb-copilot-dash__ok').nth(1).waitFor({ state: 'visible', timeout: 30000 });
+        assert(String(themeNow().accentColor).toLowerCase() === '#0b5cad', 'the colour is saved: ' + JSON.stringify(themeNow()));
+        await send(page, 'Where are the language settings?');
+        await page.locator('.nb-copilot-dash', { hasText: 'Open Settings › Language' }).waitFor({ state: 'visible', timeout: 30000 });
+        await page.locator('.nb-copilot-dash-run').last().click();
+        await page.locator('#settingsPanel-language.active').waitFor({ state: 'visible', timeout: 10000 });
+        await send(page, 'Switch the dashboard to German');
+        await page.locator('.nb-copilot-dash', { hasText: 'dashboard language' }).waitFor({ state: 'visible', timeout: 30000 });
+        await page.locator('.nb-copilot-dash-dismiss').last().click();
+        assert(!(await page.locator('.nb-copilot-dash', { hasText: 'dashboard language' }).count()), 'a dismissed card is gone and changes nothing');
+        assert(!(JSON.parse(fs.readFileSync(path.join(siteRoot, 'content/settings.json'), 'utf8')).general || {}).adminLanguage, 'dismissing does not change the language');
+        await send(page, 'Switch the dashboard to German');
+        await page.locator('.nb-copilot-dash', { hasText: 'dashboard language' }).waitFor({ state: 'visible', timeout: 30000 });
+        await Promise.all([
+            page.waitForNavigation({ timeout: 20000 }),
+            page.locator('.nb-copilot-dash-run').last().click()
+        ]);
+        assert((JSON.parse(fs.readFileSync(path.join(siteRoot, 'content/settings.json'), 'utf8')).general || {}).adminLanguage === 'de', 'the language is saved and the dashboard reloads');
+        await context.close();
+        const resetSettings = JSON.parse(fs.readFileSync(path.join(siteRoot, 'content/settings.json'), 'utf8'));
+        delete resetSettings.general; delete resetSettings.theme;
+        fs.writeFileSync(path.join(siteRoot, 'content/settings.json'), JSON.stringify(resetSettings));
+
         // ---- Dashboard: the agent section of the AI settings ------------------------------------------------------------------------------
         ({ context, page } = await login(browser, 'admin'));
         await page.locator('.sidebar-nav-item[data-tab="settings"]').click();

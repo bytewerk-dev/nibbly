@@ -486,10 +486,10 @@
         const keepScroll = !!(options && options.keepScroll === true);
         const scrollTop = list.scrollTop;
         const intro = state.context ? contextIntro(state.context) : '';
-        const messages = state.messages.map(message => {
+        const messages = state.messages.map((message, messageIndex) => {
             return '<div class="nb-copilot-msg nb-copilot-msg--' + escHtml(message.role) + '">' +
                 '<div class="nb-copilot-msg__bubble">' + renderInlineMarkdown(message.content) + '</div>' +
-                '</div>';
+                '</div>' + renderDashboardActions(message, messageIndex);
         }).join('');
         const loading = state.loading
             ? '<div class="nb-copilot-msg nb-copilot-msg--assistant"><div class="nb-copilot-msg__bubble nb-copilot-msg__bubble--loading"><span class="nb-copilot-spinner" aria-hidden="true"></span>' + escHtml(state.loadingMessage || label('copilot.working', 'AI Assistant is working...')) + '</div></div>'
@@ -502,6 +502,58 @@
         updateActionAvailability();
         renderModal();
         persistSession();
+    }
+
+    // ---- Dashboard actions (dashboard assistant only) --------------------------------------------------------------
+    // The server offers cards (open a section, change the dashboard look); the person confirms with a button and
+    // the dashboard performs the action through its own settings forms.
+
+    function renderDashboardActions(message, messageIndex) {
+        if (!Array.isArray(message.actions) || !message.actions.length) return '';
+        const cards = message.actions.map((action, actionIndex) => {
+            if (!action || action.status === 'dismissed') return '';
+            const ref = ' data-dash-message="' + messageIndex + '" data-dash-action="' + actionIndex + '"';
+            const detail = action.detail ? '<span>' + escHtml(action.detail) + '</span>' : '';
+            let footer = '';
+            if (action.type === 'noop') {
+                footer = '';
+            } else if (action.status === 'working') {
+                footer = '<em>' + escHtml(label('copilot.dash_applying', 'Working...')) + '</em>';
+            } else if (action.status === 'done') {
+                footer = '<em class="nb-copilot-dash__ok">' + escHtml(action.note || label('copilot.dash_done', 'Done.')) + '</em>';
+            } else {
+                const run = action.type === 'open' ? label('copilot.dash_open_btn', 'Open') : label('copilot.dash_apply', 'Apply');
+                footer = (action.status === 'failed' ? '<em class="nb-copilot-dash__error">' + escHtml(action.note || label('copilot.dash_failed', 'That did not work.')) + '</em>' : '') +
+                    '<button type="button" class="nb-copilot-dash-run"' + ref + '>' + escHtml(run) + '</button>' +
+                    '<button type="button" class="nb-copilot-dash-dismiss"' + ref + '>' + escHtml(label('copilot.dash_dismiss', 'Dismiss')) + '</button>';
+            }
+            return '<section class="nb-copilot-dash"><div><strong>' + escHtml(action.title || '') + '</strong>' + detail + '</div>' + (footer ? '<footer>' + footer + '</footer>' : '') + '</section>';
+        }).join('');
+        return cards ? '<div class="nb-copilot-dash-list">' + cards + '</div>' : '';
+    }
+
+    async function runDashboardAction(messageIndex, actionIndex) {
+        const message = state.messages[messageIndex];
+        const action = message && Array.isArray(message.actions) ? message.actions[actionIndex] : null;
+        if (!action || action.status === 'working' || action.status === 'done' || !['open', 'setting'].includes(action.type)) return;
+        const runner = window.NibblyDashboardActions;
+        if (!runner || typeof runner.run !== 'function') {
+            action.status = 'failed';
+            action.note = label('copilot.dash_failed', 'That did not work.');
+            renderMessages({ keepScroll: true });
+            return;
+        }
+        action.status = 'working';
+        renderMessages({ keepScroll: true });
+        try {
+            const outcome = await runner.run({ type: action.type, section: action.section, settingsTab: action.settingsTab, setting: action.setting, value: action.value });
+            action.status = 'done';
+            action.note = outcome && outcome.message ? outcome.message : '';
+        } catch (error) {
+            action.status = 'failed';
+            action.note = error && error.message ? error.message : '';
+        }
+        renderMessages({ keepScroll: true });
     }
 
     function renderChangeDraftForm() {
@@ -1196,6 +1248,20 @@
                 if (Number.isInteger(index) && state.proposals[index]) applyProposal(index, { skipConfirm: true });
                 return;
             }
+            const dashRun = event.target.closest('.nb-copilot-dash-run');
+            if (dashRun) {
+                runDashboardAction(Number(dashRun.dataset.dashMessage), Number(dashRun.dataset.dashAction));
+                return;
+            }
+            const dashDismiss = event.target.closest('.nb-copilot-dash-dismiss');
+            if (dashDismiss) {
+                const dismissed = state.messages[Number(dashDismiss.dataset.dashMessage)];
+                if (dismissed && Array.isArray(dismissed.actions) && dismissed.actions[Number(dashDismiss.dataset.dashAction)]) {
+                    dismissed.actions[Number(dashDismiss.dataset.dashAction)].status = 'dismissed';
+                    renderMessages({ keepScroll: true });
+                }
+                return;
+            }
             if (event.target.closest('.nb-copilot-apply-all') && !state.loading) {
                 applyAllProposals({ skipConfirm: true });
                 return;
@@ -1507,6 +1573,7 @@
         renderMessages();
         state.contextPromise = post('ai-copilot-context', {
             contentPage,
+            mode: copilotMode,
             uiLanguage: assistantUiLanguage()
         }).then(context => {
             state.context = context;
@@ -1678,9 +1745,12 @@
         renderMessages();
         const payload = {
             contentPage,
+            mode: copilotMode,
             uiLanguage: assistantUiLanguage(),
             messages: state.messages.map(message => ({ role: message.role, content: message.content }))
         };
+        // With dashboard actions the answer comes in one piece together with its cards, so no streaming.
+        const useStream = supportsStreaming() && !(copilotMode === 'dashboard' && state.context && state.context.dashboardActions === true);
         let streamingMessage = null;
         const onDelta = delta => {
             if (!streamingMessage) {
@@ -1698,14 +1768,16 @@
             if (streamingMessage) {
                 streamingMessage.content = reply;
             } else {
-                state.messages.push({ role: 'assistant', content: reply });
+                const entry = { role: 'assistant', content: reply };
+                if (result && Array.isArray(result.actions) && result.actions.length) entry.actions = result.actions;
+                state.messages.push(entry);
             }
         };
-        const request = supportsStreaming()
+        const request = useStream
             ? postStream('ai-copilot-chat-stream', payload, onDelta).then(finish)
             : post('ai-copilot-chat', payload).then(finish);
         request.catch(error => {
-            if (!streamingMessage && supportsStreaming() && !error.sessionExpired) {
+            if (!streamingMessage && useStream && !error.sessionExpired) {
                 // Streaming produced no output: retry once over the JSON endpoint.
                 return post('ai-copilot-chat', payload).then(finish).catch(fallbackError => {
                     state.messages.push({ role: 'assistant', content: fallbackError.message });

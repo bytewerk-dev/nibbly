@@ -194,6 +194,14 @@ encrypted reasoning items carried in the assistant message as `reasoningItems`)
 for api.openai.com and for models a host refused on chat/completions with
 "use /v1/responses"; everything else stays on chat/completions.
 
+The dashboard assistant (`mode=dashboard` on `ai-copilot-chat`) runs one tool turn with
+`open_section` and `change_setting` (`includes/ai/dashboard-actions.php`). Calls are
+validated per role and returned as `actions` cards; nothing is changed by the chat. The
+card's button calls `window.NibblyDashboardActions.run()` (admin/dashboard/scripts/settings.php),
+which fills the existing theme or language form and submits it. To allow another setting,
+add it to `NIBBLY_DASHBOARD_SETTINGS`, validate it in `nibblyDashboardActionFromCall()`, add
+its texts, and handle it in the runner.
+
 Dashboard AI UI should honor both global module visibility and AI feature flags.
 If AI features are disabled, hide AI buttons and tools throughout the admin UI.
 If AI is enabled but a capability lacks a model or key, show a clear disabled
