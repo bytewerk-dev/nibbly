@@ -144,9 +144,39 @@
         renderFooter(bottomFooter, false);
     }
 
+    // The page list groups the language versions of a page; every version has its own slug
+    // (translated URL paths: de "leistungen", en "services"). Everything that opens, previews,
+    // duplicates or trashes a page uses the slug of that language version.
+    function pageVersionSlug(page, lang) {
+        return page?.languages?.[lang]?.slug || page?.slug || '';
+    }
+
+    function findPageGroup(lang, slug) {
+        const pages = pageListCache?.pages || [];
+        return pages.find(p => p.languages?.[lang]?.exists && pageVersionSlug(p, lang) === slug) || null;
+    }
+
+    // The slug the same page has in another language, or null when it has no version there.
+    function translatedSlug(fromLang, slug, toLang) {
+        const group = findPageGroup(fromLang, slug);
+        const target = group?.languages?.[toLang];
+        return target && target.exists ? pageVersionSlug(group, toLang) : null;
+    }
+
+    let topbarLang = '';
+
+    // The language select changed: stay on the same page when it has a version in the new language.
+    function onTopbarLanguageChanged() {
+        const newLang = document.getElementById('langSelect').value;
+        const oldSlug = document.getElementById('pageSelect').value;
+        const translated = topbarLang && topbarLang !== newLang ? translatedSlug(topbarLang, oldSlug, newLang) : null;
+        updatePageSelect(translated !== null ? translated : oldSlug);
+    }
+
     // Update page dropdown from pageListCache (both desktop and mobile)
     function updatePageSelect(selectedSlug = document.getElementById('pageSelect').value) {
         const lang = document.getElementById('langSelect').value;
+        topbarLang = lang;
         const pageSelect = document.getElementById('pageSelect');
         const pageSelectMobile = document.getElementById('pageSelectMobile');
         pageSelect.innerHTML = '';
@@ -158,7 +188,7 @@
             const langInfo = page.languages[lang];
             if (!langInfo || !langInfo.exists) continue;
             const option = document.createElement('option');
-            option.value = page.slug;
+            option.value = pageVersionSlug(page, lang);
             option.textContent = langInfo.title || page.title;
             pageSelect.appendChild(option);
             if (pageSelectMobile) pageSelectMobile.appendChild(option.cloneNode(true));
@@ -177,7 +207,11 @@
     function syncSelect(targetId, value) {
         const target = document.getElementById(targetId);
         if (target) target.value = value;
-        updatePageSelect();
+        if (targetId === 'langSelect') {
+            onTopbarLanguageChanged();
+        } else {
+            updatePageSelect();
+        }
     }
 
     // Page list
@@ -268,7 +302,7 @@
             const viewInfo = page.languages[viewLang];
             // Skip pages that have no entry at all for this language
             if (!viewInfo) return false;
-            const titleText = viewInfo.title || page.slug;
+            const titleText = viewInfo.title || pageVersionSlug(page, viewLang);
             if (pageListSearchQuery && !normalizePageListSearchValue(titleText).includes(pageListSearchQuery)) {
                 return false;
             }
@@ -282,6 +316,7 @@
 
         paged.items.forEach(page => {
             const viewInfo = page.languages[viewLang];
+            const viewSlug = pageVersionSlug(page, viewLang);
             const tr = document.createElement('tr');
             tr.className = 'page-list-row';
 
@@ -291,16 +326,16 @@
 
             const slugSpan = document.createElement('span');
             slugSpan.className = 'page-list-slug';
-            slugSpan.textContent = '/' + page.slug;
+            slugSpan.textContent = '/' + viewSlug;
             tdTitle.appendChild(slugSpan);
 
             const titleLink = document.createElement('a');
             titleLink.href = '#';
             titleLink.className = 'page-list-title-link';
-            titleLink.textContent = viewInfo.title || page.slug;
+            titleLink.textContent = viewInfo.title || viewSlug;
             titleLink.onclick = (e) => {
                 e.preventDefault();
-                openPageFromList(viewLang, page.slug);
+                openPageFromList(viewLang, viewSlug);
             };
             const titleRow = document.createElement('div');
             titleRow.className = 'page-list-title-row';
@@ -319,7 +354,7 @@
                 editLink.href = '#';
                 editLink.className = 'page-list-row-action';
                 editLink.innerHTML = icon('edit', 12, '2') + ' ' + t('pages.edit');
-                editLink.onclick = (e) => { e.preventDefault(); openPageFromList(viewLang, page.slug); };
+                editLink.onclick = (e) => { e.preventDefault(); openPageFromList(viewLang, viewSlug); };
                 actions.appendChild(editLink);
 
                 // View
@@ -329,9 +364,9 @@
                 actions.appendChild(sep1);
 
                 const viewLink = document.createElement('a');
-                const frontendPath = page.slug === 'home'
+                const frontendPath = viewSlug === 'home'
                     ? ((viewLang === DEFAULT_LANG) ? '../' : '../' + viewLang + '/')
-                    : ((viewLang === DEFAULT_LANG) ? '../' + page.slug : '../' + viewLang + '/' + page.slug);
+                    : ((viewLang === DEFAULT_LANG) ? '../' + viewSlug : '../' + viewLang + '/' + viewSlug);
                 viewLink.href = frontendPath;
                 viewLink.target = '_blank';
                 viewLink.className = 'page-list-row-action';
@@ -352,7 +387,7 @@
                     e.preventDefault();
                     dupLink.classList.add('disabled');
                     try {
-                        const result = await duplicatePage(viewLang, page.slug);
+                        const result = await duplicatePage(viewLang, viewSlug);
                         showToast(t('toast.page_duplicated', {slug: result.slug}), 'success');
                         if (result.pageList) applyPageList(result.pageList);
                     } catch (err) {
@@ -374,7 +409,7 @@
                 trashLink.innerHTML = icon('trash', 12, '2') + ' ' + t('pages.trash');
                 trashLink.onclick = async (e) => {
                     e.preventDefault();
-                    const pageName = pageContentKey(viewLang, page.slug);
+                    const pageName = pageContentKey(viewLang, viewSlug);
                     try {
                         const result = await deletePage(pageName);
                         showToast(t('toast.page_trashed'), 'success');
@@ -412,7 +447,7 @@
                     editBtn.innerHTML = icon('edit', 12) + ' ' + t('pages.edit');
                     editBtn.onclick = (e) => {
                         e.preventDefault();
-                        openPageFromList(lang, page.slug);
+                        openPageFromList(lang, pageVersionSlug(page, lang));
                     };
                     td.appendChild(editBtn);
                 } else if (viewInfo.exists) {
@@ -426,8 +461,10 @@
                         createLink.classList.add('disabled');
                         createLink.textContent = '...';
                         try {
-                            const result = await copyPageToLang(viewLang, page.slug, lang, page.slug);
-                            showToast(t('toast.page_created', {title: lang + '_' + page.slug}), 'success');
+                            // The path the language mapping intends for the translation; otherwise the same path.
+                            const targetSlug = page.targetSlugs?.[lang] || viewSlug;
+                            const result = await copyPageToLang(viewLang, viewSlug, lang, targetSlug);
+                            showToast(t('toast.page_created', {title: pageContentKey(lang, targetSlug)}), 'success');
                             if (result.data?.pageList) applyPageList(result.data.pageList);
                         } catch (err) {
                             showToast(err.message, 'error');
@@ -520,13 +557,13 @@
     }
 
     function getPageSeoHealth(lang, slug) {
-        const pageData = pageListCache?.pages?.find(p => p.slug === slug);
+        const pageData = findPageGroup(lang, slug);
         return pageData?.languages?.[lang]?.seoHealth || null;
     }
 
     function setPageSeoHealth(lang, slug, seoHealth) {
         if (!pageListCache || !seoHealth) return;
-        const pageData = pageListCache.pages?.find(p => p.slug === slug);
+        const pageData = findPageGroup(lang, slug);
         if (pageData?.languages?.[lang]) {
             pageData.languages[lang].seoHealth = seoHealth;
         }
@@ -1819,7 +1856,7 @@
 
         const lang = document.getElementById('langSelect').value;
         const page = document.getElementById('pageSelect').value;
-        const pageData = pageListCache?.pages?.find(p => p.slug === page);
+        const pageData = findPageGroup(lang, page);
         document.getElementById('editorTitle').textContent = pageData?.languages?.[lang]?.title || pageData?.title || page;
         updateEditorSeoHealth(currentSeoHealth || pageData?.languages?.[lang]?.seoHealth || null);
 

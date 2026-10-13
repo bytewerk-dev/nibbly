@@ -141,6 +141,18 @@ switch ($action) {
         // Top-level scalar settings (not nested under a group)
         $allowedScalar = ['favicon', 'favicon_png'];
 
+        // A path or address that is already stored is not checked again: an old invalid value must not block saving
+        // unrelated settings (colours, radius, language ...), because the dashboard sends every group along.
+        // Only a changed value has to be valid.
+        $storedSettings = [];
+        if (file_exists(SETTINGS_PATH)) {
+            $storedSettings = json_decode(file_get_contents(SETTINGS_PATH), true) ?: [];
+        }
+        $isStored = static function (?string $group, string $key, $value) use ($storedSettings): bool {
+            $stored = $group === null ? ($storedSettings[$key] ?? null) : ($storedSettings[$group][$key] ?? null);
+            return is_string($value) && is_string($stored) && $value !== '' && $stored === $value;
+        };
+
         $sanitized = [];
         foreach ($allowed as $group => $keys) {
             if (!isset($settings[$group])) continue;
@@ -187,7 +199,7 @@ switch ($action) {
                     // Validate logo paths (prevent traversal and protocol injection)
                     if (in_array($key, ['logo', 'logoDark', 'adminLogo'], true)) {
                         $value = (string)$value;
-                        if ($value !== '' && (
+                        if ($value !== '' && !$isStored($group, $key, $value) && (
                             strpos($value, '..') !== false ||
                             !str_starts_with($value, '/assets/images/') ||
                             preg_match('#[:\x00]#', $value)
@@ -196,14 +208,14 @@ switch ($action) {
                         }
                     }
 
-                    if ($group === 'seo' && $key === 'defaultOgImage') {
+                    if ($group === 'seo' && $key === 'defaultOgImage' && !$isStored($group, $key, $value)) {
                         $value = normalizeOgImagePath((string)$value);
                         if (!validateOgImagePath($value)) {
                             jsonResponse(false, null, 'Default Open Graph image must be a JPG or PNG file from /assets/images/');
                         }
                     }
 
-                    if ($group === 'seo' && $key === 'siteUrl') {
+                    if ($group === 'seo' && $key === 'siteUrl' && !$isStored($group, $key, $value)) {
                         $value = rtrim(trim((string)$value), '/');
                         if ($value !== '' && filter_var($value, FILTER_VALIDATE_URL) === false) {
                             jsonResponse(false, null, 'Invalid SEO site URL');
@@ -306,7 +318,7 @@ switch ($action) {
             if (!array_key_exists($scalarKey, $settings)) continue;
             $value = (string)$settings[$scalarKey];
             if (in_array($scalarKey, ['favicon', 'favicon_png'], true)) {
-                if ($value !== '' && (
+                if ($value !== '' && !$isStored(null, $scalarKey, $value) && (
                     strpos($value, '..') !== false ||
                     !str_starts_with($value, '/assets/images/') ||
                     preg_match('#[:\x00]#', $value)

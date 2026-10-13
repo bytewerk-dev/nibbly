@@ -1831,13 +1831,53 @@ function buildPageSeoHealth($lang, $slug, array $data) {
     ]));
 }
 
+/**
+ * $PAGE_MAPPING of includes/nav-config.php (page key => [lang => URL path]), or [] when the site has none.
+ * Read in a closure so the variables of that file stay out of the caller's scope.
+ */
+function nibblyLoadPageMapping(): array {
+    static $mapping = null;
+    if ($mapping !== null) return $mapping;
+    $mapping = [];
+    $file = NIBBLY_ADMIN_DIR . '/../includes/nav-config.php';
+    if (is_file($file)) {
+        $loaded = (static function (string $file): array {
+            include $file;
+            return isset($PAGE_MAPPING) && is_array($PAGE_MAPPING) ? $PAGE_MAPPING : [];
+        })($file);
+        $mapping = $loaded;
+    }
+    return $mapping;
+}
+
+/** The page path ("slug") a URL path of $PAGE_MAPPING stands for in $lang, or null when it is not a usable page path. */
+function nibblyPagePathFromMapping($path, string $lang, string $defaultLang): ?string {
+    if (!is_string($path)) return null;
+    $path = trim(trim($path), '/');
+    if ($path === '' || $path === '.') return 'home';
+    if ($lang !== $defaultLang) {
+        if ($path === $lang) return 'home';
+        if (str_starts_with($path, $lang . '/')) $path = trim(substr($path, strlen($lang) + 1), '/');
+        if ($path === '') return 'home';
+    }
+    return nibblyPageIsValidPath($path) ? $path : null;
+}
+
+/**
+ * The pages of the site, one entry per page with all its language versions.
+ *
+ * Versions belong together when $PAGE_MAPPING connects them (different URL paths per language, aliases
+ * included) or when they share the same path. Every version carries its own slug; that slug, not the one of
+ * another language, is what editor links, previews, duplicates, the trash and the SEO badges use. A missing
+ * version has no entry in "languages"; "targetSlugs" names the path the mapping intends for it.
+ */
 function buildPageList() {
     global $SITE_LANGUAGES;
     $allLangs = array_keys($SITE_LANGUAGES);
     $defaultLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : $allLangs[0];
 
     // Scan filesystem for page JSON files (pattern: {lang}_{slug}.json)
-    $slugsByLang = [];
+    $versions = []; // "lang|slug" => version
     $files = glob(CONTENT_PATH . '*.json');
     foreach ($files as $file) {
         $basename = basename($file, '.json');
@@ -1856,18 +1896,75 @@ function buildPageList() {
         $title = $data['title'] ?? ucfirst(str_replace('-', ' ', $slug));
         // Use JSON lastModified, fall back to file modification time
         $lastModified = $data['lastModified'] ?? date('c', filemtime($file));
-        $slugsByLang[$slug][$lang] = [
+        $versions[$lang . '|' . $slug] = [
+            'lang' => $lang,
+            'slug' => $slug,
             'title' => $title,
             'lastModified' => $lastModified,
             'seoHealth' => buildPageSeoHealth($lang, $slug, is_array($data) ? $data : []),
         ];
     }
 
+    // Group the versions: union-find, never joining two versions of one language.
+    $parent = [];
+    $langsOf = [];
+    foreach ($versions as $key => $version) {
+        $parent[$key] = $key;
+        $langsOf[$key] = [$version['lang'] => true];
+    }
+    $find = static function (string $key) use (&$parent, &$find): string {
+        return $parent[$key] === $key ? $key : ($parent[$key] = $find($parent[$key]));
+    };
+    $union = static function (string $a, string $b) use (&$parent, &$langsOf, $find): void {
+        $a = $find($a);
+        $b = $find($b);
+        if ($a === $b || array_intersect_key($langsOf[$a], $langsOf[$b])) return;
+        $parent[$b] = $a;
+        $langsOf[$a] += $langsOf[$b];
+    };
+
+    // 1. Translated paths from $PAGE_MAPPING (aliases of one page simply join the same group).
+    $mappingEntries = [];
+    foreach (nibblyLoadPageMapping() as $entry) {
+        if (!is_array($entry)) continue;
+        $paths = [];
+        foreach ($entry as $lang => $path) {
+            $lang = (string)$lang;
+            if (!isset($SITE_LANGUAGES[$lang])) continue;
+            $slug = nibblyPagePathFromMapping($path, $lang, $defaultLang);
+            if ($slug !== null) $paths[$lang] = $slug;
+        }
+        if (count($paths) < 2) continue;
+        $mappingEntries[] = $paths;
+        $members = [];
+        foreach ($paths as $lang => $slug) {
+            if (isset($versions[$lang . '|' . $slug])) $members[] = $lang . '|' . $slug;
+        }
+        for ($i = 1; $i < count($members); $i++) $union($members[0], $members[$i]);
+    }
+    // 2. Pages with the same path in several languages, as before.
+    $byPath = [];
+    foreach ($versions as $key => $version) $byPath[$version['slug']][] = $key;
+    foreach ($byPath as $keys) {
+        for ($i = 1; $i < count($keys); $i++) $union($keys[0], $keys[$i]);
+    }
+
+    $groups = [];
+    foreach ($versions as $key => $version) {
+        $groups[$find($key)][$version['lang']] = $version;
+    }
+
     $pages = [];
-    foreach ($slugsByLang as $slug => $langData) {
+    foreach ($groups as $langData) {
+        // Representative: the default language's version, else the first language that has one.
+        $first = null;
+        foreach ($allLangs as $lang) {
+            if (isset($langData[$lang])) { $first = $langData[$lang]; break; }
+        }
+        $representative = $langData[$defaultLang] ?? $first;
         $pageInfo = [
-            'slug' => $slug,
-            'title' => reset($langData)['title'],
+            'slug' => $representative['slug'],
+            'title' => $first['title'],
             'languages' => [],
         ];
 
@@ -1875,12 +1972,27 @@ function buildPageList() {
             if (isset($langData[$lang])) {
                 $pageInfo['languages'][$lang] = [
                     'exists' => true,
+                    'slug' => $langData[$lang]['slug'],
                     'title' => $langData[$lang]['title'],
                     'lastModified' => $langData[$lang]['lastModified'],
                     'seoHealth' => $langData[$lang]['seoHealth'],
                 ];
             }
         }
+
+        // Missing versions: the path the mapping intends for them, when it names one that is still free.
+        $targets = [];
+        foreach ($mappingEntries as $paths) {
+            $related = false;
+            foreach ($langData as $lang => $version) {
+                if (($paths[$lang] ?? null) === $version['slug']) { $related = true; break; }
+            }
+            if (!$related) continue;
+            foreach ($paths as $lang => $slug) {
+                if (!isset($langData[$lang]) && !isset($targets[$lang]) && !isset($versions[$lang . '|' . $slug])) $targets[$lang] = $slug;
+            }
+        }
+        if ($targets) $pageInfo['targetSlugs'] = $targets;
 
         $dates = array_filter(array_column($pageInfo['languages'], 'lastModified'));
         $pageInfo['lastModified'] = !empty($dates) ? max($dates) : null;

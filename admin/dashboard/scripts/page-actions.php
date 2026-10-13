@@ -315,7 +315,7 @@
 
     // Init
     document.getElementById('langSelect').addEventListener('change', function() {
-        updatePageSelect();
+        onTopbarLanguageChanged();
         const m = document.getElementById('langSelectMobile');
         if (m) m.value = this.value;
     });
@@ -323,7 +323,7 @@
     if (langMobile) {
         langMobile.addEventListener('change', function() {
             document.getElementById('langSelect').value = this.value;
-            updatePageSelect();
+            onTopbarLanguageChanged();
         });
     }
     const pageMobile = document.getElementById('pageSelectMobile');
