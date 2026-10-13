@@ -57,6 +57,16 @@ Git milestones and the gaps in publication records.
   apply dialog and the note after applying say that changes to existing content are
   live at once and only new pages, posts, events, sections and list items stay
   hidden until published (it used to say this for every package).
+- Dashboard → Pages: language versions with translated URL paths (de `leistungen`,
+  en `services`, linked in `$PAGE_MAPPING`) are one page again, aliases of one page
+  give one row, and "Edit" instead of "Create" is shown. Every language version
+  carries its own slug (`languages[lang].slug`), used by editor links, the view link,
+  the language select, duplicate, trash and the SEO badges. A missing translation is
+  created under the path the mapping intends (`targetSlugs`). Pages with identical
+  slugs are grouped as before; existing files and public URLs are untouched.
+- Saving settings: an old invalid path (favicon, logos, Open Graph image, site URL)
+  no longer blocks saving other settings such as colours and radius; only changed
+  values are validated.
 - Agent review: a package of up to four changes shows its before and after right
   away; block ends in rich text no longer run together.
 - Agent preview: it opens in the same tab and the bar (in the admin language) has two
