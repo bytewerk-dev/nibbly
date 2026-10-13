@@ -371,20 +371,21 @@ select:not([multiple]) {
     top: 12px;
     left: 12px;
     z-index: calc(var(--nb-z-toast) + 1);
-    transform: translateY(-160%);
+    transform: translateY(calc(-100% - 24px)); /* fully off screen, shadow included */
     padding: 10px 14px;
     border-radius: var(--editor-btn-radius, var(--nb-radius-md));
     background: var(--nb-primary);
     color: var(--nb-primary-contrast, #fff);
     font-weight: 700;
     text-decoration: none;
-    box-shadow: var(--nb-shadow-lg);
+    box-shadow: none;
     transition: transform var(--nb-duration-fast) var(--nb-ease);
 }
 
 .skip-link:focus,
 .skip-link:focus-visible {
     transform: translateY(0);
+    box-shadow: var(--nb-shadow-lg);
     outline: 3px solid var(--nb-primary-muted);
     outline-offset: 2px;
 }
