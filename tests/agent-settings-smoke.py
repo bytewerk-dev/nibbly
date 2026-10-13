@@ -60,6 +60,19 @@ with tempfile.TemporaryDirectory(prefix="nibbly-agent-settings-") as folder:
             status, payload = save(admin, {**form, "apiKey": "", **bad})
             assert payload["success"] is False and status != 200 or payload["success"] is False, (bad, payload)
 
+        # ---- Warnings travel with the usage numbers ---------------------------------------------------------------------------------
+        import time
+        usage = {"days": {time.strftime("%Y-%m-%d", time.gmtime()): {"requests": 290, "textRequests": 10, "imageRequests": 0, "inputTokens": 0, "outputTokens": 0, "estimatedCostCents": 0}},
+                 "months": {time.strftime("%Y-%m", time.gmtime()): {"requests": 290, "textRequests": 10, "imageRequests": 0, "inputTokens": 0, "outputTokens": 0, "estimatedCostCents": 1000}}}
+        write_json(root / "content/ai-usage.json", usage)
+        save(admin, {**form, "apiKey": "", "limits": {"monthlyBudgetCents": 1000, "dailyRequests": 300, "dailyTextRequests": 250, "dailyImageRequests": 10, "maxInputTokens": 64000, "maxOutputTokens": 16000, "requestTimeoutSeconds": 300}})
+        for client in (admin, editor):
+            kinds = {w["kind"]: w["level"] for w in load(client)[1]["data"]["usage"]["warnings"]}
+            assert kinds == {"month": "reached", "requests": "warning"}, kinds
+        status, _, body = admin.request("/admin/api.php", {"action": "ai-copilot-context", "csrf_token": admin.csrf, "contentPage": "en_home"})
+        assert {w["kind"] for w in json.loads(body)["data"]["limitWarnings"]} == {"month", "requests"}, "the assistant gets them with its context"
+        write_json(root / "content/ai-usage.json", {"days": {}, "months": {}})
+
         # ---- Who may change them ---------------------------------------------------------------------------------------------------------
         status, payload = save(editor, form)
         assert status == 403 and payload["success"] is False, (status, payload)

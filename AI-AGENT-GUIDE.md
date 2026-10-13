@@ -179,6 +179,21 @@ automatically retry an ambiguous paid POST, even when no response bytes arrived.
 Resume known provider task IDs through the request ledger; outcomes without a
 task ID need reconciliation before another submission.
 
+Limits are guides, not hard walls (`nibblyAiCheckLimits()`): a request that
+starts below a limit may finish, and requests of an agent run under way
+(`agent_run_*_N` with N > 1, `agent_read_*`) may use up to 10 % more of the daily
+request limits and the monthly budget. The first request of a run, standalone
+requests and image requests stay strict. `nibblyAiUsageSummary()['warnings']`
+lists limits at 80 % or reached; the dashboard, the AI settings and the
+assistant show them. OpenAI-compatible requests go through
+`nibblyAiCompatRequest()`, which sends `max_completion_tokens` to api.openai.com
+and learns per model (content/ai-model-quirks.json) when a provider rejects
+`max_tokens`, `max_completion_tokens` or `temperature`. Agent turns with tools
+(`nibblyAiChatWithTools()`) use the Responses API (`/responses`, `store: false`,
+encrypted reasoning items carried in the assistant message as `reasoningItems`)
+for api.openai.com and for models a host refused on chat/completions with
+"use /v1/responses"; everything else stays on chat/completions.
+
 Dashboard AI UI should honor both global module visibility and AI feature flags.
 If AI features are disabled, hide AI buttons and tools throughout the admin UI.
 If AI is enabled but a capability lacks a model or key, show a clear disabled

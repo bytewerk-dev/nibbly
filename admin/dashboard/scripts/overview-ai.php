@@ -14,6 +14,7 @@
             renderAiUsagePanel(null);
             return;
         }
+        renderAiLimitWarnings(usage ? usage.warnings : []);
         if (!el || !usage) return;
         el.hidden = false;
         var today = usage.today || {};
@@ -23,6 +24,86 @@
             cost: formatAiCents(month.estimatedCostCents || 0)
         });
         renderAiUsagePanel(usage);
+    }
+
+    // ---- Limit warnings ---------------------------------------------------------------------------------------------
+    var AI_LIMIT_FIELDS = { month: 'aiMonthlyBudget', requests: 'aiDailyRequests', text: 'aiDailyTextRequests', images: 'aiDailyImageRequests' };
+    var aiLimitWarnings = [];
+
+    function aiLimitValue(kind, value) {
+        return kind === 'month' ? formatAiCents(value) : String(value);
+    }
+
+    function aiLimitDismissKey(warning) {
+        return 'nb.aiLimitDismissed:' + warning.kind + ':' + warning.level + ':' + new Date().toISOString().slice(0, warning.kind === 'month' ? 7 : 10);
+    }
+
+    function aiLimitDismissed(warning) {
+        if (warning.level === 'reached') return false;
+        try { return window.sessionStorage.getItem(aiLimitDismissKey(warning)) === '1'; } catch (error) { return false; }
+    }
+
+    function renderAiLimitWarnings(warnings) {
+        aiLimitWarnings = Array.isArray(warnings) ? warnings : [];
+        document.querySelectorAll('[data-ai-limit-banner]').forEach(function(box) {
+            var shown = aiLimitWarnings.filter(function(warning) { return !aiLimitDismissed(warning); });
+            box.replaceChildren();
+            box.hidden = !shown.length || !AI_FEATURES_ENABLED;
+            if (box.hidden) return;
+            var isAdmin = USER_ROLE === 'admin';
+            var inner = document.createElement('div');
+            inner.className = 'info-banner__inner';
+            shown.forEach(function(warning) {
+                var line = document.createElement('p');
+                line.className = 'ai-limit-banner__line ai-limit-banner__line--' + warning.level;
+                var params = { kind: t('ai.limit_kind_' + warning.kind), used: aiLimitValue(warning.kind, warning.used), limit: aiLimitValue(warning.kind, warning.limit), percent: warning.percent };
+                line.textContent = t(warning.level === 'reached' ? 'ai.limit_reached' : 'ai.limit_warning', params);
+                if (warning.level !== 'reached') {
+                    var dismiss = document.createElement('button');
+                    dismiss.type = 'button';
+                    dismiss.className = 'btn btn-link btn-sm';
+                    dismiss.textContent = t('ai.limit_dismiss');
+                    dismiss.addEventListener('click', function() {
+                        try { window.sessionStorage.setItem(aiLimitDismissKey(warning), '1'); } catch (error) { /* only this view */ }
+                        renderAiLimitWarnings(aiLimitWarnings);
+                    });
+                    line.append(' ', dismiss);
+                }
+                inner.appendChild(line);
+            });
+            var actions = document.createElement('div');
+            actions.className = 'ai-limit-banner__actions';
+            if (!isAdmin) {
+                var note = document.createElement('span');
+                note.textContent = t('ai.limit_ask_admin');
+                actions.appendChild(note);
+            } else if (box.getAttribute('data-ai-limit-banner') === 'settings') {
+                var raise = document.createElement('button');
+                raise.type = 'button';
+                raise.className = 'btn btn-secondary btn-sm';
+                raise.textContent = t('ai.limit_raise');
+                raise.addEventListener('click', function() {
+                    aiLimitWarnings.forEach(function(warning) {
+                        var field = document.getElementById(AI_LIMIT_FIELDS[warning.kind]);
+                        if (!field) return;
+                        // Fields are in cents (month) or counts; raise by half, at least by one.
+                        var current = parseInt(field.value || '0', 10) || 0;
+                        field.value = Math.max(current + 1, Math.ceil(current * 1.5));
+                    });
+                    showToast(t('ai.limit_raised'), 'info');
+                });
+                actions.appendChild(raise);
+            } else {
+                var adjust = document.createElement('button');
+                adjust.type = 'button';
+                adjust.className = 'btn btn-secondary btn-sm';
+                adjust.textContent = t('ai.limit_adjust');
+                adjust.addEventListener('click', function() { switchTab('settings', { settingsTab: 'ai' }); });
+                actions.appendChild(adjust);
+            }
+            inner.appendChild(actions);
+            box.appendChild(inner);
+        });
     }
 
     function aiUsageStatTile(value, label, sub) {
@@ -737,6 +818,8 @@
         aiModelComboboxes.forEach(function(combobox) { combobox.refresh(); });
         if (provider === 'openrouter') {
             loadOpenRouterModels();
+        } else {
+            loadProviderModels(false);
         }
     }
 
@@ -744,7 +827,43 @@
         var provider = document.getElementById('aiProvider')?.value
             || (currentAiSettings && currentAiSettings.provider) || 'openai-compatible';
         var preset = AI_TEXT_MODEL_PRESETS[provider] || AI_TEXT_MODEL_PRESETS['openai-compatible'];
+        // The provider's own list wins once it is loaded; the presets are the fallback.
+        if (provider !== 'openrouter' && aiLiveModels[provider] && aiLiveModels[provider].length) return aiLiveModels[provider].slice();
         return preset.suggestions.slice();
+    }
+
+    // Models the saved provider offers (GET /models through the server, admins only).
+    var aiLiveModels = {};
+    var aiLiveModelsLoading = {};
+
+    function loadProviderModels(force) {
+        var provider = document.getElementById('aiProvider')?.value || (currentAiSettings && currentAiSettings.provider) || '';
+        var hint = document.getElementById('aiModelsHint');
+        if (!provider || provider === 'openrouter' || provider === 'kie' || aiLiveModelsLoading[provider]) return;
+        var credentials = aiProviderCredentials(currentAiSettings || {}, provider);
+        if (!credentials.hasApiKey && !(currentAiSettings && currentAiSettings.allowLocalProvider)) {
+            if (hint) hint.textContent = '';
+            return;
+        }
+        if (aiLiveModels[provider] && !force) return;
+        aiLiveModelsLoading[provider] = true;
+        var formData = new FormData();
+        formData.append('action', 'ai-list-models');
+        formData.append('csrf_token', CSRF_TOKEN);
+        if (hint) hint.textContent = t('ai.models_loading');
+        fetch('api.php', { method: 'POST', body: formData, cache: 'no-store' })
+            .then(function(response) { return response.json(); })
+            .then(function(result) {
+                if (!result.success) throw new Error(result.message);
+                var models = Array.isArray(result.data.models) ? result.data.models : [];
+                aiLiveModels[result.data.provider || provider] = models;
+                if (hint) hint.textContent = models.length ? t('ai.models_loaded', { count: models.length }) : '';
+                aiModelComboboxes.forEach(function(combobox) { combobox.refresh(); });
+            })
+            .catch(function(error) {
+                if (hint) hint.textContent = t('ai.models_failed', { message: error.message });
+            })
+            .finally(function() { delete aiLiveModelsLoading[provider]; });
     }
 
     // Custom combobox: identical rendering in every browser (incl. Safari and
@@ -835,6 +954,7 @@
         if (toggle) {
             toggle.addEventListener('mousedown', function(event) {
                 event.preventDefault();
+                loadProviderModels(false);
                 if (list.hidden) {
                     input.focus();
                     open('');
@@ -1039,11 +1159,11 @@
             aiTextModel: settings.textModel || settings.chatModel || 'gpt-4.1-mini',
             aiImageModel: Object.prototype.hasOwnProperty.call(settings, 'imageModel') ? (settings.imageModel || '') : 'gpt-image-2',
             aiMonthlyBudget: settings.limits?.monthlyBudgetCents ?? 1000,
-            aiDailyRequests: settings.limits?.dailyRequests ?? 100,
-            aiDailyTextRequests: settings.limits?.dailyTextRequests ?? 80,
+            aiDailyRequests: settings.limits?.dailyRequests ?? 300,
+            aiDailyTextRequests: settings.limits?.dailyTextRequests ?? 250,
             aiDailyImageRequests: settings.limits?.dailyImageRequests ?? 10,
-            aiMaxInputTokens: settings.limits?.maxInputTokens ?? 24000,
-            aiMaxOutputTokens: settings.limits?.maxOutputTokens ?? 4096,
+            aiMaxInputTokens: settings.limits?.maxInputTokens ?? 64000,
+            aiMaxOutputTokens: settings.limits?.maxOutputTokens ?? 16000,
             aiRequestTimeout: settings.limits?.requestTimeoutSeconds ?? 300,
             aiInputPrice: settings.pricing?.inputCentsPerMillion ?? 15,
             aiOutputPrice: settings.pricing?.outputCentsPerMillion ?? 60,
@@ -1252,12 +1372,34 @@
         }
         if (!status.gd) messages.push(t('ai.agent_status_no_gd'));
         else if (!status.webp) messages.push(t('ai.agent_status_no_webp'));
-        if (settings.agent && settings.agent.enabled && status.limits && (status.limits.maxInputTokens < 40000 || (status.limits.dailyRequests > 0 && status.limits.dailyRequests < 100))) {
+        if (settings.agent && settings.agent.enabled && status.limits && (status.limits.maxInputTokens < 60000 || (status.limits.dailyRequests > 0 && status.limits.dailyRequests < 200))) {
             messages.push(t('ai.agent_status_limits', { requests: status.limits.dailyRequests, tokens: status.limits.maxInputTokens }));
         }
         box.textContent = messages.join(' ');
         box.hidden = false;
     }
+
+    // What the agent needs to work (model turns carry the page content and tool results).
+    var AI_AGENT_RECOMMENDED_LIMITS = { aiMaxInputTokens: 64000, aiMaxOutputTokens: 16000, aiDailyRequests: 300, aiDailyTextRequests: 250 };
+
+    function raiseAgentLimits() {
+        var raised = false;
+        Object.keys(AI_AGENT_RECOMMENDED_LIMITS).forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el && (parseInt(el.value || '0', 10) || 0) < AI_AGENT_RECOMMENDED_LIMITS[id]) {
+                el.value = AI_AGENT_RECOMMENDED_LIMITS[id];
+                raised = true;
+            }
+        });
+        return raised;
+    }
+
+    document.getElementById('aiAgentRecommendedLimits')?.addEventListener('click', function() {
+        showToast(t(raiseAgentLimits() ? 'ai.agent_limits_raised' : 'ai.agent_limits_fine'), 'info');
+    });
+    document.getElementById('aiAgentEnabled')?.addEventListener('change', function() {
+        if (this.checked && raiseAgentLimits()) showToast(t('ai.agent_limits_raised'), 'info');
+    });
 
     document.getElementById('aiAgentClearCache')?.addEventListener('click', async function() {
         var button = this;

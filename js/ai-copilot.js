@@ -53,6 +53,7 @@
         selectedField: null,
         selectedFieldPath: '',
         selectedElement: null,
+        limitWarnings: [],
         lastFocusedBeforeOpen: null,
         modal: null,
         maximized: false
@@ -455,6 +456,30 @@
         state.loadingMessage = isLoading ? label(messageKey || 'copilot.working', fallback || 'AI Assistant is working...') : '';
     }
 
+    // Limits that are nearly or fully used, shown above the chat so they can be raised in time.
+    function setLimitWarnings(warnings) {
+        const next = Array.isArray(warnings) ? warnings.filter(item => item && typeof item.kind === 'string') : [];
+        if (JSON.stringify(next) === JSON.stringify(state.limitWarnings)) return;
+        state.limitWarnings = next;
+        renderMessages({ keepScroll: true });
+    }
+
+    function renderLimitWarnings() {
+        if (!state.limitWarnings.length) return '';
+        const money = cents => (Number(cents || 0) / 100).toFixed(2) + ' EUR';
+        const lines = state.limitWarnings.map(warning => {
+            const value = warning.kind === 'month' ? money : String;
+            const text = label(warning.level === 'reached' ? 'ai.limit_reached' : 'ai.limit_warning', '', {
+                kind: label('ai.limit_kind_' + warning.kind, warning.kind),
+                used: value(warning.used),
+                limit: value(warning.limit),
+                percent: warning.percent
+            });
+            return '<p class="nb-copilot-limit__line nb-copilot-limit__line--' + escHtml(warning.level) + '">' + escHtml(text) + '</p>';
+        });
+        return '<div class="nb-copilot-limit" role="status">' + lines.join('') + '<p class="nb-copilot-limit__hint">' + escHtml(label('ai.limit_ask_admin', '')) + '</p></div>';
+    }
+
     function renderMessages(options) {
         const list = document.querySelector('[data-copilot-messages]');
         if (!list) return;
@@ -470,7 +495,7 @@
             ? '<div class="nb-copilot-msg nb-copilot-msg--assistant"><div class="nb-copilot-msg__bubble nb-copilot-msg__bubble--loading"><span class="nb-copilot-spinner" aria-hidden="true"></span>' + escHtml(state.loadingMessage || label('copilot.working', 'AI Assistant is working...')) + '</div></div>'
             : '';
         const agentHtml = agentHook && agentHook.isActive() ? agentHook.render() : '';
-        list.innerHTML = intro + messages + renderContentDraft() + renderCreatedContent() + renderLastImageResult() + renderUndo() + renderProposals() + agentHtml + loading;
+        list.innerHTML = renderLimitWarnings() + intro + messages + renderContentDraft() + renderCreatedContent() + renderLastImageResult() + renderUndo() + renderProposals() + agentHtml + loading;
         list.setAttribute('aria-busy', state.loading ? 'true' : 'false');
         list.scrollTop = keepScroll ? scrollTop : list.scrollHeight;
         if (agentHook) agentHook.afterRender(list);
@@ -1485,6 +1510,7 @@
             uiLanguage: assistantUiLanguage()
         }).then(context => {
             state.context = context;
+            state.limitWarnings = Array.isArray(context && context.limitWarnings) ? context.limitWarnings : [];
             resolveSelectedField();
             if (!state.messages.length) {
                 state.messages.push({
@@ -1667,6 +1693,7 @@
         };
         const finish = result => {
             if (result && result.context) state.context = result.context;
+            if (result && result.limits) setLimitWarnings(result.limits.warnings);
             const reply = (result && result.reply) || (streamingMessage && streamingMessage.content) || label('copilot.no_response', 'No response.');
             if (streamingMessage) {
                 streamingMessage.content = reply;
@@ -2915,6 +2942,7 @@
             pushMessage: (role, content) => state.messages.push({ role, content: String(content || '') }),
             render: renderMessages,
             updateActions: updateActionAvailability,
+            setLimitWarnings,
             contentPage: () => contentPage,
             open: () => setOpen(true)
         };

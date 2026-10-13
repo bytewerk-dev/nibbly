@@ -11,6 +11,9 @@
  *    toolCalls?: [{id, name, arguments: array}]   (assistant)
  *    toolCallId?: string, isError?: bool}          (tool)
  *
+ * Assistant messages may carry opaque 'reasoningItems' (OpenAI Responses API, encrypted so nothing
+ * is stored at the provider); they go back to the provider unchanged and are never shown.
+ *
  * nibblyAiChat(), nibblyAiChatStream() and nibblyAiCleanMessages() are untouched.
  *
  * Accounting: every call is its own top-level request (ledger reservation). A call
@@ -21,6 +24,7 @@ const NIBBLY_AGENT_MESSAGE_CHARS = 12000;
 const NIBBLY_AGENT_MAX_MESSAGES = 60;
 const NIBBLY_AGENT_MAX_TOOLS = 40;
 const NIBBLY_AGENT_MAX_ARGUMENT_BYTES = 200000;
+const NIBBLY_AGENT_MAX_REASONING_BYTES = 200000;
 
 /** Catalog key of the provider behind the saved settings. */
 function nibblyAiProviderKey(array $settings): string {
@@ -44,6 +48,19 @@ function nibblyAgentValidName(string $name): bool {
 
 function nibblyAgentNewCallId(): string {
     return 'call_' . bin2hex(random_bytes(8));
+}
+
+/** Encrypted reasoning items of the Responses API, passed through; anything else is dropped. */
+function nibblyAgentCleanReasoningItems($items): array {
+    if (!is_array($items) || !array_is_list($items)) return [];
+    $clean = [];
+    foreach ($items as $item) {
+        if (!is_array($item) || ($item['type'] ?? '') !== 'reasoning' || !is_string($item['encrypted_content'] ?? null) || $item['encrypted_content'] === '') continue;
+        $entry = ['type' => 'reasoning', 'encrypted_content' => $item['encrypted_content'], 'summary' => is_array($item['summary'] ?? null) ? array_values($item['summary']) : []];
+        if (is_string($item['id'] ?? null) && preg_match('/^[A-Za-z0-9_-]{1,100}$/', $item['id'])) $entry['id'] = $item['id'];
+        $clean[] = $entry;
+    }
+    return strlen((string)json_encode($clean)) > NIBBLY_AGENT_MAX_REASONING_BYTES ? [] : $clean;
 }
 
 /**
@@ -84,6 +101,8 @@ function nibblyAgentCleanMessages(array $messages, int $maxMessages = NIBBLY_AGE
                 $calls[] = ['id' => $id, 'name' => $name, 'arguments' => $arguments];
             }
             $entry['toolCalls'] = $calls;
+            $reasoning = nibblyAgentCleanReasoningItems($message['reasoningItems'] ?? []);
+            if ($reasoning) $entry['reasoningItems'] = $reasoning;
         } elseif ($role === 'tool') {
             $id = (string)($message['toolCallId'] ?? '');
             if (!nibblyAgentValidName($id)) {
@@ -406,6 +425,98 @@ function nibblyAgentParseOpenAiResponse(array $response): array {
     ];
 }
 
+/**
+ * OpenAI itself is spoken to through the Responses API (reasoning models cannot combine function tools
+ * with reasoning on chat/completions). Other OpenAI-compatible hosts use chat/completions unless a
+ * rejected request taught us that the model needs /responses.
+ */
+function nibblyAgentUsesResponsesApi(array $settings, string $model): bool {
+    if (nibblyAiProviderKey($settings) !== 'openai-compatible') return false;
+    if (strtolower((string)parse_url((string)($settings['baseUrl'] ?? ''), PHP_URL_HOST)) === 'api.openai.com') return true;
+    return (nibblyAiKnownQuirks($settings, $model)['api'] ?? '') === 'responses';
+}
+
+/** @return array{0:string,1:array} instructions and input items */
+function nibblyAgentResponsesInput(array $messages): array {
+    $instructions = [];
+    $input = [];
+    foreach ($messages as $message) {
+        if ($message['role'] === 'system') {
+            $instructions[] = $message['content'];
+        } elseif ($message['role'] === 'tool') {
+            $input[] = ['type' => 'function_call_output', 'call_id' => $message['toolCallId'], 'output' => $message['content']];
+        } elseif ($message['role'] === 'assistant') {
+            foreach ($message['reasoningItems'] ?? [] as $item) $input[] = $item;
+            if ($message['content'] !== '') $input[] = ['role' => 'assistant', 'content' => $message['content']];
+            foreach ($message['toolCalls'] ?? [] as $call) {
+                $input[] = [
+                    'type' => 'function_call',
+                    'call_id' => $call['id'],
+                    'name' => $call['name'],
+                    'arguments' => json_encode($call['arguments'] ?: new stdClass(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                ];
+            }
+        } else {
+            $input[] = ['role' => 'user', 'content' => $message['content']];
+        }
+    }
+    return [implode("\n\n", $instructions), $input];
+}
+
+function nibblyAgentResponsesBody(array $messages, array $tools, string $model, int $maxOutput, float $temperature): array {
+    [$instructions, $input] = nibblyAgentResponsesInput($messages);
+    $body = ['model' => $model, 'input' => $input];
+    if ($instructions !== '') $body['instructions'] = $instructions;
+    $body += [
+        'tools' => array_values(array_map(static fn($tool) => [
+            'type' => 'function',
+            'name' => $tool['name'],
+            'description' => $tool['description'],
+            'parameters' => nibblyAgentProviderSchema($tool['parameters']),
+            'strict' => false
+        ], $tools)),
+        'tool_choice' => 'auto',
+        'max_output_tokens' => $maxOutput,
+        'temperature' => $temperature,
+        // Nothing is kept at the provider; the reasoning comes back encrypted and goes into the next turn.
+        'store' => false,
+        'include' => ['reasoning.encrypted_content'],
+        'stream' => false
+    ];
+    return $body;
+}
+
+function nibblyAgentParseResponsesResponse(array $response): array {
+    $text = '';
+    $raw = [];
+    $reasoning = [];
+    $sawReasoning = false;
+    foreach ((is_array($response['output'] ?? null) ? $response['output'] : []) as $item) {
+        if (!is_array($item)) continue;
+        $type = (string)($item['type'] ?? '');
+        if ($type === 'message') {
+            foreach ((is_array($item['content'] ?? null) ? $item['content'] : []) as $part) {
+                if (is_array($part) && ($part['type'] ?? '') === 'output_text') $text .= (string)($part['text'] ?? '');
+            }
+        } elseif ($type === 'function_call') {
+            $raw[] = ['id' => (string)($item['call_id'] ?? ''), 'name' => (string)($item['name'] ?? ''), 'arguments' => $item['arguments'] ?? ''];
+        } elseif ($type === 'reasoning') {
+            $sawReasoning = true;
+            $reasoning[] = $item;
+        }
+    }
+    $incomplete = ($response['status'] ?? '') === 'incomplete' && ($response['incomplete_details']['reason'] ?? '') === 'max_output_tokens';
+    return [
+        'text' => trim($text),
+        'calls' => $raw,
+        'stopReason' => $incomplete ? 'length' : ($raw ? 'tool_calls' : 'stop'),
+        'inputTokens' => isset($response['usage']['input_tokens']) ? (int)$response['usage']['input_tokens'] : null,
+        'outputTokens' => isset($response['usage']['output_tokens']) ? (int)$response['usage']['output_tokens'] : null,
+        'reasoning' => $sawReasoning,
+        'reasoningItems' => nibblyAgentCleanReasoningItems($reasoning)
+    ];
+}
+
 function nibblyAgentAnthropicBody(array $messages, array $tools, string $model, int $maxOutput, float $temperature): array {
     $system = [];
     $mapped = [];
@@ -547,8 +658,24 @@ function nibblyAiChatWithToolsExecute(array $messages, array $tools, array $opti
         $response = nibblyAiExecuteJsonRequest($settings, $url, $headers, nibblyAgentAnthropicBody($clean, $tools, $model, $maxOutput, $temperature));
         $parsed = nibblyAgentParseAnthropicResponse($response);
     } else {
-        $response = nibblyAiProviderRequest($settings, '/chat/completions', nibblyAgentOpenAiBody($clean, $tools, $model, $maxOutput, $temperature));
-        $parsed = nibblyAgentParseOpenAiResponse($response);
+        $responsesApi = nibblyAgentUsesResponsesApi($settings, $model);
+        if (!$responsesApi) {
+            try {
+                $response = nibblyAiProviderRequest($settings, '/chat/completions', nibblyAgentOpenAiBody($clean, $tools, $model, $maxOutput, $temperature));
+                $parsed = nibblyAgentParseOpenAiResponse($response);
+            } catch (NibblyAiProviderRejected $error) {
+                // "use /v1/responses": the model does not take tools on chat/completions. Nothing was generated; ask again there.
+                if (!in_array($error->status, [400, 404, 422], true) || !preg_match('~/v1/responses|/responses~i', $error->getMessage()) || nibblyAiProviderKey($settings) !== 'openai-compatible') {
+                    throw $error;
+                }
+                $responsesApi = true;
+                nibblyAiStoreQuirk($settings, $model, ['api' => 'responses']);
+            }
+        }
+        if ($responsesApi) {
+            $response = nibblyAiProviderRequest($settings, '/responses', nibblyAgentResponsesBody($clean, $tools, $model, $maxOutput, $temperature));
+            $parsed = nibblyAgentParseResponsesResponse($response);
+        }
     }
 
     $calls = nibblyAgentFinalizeToolCalls($parsed['calls'], $tools);
@@ -577,6 +704,7 @@ function nibblyAiChatWithToolsExecute(array $messages, array $tools, array $opti
     $message = ['role' => 'assistant', 'content' => $parsed['text']];
     if ($calls) {
         $message['toolCalls'] = array_map(static fn($call) => ['id' => $call['id'], 'name' => $call['name'], 'arguments' => $call['arguments']], $calls);
+        if (!empty($parsed['reasoningItems'])) $message['reasoningItems'] = $parsed['reasoningItems'];
     }
     return [
         'kind' => $calls ? 'tool_calls' : 'final',

@@ -1830,3 +1830,29 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     color: #64748b;
     font-size: 11px;
 }
+
+/* Limits that are nearly used up (shown above the chat) */
+.nb-copilot-limit {
+    margin-bottom: 12px;
+    padding: 9px 12px;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+    background: #fffbeb;
+    color: #78350f;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.nb-copilot-limit p {
+    margin: 0 0 4px;
+}
+
+.nb-copilot-limit__line--reached {
+    color: #991b1b;
+    font-weight: 700;
+}
+
+.nb-copilot-limit__hint {
+    margin-bottom: 0 !important;
+    color: #92400e;
+}
