@@ -106,8 +106,10 @@ function nibblyAgentToolDefinitions(): array {
             'parameters' => $object(['lang' => $lang, 'title' => $text(180), 'slug' => $text(120), 'date' => ['type' => 'string', 'pattern' => '^\d{4}-\d{2}-\d{2}$'], 'author' => $text(120), 'excerpt' => $text(320), 'contentHtml' => $text(20000), 'imageRef' => $text(60), 'imagePath' => $text(300)] + $sources, ['lang', 'title', 'date', 'contentHtml']), 'right' => 'createNews', 'handler' => 'nibblyAgentToolStage'],
         'stage_create_event' => ['description' => 'Create an event. It is created hidden; the user publishes it.',
             'parameters' => $object(['lang' => $lang, 'title' => $text(180), 'date' => ['type' => 'string', 'pattern' => '^\d{4}-\d{2}-\d{2}$'], 'time' => ['type' => 'string', 'pattern' => '^\d{2}:\d{2}$'], 'endDate' => ['type' => 'string', 'pattern' => '^\d{4}-\d{2}-\d{2}$'], 'endTime' => ['type' => 'string', 'pattern' => '^\d{2}:\d{2}$'], 'location' => $text(240), 'description' => $text(20000), 'admission' => $text(160), 'url' => $text(500)] + $sources, ['lang', 'title', 'date', 'time', 'location']), 'right' => 'createEvents', 'handler' => 'nibblyAgentToolStage'],
-        'stage_create_page' => ['description' => 'Create a page from sections. It is created private and out of the navigation; the user publishes it.',
+        'stage_create_page' => ['description' => 'Create a page from sections. It is created private and out of the navigation; the user publishes it. A heading section at the start becomes the page title (h1); give the page one.',
             'parameters' => $object(['lang' => $lang, 'slug' => $text(120), 'title' => $text(180), 'description' => $text(320), 'sections' => ['type' => 'array', 'maxItems' => 30, 'items' => $object(['type' => $text(40), 'fields' => ['type' => 'object']], ['type'])]] + $sources, ['lang', 'slug', 'title', 'sections']), 'right' => 'createPages', 'handler' => 'nibblyAgentToolStage'],
+        'stage_set_page_menus' => ['description' => 'Show a page in menus or take it out again (administrators only). "header" is the main menu; the footer menus have their own ids. Pass only what changes. A page the agent created is private until published, so it is not reachable from the menu before that.',
+            'parameters' => $object(['target' => $target, 'add' => ['type' => 'array', 'maxItems' => 6, 'items' => $text(40)], 'remove' => ['type' => 'array', 'maxItems' => 6, 'items' => $text(40)]], ['target']), 'right' => 'editMenus', 'handler' => 'nibblyAgentToolStage'],
         'stage_revert_op' => ['description' => 'Take one staged operation out of the change set again.',
             'parameters' => $object(['opId' => $text(20)], ['opId']), 'right' => 'edit', 'handler' => 'nibblyAgentToolStage'],
 
@@ -136,7 +138,7 @@ const NIBBLY_AGENT_STAGE_TYPES = [
     'stage_set_field' => 'set_field', 'stage_set_image' => 'set_image', 'stage_add_list_item' => 'list_insert',
     'stage_hide_list_item' => 'list_hide', 'stage_remove_list_item' => 'list_remove', 'stage_move_list_item' => 'list_move',
     'stage_add_section' => 'section_insert', 'stage_create_news' => 'create_news', 'stage_create_event' => 'create_event',
-    'stage_create_page' => 'create_page', 'stage_revert_op' => 'revert_op',
+    'stage_create_page' => 'create_page', 'stage_set_page_menus' => 'set_page_menus', 'stage_revert_op' => 'revert_op',
 ];
 
 // ---------------------------------------------------------------------------

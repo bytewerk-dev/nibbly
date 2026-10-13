@@ -260,6 +260,7 @@ csRejected($a, ['type' => 'create_news', 'lang' => 'en', 'title' => 'Agent news:
 $ops = nibblyAgentChangesetLoad($a)['ops'];
 csAssert(count($ops) === 12 && $ops[9]['post']['id'] === '2026-10-10-agent-news-a-title' && $ops[9]['post']['hidden'] === true, 'news id from date and slug, created hidden: ' . ($ops[9]['post']['id'] ?? ''));
 csAssert($ops[10]['event']['hidden'] === true && $ops[10]['event']['url'] === 'mailto:team@example.org', 'event created hidden');
+csAssert($ops[11]['page']['sections'][0]['type'] === 'heading' && $ops[11]['page']['sections'][0]['level'] === 'h1' && !isset($ops[11]['page']['sections'][1]['level']), 'the heading that opens a new page is its title (h1): ' . json_encode($ops[11]['page']['sections'][0]));
 $page = $ops[11]['page'];
 csAssert($page['visibility']['status'] === 'private' && strlen($page['visibility']['passwordHash']) > 40 && $page['nav'] === [] && count($page['sections']) === 2, 'page created private, random password, out of the navigation');
 csAssert($ops[11]['target'] === 'page:en_agent__page', 'nested path becomes a flat content key');
@@ -384,6 +385,32 @@ csAssert(nibblyAgentChangesetFinalize($d)['status'] === 'conflict', 'finalize re
 $rev = nibblyAgentChangesetRevalidate($d, $owner);
 csAssert(!$rev['ok'] && str_contains($rev['error'], 'no longer fit') && nibblyAgentChangesetLoad($d)['status'] === 'conflict', 'operations that no longer fit stay a conflict, with the reason: ' . json_encode($rev));
 file_put_contents($stdFile, $stdOriginal);
+
+// ---- Menus: a page shown in the main menu (administrators' tool) -------------------------------
+$menuCs = csNew();
+csOk($menuCs, ['type' => 'create_page', 'lang' => 'en', 'slug' => 'menu-page', 'title' => 'Menu page', 'sections' => [['type' => 'heading', 'fields' => ['text' => 'Menu page']]]], 'page for the menu');
+csRejected($menuCs, ['type' => 'set_page_menus', 'target' => 'page:en_menu-page', 'add' => ['nope']], 'is not a menu of this site', 'unknown menu');
+csRejected($menuCs, ['type' => 'set_page_menus', 'target' => 'news:2026-10-01-demo-post', 'add' => ['header']], 'Menus belong to pages', 'menus of a news post');
+csRejected($menuCs, ['type' => 'set_page_menus', 'target' => 'page:en_does-not-exist', 'add' => ['header']], 'does not exist', 'menus of a missing page');
+csRejected($menuCs, ['type' => 'set_page_menus', 'target' => 'page:en_menu-page'], 'at least one menu', 'nothing to change');
+csRejected($menuCs, ['type' => 'set_page_menus', 'target' => 'page:en_menu-page', 'add' => ['header'], 'remove' => ['header']], 'added and removed at once', 'the same menu added and removed');
+csRejected($menuCs, ['type' => 'set_page_menus', 'target' => 'page:en_menu-page', 'add' => ['header'], 'nav' => ['x']], "'nav' is not an argument", 'no raw nav argument');
+csOk($menuCs, ['type' => 'set_page_menus', 'target' => 'page:en_menu-page', 'add' => ['header']], 'menus of the new page');
+csOk($menuCs, ['type' => 'set_page_menus', 'target' => 'page:en_menu-page', 'remove' => ['header']], 'and taken out again');
+csOk($menuCs, ['type' => 'set_page_menus', 'target' => 'page:en_menu-page', 'add' => ['header']], 'and put back');
+csRejected($menuCs, ['type' => 'set_field', 'target' => $std, 'path' => 'nav', 'value' => 'header'], 'not an editable field', 'the nav list is still no editable field');
+$menuReview = nibblyAgentChangesetPreview(nibblyAgentChangesetLoad($menuCs));
+$menuOps = $menuReview['targets']['page:en_menu-page'];
+csAssert($menuOps[1]['label'] === 'Change the menus of this page' && $menuOps[1]['before'] === '–' && $menuOps[1]['after'] === 'Header', 'the review names the menus: ' . json_encode($menuOps[1]));
+csAssert($menuOps[2]['before'] === 'Header' && $menuOps[2]['after'] === '–', 'and what changes: ' . json_encode($menuOps[2]));
+$menuReady = nibblyAgentChangesetFinalize($menuCs);
+csAssert($menuReady['status'] === 'ready', 'the menu package is ready: ' . json_encode($menuReady['validation'] ?? $menuReady));
+csAssert(array_filter((array)$menuReady['validation']['warnings'], static fn($w) => str_contains($w['message'], 'private')) !== [], 'a private page in the main menu is flagged');
+$menuApplied = nibblyAgentChangesetApply($menuCs, $menuReady['previewHash'], $owner);
+csAssert(!empty($menuApplied['ok']), 'the menu package applies: ' . json_encode($menuApplied));
+$menuPage = csDoc($site, 'content/pages/en_menu-page.json');
+csAssert($menuPage['nav'] === ['header'], 'the page is in the main menu only: ' . json_encode($menuPage['nav']));
+csAssert(!empty(nibblyAgentChangesetUndo($menuCs, $menuApplied['undoToken'], $owner)['ok']) && !is_file($site . '/content/pages/en_menu-page.json'), 'undo takes the page and its menu entry away');
 
 // ---- A failing write rolls everything back ----------------------------------------------------
 $f = csNew();

@@ -3012,6 +3012,7 @@
             post,
             confirm: confirmCopilot,
             pushMessage: (role, content) => state.messages.push({ role, content: String(content || '') }),
+            hasMessage: (role, content) => state.messages.some(message => message.role === role && message.content === String(content || '')),
             render: renderMessages,
             updateActions: updateActionAvailability,
             setLimitWarnings,

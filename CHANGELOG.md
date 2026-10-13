@@ -58,9 +58,22 @@ Git milestones and the gaps in publication records.
   live at once and only new pages, posts, events, sections and list items stay
   hidden until published (it used to say this for every package).
 - Agent review: a package of up to four changes shows its before and after right
-  away; block ends in rich text no longer run together. The preview bar (in the
-  admin language) has "Apply changes" and "Back to the assistant": apply opens the
-  assistant's own confirmation in the other tab, the preview itself writes nothing.
+  away; block ends in rich text no longer run together.
+- Agent preview: it opens in the same tab and the bar (in the admin language) has two
+  plain links back to the page the assistant was on: "Back to the assistant" and
+  "Apply changes", which opens the assistant's own confirmation there. The preview
+  itself writes nothing and needs no second tab or cross-tab message.
+- Agent: the summary of a prepared package is also written into the chat, so the
+  history keeps it. A new tab finds the open package again (only the run id is kept
+  in local storage, for 48 hours).
+- Agent: the heading that opens a new page is its title (h1), not an h2.
+- Agent: administrators can have a page shown in a menu or taken out again
+  (`stage_set_page_menus`, e.g. "put the page into the main menu"). Only
+  administrators get the tool; the menus must exist in `content/menus.json`, and the
+  review lists what changes. A private page in the main menu is flagged.
+- Agent: a run that finished while the page was closed or the session had expired
+  (answer or prepared package) shows its answer in the chat again after the next
+  login or reload, and the chat history saves it.
 - Dashboard assistant: it can offer actions as cards the person confirms: open a
   dashboard area or settings tab, and (administrators only) change the dashboard
   theme (light/dark/system), main and accent colour and language. The model only

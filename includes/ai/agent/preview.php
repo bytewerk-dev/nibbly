@@ -79,38 +79,35 @@ function nibblyAgentPreviewText(string $key, string $fallback): string {
 }
 
 /**
- * Bar above the page while previewing: what this is, and the way back. "Apply changes" does not
- * apply anything here; it asks the assistant tab (same browser, BroadcastChannel) to open its own
- * confirmation, so the confirmation, the undo and the review stay in one place.
+ * The page the person came from (the assistant sends it as nb_agent_return): a path on this site, nothing else.
+ * Empty when it is missing or not a plain local path.
+ */
+function nibblyAgentPreviewReturnPath(): string {
+    $path = $_GET['nb_agent_return'] ?? '';
+    if (!is_string($path) || $path === '' || strlen($path) > 500 || $path[0] !== '/' || str_starts_with($path, '//')) return '';
+    if (preg_match('/[\x00-\x1f\x7f\\\\]/', $path) || str_contains($path, '://')) return '';
+    return preg_replace('/([?&])nb_agent_[a-z_]+=[^&#]*(&|$)/', '$1', $path) ?? '';
+}
+
+/**
+ * Bar above the page while previewing: what this is, and the way on. Both buttons are plain links back to the
+ * page the person came from; the assistant there (same tab, it still has the package) opens, and for "Apply
+ * changes" asks for its own confirmation. The preview itself never applies anything.
  */
 function nibblyAgentPreviewBanner(): string {
     $id = (string)($GLOBALS['nibblyAgentPreview']['id'] ?? '');
-    $text = [
-        'banner' => nibblyAgentPreviewText('agent.preview_banner', 'Preview: these changes have not been applied yet. Only you see the page like this.'),
-        'apply' => nibblyAgentPreviewText('agent.apply', 'Apply changes'),
-        'back' => nibblyAgentPreviewText('agent.preview_back', 'Back to the assistant'),
-        'sent' => nibblyAgentPreviewText('agent.preview_sent', 'Sent to the assistant. Confirm the changes there.'),
-        'close' => nibblyAgentPreviewText('agent.preview_close_hint', 'Close this tab to get back to the assistant.'),
-        'none' => nibblyAgentPreviewText('agent.preview_no_assistant', 'The assistant is not open in any tab any more. Open it on your site again and apply the package there.')
-    ];
-    $button = 'font:600 13px/1 system-ui,sans-serif;padding:.45rem .8rem;border-radius:6px;border:1px solid #fff;cursor:pointer;margin:0 .25rem';
-    $flags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE;
+    $return = rtrim(nibblyAgentPreviewReturnPath(), '?&');
+    if ($return === '') $return = (string)($GLOBALS['basePath'] ?? '') !== '' ? (string)$GLOBALS['basePath'] : './';
+    $banner = nibblyAgentPreviewText('agent.preview_banner', 'Preview: these changes have not been applied yet. Only you see the page like this.');
+    $apply = nibblyAgentPreviewText('agent.apply', 'Apply changes');
+    $back = nibblyAgentPreviewText('agent.preview_back', 'Back to the assistant');
+    $link = 'display:inline-block;font:600 13px/1 system-ui,sans-serif;padding:.5rem .85rem;border-radius:6px;border:1px solid #fff;text-decoration:none;margin:0 .25rem';
+    $href = static fn(string $hash): string => htmlspecialchars($return . $hash, ENT_QUOTES);
     return '<div class="nb-agent-preview-banner" id="nb-agent-preview-banner" role="status" style="position:sticky;top:0;z-index:2147483000;padding:.6rem 1rem;'
         . 'background:#1f2933;color:#fff;font:600 14px/1.4 system-ui,sans-serif;text-align:center">'
-        . '<span data-nb-preview-text>' . htmlspecialchars($text['banner']) . '</span>'
+        . '<span>' . htmlspecialchars($banner) . '</span>'
         . '<span style="display:inline-block;margin-left:.75rem;white-space:nowrap">'
-        . '<button type="button" data-nb-preview="apply" style="' . $button . ';background:#fff;color:#1f2933">' . htmlspecialchars($text['apply']) . '</button>'
-        . '<button type="button" data-nb-preview="back" style="' . $button . ';background:transparent;color:#fff">' . htmlspecialchars($text['back']) . '</button>'
-        . '</span></div>'
-        . '<script>(function(){var bar=document.getElementById("nb-agent-preview-banner");if(!bar)return;'
-        . 'var id=' . json_encode($id, $flags) . ',text=' . json_encode($text, $flags) . ',label=bar.querySelector("[data-nb-preview-text]"),channel=null,timer=0;'
-        . 'try{if(typeof BroadcastChannel==="function")channel=new BroadcastChannel("nibbly-agent-preview");}catch(e){}'
-        . 'function say(message){label.textContent=message;}'
-        . 'function leave(){window.close();}'
-        . 'if(channel)channel.addEventListener("message",function(event){var d=event.data||{};if(d.type!=="ack"||d.id!==id)return;window.clearTimeout(timer);say(text.sent);window.setTimeout(leave,600);});'
-        . 'bar.addEventListener("click",function(event){var b=event.target.closest("[data-nb-preview]");if(!b)return;'
-        . 'if(b.getAttribute("data-nb-preview")==="back"){leave();window.setTimeout(function(){say(text.close);},300);return;}'
-        . 'if(!channel){say(text.none);return;}'
-        . 'channel.postMessage({type:"apply",id:id});window.clearTimeout(timer);timer=window.setTimeout(function(){say(text.none);},1500);});'
-        . '})();</script>';
+        . '<a data-nb-preview="apply" href="' . $href('#nb-agent-apply=' . $id) . '" style="' . $link . ';background:#fff;color:#1f2933">' . htmlspecialchars($apply) . '</a>'
+        . '<a data-nb-preview="back" href="' . $href('#nb-agent-open') . '" style="' . $link . ';background:transparent;color:#fff">' . htmlspecialchars($back) . '</a>'
+        . '</span></div>';
 }

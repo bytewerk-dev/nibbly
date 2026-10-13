@@ -61,7 +61,9 @@ assertContains(agent, 'target="_blank" rel="noopener noreferrer"', 'External lin
 assertContains(agent, 'function safeLocalPath(value)', 'Preview paths are checked.');
 assertContains(agent, "/^\\/(?!\\/)[^\\s\\\\]*$/", 'Preview links stay on this site.');
 assertContains(agent, "new DOMParser().parseFromString(text, 'text/html').body.textContent", 'HTML values are reduced to text with a parser that never runs scripts.');
-assertContains(agent, "window.open(url.href, '_blank', 'noopener')", 'The preview opens without an opener.');
+assertContains(agent, "window.location.assign(url.href)", 'The preview opens in this tab, where the open package stays.');
+assertContains(agent, "/^#nb-agent-(apply|open)(?:=(cs_[a-f0-9]{8,}))?$/", 'Only the two known hashes from the preview bar are read.');
+assertAbsent(agent, /BroadcastChannel|nibbly-agent-apply-request/, 'No cross-tab messaging between the preview and the assistant.');
 assertContains(agent, "url.searchParams.set('nb_agent_preview', review.id)", 'The preview is requested with the package id only.');
 // ---- Behaviour ----------------------------------------------------------------------------------------------------------
 assertContains(agent, "host.post('ai-agent-start'", 'The agent starts runs through the API.');
@@ -70,8 +72,10 @@ assertContains(agent, "'ai-agent-reply'", 'Answers and change requests go throug
 assertContains(agent, "'ai-agent-cancel'", 'Runs can be cancelled.');
 assertContains(agent, "apiGet('ai-agent-changeset'", 'The review is read with GET.');
 assertContains(agent, "apiGet('ai-agent-status'", 'A run is resumed with GET.');
-assertContains(agent, "sessionStorage.setItem(RUN_KEY, JSON.stringify({ runId: state.run.runId", 'Only the run id and the goal are kept in session storage.');
-assertAbsent(agent, /localStorage\.setItem\([^)]*(run|token|csrf)/i, 'No run data or token in local storage.');
+assertContains(agent, "const stored = { runId: state.run.runId, goal: String(state.lastGoal || '').slice(0, 2000) };", 'Only the run id and the goal are kept in session storage.');
+assertContains(agent, "sessionStorage.setItem(RUN_KEY, JSON.stringify(stored))", 'The session storage entry is that object.');
+assertContains(agent, "JSON.stringify({ at: Date.now(), runId: stored.runId })", 'Local storage keeps nothing but the run id and a time, so another tab finds the open package.');
+assertAbsent(agent, /localStorage\.setItem\([^)]*(token|csrf|goal|stored\b)/i, 'No goal text or token in local storage.');
 assertContains(agent, "csrf_token', host.csrfToken", 'Uploads carry the CSRF token.');
 assertContains(agent, "if (!/^image\\/(jpeg|png|webp)$/.test(file.type)", 'The browser prefilters image types (the server decides).');
 assertContains(agent, 'maxUploadFiles', 'The number of attached images is limited.');

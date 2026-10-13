@@ -83,6 +83,13 @@ foreach (nibblyAgentToolsForUser() as $tool) {
 toolSettings($settingsFile, ['enabled' => true, 'roles' => ['editor' => ['structural' => false, 'createPages' => false]]]);
 $limited = array_column(nibblyAgentToolsForUser(), 'name');
 toolAssert(!array_intersect($limited, ['stage_add_list_item', 'stage_hide_list_item', 'stage_remove_list_item', 'stage_move_list_item', 'stage_add_section', 'stage_create_page']) && in_array('stage_create_news', $limited, true), 'tools without a right are not offered');
+toolAssert(!in_array('stage_set_page_menus', $names, true) && !nibblyAgentCan('editMenus'), 'editors cannot change menus, whatever their rights');
+toolSettings($settingsFile, ['enabled' => true, 'roles' => ['editor' => ['editMenus' => true]]]);
+toolAssert(!nibblyAgentCan('editMenus'), 'a stray "editMenus" setting does not give editors the menu tool');
+$_SESSION['admin_role'] = 'admin';
+$adminTools = array_column(nibblyAgentToolsForUser(), 'name');
+toolAssert(in_array('stage_set_page_menus', $adminTools, true) && str_contains(nibblyAgentSystemPrompt(['id' => 'run_0123456789abcdef', 'owner' => 'u_admin', 'transcript' => [], 'status' => 'running']), 'Menus: stage_set_page_menus'), 'administrators get the menu tool and its prompt hint');
+$_SESSION['admin_role'] = 'editor';
 toolSettings($settingsFile, ['enabled' => true]);
 
 // ---- Tools ----------------------------------------------------------------------------------------

@@ -20,6 +20,8 @@
 
     const MODE_KEY = 'nibbly.aiAgent.mode';
     const RUN_KEY = 'nibbly-ai-agent:run';
+    const LAST_RUN_KEY = 'nibbly-ai-agent:last-run'; // only the run id, shared by all tabs, so a new tab finds the open package again
+    const LAST_RUN_MAX_AGE = 48 * 3600 * 1000;
     const rights = config.rights && typeof config.rights === 'object' ? config.rights : {};
     const maxUploadFiles = Number(config.maxUploadFiles) > 0 ? Number(config.maxUploadFiles) : 6;
     const maxUploadBytes = Number(config.maxUploadBytes) > 0 ? Number(config.maxUploadBytes) : 10 * 1024 * 1024;
@@ -27,7 +29,7 @@
     const visibleSteps = 6;
     const TOOL_STEPS = [
         'get_site_overview', 'get_page_capabilities', 'read_content', 'list_content', 'list_media', 'list_run_media', 'search_stock_images', 'import_stock_image',
-        'generate_image', 'search_web', 'read_web_result', 'read_url', 'stage_set_field', 'stage_set_image', 'stage_add_list_item', 'stage_hide_list_item', 'stage_remove_list_item',
+        'generate_image', 'search_web', 'read_web_result', 'read_url', 'stage_set_field', 'stage_set_image', 'stage_set_page_menus', 'stage_add_list_item', 'stage_hide_list_item', 'stage_remove_list_item',
         'stage_move_list_item', 'stage_add_section', 'stage_create_news', 'stage_create_event', 'stage_create_page', 'stage_revert_op', 'validate_changeset', 'ask_user', 'present_changeset'
     ];
 
@@ -89,9 +91,12 @@
             if (!window.sessionStorage) return;
             if (!state.run || !state.run.runId) {
                 window.sessionStorage.removeItem(RUN_KEY);
+                if (window.localStorage) window.localStorage.removeItem(LAST_RUN_KEY);
                 return;
             }
-            window.sessionStorage.setItem(RUN_KEY, JSON.stringify({ runId: state.run.runId, goal: String(state.lastGoal || '').slice(0, 2000) }));
+            const stored = { runId: state.run.runId, goal: String(state.lastGoal || '').slice(0, 2000) };
+            window.sessionStorage.setItem(RUN_KEY, JSON.stringify(stored));
+            if (window.localStorage) window.localStorage.setItem(LAST_RUN_KEY, JSON.stringify({ at: Date.now(), runId: stored.runId }));
         } catch (error) {
             // Storage limits or privacy settings must not break editing.
         }
@@ -99,11 +104,49 @@
 
     function readStoredRun() {
         try {
-            const raw = window.sessionStorage ? window.sessionStorage.getItem(RUN_KEY) : '';
-            const data = raw ? JSON.parse(raw) : null;
-            return data && /^run_[a-z0-9]{6,}$/.test(String(data.runId || '')) ? data : null;
+            const valid = data => data && /^run_[a-z0-9]{6,}$/.test(String(data.runId || '')) ? data : null;
+            const own = valid(JSON.parse((window.sessionStorage && window.sessionStorage.getItem(RUN_KEY)) || 'null'));
+            if (own) return own;
+            // Another tab of this browser started it (or this tab was opened fresh): the open package is still there.
+            const shared = valid(JSON.parse((window.localStorage && window.localStorage.getItem(LAST_RUN_KEY)) || 'null'));
+            return shared && Date.now() - Number(shared.at || 0) < LAST_RUN_MAX_AGE ? shared : null;
         } catch (error) {
             return null;
+        }
+    }
+
+    // The preview page sends the person back here with #nb-agent-open or #nb-agent-apply={id}. Applying still
+    // goes through the confirmation of this assistant; the hash only opens it.
+    function launchRequest() {
+        const match = /^#nb-agent-(apply|open)(?:=(cs_[a-f0-9]{8,}))?$/.exec(window.location.hash || '');
+        return match ? { kind: match[1], id: match[2] || '' } : null;
+    }
+
+    function clearLaunchHash() {
+        try {
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        } catch (error) {
+            // The hash stays; a reload would ask again at most.
+        }
+    }
+
+    // final: nothing more will load, so a request that found no matching package is dropped.
+    function handleLaunchRequest(final) {
+        const request = launchRequest();
+        if (!request || !host) return;
+        if (request.kind === 'open') {
+            clearLaunchHash();
+            host.open();
+            return;
+        }
+        const review = state.review;
+        if (review && review.status === 'ready' && review.id === request.id) {
+            clearLaunchHash();
+            host.open();
+            applyPackage();
+        } else if (final) {
+            clearLaunchHash();
+            host.open();
         }
     }
 
@@ -192,13 +235,16 @@
         state.run = Object.assign({}, state.run && state.run.runId === data.runId ? state.run : {}, data);
         if (data.status !== 'needs_input' && data.status !== 'awaiting_review') state.awaitingChanges = false;
         if (Array.isArray(data.limitWarnings) && host.setLimitWarnings) host.setLimitWarnings(data.limitWarnings);
-        if (live !== false && data.status === 'needs_input' && previous !== 'needs_input') {
-            const text = String(data.question || '').trim();
-            if (text) host.pushMessage('assistant', text);
-        }
+        // The answer and the summary belong in the chat, so the history keeps them. When a run is picked up again
+        // (reload, a new login, another tab) the chat may lack them, so they are added unless they are there already.
+        const addToChat = text => {
+            if (text && (live !== false || !(typeof host.hasMessage === 'function' && host.hasMessage('assistant', text)))) host.pushMessage('assistant', text);
+        };
+        if (data.status === 'needs_input' && previous !== 'needs_input') addToChat(String(data.question || '').trim());
         if (data.status === 'awaiting_review' && previous !== 'awaiting_review') {
+            addToChat(String(data.summary || '').trim());
             state.review = null;
-            loadReview();
+            state.reviewLoading = loadReview();
         }
         if (data.status === 'cancelled' && previous !== 'cancelled') {
             // Whether the cancel was immediate or caught by a running step, the run ends here.
@@ -351,6 +397,7 @@
             state.notice = { type: 'error', text: error.message };
         }
         update();
+        handleLaunchRequest(false);
     }
 
     async function applyPackage() {
@@ -482,7 +529,9 @@
         if (!path) return;
         const url = new URL(path, window.location.origin);
         url.searchParams.set('nb_agent_preview', review.id);
-        window.open(url.href, '_blank', 'noopener');
+        // The preview opens in this tab and sends the person back here, where the package is still open.
+        url.searchParams.set('nb_agent_return', window.location.pathname + window.location.search);
+        window.location.assign(url.href);
     }
 
     function clearRun() {
@@ -1031,6 +1080,12 @@
     }
 
     async function resume() {
+        await resumeRun();
+        if (state.reviewLoading) await state.reviewLoading;
+        handleLaunchRequest(true);
+    }
+
+    async function resumeRun() {
         const stored = readStoredRun();
         if (!stored || state.run) return;
         try {
@@ -1061,25 +1116,6 @@
         state.openDetails = {};
         persistRun();
         if (root) updateControls();
-    }
-
-    // The preview tab asks this tab to apply the package: the confirmation and the undo
-    // state stay in one place, and nothing is applied without the assistant's own dialog.
-    if (typeof BroadcastChannel === 'function') {
-        try {
-            const channel = new BroadcastChannel('nibbly-agent-preview');
-            channel.addEventListener('message', event => {
-                const data = event.data && typeof event.data === 'object' ? event.data : {};
-                if (data.type !== 'apply' || !state.review || state.review.id !== data.id || state.review.status !== 'ready') return;
-                channel.postMessage({ type: 'ack', id: data.id });
-                if (host) {
-                    host.open();
-                    applyPackage();
-                }
-            });
-        } catch (error) {
-            // No cross-tab messages: the preview then tells the person to come back to the assistant.
-        }
     }
 
     const registered = window.NibblyAiCopilot.registerAgent({
