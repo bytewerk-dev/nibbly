@@ -532,22 +532,53 @@ function nibblyAgentDisplayValue($value): string {
     return mb_strlen($text, 'UTF-8') > 600 ? mb_substr($text, 0, 600, 'UTF-8') . '…' : $text;
 }
 
+/** A review text in the admin language (English when the language files are not loaded, e.g. in CLI tests). */
+function nibblyAgentOpText(string $key, string $fallback, array $params = []): string {
+    $text = function_exists('t') ? t($key) : $key;
+    if ($text === $key) $text = $fallback;
+    foreach ($params as $name => $value) $text = str_replace('{' . $name . '}', (string)$value, $text);
+    return $text;
+}
+
+/** A field or list name as a person says it: common names are translated, others shown as they are. */
+function nibblyAgentFieldName(string $field): string {
+    $known = ['content' => 'Text', 'text' => 'Text', 'title' => 'Title', 'heading' => 'Heading', 'subtitle' => 'Subtitle',
+        'description' => 'Description', 'caption' => 'Caption', 'image' => 'Image', 'items' => 'Items', 'alt' => 'Alt text'];
+    $field = ['src' => 'image', 'body' => 'content'][$field] ?? $field;
+    return isset($known[$field]) ? nibblyAgentOpText('agent.field.' . $field, $known[$field]) : $field;
+}
+
+/** The headline of one operation in the review: what changes and where, e.g. Change “Text” in section 14 (text): “Loslegen”. */
+function nibblyAgentOpLabel(array $op, array $result): string {
+    $type = $op['type'];
+    $context = is_array($result['context'] ?? null) ? $result['context'] : ['field' => '', 'section' => null, 'item' => null];
+    $field = nibblyAgentFieldName((string)($context['field'] ?: ($op['path'] ?? $op['listKey'] ?? '')));
+    $what = match ($type) {
+        'set_field' => nibblyAgentOpText('agent.op.set_field', 'Change “{field}”', ['field' => $field]),
+        'set_image' => nibblyAgentOpText('agent.op.set_image', 'Set image “{field}”', ['field' => $field]),
+        'list_insert' => nibblyAgentOpText('agent.op.list_insert', 'Add item to “{field}”', ['field' => $field]),
+        'list_hide' => nibblyAgentOpText($op['hidden'] ? 'agent.op.list_hide' : 'agent.op.list_show', $op['hidden'] ? 'Hide item {n} of “{field}”' : 'Show item {n} of “{field}”', ['n' => (int)$op['index'] + 1, 'field' => $field]),
+        'list_remove' => nibblyAgentOpText('agent.op.list_remove', 'Remove item {n} of “{field}”', ['n' => (int)$op['index'] + 1, 'field' => $field]),
+        'list_move' => nibblyAgentOpText('agent.op.list_move', 'Move item {from} to {to} in “{field}”', ['from' => (int)$op['from'] + 1, 'to' => (int)$op['to'] + 1, 'field' => $field]),
+        'section_insert' => nibblyAgentOpText('agent.op.section_insert', 'Add {type} section', ['type' => (string)($op['section']['type'] ?? '')]),
+        'create_news' => nibblyAgentOpText('agent.op.create_news', 'Create news post'),
+        'create_event' => nibblyAgentOpText('agent.op.create_event', 'Create event'),
+        'create_page' => nibblyAgentOpText('agent.op.create_page', 'Create page'),
+        default => $type
+    };
+    $section = $context['section'] ?? null;
+    if (!is_array($section)) return $what;
+    $params = ['what' => $what, 'n' => $section['n'], 'type' => $section['type'], 'title' => $section['title']];
+    $where = $section['title'] !== ''
+        ? nibblyAgentOpText('agent.op.in_section', '{what} in section {n} ({type}): “{title}”', $params)
+        : nibblyAgentOpText('agent.op.in_section_untitled', '{what} in section {n} ({type})', $params);
+    return !empty($context['item']) ? $where . ' ' . nibblyAgentOpText('agent.op.item', '(item {item})', ['item' => $context['item']]) : $where;
+}
+
 /** One operation as the review panel shows it. Values are plain text; HTML values are already sanitised. */
 function nibblyAgentOpPreview(array $op, array $result): array {
     $type = $op['type'];
-    $label = match ($type) {
-        'set_field' => 'Change ' . $op['path'],
-        'set_image' => 'Set image ' . $op['path'],
-        'list_insert' => 'Add item to ' . $op['listKey'],
-        'list_hide' => ($op['hidden'] ? 'Hide' : 'Show') . ' item ' . $op['index'] . ' of ' . $op['listKey'],
-        'list_remove' => 'Remove item ' . $op['index'] . ' of ' . $op['listKey'],
-        'list_move' => 'Move item ' . $op['from'] . ' to ' . $op['to'] . ' in ' . $op['listKey'],
-        'section_insert' => 'Add ' . ($op['section']['type'] ?? '') . ' section',
-        'create_news' => 'Create news post',
-        'create_event' => 'Create event',
-        'create_page' => 'Create page',
-        default => $type
-    };
+    $label = nibblyAgentOpLabel($op, $result);
     $isHtml = ($op['spec']['type'] ?? '') === 'html' || $type === 'create_news';
     return [
         'opId' => $op['id'], 'type' => $type, 'target' => $op['target'], 'label' => $label,

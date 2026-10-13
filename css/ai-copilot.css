@@ -1745,6 +1745,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     color: #172033;
     font-size: 12px;
     overflow-wrap: anywhere;
+    white-space: pre-line;
 }
 
 .nb-agent-empty {

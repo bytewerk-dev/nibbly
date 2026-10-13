@@ -145,16 +145,20 @@
     }
 
     /** Readable text of a stored value: HTML is reduced to its text (the parser never runs scripts). */
-    function plainText(value, limit) {
+    function plainText(value, limit, keepBreaks) {
         let text = String(value == null ? '' : value);
         if (/<[a-z!/][^>]*>/i.test(text)) {
+            // Block ends become line breaks, otherwise headings and paragraphs run together.
+            if (keepBreaks) text = text.replace(/<\/(p|h[1-6]|li|div|blockquote|tr)>|<br\s*\/?>/gi, '$&\n');
             try {
                 text = new DOMParser().parseFromString(text, 'text/html').body.textContent || '';
             } catch (error) {
                 text = text.replace(/<[^>]*>/g, ' ');
             }
         }
-        text = text.replace(/\s+/g, ' ').trim();
+        text = keepBreaks
+            ? text.replace(/[ \t\f\v\r]+/g, ' ').replace(/ ?\n ?/g, '\n').replace(/\n{2,}/g, '\n').trim()
+            : text.replace(/\s+/g, ' ').trim();
         const max = limit || 400;
         return text.length > max ? text.slice(0, max - 1).trimEnd() + '…' : text;
     }
@@ -354,9 +358,13 @@
         if (!review || review.status !== 'ready' || isBusy()) return;
         const operations = Object.values(review.targets || {}).reduce((total, list) => total + list.length, 0);
         const targets = Object.keys(review.targets || {}).map(targetLabel);
+        // New pages, posts, events, sections and list items start hidden; changes to existing content are live at once.
+        const createsContent = Object.values(review.targets || {}).some(list => list.some(op => ['create_news', 'create_event', 'create_page', 'section_insert', 'list_insert'].includes(op.type)));
         const confirmed = await host.confirm({
             title: label('agent.apply_confirm_title', 'Apply this package?'),
-            body: label('agent.apply_confirm_body', '{count} changes will be saved. New content stays hidden until you publish it. You can undo the package afterwards.', { count: operations }),
+            body: createsContent
+                ? label('agent.apply_confirm_body', '{count} changes will be saved. Changes to existing content go live right away; new content stays hidden until you publish it. You can undo the package afterwards.', { count: operations })
+                : label('agent.apply_confirm_body_live', '{count} changes will be saved and go live right away. You can undo the package afterwards.', { count: operations }),
             items: targets,
             confirmLabel: label('agent.apply_confirm_button', 'Apply')
         });
@@ -592,12 +600,16 @@
                 // Not JSON: show it as text.
             }
         }
-        return esc(plainText(text, 400));
+        return esc(plainText(text, 400, true));
     }
 
-    function renderOperation(op) {
+    // A package of a few changes shows them right away; a long one stays folded.
+    const OPEN_OPERATIONS_UP_TO = 4;
+
+    function renderOperation(op, openByDefault) {
         const key = 'op:' + op.opId;
-        const open = state.openDetails[key] === true ? ' open' : '';
+        const stored = state.openDetails[key];
+        const open = (stored === undefined ? openByDefault : stored === true) ? ' open' : '';
         return '<li class="nb-agent-op' + (op.destructive ? ' is-destructive' : '') + '"><details data-agent-details="' + esc(key) + '"' + open + '><summary>' + esc(op.label) +
             (op.destructive ? ' <span class="nb-agent-tag nb-agent-tag--danger">' + esc(label('agent.destructive', 'Deletes content')) + '</span>' : '') + '</summary>' +
             '<div class="nb-agent-diff"><div><span>' + esc(label('agent.before', 'Before')) + '</span><p>' + describeOpValue(op.before) + '</p></div>' +
@@ -667,8 +679,9 @@
         const review = state.review;
         const run = state.run;
         if (!review || !run || run.status !== 'awaiting_review' || !['staging', 'ready', 'conflict', 'failed'].includes(review.status)) return '';
+        const operationCount = Object.values(review.targets || {}).reduce((total, list) => total + list.length, 0);
         const groups = Object.entries(review.targets || {}).map(([target, ops]) => '<section class="nb-agent-target"><h4>' + esc(targetLabel(target)) + '</h4><ul>' +
-            ops.map(renderOperation).join('') + '</ul></section>').join('');
+            ops.map(op => renderOperation(op, operationCount <= OPEN_OPERATIONS_UP_TO)).join('') + '</ul></section>').join('');
         const questions = Array.isArray(run.openQuestions) && run.openQuestions.length
             ? '<div class="nb-agent-block"><h4>' + esc(label('agent.open_questions', 'Open questions')) + '</h4><ul>' + run.openQuestions.map(question => '<li>' + esc(String(question)) + '</li>').join('') + '</ul></div>' : '';
         const previews = Array.isArray(review.previewLinks) ? review.previewLinks : [];
@@ -705,7 +718,9 @@
         });
         return '<section class="nb-agent-package nb-agent-package--applied" aria-label="' + esc(label('agent.applied_title', 'Changes applied')) + '">' +
             '<header><strong>' + esc(label('agent.applied_title', 'Changes applied')) + '</strong><span class="nb-agent-tag nb-agent-tag--ok">' + icon('ok') + '</span></header>' +
-            '<p class="nb-agent-summary">' + esc(label('agent.applied_note', 'A backup was made. New content is hidden until you publish it.')) + '</p>' +
+            '<p class="nb-agent-summary">' + esc(state.applied.items.length
+                ? label('agent.applied_note', 'A backup was made. Changes to existing content are live; new content is hidden until you publish it.')
+                : label('agent.applied_note_live', 'A backup was made. The changes are live. Undo restores the previous state.')) + '</p>' +
             (rows.length ? '<ul class="nb-agent-items">' + rows.join('') + '</ul>' : '') +
             '<footer class="nb-agent-actions">' +
             '<button type="button" class="nb-copilot-copy" data-agent-action="reload">' + esc(label('agent.reload', 'Reload page')) + '</button>' +
@@ -1046,6 +1061,25 @@
         state.openDetails = {};
         persistRun();
         if (root) updateControls();
+    }
+
+    // The preview tab asks this tab to apply the package: the confirmation and the undo
+    // state stay in one place, and nothing is applied without the assistant's own dialog.
+    if (typeof BroadcastChannel === 'function') {
+        try {
+            const channel = new BroadcastChannel('nibbly-agent-preview');
+            channel.addEventListener('message', event => {
+                const data = event.data && typeof event.data === 'object' ? event.data : {};
+                if (data.type !== 'apply' || !state.review || state.review.id !== data.id || state.review.status !== 'ready') return;
+                channel.postMessage({ type: 'ack', id: data.id });
+                if (host) {
+                    host.open();
+                    applyPackage();
+                }
+            });
+        } catch (error) {
+            // No cross-tab messages: the preview then tells the person to come back to the assistant.
+        }
     }
 
     const registered = window.NibblyAiCopilot.registerAgent({

@@ -94,15 +94,15 @@ foreach ($expectedAgent as $key) {
     if (preg_match('/\b(Sie|Ihr|Ihre|Ihren|Ihrem|Ihrer|Ihnen)\b/u', $text)) fail('German agent text must use "du": ' . $key . ' = ' . $text);
     if (preg_match('/\p{L}[:*_]innen|\p{L}[:*_]in\b|\p{Ll}Innen\b/u', $text)) fail('German agent text must not use gender special characters: ' . $key . ' = ' . $text);
 }
-$agentJs = (string)file_get_contents($root . '/js/ai-agent.js');
+$agentJs = (string)file_get_contents($root . '/js/ai-agent.js') . (string)file_get_contents($root . '/includes/ai/agent/preview.php') . (string)file_get_contents($root . '/includes/ai/agent/changeset.php'); // the preview bar and the review texts are built on the server
 preg_match_all("/['\"](agent\.[a-z0-9_.]+)['\"]/", $agentJs, $agentMatches);
-$agentJsKeys = array_values(array_unique(array_filter($agentMatches[1] ?? [], fn($key) => $key !== 'agent.step.')));
+$agentJsKeys = array_values(array_unique(array_filter($agentMatches[1] ?? [], fn($key) => !in_array($key, ['agent.step.', 'agent.field.'], true))));
 sort($agentJsKeys);
 $unknownAgentKeys = array_values(array_diff($agentJsKeys, $expectedAgent));
 if ($unknownAgentKeys) {
     fail('Agent JS references missing en.json keys: ' . implode(', ', $unknownAgentKeys));
 }
-$unusedAgentKeys = array_values(array_filter(array_diff($expectedAgent, $agentJsKeys), fn($key) => !str_starts_with($key, 'agent.step.')));
+$unusedAgentKeys = array_values(array_filter(array_diff($expectedAgent, $agentJsKeys), fn($key) => !str_starts_with($key, 'agent.step.') && !str_starts_with($key, 'agent.field.')));
 if ($unusedAgentKeys) {
     fail('Agent texts that no code uses: ' . implode(', ', $unusedAgentKeys));
 }
