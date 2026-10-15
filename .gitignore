@@ -100,3 +100,6 @@ content/ai-model-quirks.json.lock
 # Search engine check result
 content/seo-check.json
 content/seo-check.json.lock
+# AI API keys (Provider, Brave, Pexels): never commit; the settings file next to it holds no keys
+content/ai-secrets.json
+content/ai-settings.json.lock

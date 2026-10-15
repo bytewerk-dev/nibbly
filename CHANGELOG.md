@@ -110,6 +110,11 @@ Git milestones and the gaps in publication records.
 - The AI settings load the provider's model list for the model fields, keep the
   save bar in view and fold the rarely used agent groups; long model lists in
   the dropdown stay readable.
+- AI API keys (provider, Brave Search, Pexels) are stored in `content/ai-secrets.json`
+  (owner-only, in `.gitignore`) instead of `content/ai-settings.json`, which can now be
+  committed. Keys that an older version left in the settings file move there when an
+  administrator next opens the dashboard or the AI settings. Code reads the settings
+  through `nibblyAiReadStoredSettings()` (`includes/ai/settings-store.php`).
 - `nibblyNetSafeFetch()` (`includes/ai/agent/net.php`) is now the only way to
   fetch external URLs: public addresses only (IPv4 and IPv6 ranges), DNS pinning,
   manual redirects, size and content-type limits. Existing external fetches use it.

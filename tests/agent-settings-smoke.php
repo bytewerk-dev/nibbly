@@ -37,7 +37,7 @@ const PEXELS = 'pexels-secret-key-ABCDEFGH123456';
 $base = ['enabled' => true, 'provider' => 'openai-compatible', 'baseUrl' => 'http://127.0.0.1:9', 'allowLocalProvider' => true, 'apiKey' => 'provider-secret-key-0000', 'chatModel' => 'gpt-4.1-mini',
     'features' => ['backendAssistant' => true, 'seoTextGeneration' => true, 'imageGeneration' => true]];
 $file = NIBBLY_AI_SETTINGS_PATH;
-$stored = static fn(): array => json_decode((string)file_get_contents($file), true);
+$stored = static fn(): array => nibblyAiReadStoredSettings(); // keys merged in, as the code reads them
 
 // ---- Defaults ------------------------------------------------------------------------------------------
 $public = nibblyAiLoadSettings(true);
@@ -64,6 +64,33 @@ settingsAssert(!str_contains($encoded, BRAVE) && !str_contains($encoded, PEXELS)
 $loaded = json_encode(nibblyAiLoadSettings(true));
 settingsAssert(!str_contains($loaded, BRAVE) && !str_contains($loaded, PEXELS) && !str_contains($loaded, 'provider-secret') && !str_contains($loaded, 'apiKey'), 'neither does a later load');
 settingsAssert($stored()['research']['brave']['apiKey'] === BRAVE && $stored()['stock']['pexels']['apiKey'] === PEXELS, 'the keys are stored for the server');
+// The keys live in content/ai-secrets.json; the settings file holds none and can be committed.
+$secretsFile = dirname($file) . '/ai-secrets.json';
+$settingsText = (string)file_get_contents($file);
+settingsAssert(!str_contains($settingsText, BRAVE) && !str_contains($settingsText, PEXELS) && !str_contains($settingsText, 'provider-secret') && !str_contains($settingsText, 'apiKey'), 'the settings file holds no key');
+$secretsData = json_decode((string)file_get_contents($secretsFile), true);
+settingsAssert($secretsData['research']['brave']['apiKey'] === BRAVE && $secretsData['stock']['pexels']['apiKey'] === PEXELS && str_contains((string)json_encode($secretsData['providerCredentials']), 'provider-secret'), 'the secrets file holds the provider, Brave and Pexels keys');
+settingsAssert(DIRECTORY_SEPARATOR === '\\' || (fileperms($secretsFile) & 0777) === 0600, 'the secrets file is for the owner only');
+settingsAssert(!isset($secretsData['research']['allowDomains']) && !isset($secretsData['agent']), 'and holds nothing but keys');
+
+// A settings file of an older version (keys inside) still works and is moved on request, once.
+$legacy = json_decode($settingsText, true);
+$legacy['apiKey'] = 'legacy-provider-key';
+$legacy['providerCredentials']['openai-compatible']['apiKey'] = 'legacy-provider-key';
+$legacy['research']['brave']['apiKey'] = 'BSA-legacy-brave-key-123';
+$legacy['stock']['pexels']['apiKey'] = 'legacy-pexels-key-12345';
+unlink($secretsFile);
+file_put_contents($file, json_encode($legacy));
+settingsAssert(nibblyAiReadStoredSettings()['research']['brave']['apiKey'] === 'BSA-legacy-brave-key-123' && nibblyAiLoadSettings(false)['apiKey'] === 'legacy-provider-key', 'an older file is read as before');
+settingsAssert(nibblyAiMigrateSecrets() === true && nibblyAiMigrateSecrets() === false, 'the keys move once');
+$movedText = (string)file_get_contents($file);
+settingsAssert(!str_contains($movedText, 'legacy-') && !str_contains($movedText, 'BSA-legacy') && !str_contains($movedText, 'apiKey') && is_file($secretsFile), 'the settings file is clean afterwards');
+settingsAssert(nibblyAiLoadSettings(false)['apiKey'] === 'legacy-provider-key' && nibblyAiReadStoredSettings()['stock']['pexels']['apiKey'] === 'legacy-pexels-key-12345' && nibblyAiReadStoredSettings()['agent'] === $legacy['agent'], 'nothing is lost by the move');
+// Restore the state the following checks expect
+$restored = json_decode($movedText, true);
+$restored['research']['brave']['apiKey'] = BRAVE;
+$restored['stock']['pexels']['apiKey'] = PEXELS;
+nibblyAiWriteStoredSettings(array_replace_recursive(nibblyAiReadStoredSettings(), ['research' => ['brave' => ['apiKey' => BRAVE]], 'stock' => ['pexels' => ['apiKey' => PEXELS]]]));
 
 // The agent code reads what was saved
 settingsAssert(nibblyAgentSettings()['limits']['maxToolCalls'] === 25 && nibblyAgentSettings()['mediaFolder'] === 'team-photos', 'nibblyAgentSettings() sees the saved values');
@@ -81,7 +108,7 @@ settingsAssert($again['agent']['limits']['maxToolCalls'] === 25 && $again['agent
 $replaced = nibblyAiSaveSettings($base + ['apiKey' => '', 'research' => ['braveApiKey' => 'BSA-another-brave-key-999'], 'stock' => []]);
 settingsAssert($stored()['research']['brave']['apiKey'] === 'BSA-another-brave-key-999' && $stored()['stock']['pexels']['apiKey'] === PEXELS, 'a new key replaces the old one, the other stays');
 $cleared = nibblyAiSaveSettings($base + ['apiKey' => '', 'research' => ['clearBraveApiKey' => true], 'stock' => ['clearPexelsApiKey' => true]]);
-settingsAssert($stored()['research']['brave']['apiKey'] === '' && $stored()['stock']['pexels']['apiKey'] === '' && !$cleared['research']['hasBraveApiKey'] && !$cleared['stock']['hasPexelsApiKey'], 'keys can be removed');
+settingsAssert(($stored()['research']['brave']['apiKey'] ?? '') === '' && ($stored()['stock']['pexels']['apiKey'] ?? '') === '' && !str_contains((string)file_get_contents($secretsFile), 'BSA-') && !$cleared['research']['hasBraveApiKey'] && !$cleared['stock']['hasPexelsApiKey'], 'keys can be removed');
 settingsAssert(!nibblyAgentResearchSettings()['available'] && !nibblyAgentStockSettings()['available'], 'without keys there is no research and no stock photos');
 
 // ---- Sections survive callers that know nothing about them -----------------------------------------------------

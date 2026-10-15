@@ -97,7 +97,8 @@ content/
   news/             Blog post JSON files
   events.json       Events
   settings.json     Site-wide settings
-  ai-settings.json  AI provider settings, feature flags, and limits
+  ai-settings.json  AI provider settings, feature flags, and limits (no keys)
+  ai-secrets.json   AI API keys (provider, Brave, Pexels); never commit or serve
   ai-usage.json     AI usage counters
 css/
   style.css         Core styles + CSS custom properties (do not edit)

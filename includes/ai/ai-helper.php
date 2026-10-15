@@ -13,9 +13,7 @@ require_once __DIR__ . '/agent/tool-gateway.php';
 require_once __DIR__ . '/request-ledger.php';
 require_once __DIR__ . '/model-catalog.php';
 
-if (!defined('NIBBLY_AI_SETTINGS_PATH')) {
-    define('NIBBLY_AI_SETTINGS_PATH', dirname(__DIR__, 2) . '/content/ai-settings.json');
-}
+require_once __DIR__ . '/settings-store.php';
 if (!defined('NIBBLY_AI_USAGE_PATH')) {
     define('NIBBLY_AI_USAGE_PATH', dirname(__DIR__, 2) . '/content/ai-usage.json');
 }
@@ -147,11 +145,9 @@ function nibblyAiResolveProviderSettings(array $settings): array {
 
 function nibblyAiLoadSettings(bool $public = false): array {
     $settings = nibblyAiDefaults();
-    if (is_file(NIBBLY_AI_SETTINGS_PATH)) {
-        $loaded = json_decode((string)file_get_contents(NIBBLY_AI_SETTINGS_PATH), true);
-        if (is_array($loaded)) {
-            $settings = array_replace_recursive($settings, $loaded);
-        }
+    $loaded = nibblyAiReadStoredSettings();
+    if ($loaded) {
+        $settings = array_replace_recursive($settings, $loaded);
     }
 
     $settings = nibblyAiResolveProviderSettings($settings);
@@ -276,12 +272,8 @@ function nibblyAiSaveSettings(array $input, array $existing = []): array {
         $settings['features']['imageGeneration'] = true;
     }
 
-    $dir = dirname(NIBBLY_AI_SETTINGS_PATH);
-    if (!is_dir($dir)) {
-        mkdir($dir, 0755, true);
-    }
-    $ok = file_put_contents(NIBBLY_AI_SETTINGS_PATH, json_encode($settings, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX);
-    if ($ok === false) {
+    // The keys go to content/ai-secrets.json, everything else to content/ai-settings.json.
+    if (!nibblyAiWriteStoredSettings($settings)) {
         throw new RuntimeException('Could not save AI settings.');
     }
 

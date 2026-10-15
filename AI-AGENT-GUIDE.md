@@ -38,7 +38,7 @@ This is the canonical, tool-neutral guide for AI coding agents. `AGENTS.md` and 
 | Public form submit API | `api/form-submit.php` |
 | Legacy contact form API | `api/contact.php` |
 | AI gateway | `includes/ai/ai-helper.php` |
-| AI settings | `content/ai-settings.json` |
+| AI settings | `content/ai-settings.json` (no keys), `content/ai-secrets.json` (API keys only) |
 | AI usage/audit | `content/ai-usage.json`, `content/ai-audit/*.jsonl` |
 | AI image history | `content/ai-image-history.json` |
 | Deploy script | `deploy.example.sh` (copy to `deploy.sh` and configure) |
@@ -151,7 +151,7 @@ validate with `nibblyValidateFormToken()`, and store messages with the same
 Nibbly core AI features must use `includes/ai/ai-helper.php` instead of calling
 LLM or image-generation vendors directly. The gateway stores provider settings in
 `content/ai-settings.json`, supports OpenAI-compatible providers, keeps API keys
-server-side, enforces feature flags, daily/monthly limits, token caps, rough cost
+server-side in `content/ai-secrets.json` (never in the settings file, which is safe to commit), enforces feature flags, daily/monthly limits, token caps, rough cost
 estimates, and writes audit events to `content/ai-audit/*.jsonl`.
 
 Use the existing admin API actions (`ai-chat`, `ai-generate-text`,
@@ -342,8 +342,9 @@ The agent is off by default. Admins enable it in Dashboard → Settings → AI
 Settings → "AI agent" (limits per run, what editors may do, Brave and Pexels
 keys, media folder, credit behaviour, "clear page scan cache"). It needs a
 provider/model with tool calling (OpenAI-compatible and Anthropic are
-supported; Kie.ai is not) and the agent code reads only `content/ai-settings.json`
-sections `agent`, `research` and `stock`. API keys of these sections are never
+supported; Kie.ai is not) and the agent code reads only the `agent`, `research` and `stock`
+sections through `nibblyAiReadStoredSettings()` (settings file with `content/ai-secrets.json`
+merged in; never read the files directly). API keys of these sections are never
 returned by `load-ai-settings`; an empty key field on save keeps the saved key.
 
 Files (all under `includes/ai/agent/` unless noted):

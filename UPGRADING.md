@@ -9,8 +9,8 @@ Version 2.3.0 adds compatible features and fixes: the optional AI agent in the
 assistant, actions of the dashboard assistant, the search engine check in the
 system status, and corrections to the page list and to saving settings. The
 documented admin API, accounts and sessions are unchanged. New storage is created
-on first use. One behaviour changes: `seo.noindexSite` now blocks the whole site
-(step 3).
+on first use, and the AI API keys move to their own file (step 6). One behaviour
+changes: `seo.noindexSite` now blocks the whole site (step 3).
 
 1. Prepare as for any update: make and verify a full backup, pause editing and
    scheduled jobs, and preserve site-owned files (see
@@ -44,19 +44,29 @@ on first use. One behaviour changes: `seo.noindexSite` now blocks the whole site
    deployments, and never in the web root's public files: `content/ai-agent/` (runs,
    change sets, staged images, snapshots, journal, rate limits and the page
    structure cache; `.secret` signs the undo tokens, so an open package cannot be
-   undone without it), `content/ai-model-quirks.json` (what a provider model
-   accepts) and `content/seo-check.json` (result of the search engine check). Optional
+   undone without it), `content/ai-secrets.json` (the API keys, see step 6),
+   `content/ai-model-quirks.json` (what a provider model accepts) and
+   `content/seo-check.json` (result of the search engine check). Optional
    per-page restrictions for the agent live in `content/ai-schema/`. The shipped
    `content/.htaccess` denies direct access; on other servers confirm that
    `content/` cannot be fetched.
-6. The AI agent is off by default. To use it, enable it under Settings → AI Settings →
+6. API keys now live in their own file. The provider keys, the Brave Search key and
+   the Pexels key move from `content/ai-settings.json` to `content/ai-secrets.json`
+   (owner-only, listed in `.gitignore`); the settings file then holds no key and can
+   be committed. Nothing needs to be done: keys that the old file still holds move
+   once when an administrator opens the dashboard or the AI settings. Afterwards,
+   copy, deploy and back up the two files together; a copy of `ai-settings.json`
+   alone no longer carries the keys, and `ai-secrets.json` must never be committed
+   or served. A complete backup of `content/` contains both. Code that reads the
+   settings file itself should call `nibblyAiReadStoredSettings()` instead.
+7. The AI agent is off by default. To use it, enable it under Settings → AI Settings →
    "AI agent". It needs a provider with tool calling. OpenAI is addressed through the
    Responses API. Web research (Brave Search) and stock photos (Pexels) need their own
    keys and are optional. New default limits (64,000 input tokens, 16,000 output
    tokens, 300 requests and 250 text requests per day) apply to new installations;
    saved values are not changed, and "Use recommended limits" in the AI settings
    adopts them.
-7. Sites that link language versions with different URL paths through `$PAGE_MAPPING`
+8. Sites that link language versions with different URL paths through `$PAGE_MAPPING`
    in `includes/nav-config.php` now see them as one page in Dashboard → Pages. Page
    files, slugs and public URLs are not touched, and `nav-config.php` needs no change.
 

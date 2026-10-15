@@ -34,11 +34,8 @@ const NIBBLY_AGENT_USER_AGENT = 'nibbly-cms/1.0 (+content research; respects rob
 
 /** Keys and lists come from the raw ai-settings.json, like the other agent settings. */
 function nibblyAgentResearchSettings(): array {
-    $raw = [];
-    if (is_file(NIBBLY_AI_SETTINGS_PATH)) {
-        $stored = json_decode((string)file_get_contents(NIBBLY_AI_SETTINGS_PATH), true);
-        $raw = is_array($stored['research'] ?? null) ? $stored['research'] : [];
-    }
+    $stored = nibblyAiReadStoredSettings();
+    $raw = is_array($stored['research'] ?? null) ? $stored['research'] : [];
     $key = is_string($raw['brave']['apiKey'] ?? null) ? trim($raw['brave']['apiKey']) : '';
     return [
         'provider' => 'brave',

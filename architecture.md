@@ -274,6 +274,13 @@ separate API keys and base URLs for OpenAI and OpenRouter while switching the
 active provider in the admin UI. `load-ai-settings` never returns raw API keys;
 it only exposes `hasApiKey` and non-secret provider metadata.
 
+The keys (provider keys, `research.brave.apiKey`, `stock.pexels.apiKey`) are not kept in
+`content/ai-settings.json` but in `content/ai-secrets.json` (owner-only, in `.gitignore`), so
+the settings file can be committed. `includes/ai/settings-store.php` merges both for readers
+(`nibblyAiReadStoredSettings()`) and splits them for writers (`nibblyAiWriteStoredSettings()`);
+keys that an older version left in the settings file move on the next administrator load of the
+AI settings (`nibblyAiMigrateSecrets()`). Never read or write the two files directly.
+
 Usage counters live in `content/ai-usage.json`; request audit lines live in
 `content/ai-audit/YYYY-MM-DD.jsonl`; generated image metadata lives in
 `content/ai-image-history.json`; generated image files are written to
