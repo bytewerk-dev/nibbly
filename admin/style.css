@@ -8803,6 +8803,7 @@ input.color-hex-input,
     font-size: 0.875rem;
     line-height: 1.25;
     width: max-content;
+    max-width: 100%; /* a long label wraps on a phone instead of widening the page */
 }
 
 .checkbox-label input[type="checkbox"] {
