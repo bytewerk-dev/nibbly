@@ -668,6 +668,15 @@ To create the JSON manually instead:
 }
 ```
 
+Staging sites are blocked for search engines with `content/settings.json` →
+`seo.noindexSite: true` (Settings → Branding → Search engines). It sets
+`Disallow: /` in `robots.txt`, `noindex, nofollow` in the robots meta tag and in
+`X-Robots-Tag`, and empties `sitemap.xml`. Set it back to `false` and `seo.siteUrl`
+to the live address when the site goes live. Do not block staging with a static
+`robots.txt` in the web root (it replaces Nibbly's own) or with custom headers:
+the dashboard's "Search engines" check (system status) warns about every such
+block on a public host, but cannot tell a forgotten one from an intended one.
+
 SEO and social sharing metadata live in the optional top-level `seo` object.
 `includes/header.php` renders these fields as the visitor-facing meta tags,
 Open Graph tags, Twitter card tags, canonical URL, robots meta, and JSON-LD.

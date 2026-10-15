@@ -18,6 +18,14 @@ switch ($action) {
         ignore_user_abort(true);
         jsonResponse(true, nibblySecurityStatus((string)($_POST['scheme'] ?? ''), true, ($_POST['force'] ?? '') === '1'));
         break;
+    case 'seo-check':
+        if (!isAdmin()) jsonResponse(false, null, 'Forbidden');
+        require_once NIBBLY_ADMIN_DIR . '/../includes/seo-check.php';
+        // Three requests to the own site, a few seconds at most: do not hold the session lock meanwhile.
+        session_write_close();
+        ignore_user_abort(true);
+        jsonResponse(true, nibblySeoCheckStatus((string)($_POST['scheme'] ?? ''), true, ($_POST['force'] ?? '') === '1'));
+        break;
     case 'keepalive':
         if (!validateCsrfToken()) {
             jsonResponse(false, null, 'Invalid CSRF token');

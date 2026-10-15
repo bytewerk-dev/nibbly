@@ -38,13 +38,7 @@
             if (body.textContent !== text) body.textContent = text;
             banner.hidden = !exposed.length;
         }
-        const badge = document.getElementById('systemBadge');
-        if (badge) {
-            const count = security.items.filter(item => item.state === 'critical' || item.state === 'warning').length;
-            badge.textContent = String(count);
-            badge.title = t('security_check.badge', { count: count });
-            badge.classList.toggle('mail-badge--hidden', count === 0);
-        }
+        updateSystemBadge();
         const panel = document.getElementById('systemSecurityPanel');
         if (panel) panel.replaceWith(renderSecurityPanel(security));
     }
@@ -150,6 +144,155 @@
         return section;
     }
 
+    // Search engine check (staging block forgotten at go-live). Same lifecycle as the security check.
+    var seoCheckRequest = null;
+    var seoStatus = null;
+
+    function updateSystemBadge() {
+        const badge = document.getElementById('systemBadge');
+        if (!badge) return;
+        const count = [securityStatus, seoStatus].reduce((sum, status) => sum + (status
+            ? status.items.filter(item => item.state === 'critical' || item.state === 'warning').length : 0), 0);
+        badge.textContent = String(count);
+        badge.title = t('system.badge', { count: count });
+        badge.classList.toggle('mail-badge--hidden', count === 0);
+    }
+
+    function runSeoCheck(force) {
+        if (seoCheckRequest && !force) return seoCheckRequest;
+        const form = new FormData();
+        form.set('action', 'seo-check');
+        form.set('csrf_token', CSRF_TOKEN);
+        form.set('scheme', window.location.protocol === 'https:' ? 'https' : 'http');
+        if (force) form.set('force', '1');
+        const request = fetch('api.php', { method: 'POST', body: form })
+            .then(response => response.json())
+            .then(result => {
+                if (!result.success) throw new Error(result.message || t('system.load_failed'));
+                return result.data;
+            })
+            .finally(() => { if (seoCheckRequest === request) seoCheckRequest = null; })
+            .then(data => { applySeoStatus(data); return data; });
+        seoCheckRequest = request;
+        if (seoStatus) applySeoStatus(seoStatus);
+        return request;
+    }
+
+    // One click on the banner or in the panel: only this setting changes, nothing else.
+    async function allowSeoIndexing(button) {
+        button.disabled = true;
+        const form = new FormData();
+        form.set('action', 'save-settings');
+        form.set('csrf_token', CSRF_TOKEN);
+        form.set('settings', JSON.stringify({ seo: { noindexSite: false } }));
+        try {
+            // Saving settings needs the current revision; loading them records it (js/revision-client.js).
+            await fetch('api.php?action=load-settings');
+            const result = await (await fetch('api.php', { method: 'POST', body: form })).json();
+            if (!result.success) throw new Error(result.message);
+            currentSettings = result.data;
+            showToast(t('seo_check.allowed'), 'success');
+            await runSeoCheck(true);
+        } catch (error) {
+            showToast(error.message, 'error');
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    function applySeoStatus(seo) {
+        if (!seo || !Array.isArray(seo.items)) return;
+        seoStatus = seo;
+        const banner = document.getElementById('seoBlockedWarning');
+        if (banner) {
+            const where = [];
+            for (const item of seo.items) {
+                if (item.state !== 'warning') continue;
+                if (item.reason === 'blocked') where.push('robots.txt');
+                if (item.reason === 'noindex') for (const place of item.where || []) where.push(t('seo_check.where_' + place));
+            }
+            const text = t(seo.noindexSite ? 'seo_check.banner_text_setting' : 'seo_check.banner_text_other', { where: where.join(', ') });
+            const body = document.getElementById('seoBlockedText');
+            if (body.textContent !== text) body.textContent = text;
+            document.getElementById('seoBlockedAllow').hidden = !seo.noindexSite;
+            banner.hidden = !seo.blocked;
+        }
+        updateSystemBadge();
+        const panel = document.getElementById('systemSeoPanel');
+        if (panel) panel.replaceWith(renderSeoPanel(seo));
+    }
+
+    function seoItemText(item) {
+        let key = item.id + '_' + (item.reason || item.state);
+        if (item.state === 'skipped') key = 'skipped_' + (item.reason || 'local');
+        else if (item.state === 'pending') key = seoCheckRequest || item.running ? 'running' : 'pending';
+        else if (item.state === 'unknown') key = 'unknown_' + (item.reason || 'unreachable');
+        return t('seo_check.' + key, {
+            url: item.url || '', detail: item.detail || '', count: item.count || 0, total: item.total || 0,
+            where: (item.where || []).map(place => t('seo_check.where_' + place)).join(', ')
+        });
+    }
+
+    function renderSeoDetails(item) {
+        if (!['warning', 'note', 'unknown'].includes(item.state)) return null;
+        const blocks = [];
+        const paragraph = (text) => { const p = document.createElement('p'); p.textContent = text; blocks.push(p); };
+        if (item.url) {
+            const p = document.createElement('p'); const code = document.createElement('code'); code.textContent = item.url;
+            p.append(t('seo_check.url') + ' ', code); blocks.push(p);
+        }
+        if (item.state !== 'unknown') paragraph(t('seo_check.expected') + ' ' + t('seo_check.' + item.id + '_expected'));
+        if (item.state === 'unknown') paragraph(t('seo_check.unknown_fix', { url: item.url || '' }));
+        else if (item.fix) paragraph(t('seo_check.' + item.id + '_fix_' + item.fix, { url: item.url || '', detail: item.detail || '' }));
+        if (item.source === 'setting') {
+            const button = document.createElement('button'); button.type = 'button'; button.className = 'btn btn-secondary btn-sm';
+            button.textContent = t('seo_check.allow'); button.onclick = () => allowSeoIndexing(button);
+            blocks.push(button);
+        }
+        const details = document.createElement('details'); details.className = 'system-check__details';
+        details.open = item.state === 'warning';
+        const summary = document.createElement('summary'); summary.textContent = t('security_check.how_to_fix');
+        details.append(summary, ...blocks);
+        return details;
+    }
+
+    function renderSeoPanel(seo) {
+        const section = document.createElement('section');
+        section.className = 'dashboard-panel system-security'; section.id = 'systemSeoPanel';
+        const header = document.createElement('div'); header.className = 'dashboard-panel-header';
+        const heading = document.createElement('h3'); heading.textContent = t('seo_check.title');
+        header.append(heading);
+        const actions = document.createElement('div'); actions.className = 'system-security__actions';
+        if (seo.checkedAt) {
+            const checked = document.createElement('span');
+            checked.textContent = t('security_check.checked_at', { date: new Date(seo.checkedAt).toLocaleString() });
+            actions.append(checked);
+        }
+        if (seo.canRun) {
+            const busy = !!seoCheckRequest || !!seo.running;
+            const button = document.createElement('button'); button.type = 'button'; button.className = 'btn btn-secondary btn-sm';
+            button.textContent = t(busy ? 'security_check.running' : 'security_check.run'); button.disabled = busy;
+            button.onclick = () => runSeoCheck(true).catch(error => {
+                showToast(error.message, 'error');
+                if (seoStatus) applySeoStatus(seoStatus);
+            });
+            actions.append(button);
+        }
+        header.append(actions);
+        section.append(header);
+        for (const item of seo.items) {
+            const check = document.createElement('div'); check.className = 'system-check system-check--' + item.state;
+            const row = document.createElement('div'); row.className = 'system-status-row';
+            const name = document.createElement('strong'); name.textContent = t('seo_check.' + item.id);
+            const text = document.createElement('span'); text.className = 'system-check__state'; text.textContent = seoItemText(item);
+            row.append(name, text); check.append(row);
+            const details = renderSeoDetails(item);
+            if (details) check.append(details);
+            section.append(check);
+        }
+        return section;
+    }
+
     async function loadSystemStatus() {
         const target = document.getElementById('systemStatusBody');
         if (!target) return;
@@ -180,6 +323,14 @@
                 const folders = data.security.items.find(item => item.id === 'folders') || {};
                 if (folders.canRun && folders.stale && !data.security.local) {
                     runSecurityCheck(false).catch(() => { if (securityStatus) applySecurityStatus(securityStatus); });
+                }
+            }
+            if (data.seo) {
+                const placeholder = document.createElement('section'); placeholder.id = 'systemSeoPanel';
+                target.append(placeholder);
+                applySeoStatus(data.seo);
+                if (data.seo.canRun && data.seo.stale && !data.seo.local) {
+                    runSeoCheck(false).catch(() => { if (seoStatus) applySeoStatus(seoStatus); });
                 }
             }
             const runtime = group(t('system.runtime'));
@@ -240,4 +391,5 @@
     // The server reuses a recent result and never delays the dashboard itself.
     if (VALID_DASHBOARD_TABS.indexOf('system') !== -1) {
         window.addEventListener('load', () => setTimeout(() => { runSecurityCheck(false).catch(() => {}); }, 1000));
+        window.addEventListener('load', () => setTimeout(() => { runSeoCheck(false).catch(() => {}); }, 1500));
     }

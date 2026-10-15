@@ -330,6 +330,18 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <button type="button" class="info-banner__cta info-banner__cta-button" onclick="switchTab('system');"><?php echo t('security_check.banner_cta'); ?> &rarr;</button>
         </div>
     </div>
+    <!-- Filled by the background search engine check (dashboard/scripts/system.php). Always shown while the live site blocks search engines. -->
+    <div class="info-banner info-banner--warning mail-config-banner security-warning-banner" id="seoBlockedWarning" role="status" hidden>
+        <div class="info-banner__inner">
+            <span class="info-banner__icon"><?php echo nbIcon('alert'); ?></span>
+            <span class="info-banner__content">
+                <strong class="info-banner__title"><?php echo t('seo_check.banner_title'); ?></strong>
+                <span class="info-banner__body" id="seoBlockedText"></span>
+            </span>
+            <button type="button" class="info-banner__cta info-banner__cta-button" id="seoBlockedAllow" onclick="allowSeoIndexing(this);" hidden><?php echo t('seo_check.allow'); ?></button>
+            <button type="button" class="info-banner__cta info-banner__cta-button" onclick="switchTab('system');"><?php echo t('security_check.banner_cta'); ?> &rarr;</button>
+        </div>
+    </div>
     <?php endif; ?>
     <?php
     // One-shot frontend-edit hint: the user reached the dashboard from a public
@@ -1270,6 +1282,18 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </fieldset>
+                    <fieldset class="settings-section">
+                        <legend><?php echo t('settings.search_engines'); ?></legend>
+                        <div class="form-group">
+                            <label class="checkbox-label"><input type="checkbox" id="settingsNoindexSite"> <span><?php echo t('settings.noindex_site'); ?></span></label>
+                            <small class="form-hint"><?php echo t('settings.noindex_site_hint'); ?></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="settingsSiteUrl"><?php echo t('settings.site_url'); ?></label>
+                            <small class="form-hint"><?php echo t('settings.site_url_hint'); ?></small>
+                            <input type="text" id="settingsSiteUrl" value="" placeholder="https://www.example.com">
                         </div>
                     </fieldset>
                     <fieldset class="settings-section">

@@ -120,6 +120,9 @@
             updateClearButton(defaultOgInput);
         }
 
+        document.getElementById('settingsNoindexSite').checked = !!settings.seo?.noindexSite;
+        document.getElementById('settingsSiteUrl').value = settings.seo?.siteUrl || '';
+
         // Theme
         document.getElementById('settingsAdminTheme').value = settings.theme.adminTheme || 'light';
         document.querySelectorAll('.theme-option').forEach(function(btn) {
@@ -1032,7 +1035,9 @@
                 logoSize: sizeRadio ? sizeRadio.value : 'medium'
             };
             settings.seo = Object.assign({}, settings.seo || {}, {
-                defaultOgImage: document.getElementById('settingsDefaultOgImage').value.trim()
+                defaultOgImage: document.getElementById('settingsDefaultOgImage').value.trim(),
+                noindexSite: document.getElementById('settingsNoindexSite').checked,
+                siteUrl: document.getElementById('settingsSiteUrl').value.trim()
             });
 
             var formData = new FormData();

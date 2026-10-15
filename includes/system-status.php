@@ -4,6 +4,7 @@ function nibblySystemStatus(string $scheme = ''): array {
     require_once __DIR__ . '/backup-helper.php';
     require_once __DIR__ . '/ai/ai-helper.php';
     require_once __DIR__ . '/security-check.php';
+    require_once __DIR__ . '/seo-check.php';
     $extensions = [];
     foreach (['json', 'session', 'mbstring', 'dom', 'fileinfo', 'curl', 'zip', 'gd', 'openssl'] as $extension) {
         $extensions[] = ['name' => $extension, 'available' => extension_loaded($extension)];
@@ -41,6 +42,8 @@ function nibblySystemStatus(string $scheme = ''): array {
         'lastBackup' => isset($backups[0]['mtime']) ? date('c', $backups[0]['mtime']) : null,
         'failedJobs' => $jobs, 'requests' => $requests,
         // Cached network probe only; POST action security-check refreshes it.
-        'security' => nibblySecurityStatus($scheme)
+        'security' => nibblySecurityStatus($scheme),
+        // Cached result only; POST action seo-check refreshes it.
+        'seo' => nibblySeoCheckStatus($scheme)
     ];
 }
