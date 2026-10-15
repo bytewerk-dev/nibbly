@@ -45,16 +45,19 @@ with tempfile.TemporaryDirectory(prefix="nibbly-agent-settings-") as folder:
         assert saved["research"]["hasBraveApiKey"] and saved["stock"]["hasPexelsApiKey"] and saved["research"]["allowDomains"] == ["example.org", "example.net"], saved
         assert "agentStatus" in saved
         stored = (root / "content/ai-settings.json").read_text()
-        assert BRAVE in stored and PEXELS in stored, "the server keeps the keys"
+        secrets = (root / "content/ai-secrets.json").read_text()
+        assert BRAVE in secrets and PEXELS in secrets and "provider-http-secret" in secrets, "the server keeps the keys in the secrets file"
+        assert BRAVE not in stored and PEXELS not in stored and "provider-http-secret" not in stored and '"apiKey"' not in stored, "and none of them in the settings file, which is safe to commit"
+        assert oct((root / "content/ai-secrets.json").stat().st_mode & 0o777) == "0o600", "the secrets file is for the owner only"
         for text in [json.dumps(payload), json.dumps(load(admin)[1]), json.dumps(load(editor)[1])]:
             assert BRAVE not in text and PEXELS not in text and "provider-http-secret" not in text, "no key in any response"
-        assert visitor.request("/content/ai-settings.json")[0] != 200, "the settings file is not downloadable"
+        assert visitor.request("/content/ai-settings.json")[0] != 200 and visitor.request("/content/ai-secrets.json")[0] != 200, "neither file is downloadable"
 
         # keys survive a save without keys, and are cleared on request
         status, payload = save(admin, {**form, "apiKey": "", "research": {"braveApiKey": "", "clearBraveApiKey": False}, "stock": {"pexelsApiKey": ""}})
-        assert payload["success"] and BRAVE in (root / "content/ai-settings.json").read_text() and PEXELS in (root / "content/ai-settings.json").read_text()
+        assert payload["success"] and BRAVE in (root / "content/ai-secrets.json").read_text() and PEXELS in (root / "content/ai-secrets.json").read_text()
         status, payload = save(admin, {**form, "apiKey": "", "research": {"clearBraveApiKey": True}, "stock": {"clearPexelsApiKey": True}})
-        assert payload["success"] and BRAVE not in (root / "content/ai-settings.json").read_text() and not payload["data"]["settings"]["research"]["hasBraveApiKey"]
+        assert payload["success"] and BRAVE not in (root / "content/ai-secrets.json").read_text() and PEXELS not in (root / "content/ai-secrets.json").read_text() and not payload["data"]["settings"]["research"]["hasBraveApiKey"]
         # refusals
         for bad in [{"research": {"braveApiKey": "short"}}, {"stock": {"pexelsApiKey": "a key with spaces 12345"}}, {"agent": {"mediaFolder": "../up"}}]:
             status, payload = save(admin, {**form, "apiKey": "", **bad})
@@ -108,6 +111,23 @@ with tempfile.TemporaryDirectory(prefix="nibbly-agent-settings-") as folder:
             assert needle in html, needle
         assert BRAVE not in html and PEXELS not in html and "provider-http-secret" not in html, "keys are never rendered into the dashboard"
         assert "aiAgentSection" not in editor.request("/admin/dashboard.php")[2].decode(), "editors do not get the section"
+        # ---- A settings file of an older version: the keys move out when an administrator loads the settings ---------------------------------
+        legacy = json.loads((root / "content/ai-settings.json").read_text())
+        legacy["apiKey"] = "legacy-http-key"
+        legacy["providerCredentials"]["openai-compatible"]["apiKey"] = "legacy-http-key"
+        legacy["research"]["brave"] = {"apiKey": "BSA-legacy-http-brave-1234"}
+        (root / "content/ai-secrets.json").unlink(missing_ok=True)
+        write_json(root / "content/ai-settings.json", legacy)
+        status, payload = load(editor)
+        assert "legacy-http-key" in (root / "content/ai-settings.json").read_text(), "an editor loading the settings moves nothing"
+        status, payload = load(admin)
+        assert status == 200 and payload["success"] and payload["data"]["settings"]["hasApiKey"] and payload["data"]["settings"]["research"]["hasBraveApiKey"], payload
+        moved = (root / "content/ai-settings.json").read_text()
+        assert "legacy-http-key" not in moved and "BSA-legacy-http" not in moved and '"apiKey"' not in moved, "the settings file holds no key afterwards"
+        kept = json.loads((root / "content/ai-secrets.json").read_text())
+        assert kept["providerCredentials"]["openai-compatible"]["apiKey"] == "legacy-http-key" and kept["research"]["brave"]["apiKey"] == "BSA-legacy-http-brave-1234", kept
+        assert set(kept) == {"providerCredentials", "research"}, "only keys are in the secrets file: " + json.dumps(list(kept))
+
         print("PASS agent settings over HTTP: load and save, keys never returned and kept, clear flags, refusals, admin only, CSRF, cache, system status, form markup")
     finally:
         site.close()

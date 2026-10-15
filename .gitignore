@@ -93,3 +93,6 @@ NIBBLY-UPGRADE-NOTES.md
 !tests/package-lock.json
 content/analytics/
 content/ai-requests.json
+# AI API keys (Provider, Brave, Pexels): never commit; the settings file next to it holds no keys
+content/ai-secrets.json
+content/ai-settings.json.lock

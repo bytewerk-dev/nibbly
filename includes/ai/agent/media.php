@@ -345,11 +345,8 @@ function nibblyAgentUndoMedia(array $appliedMedia): array {
 
 /** Keys come from the raw ai-settings.json, like the other agent settings (the settings UI follows in P8). */
 function nibblyAgentStockSettings(): array {
-    $raw = [];
-    if (is_file(NIBBLY_AI_SETTINGS_PATH)) {
-        $stored = json_decode((string)file_get_contents(NIBBLY_AI_SETTINGS_PATH), true);
-        $raw = is_array($stored['stock'] ?? null) ? $stored['stock'] : [];
-    }
+    $stored = nibblyAiReadStoredSettings();
+    $raw = is_array($stored['stock'] ?? null) ? $stored['stock'] : [];
     $key = is_string($raw['pexels']['apiKey'] ?? null) ? trim($raw['pexels']['apiKey']) : '';
     return ['provider' => 'pexels', 'apiKey' => $key, 'available' => $key !== ''];
 }

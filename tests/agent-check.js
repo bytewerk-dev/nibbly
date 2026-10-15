@@ -326,11 +326,13 @@ async function mainFlow(browser, user) {
         assert(!(await page.content()).includes('BSA-browser-brave-key'), 'the key is never rendered back');
         assert((await page.locator('#aiAgentAllowDomains').inputValue()) === 'example.org\nexample.net', 'domains are shown normalised');
         const savedSettings = JSON.parse(fs.readFileSync(path.join(siteRoot, 'content/ai-settings.json'), 'utf8'));
-        assert(savedSettings.research.brave.apiKey === 'BSA-browser-brave-key-1234' && savedSettings.agent.limits.runsPerHour === 5 && savedSettings.agent.roles.editor.createEvents === false && savedSettings.agent.roles.editor.publish === true, 'the form saved what was entered');
+        const savedSecrets = JSON.parse(fs.readFileSync(path.join(siteRoot, 'content/ai-secrets.json'), 'utf8'));
+        assert(savedSecrets.research.brave.apiKey === 'BSA-browser-brave-key-1234' && !JSON.stringify(savedSettings).includes('BSA-browser-brave-key'), 'the key is in the secrets file, not in the settings file');
+        assert( savedSettings.agent.limits.runsPerHour === 5 && savedSettings.agent.roles.editor.createEvents === false && savedSettings.agent.roles.editor.publish === true, 'the form saved what was entered');
         // saving again without typing the key keeps it
         await page.locator('#saveAiSettingsBtn').click();
         await page.waitForTimeout(1500);
-        assert(JSON.parse(fs.readFileSync(path.join(siteRoot, 'content/ai-settings.json'), 'utf8')).research.brave.apiKey === 'BSA-browser-brave-key-1234', 'an empty key field keeps the saved key');
+        assert(JSON.parse(fs.readFileSync(path.join(siteRoot, 'content/ai-secrets.json'), 'utf8')).research.brave.apiKey === 'BSA-browser-brave-key-1234', 'an empty key field keeps the saved key');
         await page.locator('#aiAgentClearCache').click();
         await page.locator('.toast, [role="status"]', { hasText: 'Cache cleared' }).first().waitFor({ state: 'visible', timeout: 10000 });
         // The system status lists what the agent needs, never a key
