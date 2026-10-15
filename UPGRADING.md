@@ -3,6 +3,69 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.2.0 to 2.3.0
+
+Version 2.3.0 adds compatible features and fixes: the optional AI agent in the
+assistant, actions of the dashboard assistant, the search engine check in the
+system status, and corrections to the page list and to saving settings. The
+documented admin API, accounts and sessions are unchanged. New storage is created
+on first use. One behaviour changes: `seo.noindexSite` now blocks the whole site
+(step 3).
+
+1. Prepare as for any update: make and verify a full backup, pause editing and
+   scheduled jobs, and preserve site-owned files (see
+   [Before replacing files](#before-replacing-files)).
+2. Deploy the complete core as described in
+   [Deploy the complete core](#deploy-the-complete-core). New core files are
+   `admin/api/agent.php`, the directory `includes/ai/agent/`,
+   `includes/ai/dashboard-actions.php`, `includes/seo-check.php` and
+   `js/ai-agent.js`.
+3. Check the search engine block before the update. Until 2.2.0, the setting
+   "Block this website for search engines" (Settings → Branding → Search engines,
+   `seo.noindexSite`) only emptied `robots.txt`; pages stayed indexable. Now it also
+   sends `noindex, nofollow` in the robots meta tag and in an `X-Robots-Tag` header,
+   empties `sitemap.xml` and leaves the sitemap out of `robots.txt`. Turn it off on
+   a live site. After the update, the dashboard shows a banner while the live site
+   blocks search engines, and System status → Search engines lists what the site
+   really delivers (`robots.txt`, robots meta tag, `X-Robots-Tag`, `sitemap.xml`,
+   the website address, maintenance mode).
+4. If the site has its own copies of `includes/header.php`, `includes/footer.php`,
+   `includes/page.php`, `includes/news-post.php` or `route.php`, merge the 2.3.0
+   additions. Without them the site keeps working, but the agent is limited:
+   - `header.php`, `page.php`, `news-post.php`, `route.php`: the block that loads
+     `includes/ai/agent/preview.php` when `nb_agent_preview` is in the URL, and the
+     preview bar in `header.php`. Without it, a preview of an unapplied package
+     shows the stored page, and new pages are not found.
+   - `footer.php`: the loader of `js/ai-agent.js` with `window.NB_AI_AGENT`, and the
+     condition that keeps the inline editor and its CSRF token out of a package
+     preview (`nibblyAgentPreview`). Without the loader, the agent mode is not
+     offered.
+5. New storage, created on first use. Keep it with `content/` in backups and
+   deployments, and never in the web root's public files: `content/ai-agent/` (runs,
+   change sets, staged images, snapshots, journal, rate limits and the page
+   structure cache; `.secret` signs the undo tokens, so an open package cannot be
+   undone without it), `content/ai-model-quirks.json` (what a provider model
+   accepts) and `content/seo-check.json` (result of the search engine check). Optional
+   per-page restrictions for the agent live in `content/ai-schema/`. The shipped
+   `content/.htaccess` denies direct access; on other servers confirm that
+   `content/` cannot be fetched.
+6. The AI agent is off by default. To use it, enable it under Settings → AI Settings →
+   "AI agent". It needs a provider with tool calling. OpenAI is addressed through the
+   Responses API. Web research (Brave Search) and stock photos (Pexels) need their own
+   keys and are optional. New default limits (64,000 input tokens, 16,000 output
+   tokens, 300 requests and 250 text requests per day) apply to new installations;
+   saved values are not changed, and "Use recommended limits" in the AI settings
+   adopts them.
+7. Sites that link language versions with different URL paths through `$PAGE_MAPPING`
+   in `includes/nav-config.php` now see them as one page in Dashboard → Pages. Page
+   files, slugs and public URLs are not touched, and `nav-config.php` needs no change.
+
+After deployment, confirm that the Dashboard reports **2.3.0**, sign in through
+`/admin/`, open Pages and check that translations with different paths show
+"Edit", save colours in Settings → Dashboard, and run System status →
+Search engines. If the agent is enabled, prepare a small change on a test page,
+open its preview and undo it.
+
 ## Upgrading from 2.0.0 to 2.1.0
 
 Version 2.1.0 adds compatible features and fixes. The documented API, storage
