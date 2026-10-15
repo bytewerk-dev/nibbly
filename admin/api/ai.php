@@ -19,6 +19,8 @@ switch ($action) {
                 'usage' => null
             ]);
         }
+        // Keys that an older version stored in ai-settings.json move to ai-secrets.json (nothing happens when there are none).
+        if (isAdmin()) nibblyAiMigrateSecrets();
         $loaded = nibblyAiLoadSettings(true);
         if (isAdmin()) $loaded['agentStatus'] = nibblyAgentStatusForAdmin();
         jsonResponse(true, [

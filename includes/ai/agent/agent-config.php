@@ -60,11 +60,8 @@ function nibblyAgentNormalizeSettings(array $raw): array {
 
 /** The agent settings stored in content/ai-settings.json, normalised. */
 function nibblyAgentSettings(): array {
-    $raw = [];
-    if (is_file(NIBBLY_AI_SETTINGS_PATH)) {
-        $stored = json_decode((string)file_get_contents(NIBBLY_AI_SETTINGS_PATH), true);
-        $raw = is_array($stored['agent'] ?? null) ? $stored['agent'] : [];
-    }
+    $stored = nibblyAiReadStoredSettings();
+    $raw = is_array($stored['agent'] ?? null) ? $stored['agent'] : [];
     return nibblyAgentNormalizeSettings($raw);
 }
 
