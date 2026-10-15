@@ -36,7 +36,7 @@ Git milestones and the gaps in publication records.
   per run, what editors may do, Brave and Pexels keys (masked, kept when empty),
   media folder, credits and sources in news, clearing the scan cache. System
   status shows what the agent needs (tool calling, GD and WebP, keys, storage).
-- Texts for the agent in all nine admin languages.
+- Texts for the agent and the search engine check in all nine admin languages.
 - **Search engine check in the system status.** A staging site is blocked for
   search engines on purpose, and the block is easily forgotten at go-live. The
   new panel "Search engines" next to the security check reads what the live
@@ -52,6 +52,17 @@ Git milestones and the gaps in publication records.
 - Settings → Branding → Search engines: switches for the site-wide block
   (`seo.noindexSite`) and the public website address (`seo.siteUrl`), which had
   no interface before.
+- Dashboard assistant: it can offer actions as cards the person confirms: open a
+  dashboard area or settings tab, and (administrators only) change the dashboard
+  theme (light/dark/system), main and accent colour and language. The model only
+  picks from a fixed catalogue (`includes/ai/dashboard-actions.php`), the server
+  validates every call against the role, and the dashboard performs the change
+  through its own settings form, so contrast rules, rights and CSRF still apply.
+  Needs a provider with tool calling; the frontend assistant is unchanged.
+- Agent: administrators can have a page shown in a menu or taken out again
+  (`stage_set_page_menus`, e.g. "put the page into the main menu"). Only
+  administrators get the tool; the menus must exist in `content/menus.json`, and the
+  review lists what changes. A private page in the main menu is flagged.
 
 ### Changed
 
@@ -79,16 +90,6 @@ Git milestones and the gaps in publication records.
   apply dialog and the note after applying say that changes to existing content are
   live at once and only new pages, posts, events, sections and list items stay
   hidden until published (it used to say this for every package).
-- Dashboard → Pages: language versions with translated URL paths (de `leistungen`,
-  en `services`, linked in `$PAGE_MAPPING`) are one page again, aliases of one page
-  give one row, and "Edit" instead of "Create" is shown. Every language version
-  carries its own slug (`languages[lang].slug`), used by editor links, the view link,
-  the language select, duplicate, trash and the SEO badges. A missing translation is
-  created under the path the mapping intends (`targetSlugs`). Pages with identical
-  slugs are grouped as before; existing files and public URLs are untouched.
-- Saving settings: an old invalid path (favicon, logos, Open Graph image, site URL)
-  no longer blocks saving other settings such as colours and radius; only changed
-  values are validated.
 - Agent review: a package of up to four changes shows its before and after right
   away; block ends in rich text no longer run together.
 - Agent preview: it opens in the same tab and the bar (in the admin language) has two
@@ -98,21 +99,6 @@ Git milestones and the gaps in publication records.
 - Agent: the summary of a prepared package is also written into the chat, so the
   history keeps it. A new tab finds the open package again (only the run id is kept
   in local storage, for 48 hours).
-- Agent: the heading that opens a new page is its title (h1), not an h2.
-- Agent: administrators can have a page shown in a menu or taken out again
-  (`stage_set_page_menus`, e.g. "put the page into the main menu"). Only
-  administrators get the tool; the menus must exist in `content/menus.json`, and the
-  review lists what changes. A private page in the main menu is flagged.
-- Agent: a run that finished while the page was closed or the session had expired
-  (answer or prepared package) shows its answer in the chat again after the next
-  login or reload, and the chat history saves it.
-- Dashboard assistant: it can offer actions as cards the person confirms: open a
-  dashboard area or settings tab, and (administrators only) change the dashboard
-  theme (light/dark/system), main and accent colour and language. The model only
-  picks from a fixed catalogue (`includes/ai/dashboard-actions.php`), the server
-  validates every call against the role, and the dashboard performs the change
-  through its own settings form, so contrast rules, rights and CSRF still apply.
-  Needs a provider with tool calling; the frontend assistant is unchanged.
 - The agent talks to api.openai.com through the Responses API (`/v1/responses`):
   reasoning models cannot combine function tools with reasoning on
   chat/completions. Reasoning comes back encrypted (`store: false`, nothing is kept
@@ -129,6 +115,25 @@ Git milestones and the gaps in publication records.
   the locked JSON update; a file-based rate limiter backs the agent's limits.
 - Saving the AI settings keeps the `agent`, `research` and `stock` sections when
   a caller does not send them.
+
+### Fixed
+
+- Dashboard → Pages: language versions with translated URL paths (de `leistungen`,
+  en `services`, linked in `$PAGE_MAPPING`) are one page again, aliases of one page
+  give one row, and "Edit" instead of "Create" is shown. Every language version
+  carries its own slug (`languages[lang].slug`), used by editor links, the view link,
+  the language select, duplicate, trash and the SEO badges. A missing translation is
+  created under the path the mapping intends (`targetSlugs`). Pages with identical
+  slugs are grouped as before; existing files and public URLs are untouched.
+- Saving settings: an old invalid path (favicon, logos, Open Graph image, site URL)
+  no longer blocks saving other settings such as colours and radius; only changed
+  values are validated.
+- Agent: a run that finished while the page was closed or the session had expired
+  (answer or prepared package) shows its answer in the chat again after the next
+  login or reload, and the chat history saves it.
+- Agent: the heading that opens a new page is its title (h1), not an h2.
+- The "Skip to main content" link of the website and of the dashboard is moved fully
+  off screen until it is focused; before, its shadow showed at the top left.
 
 ### Security
 
