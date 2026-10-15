@@ -66,6 +66,45 @@ After deployment, confirm that the Dashboard reports **2.3.0**, sign in through
 Search engines. If the agent is enabled, prepare a small change on a test page,
 open its preview and undo it.
 
+## Upgrading from 2.1.0 to 2.2.0
+
+Version 2.2.0 is a compatible security release; install it promptly. The documented
+API, storage formats, accounts and sessions are unchanged. It closes an upload
+validation gap, a stored cross-site-scripting vector through uploaded SVG files and
+dangerous link schemes in page content, and it adds a security check to System status.
+
+1. Prepare as for any update: make and verify a full backup, pause editing and
+   scheduled jobs, and preserve site-owned files (see
+   [Before replacing files](#before-replacing-files)).
+2. Deploy the complete core as described in
+   [Deploy the complete core](#deploy-the-complete-core). New core files are
+   `assets/.htaccess` (a hidden file: upload it, and keep it when you replace the
+   `assets/` folder), `includes/security-check.php` and `includes/svg-sanitizer.php`.
+   `router.php` changed as well. `SYSTEM-REVIEW.md`, `SYSTEM-IMPLEMENTATION.md` and
+   `llms-full.txt` were removed and can be deleted.
+3. Open System status after the update and run **Security → Check now**
+   (administrators only). A proxy that serves static files itself, for example nginx on
+   HestiaCP or Plesk with "Serve static files directly by nginx", ignores `.htaccess`
+   and can expose `content/` (password hashes, the SMTP password, form submissions)
+   and `backups/`. If the check reports exposed folders, add the nginx rules for
+   `content/`, `backups/`, `cli/`, `tests/` and the media trash folders from
+   [ROUTING.md](ROUTING.md), reload nginx and check again. The check stores its
+   result in `content/security-check.json`; keep that file out of Git (it is in
+   `.gitignore`).
+4. Uploads are stricter. Images and audio whose filename extension is not an allowed
+   media type are refused, even when the content looks valid, and uploaded SVG files
+   are sanitised (scripts, `foreignObject`, event handlers and `javascript:` links are
+   removed, SVGs with a DTD are refused). SVG files that already lie in `assets/` are
+   not rewritten: replace any that came from an untrusted source.
+5. Link targets in page content only keep `http(s)`, `mailto`, `tel`, relative and
+   anchor addresses. A stored `javascript:`, `data:` or `vbscript:` link now renders
+   without a target. Customized templates that print link targets themselves should
+   use `nibblySanitizeHref()`.
+
+After deployment, confirm that the Dashboard reports **2.2.0**, sign in through
+`/admin/`, upload a PNG and an SVG in the media library, and read the result of the
+security check in System status.
+
 ## Upgrading from 2.0.0 to 2.1.0
 
 Version 2.1.0 adds compatible features and fixes. The documented API, storage
