@@ -138,8 +138,13 @@ function nibblySeoOgImageMeta(string $path, string $alt = ''): array {
     return $meta;
 }
 
+/** Site-wide search engine block (staging): one switch for robots.txt, meta robots, X-Robots-Tag and sitemap. */
+function nibblySeoSiteBlocked(): bool {
+    return !empty(nibblySeoSettings()['seo']['noindexSite']);
+}
+
 function nibblySeoRobots(array $seo, array $visibility = []): string {
-    if (($visibility['status'] ?? 'public') === 'private') {
+    if (($visibility['status'] ?? 'public') === 'private' || nibblySeoSiteBlocked()) {
         return 'noindex, nofollow';
     }
     $robots = trim((string)($seo['robots'] ?? ''));
@@ -316,6 +321,7 @@ function nibblySeoJsonLd(array $context, array $langLinks = []): array {
 }
 
 function nibblySeoRenderablePages(): array {
+    if (nibblySeoSiteBlocked()) return [];
     $pages = [];
     $defaultLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
     foreach (glob(nibblySeoRoot() . '/content/pages/[a-z][a-z]_*.json') ?: [] as $file) {
@@ -386,6 +392,7 @@ function nibblySeoServeRobots(): void {
         echo "Disallow: /admin/\nDisallow: /api/\nDisallow: /content/\nDisallow: /backups/\n";
     }
     $base = nibblySeoBaseUrl();
-    if ($base !== '') echo "\nSitemap: " . $base . "/sitemap.xml\n";
+    // A blocked site has an empty sitemap; do not advertise it.
+    if ($base !== '' && !$disallowAll) echo "\nSitemap: " . $base . "/sitemap.xml\n";
     exit;
 }

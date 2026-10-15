@@ -150,6 +150,8 @@ $_seoContext = nibblySeoContext([
     'data' => isset($data) && is_array($data) ? $data : null,
 ]);
 $_seoHealth = nibblySeoHealth($_seoContext);
+// Site-wide search engine block: also as a header, so files and proxies agree with the meta tag.
+if (nibblySeoSiteBlocked() && !headers_sent()) header('X-Robots-Tag: ' . $_seoContext['robots']);
 $_seoJsonLd = nibblySeoJsonLd($_seoContext, $langLinks);
 nibblyAnalyticsTrack($contentPage ?? null, $currentLang, $currentPage ?? null);
 

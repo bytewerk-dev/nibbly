@@ -37,9 +37,31 @@ Git milestones and the gaps in publication records.
   media folder, credits and sources in news, clearing the scan cache. System
   status shows what the agent needs (tool calling, GD and WebP, keys, storage).
 - Texts for the agent in all nine admin languages.
+- **Search engine check in the system status.** A staging site is blocked for
+  search engines on purpose, and the block is easily forgotten at go-live. The
+  new panel "Search engines" next to the security check reads what the live
+  site really delivers (`robots.txt`, robots meta tag and `X-Robots-Tag` of the
+  home page, `sitemap.xml`) and compares it with the SEO settings: a site-wide
+  block, a static `robots.txt` that replaces Nibbly's, a sitemap or `siteUrl`
+  on another domain or `http://`, a redirect to another domain, maintenance
+  mode and single `noindex` pages. A banner on the dashboard shows whenever the
+  live site blocks search engines, with a one-click "Allow indexing" and the
+  fix for each finding. Nothing is changed automatically; local hosts are not
+  checked. The check runs in the background at most once an hour while
+  something is wrong (12 hours when clean) and on demand.
+- Settings → Branding → Search engines: switches for the site-wide block
+  (`seo.noindexSite`) and the public website address (`seo.siteUrl`), which had
+  no interface before.
 
 ### Changed
 
+- `seo.noindexSite` now blocks the whole site consistently: besides `Disallow: /`
+  in `robots.txt` it sets `noindex, nofollow` in the robots meta tag and in an
+  `X-Robots-Tag` header, empties `sitemap.xml` and leaves the sitemap line out of
+  `robots.txt`. Before, only `robots.txt` was affected and the pages stayed
+  indexable.
+- The HTTP requests of the security check identify as a bot (`Nibbly-Security-Check-Bot`),
+  so the statistics do not count them as visitors.
 - AI limits are guides: a request that starts below a daily request limit or the
   monthly budget may finish, and a request of an agent run already under way
   (second turn on, reading steps) may use up to 10 % more before it is stopped.

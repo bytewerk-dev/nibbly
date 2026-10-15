@@ -100,7 +100,21 @@ function nibblySecurityWriteProbe(string $file, string $extension): bool {
  * the response body is ignored.
  */
 function nibblySecurityHttpStatus(string $url, bool &$insecure, int $timeout = 5): array {
+    $response = nibblySecurityHttpFetch($url, $insecure, $timeout);
+    return ['status' => $response['status'], 'finalUrl' => $response['finalUrl'], 'error' => $response['error']];
+}
+
+/**
+ * Like nibblySecurityHttpStatus(), but also returns the response headers of the final response
+ * (lower-case names, repeated headers joined with ", ") and the body, cut off after $maxBody bytes.
+ * The user agent is a bot name so that the statistics count these requests as bots, not visitors.
+ * Never sends cookies, so the answer is what an anonymous visitor or crawler gets.
+ */
+function nibblySecurityHttpFetch(string $url, bool &$insecure, int $timeout = 5, int $maxBody = 0): array {
     for ($attempt = 0; $attempt < 2; $attempt++) {
+        $headers = [];
+        $body = '';
+        $truncated = false;
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
@@ -110,9 +124,30 @@ function nibblySecurityHttpStatus(string $url, bool &$insecure, int $timeout = 5
             CURLOPT_TIMEOUT => $timeout,
             CURLOPT_SSL_VERIFYPEER => !$insecure,
             CURLOPT_SSL_VERIFYHOST => $insecure ? 0 : 2,
-            CURLOPT_USERAGENT => 'Nibbly-Security-Check/' . nibblyVersion(),
+            CURLOPT_USERAGENT => 'Nibbly-Security-Check-Bot/' . nibblyVersion(),
             CURLOPT_HTTPHEADER => ['Cache-Control: no-cache'],
+            // Headers of earlier redirect hops are dropped; only the final response is kept.
+            CURLOPT_HEADERFUNCTION => function ($handle, string $line) use (&$headers): int {
+                if (stripos($line, 'HTTP/') === 0) {
+                    $headers = [];
+                } elseif (str_contains($line, ':')) {
+                    [$name, $value] = explode(':', $line, 2);
+                    $name = strtolower(trim($name));
+                    $headers[$name] = isset($headers[$name]) ? $headers[$name] . ', ' . trim($value) : trim($value);
+                }
+                return strlen($line);
+            },
         ]);
+        if ($maxBody > 0) {
+            curl_setopt($ch, CURLOPT_WRITEFUNCTION, function ($handle, string $chunk) use (&$body, &$truncated, $maxBody): int {
+                $body .= substr($chunk, 0, max(0, $maxBody - strlen($body)));
+                if (strlen($body) >= $maxBody) {
+                    $truncated = true;
+                    return 0; // stops the transfer; handled below as a complete answer
+                }
+                return strlen($chunk);
+            });
+        }
         if (defined('CURLOPT_PROTOCOLS')) curl_setopt($ch, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
         if (defined('CURLOPT_REDIR_PROTOCOLS')) curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS);
         curl_exec($ch);
@@ -121,13 +156,17 @@ function nibblySecurityHttpStatus(string $url, bool &$insecure, int $timeout = 5
         $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
         $finalUrl = (string)curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
         unset($ch);
+        if ($truncated && $errno === 23) $errno = 0;
         if ($errno && !$insecure && in_array($errno, [35, 51, 58, 60, 77, 83], true)) {
             $insecure = true;
             continue;
         }
-        return ['status' => $errno ? 0 : $status, 'finalUrl' => $finalUrl, 'error' => $errno ? $error : ''];
+        return [
+            'status' => $errno ? 0 : $status, 'finalUrl' => $finalUrl, 'error' => $errno ? $error : '',
+            'headers' => $headers, 'body' => $body,
+        ];
     }
-    return ['status' => 0, 'finalUrl' => $url, 'error' => 'TLS'];
+    return ['status' => 0, 'finalUrl' => $url, 'error' => 'TLS', 'headers' => [], 'body' => ''];
 }
 
 function nibblySecurityProbeState(int $status): string {
