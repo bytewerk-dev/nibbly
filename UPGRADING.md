@@ -3,6 +3,56 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.3.0 to the next release
+
+This release changes how the AI settings store models and prices. No manual step is
+needed, and nothing changes silently: existing models, credentials, limits and request
+behavior stay as they are.
+
+1. Prepare as for any update (backup, preserve site-owned files) and deploy the
+   complete core. New core files: `includes/ai/model-capabilities.json`,
+   `includes/ai/model-capabilities.php`, `includes/ai/pricing-catalog.json` and
+   `includes/ai/pricing.php`.
+2. Models and reasoning effort. A saved `content/ai-settings.json` keeps its
+   `chatModel` and `textModel`; they become the entry of the active provider in the new
+   `providerModels`. The new presets only apply to installations without saved models
+   and to a provider that has none saved yet. Without a stored `reasoning` section the
+   installation runs in "legacy" mode: no effort parameter is sent, exactly as before,
+   and the settings show the extra choice "Previous behavior (provider default)". Choose
+   "Recommended" (or a level) per purpose to opt in. Note that Anthropic's own default
+   effort on Sonnet 5.5 is `high`, so "Recommended" (medium) is cheaper than omitting
+   the parameter.
+3. Prices. The former global prices (`pricing.inputCentsPerMillion`,
+   `outputCentsPerMillion`, euro cents per 1M tokens) become own prices for the chat
+   and text model of the active provider, in EUR, marked "carried-over estimate", so
+   the estimate for these models does not change. Delete such a price in the settings to
+   use the catalog price. Other models use the catalog price or are shown as "Price not
+   on file". Saving the settings once writes the new `pricing.models` section and drops
+   the old pair. Older API callers that still send the pair keep working.
+4. Costs are now stored with four decimals of a cent (`estimatedCostCents` in
+   `content/ai-usage.json` and the audit log may be fractional; reservations too). Old
+   whole-cent values stay valid. New ledger entries also carry `model`, `priced` and
+   `priceBasis`; entries and buckets from before have none. Months of usage now count
+   requests without a known price in `unpricedRequests`.
+5. Code that calls the AI gateway can pass `purpose` (`chat` or `text`; text functions
+   default to `text`, everything else to `chat`) to pick the reasoning level.
+   `nibblyAiEstimateTextCost()` still exists, now with the price of the model.
+6. `ai-settings.json` gains `reasoning`, `providerModels` and `pricing.models`. Keep
+   them in version control and deployments with the file; keys stay in
+   `content/ai-secrets.json`.
+
+### Supported models
+
+| Provider (official host) | Models with a reasoning setting | Levels offered |
+|---|---|---|
+| OpenAI (`api.openai.com`) | `gpt-6.1-sol`, `gpt-6-luna` | Low, Medium, High |
+| Anthropic (`api.anthropic.com`) | `claude-sonnet-5-5`, `claude-haiku-5-5` | Low, Medium, High |
+
+Prices in the catalog were checked on 2026-10-16 against the providers' documentation
+(see `includes/ai/pricing-catalog.json`). The exchange rate is the ECB reference rate
+of 2026-10-15 and ages; set an own rate in the settings when it matters. Extend the
+JSON files to add models. `none`, `minimal`, `xhigh` and `max` are not offered.
+
 ## Upgrading from 2.2.0 to 2.3.0
 
 Version 2.3.0 adds compatible features and fixes: the optional AI agent in the

@@ -421,6 +421,7 @@ function nibblyAgentParseOpenAiResponse(array $response): array {
         'stopReason' => $finish === 'length' ? 'length' : ($raw ? 'tool_calls' : 'stop'),
         'inputTokens' => isset($response['usage']['prompt_tokens']) ? (int)$response['usage']['prompt_tokens'] : null,
         'outputTokens' => isset($response['usage']['completion_tokens']) ? (int)$response['usage']['completion_tokens'] : null,
+        'usage' => is_array($response['usage'] ?? null) ? $response['usage'] : null,
         'reasoning' => !empty($message['reasoning'])
     ];
 }
@@ -512,6 +513,7 @@ function nibblyAgentParseResponsesResponse(array $response): array {
         'stopReason' => $incomplete ? 'length' : ($raw ? 'tool_calls' : 'stop'),
         'inputTokens' => isset($response['usage']['input_tokens']) ? (int)$response['usage']['input_tokens'] : null,
         'outputTokens' => isset($response['usage']['output_tokens']) ? (int)$response['usage']['output_tokens'] : null,
+        'usage' => is_array($response['usage'] ?? null) ? $response['usage'] : null,
         'reasoning' => $sawReasoning,
         'reasoningItems' => nibblyAgentCleanReasoningItems($reasoning)
     ];
@@ -595,6 +597,7 @@ function nibblyAgentParseAnthropicResponse(array $response): array {
         'stopReason' => $stop === 'max_tokens' ? 'length' : ($raw ? 'tool_calls' : 'stop'),
         'inputTokens' => isset($response['usage']['input_tokens']) ? (int)$response['usage']['input_tokens'] : null,
         'outputTokens' => isset($response['usage']['output_tokens']) ? (int)$response['usage']['output_tokens'] : null,
+        'usage' => is_array($response['usage'] ?? null) ? $response['usage'] : null,
         'reasoning' => false
     ];
 }
@@ -645,23 +648,25 @@ function nibblyAiChatWithToolsExecute(array $messages, array $tools, array $opti
     if ($inputTokens > (int)$settings['limits']['maxInputTokens']) {
         throw new RuntimeException('AI input is too long for the configured limit.');
     }
-    $maxOutput = nibblyAiClampInt($options['maxOutputTokens'] ?? $settings['limits']['maxOutputTokens'], 16, (int)$settings['limits']['maxOutputTokens']);
-    nibblyAiAssertWithinLimits($settings, 'text', nibblyAiEstimateTextCost($settings, $inputTokens, $maxOutput));
-
     $model = trim((string)($options['model'] ?? '')) ?: (string)$settings['chatModel'];
+    $plan = nibblyAiReasoningPlan($settings, $model, nibblyAiOptionPurpose($options));
+    $maxOutput = nibblyAiOutputBudget($settings, $options, $plan);
+    $reservation = nibblyAiReservationCost($settings, $model, $inputTokens, $maxOutput);
+    nibblyAiAssertWithinLimits($settings, 'text', $reservation['cents'], ['model' => $model, 'priced' => $reservation['priced']]);
+
     $temperature = isset($options['temperature']) ? (float)$options['temperature'] : 0.3;
     $anthropic = nibblyAiProviderKey($settings) === 'anthropic';
 
     $started = microtime(true);
     if ($anthropic) {
         [$url, $headers] = nibblyAiAnthropicRequestTarget($settings);
-        $response = nibblyAiExecuteJsonRequest($settings, $url, $headers, nibblyAgentAnthropicBody($clean, $tools, $model, $maxOutput, $temperature));
+        $response = nibblyAiExecuteJsonRequest($settings, $url, $headers, nibblyAiApplyReasoning(nibblyAgentAnthropicBody($clean, $tools, $model, $maxOutput, $temperature), $plan, 'anthropic'));
         $parsed = nibblyAgentParseAnthropicResponse($response);
     } else {
         $responsesApi = nibblyAgentUsesResponsesApi($settings, $model);
         if (!$responsesApi) {
             try {
-                $response = nibblyAiProviderRequest($settings, '/chat/completions', nibblyAgentOpenAiBody($clean, $tools, $model, $maxOutput, $temperature));
+                $response = nibblyAiProviderRequest($settings, '/chat/completions', nibblyAiApplyReasoning(nibblyAgentOpenAiBody($clean, $tools, $model, $maxOutput, $temperature), $plan, 'chat'));
                 $parsed = nibblyAgentParseOpenAiResponse($response);
             } catch (NibblyAiProviderRejected $error) {
                 // "use /v1/responses": the model does not take tools on chat/completions. Nothing was generated; ask again there.
@@ -673,7 +678,7 @@ function nibblyAiChatWithToolsExecute(array $messages, array $tools, array $opti
             }
         }
         if ($responsesApi) {
-            $response = nibblyAiProviderRequest($settings, '/responses', nibblyAgentResponsesBody($clean, $tools, $model, $maxOutput, $temperature));
+            $response = nibblyAiProviderRequest($settings, '/responses', nibblyAiApplyReasoning(nibblyAgentResponsesBody($clean, $tools, $model, $maxOutput, $temperature), $plan, 'responses'));
             $parsed = nibblyAgentParseResponsesResponse($response);
         }
     }
@@ -686,16 +691,9 @@ function nibblyAiChatWithToolsExecute(array $messages, array $tools, array $opti
         throw new RuntimeException('AI provider returned an empty response.');
     }
 
-    $actualInput = $parsed['inputTokens'] ?? $inputTokens;
-    $actualOutput = $parsed['outputTokens'] ?? nibblyAiEstimateTokens($parsed['text'] . json_encode(array_column($calls, 'arguments')));
-    $actualCost = nibblyAiEstimateTextCost($settings, $actualInput, $actualOutput);
-    nibblyAiRecordUsage('text', $actualInput, $actualOutput, $actualCost);
-    nibblyAiAudit('agent-turn', true, [
-        'model' => $model,
+    $usage = nibblyAiSettleText($settings, $model, $parsed['usage'] ?? null, $inputTokens, $parsed['text'] . json_encode(array_column($calls, 'arguments')));
+    nibblyAiAudit('agent-turn', true, nibblyAiAuditUsage($model, $usage, $plan) + [
         'provider' => nibblyAiProviderKey($settings),
-        'inputTokens' => $actualInput,
-        'outputTokens' => $actualOutput,
-        'estimatedCostCents' => $actualCost,
         'stopReason' => $parsed['stopReason'],
         'tools' => array_column($calls, 'name'),
         'durationMs' => (int)round((microtime(true) - $started) * 1000)
@@ -711,7 +709,7 @@ function nibblyAiChatWithToolsExecute(array $messages, array $tools, array $opti
         'text' => $parsed['text'],
         'toolCalls' => $calls,
         'stopReason' => $parsed['stopReason'],
-        'usage' => ['inputTokens' => $actualInput, 'outputTokens' => $actualOutput, 'estimatedCostCents' => $actualCost],
+        'usage' => nibblyAiPublicUsage($usage),
         'message' => $message
     ];
 }

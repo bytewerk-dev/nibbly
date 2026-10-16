@@ -119,3 +119,31 @@ function nibblyAiMigrateSecrets(): bool {
     });
     return $done && $moved;
 }
+
+/**
+ * Delete one stored key right away. $target: "provider:<provider>", "brave" or "pexels". Anything else is refused.
+ * Returns whether a key existed.
+ */
+function nibblyAiClearSecret(string $target): bool {
+    nibblyAiMigrateSecrets(); // a key an older version left in the settings file must go too
+    $secrets = nibblyAiReadJsonObject(NIBBLY_AI_SECRETS_PATH);
+    $existed = false;
+    if (str_starts_with($target, 'provider:')) {
+        $provider = substr($target, 9);
+        if (!in_array($provider, ['openai-compatible', 'openrouter', 'anthropic', 'kie'], true)) throw new InvalidArgumentException('Unknown provider.');
+        $existed = trim((string)($secrets['providerCredentials'][$provider]['apiKey'] ?? '')) !== '';
+        unset($secrets['providerCredentials'][$provider]['apiKey']);
+        if (empty($secrets['providerCredentials'][$provider])) unset($secrets['providerCredentials'][$provider]);
+        if (empty($secrets['providerCredentials'])) unset($secrets['providerCredentials']);
+    } elseif ($target === 'brave') {
+        $existed = trim((string)($secrets['research']['brave']['apiKey'] ?? '')) !== '';
+        unset($secrets['research']);
+    } elseif ($target === 'pexels') {
+        $existed = trim((string)($secrets['stock']['pexels']['apiKey'] ?? '')) !== '';
+        unset($secrets['stock']);
+    } else {
+        throw new InvalidArgumentException('Unknown key.');
+    }
+    if (!nibblyAiWriteSecrets($secrets)) throw new RuntimeException('Could not remove the key.');
+    return $existed;
+}
