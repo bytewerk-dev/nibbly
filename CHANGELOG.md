@@ -9,7 +9,7 @@ Git milestones and the gaps in publication records.
 
 ## Unreleased
 
-## [2.3.0] — 2026-10-15
+## [2.3.0] — 2026-10-16
 
 ### Added
 
