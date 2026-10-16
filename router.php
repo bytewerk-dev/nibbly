@@ -91,7 +91,7 @@ function _routerServeSeekableMedia(string $filePath): bool {
 
 
 // Block access to sensitive paths BEFORE serving any files
-if (preg_match('#^/(content|backups|tests|cli)(/|$)|-trash(/|$)|(^|/)\.(?!well-known(?:/|$))#i', $uri)) {
+if (preg_match('#^/(content|backups|tests|cli|not-for-git)(/|$)|-trash(/|$)|(^|/)\.(?!well-known(?:/|$))#i', $uri)) {
     http_response_code(403);
     echo '403 Forbidden';
     return true;

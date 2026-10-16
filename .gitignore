@@ -103,3 +103,5 @@ content/seo-check.json.lock
 # AI API keys (Provider, Brave, Pexels): never commit; the settings file next to it holds no keys
 content/ai-secrets.json
 content/ai-settings.json.lock
+# Local working files (plans, drafts, notes) that never go into Git, are never deployed and are never served
+not-for-git/

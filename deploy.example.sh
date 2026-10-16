@@ -132,6 +132,7 @@ CODE_EXCLUDES="\
   --exclude-glob deploy.example.sh \
   --exclude-glob screenshots/ \
   --exclude-glob reference/ \
+  --exclude-glob not-for-git/ \
   --exclude-glob *.mjs \
   --exclude-glob *.log \
   --exclude-glob package.json \
