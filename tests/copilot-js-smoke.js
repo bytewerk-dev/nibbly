@@ -295,3 +295,18 @@ console.log(JSON.stringify({
         'footerAvailabilityGates'
     ]
 }));
+
+// ---- Cards that show where something is (dashboard assistant) ------------------------------------------
+{
+    const assert = require('assert');
+    assertContains(source, "action.type === 'link'", 'The assistant renders cards that show a place in the dashboard.');
+    assertContains(source, 'target="_blank" rel="noopener"', 'Links to the dashboard open in a new tab without access to the opener.');
+    assertContains(source, 'function safeDashboardUrl(url)', 'Links are checked before they are rendered.');
+    assertContains(source, 'streamingMessage.actions = result.actions', 'Streamed answers keep the cards that come with them.');
+    const start = source.indexOf('function safeDashboardUrl(url)');
+    const body = source.slice(start, source.indexOf('\n    }', start) + 6);
+    const safe = new Function(body + '; return safeDashboardUrl;')();
+    for (const bad of ['//evil.example', 'http://evil.example/admin', 'javascript:alert(1)', '/x"onclick="y', '/a b']) assert.strictEqual(safe(bad), '', 'rejected: ' + bad);
+    assert.strictEqual(safe('/admin/dashboard.php#settings/language'), '/admin/dashboard.php#settings/language');
+    console.log('Copilot JS: place cards open in a new tab and only link to this site');
+}

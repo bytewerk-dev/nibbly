@@ -11,6 +11,37 @@ Git milestones and the gaps in publication records.
 
 ### Added
 
+- **Safety check for the AI agent, enforced on the server.** What a change set
+  would do to the site is judged on the replayed content, not on the tool
+  arguments or the model's words, in `includes/ai/agent/safety.php`: removing,
+  hiding or emptying a large share of a page (or more than a handful of parts in
+  one package, summed over all operations), losing most of a page's text,
+  creating or touching many pages, news posts or events, and changing menus of
+  many pages are stopped (`block`) or need an extra confirmation (`caution`). New
+  text is checked for scams, phishing and requests for passwords or payment
+  details, malware and script injection, hate, adult and illegal content, short
+  or deceptive links, text aimed at an AI, and swapped contact or bank details.
+  The check runs when an operation is staged, when the package is validated and
+  again when it is applied, so a tampered change set cannot get through. `block`
+  cannot be overridden, not even by administrators; `caution` is shown in the
+  review and the package is applied only with a second confirmation
+  (`confirmRisk`). The word lists cover the nine admin languages
+  (`includes/ai/agent/safety-patterns.php`).
+- **Harmful requests are refused before the model is asked** ("delete everything
+  on the home page", building phishing or malware pages, hate): in the agent (start
+  and replies) and in the assistant chat. The answer explains why and what to do
+  instead (name a few specific sections). Refusals are audited by category only.
+- **Nibbly map** (`includes/ai/nibbly-map.php`): one maintained table from a
+  function or setting to dashboard area, settings tab, deep link and name in all
+  admin languages. The assistants use it as knowledge and build links from it;
+  a test fails when the dashboard has an area or tab the map does not know.
+- **Concrete help when something cannot be done.** The dashboard assistant has a
+  new tool `show_location`, and when it cannot or may not do a request (no tool
+  calling, a value it could not use, an editor asking for an administrator
+  setting, a switched-off module) the server adds a card with the exact place
+  (for example Settings › Language › Admin Language) and a link that opens in a
+  new tab. The agent has a new tool `find_in_dashboard` and shows the same cards
+  with its answer.
 - **Models, reasoning effort and costs in the AI settings.**
   - New installations start with provider-dependent models: OpenAI `gpt-6.1-sol`
     (chat/agent) and `gpt-6-luna` (text/SEO), Anthropic `claude-sonnet-5-5` and
@@ -54,6 +85,14 @@ Git milestones and the gaps in publication records.
   behavior (no reasoning parameter is sent until a level is chosen), and the former
   global input/output price pair carries over as marked estimates for the models in use.
   See UPGRADING.md.
+
+### Fixed
+
+- "Set the system language to English/German" failed when the model sent a
+  language name ("English", "Englisch", "Français") instead of the code, and the
+  assistant then only pointed at "the settings". Language names in any admin
+  language, theme words ("dunkel", "hell", "auto") and the synonyms "system
+  language" and "interface language" are understood now.
 
 ## [2.3.0] — 2026-10-16
 

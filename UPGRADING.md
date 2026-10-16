@@ -5,9 +5,9 @@ first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-
 
 ## Upgrading from 2.3.0 to the next release
 
-This release changes how the AI settings store models and prices. No manual step is
-needed, and nothing changes silently: existing models, credentials, limits and request
-behavior stay as they are.
+The next release changes how the AI settings store models and prices, adds the safety check
+of the AI agent and the Nibbly map. No manual step is needed for the settings: existing models,
+credentials, limits and request behavior stay as they are. The documented admin API is unchanged.
 
 1. Prepare as for any update (backup, preserve site-owned files) and deploy the
    complete core. New core files: `includes/ai/model-capabilities.json`,
@@ -40,6 +40,19 @@ behavior stay as they are.
 6. `ai-settings.json` gains `reasoning`, `providerModels` and `pricing.models`. Keep
    them in version control and deployments with the file; keys stay in
    `content/ai-secrets.json`.
+7. Safety check and Nibbly map. New core files: `includes/ai/agent/safety.php`,
+   `includes/ai/agent/safety-patterns.php` and `includes/ai/nibbly-map.php`;
+   `admin/lang/*.json` gets new texts.
+8. `ai-agent-apply` takes an optional `confirmRisk=1`. A package with safety notes is
+   refused (`needsRiskConfirm` in the response data) without it. Custom code that calls
+   the endpoint for packages must show the notes and send the flag only after the
+   person confirmed them.
+9. The agent now refuses requests that would empty a page or the site and stops
+   operations that remove, hide or empty a large share of a page. This is intended;
+   work in smaller steps. The thresholds are the constant
+   `NIBBLY_AGENT_SAFETY_LIMITS` in `includes/ai/agent/safety.php` and may be lowered,
+   not raised, by site code. Suggestions and drafts of the classic Copilot go through the same
+   text check: harmful text is dropped, odd text carries a safety note.
 
 ### Supported models
 

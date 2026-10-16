@@ -355,7 +355,13 @@ function nibblyAgentChangesetApply(string $csId, string $previewHash, array $act
         $replay = nibblyAgentReplayOps($cs['ops']);
         $validation = nibblyAgentValidate($cs, $replay, true);
         if (!$validation['ok']) {
+            $blocked = array_values(array_filter(array_column($validation['errors'], 'code'), static fn($code) => is_string($code) && str_starts_with($code, 'safety_')));
+            if ($blocked) nibblyAgentAudit('agent-safety', false, ['stage' => 'apply', 'cs' => $csId, 'codes' => $blocked]);
             return ['ok' => false, 'status' => 'ready', 'error' => 'Validation failed: ' . ($validation['errors'][0]['message'] ?? 'unknown error')];
+        }
+        // A change set with a safety note needs one more explicit confirmation, on top of the apply click.
+        if (($validation['risk']['level'] ?? 'ok') === 'caution' && empty($options['confirmRisk'])) {
+            return ['ok' => false, 'status' => 'ready', 'needsRiskConfirm' => true, 'error' => nibblyAgentOpText('agent.safety_confirm_needed', 'This change set has safety notes. Read them in the review and confirm them to apply it.')];
         }
         if (($cs['renderCheck']['status'] ?? '') !== 'passed' || !hash_equals(nibblyAgentPreviewHash($cs, $replay), $previewHash)) {
             return ['ok' => false, 'status' => 'ready', 'error' => 'The render check has not passed for the current content. Review the change set again.'];

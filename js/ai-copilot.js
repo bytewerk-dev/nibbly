@@ -508,6 +508,17 @@
     // The server offers cards (open a section, change the dashboard look); the person confirms with a button and
     // the dashboard performs the action through its own settings forms.
 
+    // Links the server builds lead to the dashboard of this site only: a path on the same host, opened in a new tab.
+    function safeDashboardUrl(url) {
+        const value = String(url || '');
+        return /^\/(?!\/)[^\s"'<>]*$/.test(value) ? value : '';
+    }
+
+    function dashboardNewTabLink(action) {
+        const url = safeDashboardUrl(action && action.url);
+        return url ? '<a class="nb-copilot-dash-link" href="' + escHtml(url) + '" target="_blank" rel="noopener">' + escHtml(label('copilot.dash_open_new_tab', 'Open in a new tab')) + '</a>' : '';
+    }
+
     function renderDashboardActions(message, messageIndex) {
         if (!Array.isArray(message.actions) || !message.actions.length) return '';
         const cards = message.actions.map((action, actionIndex) => {
@@ -515,7 +526,9 @@
             const ref = ' data-dash-message="' + messageIndex + '" data-dash-action="' + actionIndex + '"';
             const detail = action.detail ? '<span>' + escHtml(action.detail) + '</span>' : '';
             let footer = '';
-            if (action.type === 'noop') {
+            if (action.type === 'link') {
+                footer = dashboardNewTabLink(action);
+            } else if (action.type === 'noop') {
                 footer = '';
             } else if (action.status === 'working') {
                 footer = '<em>' + escHtml(label('copilot.dash_applying', 'Working...')) + '</em>';
@@ -525,9 +538,10 @@
                 const run = action.type === 'open' ? label('copilot.dash_open_btn', 'Open') : label('copilot.dash_apply', 'Apply');
                 footer = (action.status === 'failed' ? '<em class="nb-copilot-dash__error">' + escHtml(action.note || label('copilot.dash_failed', 'That did not work.')) + '</em>' : '') +
                     '<button type="button" class="nb-copilot-dash-run"' + ref + '>' + escHtml(run) + '</button>' +
+                    (action.type === 'open' ? dashboardNewTabLink(action) : '') +
                     '<button type="button" class="nb-copilot-dash-dismiss"' + ref + '>' + escHtml(label('copilot.dash_dismiss', 'Dismiss')) + '</button>';
             }
-            return '<section class="nb-copilot-dash"><div><strong>' + escHtml(action.title || '') + '</strong>' + detail + '</div>' + (footer ? '<footer>' + footer + '</footer>' : '') + '</section>';
+            return '<section class="nb-copilot-dash' + (action.type === 'link' ? ' nb-copilot-dash--link' : '') + '"><div><strong>' + escHtml(action.title || '') + '</strong>' + detail + '</div>' + (footer ? '<footer>' + footer + '</footer>' : '') + '</section>';
         }).join('');
         return cards ? '<div class="nb-copilot-dash-list">' + cards + '</div>' : '';
     }
@@ -1767,6 +1781,7 @@
             const reply = (result && result.reply) || (streamingMessage && streamingMessage.content) || label('copilot.no_response', 'No response.');
             if (streamingMessage) {
                 streamingMessage.content = reply;
+                if (result && Array.isArray(result.actions) && result.actions.length) streamingMessage.actions = result.actions;
             } else {
                 const entry = { role: 'assistant', content: reply };
                 if (result && Array.isArray(result.actions) && result.actions.length) entry.actions = result.actions;

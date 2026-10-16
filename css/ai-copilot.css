@@ -1932,3 +1932,53 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     outline: 2px solid #2563eb;
     outline-offset: 2px;
 }
+
+/* Links to places in the dashboard (open in a new tab) */
+.nb-copilot-dash-link,
+.nb-copilot-dash footer a.nb-copilot-dash-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0 4px;
+    color: #1e3a8a;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: underline;
+}
+
+.nb-copilot-dash-link:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.nb-copilot-dash--link {
+    border-style: dashed;
+}
+
+.nb-agent-where ul {
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.nb-agent-where li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px 12px;
+    padding: 4px 0;
+}
+
+.nb-agent-where .nb-agent-hint {
+    display: block;
+}
+
+.nb-agent-where__open {
+    flex: 0 0 auto;
+    text-decoration: underline;
+}
+
+.nb-agent-risk {
+    border-left: 4px solid #b45309;
+}

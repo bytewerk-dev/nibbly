@@ -41,6 +41,13 @@ def scripted_turn(goal, messages):
     if "[flow:slow]" in goal:
         time.sleep(4)
         return turn(call("get_site_overview", {}, f"s{since}"))
+    if "[flow:risk]" in goal:
+        risk = [
+            turn(call("stage_set_field", {"target": "page:en_services__test", "path": "sections.0.content", "value": "<p>See <a href=\"https://bit.ly/x1\">our offer</a></p>"}, "r1")),
+            turn(call("validate_changeset", {}, "r2")),
+            turn(call("present_changeset", {"summary": "Linked the offer."}, "r3")),
+        ]
+        return risk[since] if since < len(risk) else say("Done.")
     if "[flow:upload]" in goal:
         return turn(call("list_run_media", {}, "u1")) if since == 0 else say("I can see your image. Where should it go?")
     first = [
@@ -123,7 +130,7 @@ try:
     uploads = [r for r in requests if "[flow:upload]" in json.dumps(r["messages"])]
     assert uploads and "[Attached images:" in uploads[0]["messages"][-1]["content"], "the attached image is announced to the agent"
     assert all("<script" not in json.dumps(r) for r in requests), "no markup from the UI reaches the provider"
-    print("PASS agent browser: panel, mode switch, run, review card, preview, apply, publish rights, undo, cancel, request changes, upload chips, resume after reload, mobile layout, dashboard settings, AI settings form")
+    print("PASS agent browser: panel, mode switch, run, review card, preview, apply, publish rights, undo, cancel, request changes, upload chips, resume after reload, mobile layout, dashboard settings, AI settings form, refused requests, safety notes with second confirmation, place cards in new tabs")
 finally:
     print("Screenshots:", screenshots)
     site.close()

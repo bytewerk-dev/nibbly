@@ -448,6 +448,26 @@ Restrict what the AI agent (the Copilot's agent mode) may change on a page you b
 
 ---
 
+## Skill: register-dashboard-location
+
+### Description
+Teach the AI assistants where something is in the dashboard. The Nibbly map (`includes/ai/nibbly-map.php`) is the one table that knows the dashboard areas, the settings tabs and the single settings people ask about ("where do I change the logo?"). The assistants answer with the exact place (Settings › Branding › Logo) and a link that opens in a new tab. Do this whenever you add a dashboard area, a settings tab or a setting.
+
+### Prerequisites
+- Read `AI-AGENT-GUIDE.md` → "Nibbly map"
+- The area, tab or setting exists in `admin/dashboard.php` and has its label in `admin/lang/*.json` (all nine languages).
+
+### Steps
+1. New area (`data-tab`) or settings tab (`data-settings-tab`): add it to `nibblyMapSections()` or `nibblyMapSettingsTabs()` (label key, role `admin` or `editor`, module key or `needs AI`), and add its `area_…` or `tab_…` entry to `nibblyMapEntries()`. Also add the new tab to `VALID_DASHBOARD_TABS`/the settings tab handling of the dashboard so `#settings/{tab}` opens it.
+2. New single setting: add one entry to `nibblyMapEntries()`: `[area, tab, label key, [synonyms], 'English hint']`. Use the label that the dashboard shows (so the name exists in every language); synonyms are the words people use instead (any language). A synonym may belong to one entry only.
+3. If the assistant may change the setting after a confirm, see "Dashboard actions" in `AI-AGENT-GUIDE.md` (`NIBBLY_DASHBOARD_SETTINGS`, `nibblyMapActionEntries()`, the runner in `admin/dashboard/scripts/settings.php`).
+
+### Validation
+- `php tests/nibbly-map-smoke.php` (the map matches the dashboard, every name exists in nine languages, no duplicated synonyms, links stay on the site).
+- Ask the dashboard assistant "Where do I find …?": it names the place and offers a card with an "Open in a new tab" link.
+
+---
+
 ## Skill: add-language
 
 ### Description

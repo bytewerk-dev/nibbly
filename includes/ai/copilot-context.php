@@ -1,6 +1,7 @@
 <?php
 require_once dirname(__DIR__) . '/page-path.php';
 require_once __DIR__ . '/agent/net.php';
+require_once __DIR__ . '/nibbly-map.php';
 /**
  * Safe context builder for the frontend AI Assistant.
  *
@@ -459,6 +460,12 @@ function nibblyCopilotKnowledgeBase(): array {
             'title' => 'AI features',
             'source' => 'README.md; architecture.md',
             'summary' => 'AI requests go through the server-side gateway in includes/ai/ai-helper.php. AI settings, feature flags, limits, usage counters, audit logs, image history, and generated image files stay server-side; browser code must not call providers directly.'
+        ],
+        [
+            'id' => 'dashboard-structure',
+            'title' => 'Where things are in the dashboard',
+            'source' => 'includes/ai/nibbly-map.php',
+            'summary' => nibblyMapStructureSummary(nibblyMapIsAdmin())
         ],
         [
             'id' => 'security',
