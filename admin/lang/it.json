@@ -1438,6 +1438,8 @@
     "copilot.dash_value_unclear": "Non ho potuto usare quel valore. Puoi impostarlo direttamente qui: {name}",
     "copilot.map_admin_only": "Questa operazione è riservata agli amministratori.",
     "copilot.map_module_off": "Questo modulo è disattivato. Puoi attivarlo in {path}.",
+    "copilot.safety_blocked": "Ho scartato questa proposta: sembrava frode, phishing, malware, odio o contenuto per adulti o illegale.",
+    "copilot.safety_note": "Avviso di sicurezza: questo testo chiede password o dati di pagamento, contiene link da controllare o istruzioni rivolte a un’IA. Controllalo con attenzione prima di applicarlo.",
     "ai.image_jobs_title": "Job immagini",
     "ai.image_jobs_check": "Controlla job",
     "ai.image_jobs_idle": "Nessun job immagine aperto.",

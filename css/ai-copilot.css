@@ -1982,3 +1982,15 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 .nb-agent-risk {
     border-left: 4px solid #b45309;
 }
+
+/* Safety note on a suggestion or draft */
+.nb-copilot-safety {
+    margin: 8px 0 0;
+    padding: 8px 10px;
+    border-left: 4px solid #b45309;
+    border-radius: 6px;
+    background: #fffbeb;
+    color: #78350f;
+    font-size: 12px;
+    line-height: 1.45;
+}

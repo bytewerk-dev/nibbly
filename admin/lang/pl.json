@@ -1438,6 +1438,8 @@
     "copilot.dash_value_unclear": "Nie mogłem użyć tej wartości. Możesz ustawić ją samodzielnie tutaj: {name}",
     "copilot.map_admin_only": "To mogą robić tylko administratorzy.",
     "copilot.map_module_off": "Ten moduł jest wyłączony. Możesz go włączyć w {path}.",
+    "copilot.safety_blocked": "Odrzuciłem tę propozycję: wyglądała na oszustwo, phishing, złośliwe oprogramowanie, nienawiść albo treści dla dorosłych lub niezgodne z prawem.",
+    "copilot.safety_note": "Uwaga dotycząca bezpieczeństwa: ten tekst prosi o hasła lub dane płatnicze, zawiera linki, które warto sprawdzić, albo polecenia skierowane do AI. Sprawdź go uważnie przed zastosowaniem.",
     "ai.image_jobs_title": "Zadania obrazów",
     "ai.image_jobs_check": "Sprawdź zadania",
     "ai.image_jobs_idle": "Brak otwartych zadań obrazów.",

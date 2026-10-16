@@ -1438,6 +1438,8 @@
     "copilot.dash_value_unclear": "Bu değeri kullanamadım. Buradan kendiniz ayarlayabilirsiniz: {name}",
     "copilot.map_admin_only": "Bunu yalnızca yöneticiler yapabilir.",
     "copilot.map_module_off": "Bu modül kapalı. {path} bölümünden açabilirsiniz.",
+    "copilot.safety_blocked": "Bu öneriyi reddettim: dolandırıcılık, kimlik avı, kötü amaçlı yazılım, nefret veya yetişkin ya da yasa dışı içerik gibi görünüyordu.",
+    "copilot.safety_note": "Güvenlik notu: Bu metin parola veya ödeme bilgisi istiyor, yeniden bakılması gereken bağlantılar içeriyor ya da bir yapay zekâya yönelik talimatlar barındırıyor. Uygulamadan önce dikkatle kontrol edin.",
     "ai.image_jobs_title": "Görsel işleri",
     "ai.image_jobs_check": "İşleri kontrol et",
     "ai.image_jobs_idle": "Açık görsel işi yok.",

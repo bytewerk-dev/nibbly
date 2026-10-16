@@ -616,6 +616,7 @@
         return '<section class="nb-copilot-create" aria-label="Draft content preview">' +
             '<header><strong>' + escHtml(label('copilot.content_draft_title', '{type} draft', { type: (draft.contentType || 'content').toUpperCase() })) + '</strong><span>' + escHtml(draft.canCreate ? label('copilot.ready_to_create', 'Ready to create') : label('copilot.needs_details', 'Needs details')) + '</span></header>' +
             '<div class="nb-copilot-create__fields">' + fields + '</div>' +
+            (draft.safetyNote ? '<p class="nb-copilot-safety" role="alert">' + escHtml(draft.safetyNote) + '</p>' : '') +
             missing +
             '<footer>' + action + '</footer>' +
         '</section>';
@@ -811,6 +812,7 @@
                 variantsHtml +
                 altHtml +
                 (proposal.reason ? '<p class="nb-copilot-proposal__reason">' + escHtml(proposal.reason) + '</p>' : '') +
+                (proposal.safetyNote ? '<p class="nb-copilot-safety" role="alert">' + escHtml(proposal.safetyNote) + '</p>' : '') +
                 '<footer>' +
                     '<span>' + escHtml(label('copilot.review_backup', 'Review before applying. A backup is created server-side.')) + '</span>' +
                     '<div class="nb-copilot-proposal__actions">' +

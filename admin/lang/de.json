@@ -1446,6 +1446,8 @@
     "copilot.dash_value_unclear": "Diesen Wert konnte ich nicht verwenden. Du kannst es hier selbst einstellen: {name}",
     "copilot.map_admin_only": "Das ist Administratoren vorbehalten.",
     "copilot.map_module_off": "Dieses Modul ist ausgeschaltet. Du kannst es unter {path} einschalten.",
+    "copilot.safety_blocked": "Ich habe diesen Vorschlag verworfen: Er sah nach Betrug, Phishing, Schadsoftware, Hass oder nach nicht jugendfreien oder rechtswidrigen Inhalten aus.",
+    "copilot.safety_note": "Sicherheitshinweis: Dieser Text fragt nach Passwörtern oder Zahlungsdaten, enthält Links, die einen zweiten Blick verdienen, oder Anweisungen an eine KI. Prüfe ihn genau, bevor du ihn übernimmst.",
     "ai.image_jobs_title": "Bildjobs",
     "ai.image_jobs_check": "Jobs prüfen",
     "ai.image_jobs_idle": "Keine offenen Bildjobs.",

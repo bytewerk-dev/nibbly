@@ -595,7 +595,10 @@ switch ($action) {
                 'system' => 'You produce safe draft content changes for nibbly CMS. Return strict JSON only.'
             ]);
             $raw = nibblyCopilotExtractJsonObject((string)($result['text'] ?? ''));
-            $proposals = nibblyCopilotValidateProposals($raw, $context, $pageData);
+            $proposals = nibblyCopilotValidateProposals($raw, $context, $pageData, 3, $safetyReport);
+            if (!$proposals && ($safetyReport['blocked'] ?? 0) > 0) {
+                throw new RuntimeException(t('copilot.safety_blocked'));
+            }
             nibblyAiAudit('copilot-suggest', true, [
                 'contentPage' => $contentPage,
                 'fieldRef' => $fieldRef,
@@ -670,7 +673,10 @@ switch ($action) {
                 'system' => 'You translate website content faithfully for nibbly CMS. Return strict JSON only.'
             ]);
             $raw = nibblyCopilotExtractJsonObject((string)($result['text'] ?? ''));
-            $proposals = nibblyCopilotValidateProposals($raw, $targetContext, $targetData, count($fields));
+            $proposals = nibblyCopilotValidateProposals($raw, $targetContext, $targetData, count($fields), $safetyReport);
+            if (!$proposals && ($safetyReport['blocked'] ?? 0) > 0) {
+                throw new RuntimeException(t('copilot.safety_blocked'));
+            }
             foreach ($proposals as $index => $proposal) {
                 $proposals[$index]['contentPage'] = $targetContentPage;
                 $proposals[$index]['label'] = strtoupper($targetLang) . ' · ' . (string)($proposal['label'] ?? $proposal['path']);

@@ -433,6 +433,12 @@ Security rules for agent work (read before touching `includes/ai/agent/`):
   heuristic, not a moderation service; the amounts are the part that does not depend on wording.
   `nibblyAgentSafetyScreenRequest()` refuses obvious requests before the model is called (agent
   start and replies, assistant chat); it is a first line, not the enforcement.
+- The classic Copilot uses the same word lists through `nibblyCopilotSafetyJudge()`
+  (`nibblyAgentSafetyJudgeTexts()`): `nibblyCopilotValidateProposals()` drops harmful
+  suggestions before they are signed (the `$report` argument counts them, the endpoints
+  answer with `copilot.safety_blocked` when nothing is left) and adds `safetyNote` to odd
+  ones; `nibblyCopilotNormalizeCreateDraft()` refuses harmful drafts and adds `safetyNote`.
+  Only the text check applies there: every suggestion is one field, previewed and signed.
 - Every code in `safety.php` (`$add('mass_removal', …)`) needs `agent.safety.{code}` in all nine
   languages; `agent.safety_refuse.{category}` for refusals. Audit entries (`agent-safety`) carry
   the stage and codes or category, never text.

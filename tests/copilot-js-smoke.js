@@ -310,3 +310,12 @@ console.log(JSON.stringify({
     assert.strictEqual(safe('/admin/dashboard.php#settings/language'), '/admin/dashboard.php#settings/language');
     console.log('Copilot JS: place cards open in a new tab and only link to this site');
 }
+
+// ---- Safety notes of the classic flows ----------------------------------------------------------------------------
+{
+    assertContains(source, "proposal.safetyNote ? '<p class=\"nb-copilot-safety\" role=\"alert\">'", 'A suggestion with a safety note shows it, announced to screen readers.');
+    assertContains(source, "draft.safetyNote ? '<p class=\"nb-copilot-safety\" role=\"alert\">'", 'A draft with a safety note shows it.');
+    assertContains(source, 'escHtml(proposal.safetyNote)', 'The note is shown as text.');
+    assertContains(styles, '.nb-copilot-safety', 'The safety note has a style.');
+    console.log('Copilot JS: safety notes on suggestions and drafts');
+}
