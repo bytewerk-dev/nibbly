@@ -18,8 +18,8 @@ changes: `seo.noindexSite` now blocks the whole site (step 3).
 2. Deploy the complete core as described in
    [Deploy the complete core](#deploy-the-complete-core). New core files are
    `admin/api/agent.php`, the directory `includes/ai/agent/`,
-   `includes/ai/dashboard-actions.php`, `includes/seo-check.php` and
-   `js/ai-agent.js`.
+   `includes/ai/dashboard-actions.php`, `includes/ai/settings-store.php`,
+   `includes/seo-check.php` and `js/ai-agent.js`.
 3. Check the search engine block before the update. Until 2.2.0, the setting
    "Block this website for search engines" (Settings → Branding → Search engines,
    `seo.noindexSite`) only emptied `robots.txt`; pages stayed indexable. Now it also
