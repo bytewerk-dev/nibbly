@@ -28,7 +28,7 @@
     const stepTimeoutMs = 75000;
     const visibleSteps = 6;
     const TOOL_STEPS = [
-        'get_site_overview', 'get_page_capabilities', 'read_content', 'list_content', 'list_media', 'list_run_media', 'search_stock_images', 'import_stock_image',
+        'get_site_overview', 'find_in_dashboard', 'get_page_capabilities', 'read_content', 'list_content', 'list_media', 'list_run_media', 'search_stock_images', 'import_stock_image',
         'generate_image', 'search_web', 'read_web_result', 'read_url', 'stage_set_field', 'stage_set_image', 'stage_set_page_menus', 'stage_add_list_item', 'stage_hide_list_item', 'stage_remove_list_item',
         'stage_move_list_item', 'stage_add_section', 'stage_create_news', 'stage_create_event', 'stage_create_page', 'stage_revert_op', 'validate_changeset', 'ask_user', 'present_changeset'
     ];
@@ -407,7 +407,14 @@
         const targets = Object.keys(review.targets || {}).map(targetLabel);
         // New pages, posts, events, sections and list items start hidden; changes to existing content are live at once.
         const createsContent = Object.values(review.targets || {}).some(list => list.some(op => ['create_news', 'create_event', 'create_page', 'section_insert', 'list_insert'].includes(op.type)));
-        const confirmed = await host.confirm({
+        const riskNotes = ((review.validation && review.validation.warnings) || []).filter(warning => warning && typeof warning.code === 'string' && warning.code.indexOf('safety_') === 0);
+        const risky = riskNotes.length > 0 || !!(review.validation && review.validation.risk && review.validation.risk.level === 'caution');
+        const confirmed = risky ? await host.confirm({
+            title: label('agent.risk_confirm_title', 'Apply despite the safety notes?'),
+            body: label('agent.risk_confirm_body', 'The safety check flagged this package. Apply it only if it is exactly what you asked for. You can undo the package afterwards.'),
+            items: riskNotes.slice(0, 6).map(note => plainText(note.message, 200)),
+            confirmLabel: label('agent.risk_confirm_button', 'Apply anyway')
+        }) : await host.confirm({
             title: label('agent.apply_confirm_title', 'Apply this package?'),
             body: createsContent
                 ? label('agent.apply_confirm_body', '{count} changes will be saved. Changes to existing content go live right away; new content stays hidden until you publish it. You can undo the package afterwards.', { count: operations })
@@ -420,7 +427,7 @@
         state.notice = null;
         update();
         try {
-            const data = await host.post('ai-agent-apply', { id: review.id, previewHash: review.previewHash, confirmed: '1' });
+            const data = await host.post('ai-agent-apply', Object.assign({ id: review.id, previewHash: review.previewHash, confirmed: '1' }, risky ? { confirmRisk: '1' } : {}));
             state.applied = { items: Array.isArray(data.items) ? data.items : [], undoToken: String(data.undoToken || '') };
             host.pushMessage('assistant', label('agent.applied_title', 'Changes applied'));
         } catch (error) {
@@ -714,9 +721,15 @@
             parts.push('<div class="nb-agent-note nb-agent-note--warn"><strong>' + esc(label('agent.render_failed', 'A page needs attention')) + '</strong><ul>' +
                 failedChecks.slice(0, 4).map(([target, check]) => '<li>' + esc(targetLabel(target)) + ': ' + esc(plainText((check.messages || [])[0] || '', 160)) + '</li>').join('') + '</ul></div>');
         }
-        if (warnings.length) {
-            parts.push('<details class="nb-agent-notes" data-agent-details="notes"' + (state.openDetails.notes === true ? ' open' : '') + '><summary>' + esc(label('agent.validation_warnings', 'Notes')) + ' (' + warnings.length + ')</summary><ul>' +
-                warnings.slice(0, 8).map(warning => '<li>' + esc(plainText(warning.message || warning, 200)) + '</li>').join('') + '</ul></details>');
+        const safetyNotes = warnings.filter(warning => warning && typeof warning.code === 'string' && warning.code.indexOf('safety_') === 0);
+        if (safetyNotes.length) {
+            parts.push('<div class="nb-agent-note nb-agent-note--warn nb-agent-risk" role="alert"><strong>' + esc(label('agent.risk_title', 'Safety check: please look closely')) + '</strong><ul>' +
+                safetyNotes.slice(0, 6).map(note => '<li>' + esc(plainText(note.message, 220)) + '</li>').join('') + '</ul></div>');
+        }
+        const otherWarnings = warnings.filter(warning => !(warning && typeof warning.code === 'string' && warning.code.indexOf('safety_') === 0));
+        if (otherWarnings.length) {
+            parts.push('<details class="nb-agent-notes" data-agent-details="notes"' + (state.openDetails.notes === true ? ' open' : '') + '><summary>' + esc(label('agent.validation_warnings', 'Notes')) + ' (' + otherWarnings.length + ')</summary><ul>' +
+                otherWarnings.slice(0, 8).map(warning => '<li>' + esc(plainText(warning.message || warning, 200)) + '</li>').join('') + '</ul></details>');
         }
         if (!parts.length && review.status === 'ready') {
             parts.push('<p class="nb-agent-ok">' + icon('ok') + esc(label('agent.validation_ok', 'All checks passed')) + '</p>');
@@ -776,6 +789,24 @@
             '<button type="button" class="nb-copilot-copy" data-agent-action="undo"' + (isBusy() ? ' disabled' : '') + '>' + esc(label('agent.undo', 'Undo')) + '</button></footer></section>';
     }
 
+    // Places in the dashboard the agent pointed to. The links open in a new tab and only ever lead to the same site.
+    function safeDashboardUrl(url) {
+        const value = String(url || '');
+        return /^\/(?!\/)[^\s"'<>]*$/.test(value) ? value : '';
+    }
+
+    function renderLinksCard() {
+        const run = state.run;
+        if (!run || !Array.isArray(run.links) || !run.links.length || !['needs_input', 'awaiting_review', 'failed'].includes(run.status)) return '';
+        const rows = run.links.slice(0, 4).map(link => {
+            const url = safeDashboardUrl(link.url);
+            const open = url ? '<a class="nb-agent-link nb-agent-where__open" href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(label('copilot.dash_open_new_tab', 'Open in a new tab')) + '</a>' : '';
+            const note = link.note ? '<span class="nb-agent-hint">' + esc(plainText(link.note, 160)) + '</span>' : '';
+            return '<li><span><strong>' + esc(plainText(link.title, 80)) + '</strong> <span class="nb-agent-hint">' + esc(plainText(link.path, 160)) + '</span>' + note + '</span>' + open + '</li>';
+        });
+        return '<section class="nb-agent-package nb-agent-package--quiet nb-agent-where" aria-label="' + esc(label('agent.where_title', 'Where to find it')) + '"><strong>' + esc(label('agent.where_title', 'Where to find it')) + '</strong><ul class="nb-agent-items">' + rows.join('') + '</ul></section>';
+    }
+
     function renderNotice() {
         const notice = state.notice;
         if (!notice || !notice.text) return '';
@@ -793,7 +824,7 @@
 
     function buildHtml() {
         if (state.mode !== 'agent') return '';
-        const cards = renderIntro() + renderRunCard() + renderReviewCard() + renderAppliedCard() + renderNotice();
+        const cards = renderIntro() + renderRunCard() + renderLinksCard() + renderReviewCard() + renderAppliedCard() + renderNotice();
         return cards ? '<div class="nb-agent" data-agent-root>' + cards + '</div>' : '';
     }
 

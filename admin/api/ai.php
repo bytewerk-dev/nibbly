@@ -370,11 +370,19 @@ switch ($action) {
         }
         try {
             $contentPage = trim((string)($_POST['contentPage'] ?? ''));
+            $lastUser = nibblyDashboardLastUserMessage($cleanMessages);
+            if ($refusal = nibblyAgentSafetyScreenRequest($lastUser)) {
+                // First line of the safety check: no model call for a request that asks for something harmful.
+                nibblyAiAudit('copilot-chat', false, ['safety' => $refusal['category']]);
+                jsonResponse(true, ['reply' => nibblyAgentSafetyRefusalText($refusal['category']), 'actions' => [], 'usage' => null, 'limits' => null]);
+            }
             $settings = nibblyAiLoadSettings(true);
             $settings['assistantUiLanguage'] = dashboardCopilotUiLanguage();
             $context = nibblyCopilotBuildContext($contentPage, $settings);
             $system = nibblyCopilotSystemPrompt($context);
-            $withActions = ($_POST['mode'] ?? '') === 'dashboard' && nibblyDashboardActionsAvailable();
+            $isDashboard = ($_POST['mode'] ?? '') === 'dashboard';
+            $withActions = $isDashboard && nibblyDashboardActionsAvailable();
+            if ($isDashboard) $system .= nibblyDashboardKnowledgePrompt(isAdmin(), $withActions);
             if ($withActions) $system .= nibblyDashboardActionPrompt(isAdmin());
             array_unshift($cleanMessages, ['role' => 'system', 'content' => $system]);
             $actions = [];
@@ -388,19 +396,20 @@ switch ($action) {
                 $actions = $turn['kind'] === 'tool_calls'
                     ? nibblyDashboardActionsFromCalls($turn['toolCalls'], isAdmin(), true, nibblyDashboardCurrentSettings())
                     : [];
-                $replyText = $turn['text'];
-                if ($turn['kind'] === 'tool_calls' && !$actions) {
-                    $replyText = $replyText !== '' ? $replyText : t('copilot.dash_not_possible');
-                } elseif ($actions && $replyText === '') {
-                    $replyText = t('copilot.dash_actions_ready');
-                }
-                $result = ['text' => $replyText, 'usage' => $turn['usage'], 'limits' => ['warnings' => nibblyAiUsageSummary()['warnings']]];
+                $finished = nibblyDashboardFinishTurn((string)$turn['text'], $actions, $turn['kind'] === 'tool_calls', $lastUser, isAdmin());
+                $actions = $finished['actions'];
+                $result = ['text' => $finished['text'], 'usage' => $turn['usage'], 'limits' => ['warnings' => nibblyAiUsageSummary()['warnings']]];
             } else {
                 $result = nibblyAiChat($cleanMessages, [
                     'feature' => 'backendAssistant',
                     'maxOutputTokens' => $_POST['maxOutputTokens'] ?? 900,
                     'temperature' => 0.25
                 ]);
+                if ($isDashboard) { // no tool calling here: the places are found from the person's words
+                    $finished = nibblyDashboardFinishTurn((string)($result['text'] ?? ''), [], false, $lastUser, isAdmin());
+                    $actions = $finished['actions'];
+                    $result['text'] = $finished['text'];
+                }
             }
             nibblyAiAudit('copilot-chat', true, [
                 'contentPage' => $contentPage,
@@ -462,10 +471,14 @@ switch ($action) {
         }
         try {
             $contentPage = trim((string)($_POST['contentPage'] ?? ''));
+            $lastUser = nibblyDashboardLastUserMessage($cleanMessages);
+            $refusal = nibblyAgentSafetyScreenRequest($lastUser);
             $settings = nibblyAiLoadSettings(true);
             $settings['assistantUiLanguage'] = dashboardCopilotUiLanguage();
             $context = nibblyCopilotBuildContext($contentPage, $settings);
             $system = nibblyCopilotSystemPrompt($context);
+            $isDashboard = ($_POST['mode'] ?? '') === 'dashboard';
+            if ($isDashboard) $system .= nibblyDashboardKnowledgePrompt(isAdmin(), false);
             array_unshift($cleanMessages, ['role' => 'system', 'content' => $system]);
 
             header_remove('Content-Type');
@@ -483,6 +496,11 @@ switch ($action) {
                 flush();
             };
 
+            if ($refusal) { // first line of the safety check: no model call
+                nibblyAiAudit('copilot-chat', false, ['safety' => $refusal['category'], 'streamed' => true]);
+                $emitEvent(['done' => true, 'reply' => nibblyAgentSafetyRefusalText($refusal['category']), 'usage' => null, 'limits' => null, 'context' => $context]);
+                exit;
+            }
             $result = nibblyAiChatStream($cleanMessages, [
                 'feature' => 'backendAssistant',
                 'maxOutputTokens' => $_POST['maxOutputTokens'] ?? 900,
@@ -495,9 +513,13 @@ switch ($action) {
                 'streamed' => true,
                 'messages' => count($cleanMessages) - 1
             ]);
+            $finished = $isDashboard
+                ? nibblyDashboardFinishTurn((string)($result['text'] ?? ''), [], false, $lastUser, isAdmin())
+                : ['text' => (string)($result['text'] ?? ''), 'actions' => []];
             $emitEvent([
                 'done' => true,
-                'reply' => (string)($result['text'] ?? ''),
+                'reply' => $finished['text'],
+                'actions' => $finished['actions'],
                 'usage' => $result['usage'] ?? null,
                 'limits' => $result['limits'] ?? null,
                 'context' => $context

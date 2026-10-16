@@ -16,6 +16,7 @@ require_once __DIR__ . '/settings.php';
 require_once __DIR__ . '/changeset-apply.php';
 require_once __DIR__ . '/media.php';
 require_once __DIR__ . '/research.php';
+require_once dirname(__DIR__) . '/nibbly-map.php';
 require_once dirname(__DIR__) . '/image-job-runner.php';
 
 if (!class_exists('NibblyAgentToolDeferred', false)) {
@@ -62,6 +63,8 @@ function nibblyAgentToolDefinitions(): array {
     return [
         'get_site_overview' => ['description' => 'Languages, pages (target, title, kind), the latest news posts, your rights and today\'s date. Start here when you do not know the site.',
             'parameters' => $object([]), 'right' => null, 'handler' => 'nibblyAgentToolSiteOverview'],
+        'find_in_dashboard' => ['description' => 'Find where something is in the dashboard (settings, users, backups, media library, menus, language, ...). Use it for everything you cannot do with your tools or when the user asks where something is, and tell the user the place in words (area › tab › setting); a link card is shown to them automatically. Never answer only "in the settings".',
+            'parameters' => $object(['query' => $text(200, 'What the user wants, in a few words, e.g. "dashboard language" or "change password".')], ['query']), 'right' => null, 'handler' => 'nibblyAgentToolFindInDashboard'],
         'get_page_capabilities' => ['description' => 'What can be edited on a target: fields (p path, t type, v current value, max length), lists with their item fields, sections, read-only paths and hints. Call it before changing a page.',
             'parameters' => $object(['target' => $target], ['target']), 'right' => null, 'handler' => 'nibblyAgentToolCapabilities'],
         'read_content' => ['description' => 'Read the current content of a target (including changes already staged in this change set), optionally one path. Long values are cut at 4000 characters.',
@@ -290,6 +293,22 @@ function nibblyAgentToolSiteOverview(string $name, array $args, array &$run, arr
     ];
 }
 
+/** Where something is in the dashboard. The link cards are shown to the user with the answer of the run. */
+function nibblyAgentToolFindInDashboard(string $name, array $args, array &$run, array $actor): array {
+    $isAdmin = !empty($actor['isAdmin']);
+    $found = nibblyMapLookup((string)$args['query'], $isAdmin, 3);
+    $matches = [];
+    foreach ($found as $place) {
+        $matches[] = ['name' => $place['title'], 'where' => $place['path'], 'note' => $place['note'], 'adminOnly' => $place['restricted']];
+        $known = array_column((array)($run['links'] ?? []), 'id');
+        if (!in_array($place['id'], $known, true) && count((array)($run['links'] ?? [])) < 4) {
+            $run['links'][] = ['id' => $place['id'], 'title' => $place['title'], 'path' => $place['path'], 'url' => $place['url'], 'note' => $place['note'], 'restricted' => $place['restricted']];
+        }
+    }
+    if (!$matches) return ['matches' => [], 'hint' => 'Nothing found. Say plainly that you do not know where this is; do not guess.'];
+    return ['matches' => $matches, 'note' => 'A link card with these places is shown to the user. Name the place in words.'];
+}
+
 function nibblyAgentToolCapabilities(string $name, array $args, array &$run, array $actor): array {
     nibblyAgentAssertTargetAccess($run, (string)$args['target']);
     try {
@@ -451,7 +470,12 @@ function nibblyAgentFinalizeSummary(array $report): array {
     foreach ((array)($report['renderCheck']['targets'] ?? []) as $target => $check) {
         if (($check['status'] ?? '') !== 'passed') $render[$target] = ['status' => $check['status'], 'messages' => array_slice((array)($check['messages'] ?? []), 0, 3)];
     }
-    return ['status' => $report['status'], 'ready' => $report['status'] === 'ready', 'errors' => $errors, 'renderCheck' => ['status' => $report['renderCheck']['status'] ?? 'skipped', 'problems' => $render]];
+    $notes = [];
+    foreach ((array)($report['validation']['warnings'] ?? []) as $warning) {
+        if (str_starts_with((string)($warning['code'] ?? ''), 'safety_')) $notes[] = (string)$warning['message'];
+    }
+    return ['status' => $report['status'], 'ready' => $report['status'] === 'ready', 'errors' => $errors, 'renderCheck' => ['status' => $report['renderCheck']['status'] ?? 'skipped', 'problems' => $render]]
+        + ($notes ? ['safetyNotes' => array_slice($notes, 0, 5), 'note' => 'The user sees these safety notes in the review and must confirm them once more to apply the package. Mention them in your summary.'] : []);
 }
 
 function nibblyAgentToolValidate(string $name, array $args, array &$run, array $actor): array {

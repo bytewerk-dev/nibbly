@@ -3,6 +3,25 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.3.0 to the next release
+
+The next release adds the safety check of the AI agent and the Nibbly map. There are
+no data changes and the documented admin API is unchanged.
+
+1. Deploy the complete core as described in
+   [Deploy the complete core](#deploy-the-complete-core). New core files are
+   `includes/ai/agent/safety.php`, `includes/ai/agent/safety-patterns.php` and
+   `includes/ai/nibbly-map.php`; `admin/lang/*.json` gets new texts.
+2. `ai-agent-apply` takes an optional `confirmRisk=1`. A package with safety notes is
+   refused (`needsRiskConfirm` in the response data) without it. Custom code that calls
+   the endpoint for packages must show the notes and send the flag only after the
+   person confirmed them.
+3. The agent now refuses requests that would empty a page or the site and stops
+   operations that remove, hide or empty a large share of a page. This is intended;
+   work in smaller steps. The thresholds are the constant
+   `NIBBLY_AGENT_SAFETY_LIMITS` in `includes/ai/agent/safety.php` and may be lowered,
+   not raised, by site code.
+
 ## Upgrading from 2.2.0 to 2.3.0
 
 Version 2.3.0 adds compatible features and fixes: the optional AI agent in the

@@ -195,12 +195,33 @@ for api.openai.com and for models a host refused on chat/completions with
 "use /v1/responses"; everything else stays on chat/completions.
 
 The dashboard assistant (`mode=dashboard` on `ai-copilot-chat`) runs one tool turn with
-`open_section` and `change_setting` (`includes/ai/dashboard-actions.php`). Calls are
-validated per role and returned as `actions` cards; nothing is changed by the chat. The
-card's button calls `window.NibblyDashboardActions.run()` (admin/dashboard/scripts/settings.php),
+`open_section`, `show_location` and `change_setting` (`includes/ai/dashboard-actions.php`).
+Calls are validated per role and returned as `actions` cards; nothing is changed by the chat.
+The card's button calls `window.NibblyDashboardActions.run()` (admin/dashboard/scripts/settings.php),
 which fills the existing theme or language form and submits it. To allow another setting,
-add it to `NIBBLY_DASHBOARD_SETTINGS`, validate it in `nibblyDashboardActionFromCall()`, add
-its texts, and handle it in the runner.
+add it to `NIBBLY_DASHBOARD_SETTINGS` and `nibblyMapActionEntries()`, validate it in
+`nibblyDashboardActionFromCall()` (accept the words people and models use, like
+`nibblyDashboardResolveLanguage()`), add its texts, and handle it in the runner. Whatever the
+assistant cannot or may not do must end in a **link card** (`type: link`, a same-site path that
+opens in a new tab with `rel="noopener"`), never in "see the settings": `nibblyDashboardFinishTurn()`
+adds cards found from the person's own words when the model offered none (no tool calling, an
+unusable value, an editor asking for an administrator setting). The dashboard system prompt
+always carries the map (`nibblyDashboardKnowledgePrompt()`), with or without tools.
+
+#### Nibbly map (`includes/ai/nibbly-map.php`)
+
+The one place that knows where things are in the dashboard: areas (`nibblyMapSections()`),
+settings tabs (`nibblyMapSettingsTabs()`) and the things people look for
+(`nibblyMapEntries()`: id => area, tab, label key, synonyms, English hint). Names are label
+keys of `admin/lang/*.json`, so breadcrumbs ("Settings › Language › Admin Language") exist in all
+admin languages; free text is matched against the names in every language plus the synonyms
+(`nibblyMapLookup()`). Links are built from the script path of the request
+(`nibblyMapDashboardUrl()`) with the dashboard's own hashes (`#settings/language`). Roles and
+switched-off modules are respected: an editor gets the place without a link, a switched-off
+module points to Settings › Modules. **When you add a dashboard area, a settings tab or a
+setting people ask about, add the entry here**; `tests/nibbly-map-smoke.php` compares the map
+with `admin/dashboard.php`, requires every name in all nine languages and rejects one synonym on
+two entries.
 
 The package preview (`?nb_agent_preview={id}&nb_agent_return={local path}`) opens in the same
 tab. Its bar only holds links back to the return path: `#nb-agent-open` and
@@ -357,6 +378,8 @@ Files (all under `includes/ai/agent/` unless noted):
 | `render-scan.php`, `capabilities.php`, `schemas.php` | Render scan of a page template to a capability map (fields, lists, limits). Site overrides in `content/ai-schema/`. |
 | `changeset*.php`, `preview.php` | Operations, validation, render check, apply with locks/backups/journal, undo, publish, owner-only preview. |
 | `run.php`, `tools.php`, `prompt.php` | The loop: step requests from the browser, tool whitelist, system prompt. |
+| `safety.php`, `safety-patterns.php` | The safety check: blast radius of a change set, new text, swapped contact details, first-line screening of requests. Word lists for the nine languages. |
+| `../nibbly-map.php` | Where things are in the dashboard (see "Nibbly map"); used by `find_in_dashboard` and the dashboard assistant. |
 | `media.php` | Image ingest (re-encoding, metadata removal), staging, stock photos, credits. |
 | `research.php` | Brave search, page extraction, the tool-less reading step, sources. |
 | `admin/api/agent.php` | The `ai-agent-*` actions. |
@@ -371,7 +394,7 @@ Limits per round (turns, tool calls, failures, runtime) and a cost cap per run
 apply on top of the gateway's daily and monthly limits.
 
 Tools (`nibblyAgentToolDefinitions()`): read tools (`get_site_overview`,
-`get_page_capabilities`, `read_content`, `list_content`, `list_media`,
+`find_in_dashboard`, `get_page_capabilities`, `read_content`, `list_content`, `list_media`,
 `list_run_media`), research (`search_web`, `read_web_result`, `read_url`), images
 (`search_stock_images`, `import_stock_image`, `generate_image`), stage tools
 (`stage_set_field`, `stage_set_image`, `stage_add_list_item`,
@@ -385,6 +408,25 @@ A new tool needs: a definition with schema and right, a handler, an
 `TOOL_STEPS` of `js/ai-agent.js`, and a test.
 
 Security rules for agent work (read before touching `includes/ai/agent/`):
+
+- **Safety check (`safety.php`) judges effects, not words.** `nibblyAgentSafetyAssess()` compares the
+  replayed content with what is stored (before/after per file) and runs inside
+  `nibblyAgentValidate()`, which staging, finalize and apply all call. Never move a check into a
+  tool handler or the prompt, never trust flags stored in an operation, and never let a new
+  operation type skip it: the amounts (removed, hidden, cleared parts; lost text; created and touched
+  targets; menu changes) are summed over the whole change set, so splitting a deletion into
+  many small operations does not help. `block` findings are errors (no `ready`, no present, no
+  apply, no override for anyone); `caution` findings are warnings with a `safety_` code, shown in the
+  review, and `ai-agent-apply` needs `confirmRisk=1` for them. New text is scanned only where it
+  differs from the stored text. Add words to `safety-patterns.php` (folded text: lowercase, no
+  accents), never inline; add a test case to `tests/agent-safety-smoke.php` for every new rule. The
+  limits live in `NIBBLY_AGENT_SAFETY_LIMITS` and are lowered, not raised. The patterns are a
+  heuristic, not a moderation service; the amounts are the part that does not depend on wording.
+  `nibblyAgentSafetyScreenRequest()` refuses obvious requests before the model is called (agent
+  start and replies, assistant chat); it is a first line, not the enforcement.
+- Every code in `safety.php` (`$add('mass_removal', …)`) needs `agent.safety.{code}` in all nine
+  languages; `agent.safety_refuse.{category}` for refusals. Audit entries (`agent-safety`) carry
+  the stage and codes or category, never text.
 
 - The model output and everything it reads (page content, search results, web
   pages, image metadata) is untrusted. Tool results are data, never
@@ -439,7 +481,7 @@ python3 tests/agent-browser-check.py  # Chromium (Playwright): panel, review, ap
 node --check js/ai-agent.js
 ```
 
-The agent suites in `tests/`: `agent-net`, `agent-scan-mode`, `agent-gateway`,
+The agent suites in `tests/`: `agent-safety` (PHP and HTTP), `nibbly-map`, `agent-net`, `agent-scan-mode`, `agent-gateway`,
 `agent-capabilities`, `agent-changeset`, `agent-preview`, `agent-tools`,
 `agent-loop`, `agent-media-ingest`, `agent-media`, `agent-research-extract`,
 `agent-research`, `agent-settings` (PHP and HTTP), `agent-rate-limit`,

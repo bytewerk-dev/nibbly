@@ -65,6 +65,10 @@ function nibblyAgentRunStart(array $actor, string $goal, string $changesetId = '
     $goal = trim($goal);
     if (mb_strlen($goal, 'UTF-8') < 3) throw new InvalidArgumentException('Please describe what the agent should do.');
     $goal = mb_substr($goal, 0, 2000, 'UTF-8');
+    if ($refusal = nibblyAgentSafetyScreenRequest($goal)) {
+        nibblyAgentAudit('agent-safety', false, ['stage' => 'request', 'category' => $refusal['category'], 'goalHash' => hash('sha256', $goal)]);
+        throw new InvalidArgumentException(nibblyAgentSafetyRefusalText($refusal['category']));
+    }
     $message = $goal;
     if ($changesetId !== '') {
         // Images the user dropped into the chat before sending were registered in a change set of their own.
@@ -87,7 +91,7 @@ function nibblyAgentRunStart(array $actor, string $goal, string $changesetId = '
         'roundTurns' => 0, 'roundToolCalls' => 0,
         'turns' => 0, 'toolCalls' => 0, 'costCents' => 0, 'nextTurn' => 0,
         'failures' => [], 'transcript' => [['role' => 'user', 'content' => $message]], 'pending' => [],
-        'events' => [], 'eventSeq' => 0, 'changesetId' => $changesetId, 'question' => '', 'summary' => '', 'openQuestions' => [], 'finalText' => '', 'error' => '',
+        'events' => [], 'eventSeq' => 0, 'links' => [], 'changesetId' => $changesetId, 'question' => '', 'summary' => '', 'openQuestions' => [], 'finalText' => '', 'error' => '',
     ];
     if ($run['owner'] === '') throw new InvalidArgumentException('A run needs a signed-in user.');
     nibblyAgentRunEvent($run, 'start');
@@ -104,6 +108,10 @@ function nibblyAgentRunStart(array $actor, string $goal, string $changesetId = '
 function nibblyAgentRunReply(string $runId, array $actor, string $message): array {
     $message = mb_substr(trim($message), 0, 2000, 'UTF-8');
     if ($message === '') return ['error' => 'Please write a message.'];
+    if ($refusal = nibblyAgentSafetyScreenRequest($message)) {
+        nibblyAgentAudit('agent-safety', false, ['stage' => 'request', 'category' => $refusal['category'], 'run' => $runId]);
+        return ['error' => nibblyAgentSafetyRefusalText($refusal['category']), 'refused' => true];
+    }
     return nibblyAgentRunLocked($runId, $actor, static function (array &$run) use ($message, $actor): array {
         if (!in_array($run['status'], ['needs_input', 'awaiting_review'], true)) {
             return ['error' => 'This run is ' . $run['status'] . ' and cannot take a reply.'];
@@ -118,6 +126,7 @@ function nibblyAgentRunReply(string $runId, array $actor, string $message): arra
         $run['summary'] = '';
         $run['openQuestions'] = [];
         $run['finalText'] = '';
+        $run['links'] = [];
         $run['roundStartedAt'] = time();
         $run['roundTurns'] = 0;
         $run['roundToolCalls'] = 0;
@@ -194,6 +203,10 @@ function nibblyAgentRunPublicState(array $run, int $after = 0): array {
     if ($run['status'] === 'needs_input') $state['question'] = $run['question'] !== '' ? $run['question'] : $run['finalText'];
     if ($run['status'] === 'awaiting_review') $state += ['summary' => $run['summary'], 'openQuestions' => $run['openQuestions']];
     if ($run['status'] === 'failed') $state += ['error' => $run['error'], 'errorCode' => $run['errorCode'] ?? ''];
+    // Places in the dashboard the agent pointed to (cards that open in a new tab).
+    if (!empty($run['links']) && in_array($run['status'], ['needs_input', 'awaiting_review', 'failed'], true)) {
+        $state['links'] = array_map(static fn($link) => ['title' => $link['title'], 'path' => $link['path'], 'url' => $link['url'], 'note' => $link['note'], 'restricted' => !empty($link['restricted'])], array_values($run['links']));
+    }
     return $state;
 }
 

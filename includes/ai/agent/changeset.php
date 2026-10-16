@@ -16,6 +16,7 @@
  */
 
 require_once __DIR__ . '/changeset-ops.php';
+require_once __DIR__ . '/safety.php';
 
 const NIBBLY_AGENT_MAX_OPS = 200;
 const NIBBLY_AGENT_MAX_DOC_BYTES = 524288;
@@ -676,6 +677,9 @@ function nibblyAgentChangesetStage(string $csId, array $request): array {
         $problems = nibblyAgentValidate(array_replace($cs, ['ops' => $ops]), $replay, false);
         foreach ($problems['errors'] as $problem) {
             if (in_array($op['id'], $problem['opIds'] ?? [], true)) {
+                if (str_starts_with((string)($problem['code'] ?? ''), 'safety_')) {
+                    nibblyAgentAudit('agent-safety', false, ['stage' => 'stage', 'cs' => $csId, 'op' => $op['type'], 'codes' => [$problem['code']]]);
+                }
                 $outcome = ['error' => $problem['message'], 'hint' => $problem['hint'] ?? ''];
                 return false;
             }
@@ -750,7 +754,7 @@ function nibblyAgentValidate(array $cs, array $replay, bool $final): array {
     };
     if (!$replay['ok']) {
         foreach ($replay['errors'] as $opId => $error) $add($error['message'], $opId, $error['hint']);
-        return ['ok' => false, 'errors' => $errors, 'warnings' => $warnings];
+        return ['ok' => false, 'errors' => $errors, 'warnings' => $warnings, 'risk' => ['level' => 'ok', 'codes' => []]];
     }
     $state = $replay['state'];
     $createdIds = [];
@@ -814,7 +818,18 @@ function nibblyAgentValidate(array $cs, array $replay, bool $final): array {
             $add('The result would exceed the size limit of a content file (' . basename($file) . ').');
         }
     }
-    return ['ok' => !$errors, 'errors' => $errors, 'warnings' => $warnings];
+    // Safety: what the change set does to the site, judged on the replayed content (see safety.php).
+    $safety = nibblyAgentSafetyAssess($cs, $replay);
+    $allOps = array_column($cs['ops'], 'id');
+    foreach ($safety['findings'] as $finding) {
+        $opIds = $finding['opIds'] ?: $allOps;
+        if ($finding['level'] === 'block') {
+            $errors[] = ['message' => $finding['message'], 'opId' => $opIds[0] ?? null, 'opIds' => $opIds, 'hint' => $finding['hint'], 'code' => 'safety_' . $finding['code']];
+        } else {
+            $warnings[] = ['message' => $finding['message'], 'opId' => $opIds[0] ?? null, 'hint' => $finding['hint'], 'code' => 'safety_' . $finding['code']];
+        }
+    }
+    return ['ok' => !$errors, 'errors' => $errors, 'warnings' => $warnings, 'risk' => ['level' => $safety['level'], 'codes' => array_values(array_unique(array_column($safety['findings'], 'code')))]];
 }
 
 /** State of a target document (read-only copy); files not yet touched are read from disk. */
@@ -1040,6 +1055,8 @@ function nibblyAgentChangesetFinalize(string $csId): array {
         }
         $replay = nibblyAgentReplayOps($cs['ops']);
         $validation = nibblyAgentValidate($cs, $replay, true);
+        $blocked = array_values(array_filter(array_column($validation['errors'], 'code'), static fn($code) => is_string($code) && str_starts_with($code, 'safety_')));
+        if ($blocked && empty($cs['validation']['errors']) ) nibblyAgentAudit('agent-safety', false, ['stage' => 'validate', 'cs' => $csId, 'codes' => $blocked]);
         if (!$cs['ops']) $validation = ['ok' => false, 'errors' => [['message' => 'The change set is empty.', 'opId' => null, 'hint' => '']], 'warnings' => []];
         $renderCheck = $validation['ok'] ? nibblyAgentRenderCheck($cs, $replay, (array)($cs['renderCheck']['targets'] ?? [])) : ['status' => 'skipped', 'targets' => []];
         $cs['validation'] = $validation;

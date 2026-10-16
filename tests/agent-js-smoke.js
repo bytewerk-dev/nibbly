@@ -98,4 +98,19 @@ assertContains(styles, 'overflow-wrap: anywhere', 'Long values wrap instead of o
 assertMatches(styles, /\.nb-agent-media-grid\s*\{[^}]*minmax\(120px, 1fr\)/, 'The image grid adapts to narrow panels.');
 assertContains(styles, 'cursor: not-allowed', 'Disabled actions look disabled.');
 
+// ---- Safety notes and places in the dashboard ---------------------------------------------------------
+assertContains(applyBody, "confirmRisk: '1'", 'A package with safety notes is applied with a second, explicit confirmation flag.');
+assertContains(applyBody, "agent.risk_confirm_button", 'The second confirmation has its own button text.');
+if (applyBody.indexOf("host.post('ai-agent-apply'") < applyBody.indexOf("agent.risk_confirm_title")) fail('The safety confirmation is asked before the package is sent.');
+assertContains(agent, "warning.code.indexOf('safety_') === 0", 'Safety notes are told apart by their code and shown on their own.');
+assertContains(agent, "role=\"alert\"", 'Safety notes are announced.');
+const linksBody = functionBody(agent, 'renderLinksCard');
+assertContains(linksBody, 'target="_blank" rel="noopener"', 'Places in the dashboard open in a new tab without access to the opener.');
+assertContains(linksBody, 'safeDashboardUrl(link.url)', 'Only addresses on this site are linked.');
+const safeUrl = functionBody(agent, 'safeDashboardUrl');
+assertContains(safeUrl, '(?!\\/)', 'A protocol-relative address is not accepted.');
+const check = new Function('url', safeUrl.replace(/^function safeDashboardUrl\(url\)/, 'return (function(url)') + ')(url)');
+for (const bad of ['//evil.example/x', 'https://evil.example', 'javascript:alert(1)', '/a b', '/"onmouseover="x', '']) if (check(bad) !== '') fail('Not a safe dashboard address: ' + bad);
+if (check('/admin/dashboard.php#settings/language') === '') fail('A dashboard address is accepted.');
+
 console.log('Agent JS: hooks, no implicit apply, confirmations, escaping, safe links, accessibility');

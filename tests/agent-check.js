@@ -297,6 +297,56 @@ async function mainFlow(browser, user) {
         delete resetSettings.general; delete resetSettings.theme;
         fs.writeFileSync(path.join(siteRoot, 'content/settings.json'), JSON.stringify(resetSettings));
 
+        // ---- Places in the dashboard: a card with a link that opens in a new tab, and refusals --------------------------------------------------
+        ({ context, page } = await login(browser, 'admin'));
+        await page.locator('.nb-copilot-toggle').click();
+        await page.locator('#nb-copilot-panel').waitFor({ state: 'visible' });
+        await send(page, 'Please set the system language to English');
+        const placeCard = page.locator('.nb-copilot-dash--link', { hasText: 'Admin Language' });
+        await placeCard.waitFor({ state: 'visible', timeout: 30000 });
+        assert((await placeCard.textContent()).includes('Settings › Language › Admin Language'), 'the card names the place: ' + await placeCard.textContent());
+        const placeLink = placeCard.locator('a.nb-copilot-dash-link');
+        assert(await placeLink.getAttribute('target') === '_blank' && (await placeLink.getAttribute('rel')).includes('noopener'), 'the link opens in a new tab without the opener');
+        assert(await placeLink.getAttribute('href') === '/admin/dashboard.php#settings/language', 'the link leads to the language settings');
+        await page.screenshot({ path: path.join(shots, 'dashboard-place-card.png') });
+        const [popup] = await Promise.all([context.waitForEvent('page'), placeLink.click()]);
+        await popup.waitForLoadState('domcontentloaded');
+        await popup.locator('#settingsPanel-language.active').waitFor({ state: 'visible', timeout: 15000 });
+        assert(popup.url().endsWith('#settings/language'), 'the new tab opened the language settings: ' + popup.url());
+        await popup.close();
+        await send(page, 'Delete everything on the home page');
+        await page.locator('.nb-copilot-msg--assistant .nb-copilot-msg__bubble', { hasText: 'few at a time' }).waitFor({ state: 'visible', timeout: 30000 });
+        await context.close();
+
+        // ---- Safety in the agent: a refused request, and a package with a note needs a second confirmation -------------------------------------
+        ({ context, page } = await login(browser, 'editor'));
+        await openAssistant(page);
+        await send(page, 'Please delete everything on the home page');
+        await page.locator('.nb-agent-note--warn', { hasText: 'few at a time' }).waitFor({ state: 'visible', timeout: 30000 });
+        assert(!(await page.locator('.nb-agent-run').count()), 'a refused request never starts a run');
+        await send(page, '[flow:risk] Link the first section to https://bit.ly/x1');
+        await waitForPackage(page);
+        const riskNote = page.locator('.nb-agent-risk');
+        await riskNote.waitFor({ state: 'visible', timeout: 30000 });
+        assert((await riskNote.textContent()).includes('Safety check'), 'the safety note is shown apart from the other notes: ' + await riskNote.textContent());
+        await page.screenshot({ path: path.join(shots, 'agent-safety-note.png') });
+        await page.locator('[data-agent-action="apply"]').click();
+        await page.locator('.nb-copilot-modal').waitFor({ state: 'visible' });
+        const riskModal = await page.locator('.nb-copilot-modal').textContent();
+        assert(riskModal.includes('Apply despite the safety notes?') && riskModal.includes('Apply anyway'), 'the second confirmation names the safety notes: ' + riskModal);
+        await page.locator('.nb-copilot-modal-cancel').click();
+        await page.locator('.nb-copilot-modal').waitFor({ state: 'detached' });
+        assert(!(await (await page.request.get(base + '/services/test/')).text()).includes('bit.ly/x1'), 'cancelling applies nothing');
+        await page.locator('[data-agent-action="apply"]').click();
+        await confirmModal(page);
+        await page.locator('.nb-agent-package--applied').waitFor({ state: 'visible', timeout: 20000 });
+        assert((await (await page.request.get(base + '/services/test/')).text()).includes('bit.ly/x1'), 'the package is applied after the second confirmation');
+        await page.locator('[data-agent-action="undo"]').click();
+        await confirmModal(page);
+        await page.locator('.nb-agent-package--quiet').waitFor({ state: 'visible', timeout: 20000 });
+        assert(!(await (await page.request.get(base + '/services/test/')).text()).includes('bit.ly/x1'), 'and it can be undone');
+        await context.close();
+
         // ---- Dashboard: the agent section of the AI settings ------------------------------------------------------------------------------
         ({ context, page } = await login(browser, 'admin'));
         await page.locator('.sidebar-nav-item[data-tab="settings"]').click();

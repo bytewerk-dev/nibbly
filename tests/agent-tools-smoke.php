@@ -75,7 +75,7 @@ $_SESSION['admin_role'] = 'editor';
 toolSettings($settingsFile, ['enabled' => true]);
 
 $names = array_column(nibblyAgentToolsForUser(), 'name');
-toolAssert(count($names) === 22 && in_array('read_url', $names, true) && in_array('stage_add_section', $names, true) && in_array('generate_image', $names, true) && !in_array('search_web', $names, true) && !in_array('search_stock_images', $names, true) && !in_array('import_stock_image', $names, true), 'the tool whitelist (stock photos only with a key): ' . implode(', ', $names));
+toolAssert(count($names) === 23 && in_array('read_url', $names, true) && in_array('stage_add_section', $names, true) && in_array('generate_image', $names, true) && !in_array('search_web', $names, true) && !in_array('search_stock_images', $names, true) && !in_array('import_stock_image', $names, true), 'the tool whitelist (stock photos only with a key): ' . implode(', ', $names));
 foreach (nibblyAgentToolsForUser() as $tool) {
     toolAssert(preg_match('/^[a-z_]{3,32}$/', $tool['name']) === 1 && ($tool['parameters']['additionalProperties'] ?? null) === false && $tool['description'] !== '', "{$tool['name']} has a strict schema");
     toolAssert(!preg_match('/"(file|filename|filepath|dir|directory|template|code|script)"\s*:/i', json_encode($tool['parameters'])), "{$tool['name']} takes no file, directory or code argument");

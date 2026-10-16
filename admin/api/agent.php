@@ -260,12 +260,12 @@ switch ($action) {
         if (($_POST['confirmed'] ?? '') !== '1') {
             jsonResponse(false, null, 'Confirmation required');
         }
-        $result = nibblyAgentChangesetApply($id, (string)($_POST['previewHash'] ?? ''), $actor);
+        $result = nibblyAgentChangesetApply($id, (string)($_POST['previewHash'] ?? ''), $actor, ['confirmRisk' => ($_POST['confirmRisk'] ?? '') === '1']);
         if (empty($result['ok'])) {
             if (($result['status'] ?? '') === 'conflict') {
                 http_response_code(409);
             }
-            jsonResponse(false, ['status' => $result['status'] ?? 'failed'], (string)$result['error']);
+            jsonResponse(false, ['status' => $result['status'] ?? 'failed', 'needsRiskConfirm' => !empty($result['needsRiskConfirm'])], (string)$result['error']);
         }
         jsonResponse(true, ['status' => 'applied', 'undoToken' => $result['undoToken'], 'items' => $result['items'], 'files' => $result['files']], 'Applied');
         break;
@@ -282,7 +282,7 @@ switch ($action) {
         $actor = nibblyAgentApiGuard(false);
         $result = nibblyAgentChangesetUndo(nibblyAgentApiChangesetId(), (string)($_POST['token'] ?? ''), $actor);
         if (empty($result['ok'])) {
-            jsonResponse(false, ['status' => $result['status'] ?? 'failed'], (string)$result['error']);
+            jsonResponse(false, ['status' => $result['status'] ?? 'failed', 'needsRiskConfirm' => !empty($result['needsRiskConfirm'])], (string)$result['error']);
         }
         jsonResponse(true, ['status' => 'undone'], 'Undone');
         break;

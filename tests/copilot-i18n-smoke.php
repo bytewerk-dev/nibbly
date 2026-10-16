@@ -94,18 +94,33 @@ foreach ($expectedAgent as $key) {
     if (preg_match('/\b(Sie|Ihr|Ihre|Ihren|Ihrem|Ihrer|Ihnen)\b/u', $text)) fail('German agent text must use "du": ' . $key . ' = ' . $text);
     if (preg_match('/\p{L}[:*_]innen|\p{L}[:*_]in\b|\p{Ll}Innen\b/u', $text)) fail('German agent text must not use gender special characters: ' . $key . ' = ' . $text);
 }
-$agentJs = (string)file_get_contents($root . '/js/ai-agent.js') . (string)file_get_contents($root . '/includes/ai/agent/preview.php') . (string)file_get_contents($root . '/includes/ai/agent/changeset.php'); // the preview bar and the review texts are built on the server
+$agentJs = (string)file_get_contents($root . '/js/ai-agent.js') . (string)file_get_contents($root . '/includes/ai/agent/preview.php') . (string)file_get_contents($root . '/includes/ai/agent/changeset.php') . (string)file_get_contents($root . '/includes/ai/agent/changeset-apply.php'); // the preview bar and the review texts are built on the server
 preg_match_all("/['\"](agent\.[a-z0-9_.]+)['\"]/", $agentJs, $agentMatches);
-$agentJsKeys = array_values(array_unique(array_filter($agentMatches[1] ?? [], fn($key) => !in_array($key, ['agent.step.', 'agent.field.'], true))));
+$agentJsKeys = array_values(array_unique(array_filter($agentMatches[1] ?? [], fn($key) => !in_array($key, ['agent.step.', 'agent.field.', 'agent.safety.', 'agent.safety_refuse.'], true))));
 sort($agentJsKeys);
 $unknownAgentKeys = array_values(array_diff($agentJsKeys, $expectedAgent));
 if ($unknownAgentKeys) {
     fail('Agent JS references missing en.json keys: ' . implode(', ', $unknownAgentKeys));
 }
-$unusedAgentKeys = array_values(array_filter(array_diff($expectedAgent, $agentJsKeys), fn($key) => !str_starts_with($key, 'agent.step.') && !str_starts_with($key, 'agent.field.')));
+$unusedAgentKeys = array_values(array_filter(array_diff($expectedAgent, $agentJsKeys), fn($key) => !str_starts_with($key, 'agent.step.') && !str_starts_with($key, 'agent.field.') && !str_starts_with($key, 'agent.safety.') && !str_starts_with($key, 'agent.safety_refuse.')));
 if ($unusedAgentKeys) {
     fail('Agent texts that no code uses: ' . implode(', ', $unusedAgentKeys));
 }
+// The safety check builds its texts from codes (agent.safety.{code}, agent.safety_refuse.{category}): every text belongs to a code in safety.php and every code has a text.
+$safetySource = (string)file_get_contents($root . '/includes/ai/agent/safety.php');
+preg_match_all("/\\\$add\\('([a-z_]+)'/", $safetySource, $safetyCodes);
+$safetyCodes = array_values(array_unique($safetyCodes[1] ?? []));
+if (count($safetyCodes) < 8) fail('Could not read the safety codes from safety.php (' . count($safetyCodes) . ').');
+foreach ($safetyCodes as $code) {
+    if (!isset($english['agent.safety.' . $code])) fail('No text for the safety code ' . $code);
+}
+foreach ($expectedAgent as $key) {
+    if (str_starts_with($key, 'agent.safety.') && !in_array(substr($key, strlen('agent.safety.')), $safetyCodes, true)) fail('Safety text without a code in safety.php: ' . $key);
+}
+foreach (['mass_delete', 'hate', 'create_crime'] as $category) {
+    if (!isset($english['agent.safety_refuse.' . $category]) || !str_contains($safetySource, "'" . $category . "'")) fail('Refusal text or category missing: ' . $category);
+}
+
 // Every tool has a timeline text; unknown tools fall back to agent.step.unknown.
 $toolSource = (string)file_get_contents($root . '/includes/ai/agent/tools.php');
 preg_match_all("/^        '([a-z_]+)' => \['description'/m", $toolSource, $toolMatches);
@@ -119,7 +134,7 @@ foreach ($toolNames as $tool) {
 }
 
 // ---- Dashboard actions: every text the server and the dashboard script use exists, in every language ---------------------------
-$dashboardActionSources = (string)file_get_contents($root . '/includes/ai/dashboard-actions.php') . (string)file_get_contents($root . '/admin/dashboard/scripts/settings.php') . (string)file_get_contents($root . '/admin/api/ai.php');
+$dashboardActionSources = (string)file_get_contents($root . '/includes/ai/nibbly-map.php') . (string)file_get_contents($root . '/includes/ai/dashboard-actions.php') . (string)file_get_contents($root . '/admin/dashboard/scripts/settings.php') . (string)file_get_contents($root . '/admin/api/ai.php');
 preg_match_all("/['\"](copilot\.dash_[a-z_A-Z]+)['\"]/", $dashboardActionSources, $dashMatches);
 $dashKeys = array_values(array_filter(array_unique($dashMatches[1] ?? []), fn($key) => !in_array($key, ['copilot.dash_setting_', 'copilot.dash_value_'], true)));
 foreach (['adminTheme', 'primaryColor', 'accentColor', 'adminLanguage'] as $setting) $dashKeys[] = 'copilot.dash_setting_' . $setting; // built from the setting name
