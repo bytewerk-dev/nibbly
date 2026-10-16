@@ -93,6 +93,13 @@ NIBBLY-UPGRADE-NOTES.md
 !tests/package-lock.json
 content/analytics/
 content/ai-requests.json
+# AI agent runtime data (runs, change sets, staged images, snapshots, journal) and model findings
+content/ai-agent/
+content/ai-model-quirks.json
+content/ai-model-quirks.json.lock
+# Search engine check result
+content/seo-check.json
+content/seo-check.json.lock
 # AI API keys (Provider, Brave, Pexels): never commit; the settings file next to it holds no keys
 content/ai-secrets.json
 content/ai-settings.json.lock

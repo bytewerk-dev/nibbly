@@ -3,6 +3,118 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.2.0 to 2.3.0
+
+Version 2.3.0 adds compatible features and fixes: the optional AI agent in the
+assistant, actions of the dashboard assistant, the search engine check in the
+system status, and corrections to the page list and to saving settings. The
+documented admin API, accounts and sessions are unchanged. New storage is created
+on first use, and the AI API keys move to their own file (step 6). One behaviour
+changes: `seo.noindexSite` now blocks the whole site (step 3).
+
+1. Prepare as for any update: make and verify a full backup, pause editing and
+   scheduled jobs, and preserve site-owned files (see
+   [Before replacing files](#before-replacing-files)).
+2. Deploy the complete core as described in
+   [Deploy the complete core](#deploy-the-complete-core). New core files are
+   `admin/api/agent.php`, the directory `includes/ai/agent/`,
+   `includes/ai/dashboard-actions.php`, `includes/seo-check.php` and
+   `js/ai-agent.js`.
+3. Check the search engine block before the update. Until 2.2.0, the setting
+   "Block this website for search engines" (Settings → Branding → Search engines,
+   `seo.noindexSite`) only emptied `robots.txt`; pages stayed indexable. Now it also
+   sends `noindex, nofollow` in the robots meta tag and in an `X-Robots-Tag` header,
+   empties `sitemap.xml` and leaves the sitemap out of `robots.txt`. Turn it off on
+   a live site. After the update, the dashboard shows a banner while the live site
+   blocks search engines, and System status → Search engines lists what the site
+   really delivers (`robots.txt`, robots meta tag, `X-Robots-Tag`, `sitemap.xml`,
+   the website address, maintenance mode).
+4. If the site has its own copies of `includes/header.php`, `includes/footer.php`,
+   `includes/page.php`, `includes/news-post.php` or `route.php`, merge the 2.3.0
+   additions. Without them the site keeps working, but the agent is limited:
+   - `header.php`, `page.php`, `news-post.php`, `route.php`: the block that loads
+     `includes/ai/agent/preview.php` when `nb_agent_preview` is in the URL, and the
+     preview bar in `header.php`. Without it, a preview of an unapplied package
+     shows the stored page, and new pages are not found.
+   - `footer.php`: the loader of `js/ai-agent.js` with `window.NB_AI_AGENT`, and the
+     condition that keeps the inline editor and its CSRF token out of a package
+     preview (`nibblyAgentPreview`). Without the loader, the agent mode is not
+     offered.
+5. New storage, created on first use. Keep it with `content/` in backups and
+   deployments, and never in the web root's public files: `content/ai-agent/` (runs,
+   change sets, staged images, snapshots, journal, rate limits and the page
+   structure cache; `.secret` signs the undo tokens, so an open package cannot be
+   undone without it), `content/ai-secrets.json` (the API keys, see step 6),
+   `content/ai-model-quirks.json` (what a provider model accepts) and
+   `content/seo-check.json` (result of the search engine check). Optional
+   per-page restrictions for the agent live in `content/ai-schema/`. The shipped
+   `content/.htaccess` denies direct access; on other servers confirm that
+   `content/` cannot be fetched.
+6. API keys now live in their own file. The provider keys, the Brave Search key and
+   the Pexels key move from `content/ai-settings.json` to `content/ai-secrets.json`
+   (owner-only, listed in `.gitignore`); the settings file then holds no key and can
+   be committed. Nothing needs to be done: keys that the old file still holds move
+   once when an administrator opens the dashboard or the AI settings. Afterwards,
+   copy, deploy and back up the two files together; a copy of `ai-settings.json`
+   alone no longer carries the keys, and `ai-secrets.json` must never be committed
+   or served. A complete backup of `content/` contains both. Code that reads the
+   settings file itself should call `nibblyAiReadStoredSettings()` instead.
+7. The AI agent is off by default. To use it, enable it under Settings → AI Settings →
+   "AI agent". It needs a provider with tool calling. OpenAI is addressed through the
+   Responses API. Web research (Brave Search) and stock photos (Pexels) need their own
+   keys and are optional. New default limits (64,000 input tokens, 16,000 output
+   tokens, 300 requests and 250 text requests per day) apply to new installations;
+   saved values are not changed, and "Use recommended limits" in the AI settings
+   adopts them.
+8. Sites that link language versions with different URL paths through `$PAGE_MAPPING`
+   in `includes/nav-config.php` now see them as one page in Dashboard → Pages. Page
+   files, slugs and public URLs are not touched, and `nav-config.php` needs no change.
+
+After deployment, confirm that the Dashboard reports **2.3.0**, sign in through
+`/admin/`, open Pages and check that translations with different paths show
+"Edit", save colours in Settings → Dashboard, and run System status →
+Search engines. If the agent is enabled, prepare a small change on a test page,
+open its preview and undo it.
+
+## Upgrading from 2.1.0 to 2.2.0
+
+Version 2.2.0 is a compatible security release; install it promptly. The documented
+API, storage formats, accounts and sessions are unchanged. It closes an upload
+validation gap, a stored cross-site-scripting vector through uploaded SVG files and
+dangerous link schemes in page content, and it adds a security check to System status.
+
+1. Prepare as for any update: make and verify a full backup, pause editing and
+   scheduled jobs, and preserve site-owned files (see
+   [Before replacing files](#before-replacing-files)).
+2. Deploy the complete core as described in
+   [Deploy the complete core](#deploy-the-complete-core). New core files are
+   `assets/.htaccess` (a hidden file: upload it, and keep it when you replace the
+   `assets/` folder), `includes/security-check.php` and `includes/svg-sanitizer.php`.
+   `router.php` changed as well. `SYSTEM-REVIEW.md`, `SYSTEM-IMPLEMENTATION.md` and
+   `llms-full.txt` were removed and can be deleted.
+3. Open System status after the update and run **Security → Check now**
+   (administrators only). A proxy that serves static files itself, for example nginx on
+   HestiaCP or Plesk with "Serve static files directly by nginx", ignores `.htaccess`
+   and can expose `content/` (password hashes, the SMTP password, form submissions)
+   and `backups/`. If the check reports exposed folders, add the nginx rules for
+   `content/`, `backups/`, `cli/`, `tests/` and the media trash folders from
+   [ROUTING.md](ROUTING.md), reload nginx and check again. The check stores its
+   result in `content/security-check.json`; keep that file out of Git (it is in
+   `.gitignore`).
+4. Uploads are stricter. Images and audio whose filename extension is not an allowed
+   media type are refused, even when the content looks valid, and uploaded SVG files
+   are sanitised (scripts, `foreignObject`, event handlers and `javascript:` links are
+   removed, SVGs with a DTD are refused). SVG files that already lie in `assets/` are
+   not rewritten: replace any that came from an untrusted source.
+5. Link targets in page content only keep `http(s)`, `mailto`, `tel`, relative and
+   anchor addresses. A stored `javascript:`, `data:` or `vbscript:` link now renders
+   without a target. Customized templates that print link targets themselves should
+   use `nibblySanitizeHref()`.
+
+After deployment, confirm that the Dashboard reports **2.2.0**, sign in through
+`/admin/`, upload a PNG and an SVG in the media library, and read the result of the
+security check in System status.
+
 ## Upgrading from 2.0.0 to 2.1.0
 
 Version 2.1.0 adds compatible features and fixes. The documented API, storage
