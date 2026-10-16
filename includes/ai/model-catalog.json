@@ -2,9 +2,11 @@
     "openai-compatible": {
         "baseUrl": "https://api.openai.com/v1",
         "text": {
-            "chat": "gpt-4.1-mini",
-            "text": "gpt-4.1-mini",
+            "chat": "gpt-6.1-sol",
+            "text": "gpt-6-luna",
             "suggestions": [
+                "gpt-6.1-sol",
+                "gpt-6-luna",
                 "gpt-4.1-mini",
                 "gpt-4.1"
             ]
@@ -72,9 +74,11 @@
     "anthropic": {
         "baseUrl": "https://api.anthropic.com/v1",
         "text": {
-            "chat": "claude-sonnet-4-6",
-            "text": "claude-haiku-4-5",
+            "chat": "claude-sonnet-5-5",
+            "text": "claude-haiku-5-5",
             "suggestions": [
+                "claude-sonnet-5-5",
+                "claude-haiku-5-5",
                 "claude-sonnet-4-6",
                 "claude-haiku-4-5",
                 "claude-opus-4-8"

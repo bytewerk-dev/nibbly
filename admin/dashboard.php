@@ -1953,13 +1953,16 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             </div>
                             <div class="form-group">
                                 <label for="aiApiKey"><?php echo t('ai.api_key'); ?></label>
-                                <input type="password" id="aiApiKey" autocomplete="new-password">
+                                <div class="secret-field">
+                                    <input type="password" id="aiApiKey" autocomplete="new-password">
+                                    <button type="button" class="input-clear-btn secret-field__remove" id="aiRemoveApiKey" data-secret-target="provider" title="<?php echo t('ai.clear_api_key'); ?>" aria-label="<?php echo t('ai.clear_api_key'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                </div>
                                 <small class="form-hint" id="aiApiKeyHint"></small>
-                                <label class="checkbox-label"><input type="checkbox" id="aiClearApiKey"> <?php echo t('ai.clear_api_key'); ?></label>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group" id="aiOrganizationGroup">
                                 <label for="aiOrganization"><?php echo t('ai.organization'); ?></label>
-                                <input type="text" id="aiOrganization" maxlength="120">
+                                <input type="text" id="aiOrganization" maxlength="120" autocomplete="off">
+                                <small class="form-hint"><?php echo t('ai.organization_hint'); ?></small>
                             </div>
                         </div>
                         <div class="form-group ai-local-toggle">
@@ -1981,29 +1984,47 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
                     <fieldset class="settings-section">
                         <legend><?php echo t('ai.models'); ?></legend>
-                        <p class="form-hint ai-section-hint"><?php echo t('ai.models_hint'); ?></p>
                         <p class="form-hint ai-section-hint" id="aiModelsHint" aria-live="polite"></p>
-                        <div class="form-row-inline">
-                            <div class="form-group">
-                                <label for="aiChatModel"><?php echo t('ai.chat_model'); ?></label>
-                                <div class="nb-combobox" data-model-combobox>
-                                    <input type="text" id="aiChatModel" placeholder="gpt-4.1-mini" role="combobox" aria-autocomplete="list" aria-expanded="false" autocomplete="off" spellcheck="false">
-                                    <button type="button" class="input-clear-btn nb-combobox__clear" data-clear-target="aiChatModel" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
-                                    <button type="button" class="nb-combobox__toggle" aria-label="<?php echo t('ai.model_list_open'); ?>" tabindex="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button>
-                                    <div class="nb-combobox__list" role="listbox" hidden></div>
+                        <div class="ai-model-columns">
+                            <div class="ai-model-col" id="aiModelCol_chat">
+                                <h3 class="ai-model-col__title"><?php echo t('ai.model_group_chat'); ?></h3>
+                                <p class="form-hint ai-model-col__hint"><?php echo t('ai.model_group_chat_hint'); ?></p>
+                                <div class="form-group">
+                                    <label for="aiChatModel"><?php echo t('ai.model_label'); ?></label>
+                                    <div class="nb-combobox" data-model-combobox>
+                                        <input type="text" id="aiChatModel" placeholder="" role="combobox" aria-autocomplete="list" aria-expanded="false" autocomplete="off" spellcheck="false">
+                                        <button type="button" class="input-clear-btn nb-combobox__clear" data-clear-target="aiChatModel" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                        <button type="button" class="nb-combobox__toggle" aria-label="<?php echo t('ai.model_list_open'); ?>" tabindex="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button>
+                                        <div class="nb-combobox__list" role="listbox" hidden></div>
+                                    </div>
+                                </div>
+                                <div class="form-group" id="aiChatEffortGroup">
+                                    <label for="aiChatEffort"><?php echo t('ai.reasoning_effort'); ?></label>
+                                    <select id="aiChatEffort" class="topbar-select" data-purpose="chat"></select>
+                                    <small class="form-hint" id="aiChatEffortHint" aria-live="polite"></small>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label for="aiTextModel"><?php echo t('ai.text_model'); ?></label>
-                                <div class="nb-combobox" data-model-combobox>
-                                    <input type="text" id="aiTextModel" placeholder="gpt-4.1-mini" role="combobox" aria-autocomplete="list" aria-expanded="false" autocomplete="off" spellcheck="false">
-                                    <button type="button" class="input-clear-btn nb-combobox__clear" data-clear-target="aiTextModel" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
-                                    <button type="button" class="nb-combobox__toggle" aria-label="<?php echo t('ai.model_list_open'); ?>" tabindex="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button>
-                                    <div class="nb-combobox__list" role="listbox" hidden></div>
+                            <div class="ai-model-col" id="aiModelCol_text">
+                                <h3 class="ai-model-col__title"><?php echo t('ai.model_group_text'); ?></h3>
+                                <p class="form-hint ai-model-col__hint"><?php echo t('ai.model_group_text_hint'); ?></p>
+                                <div class="form-group">
+                                    <label for="aiTextModel"><?php echo t('ai.model_label'); ?></label>
+                                    <div class="nb-combobox" data-model-combobox>
+                                        <input type="text" id="aiTextModel" placeholder="" role="combobox" aria-autocomplete="list" aria-expanded="false" autocomplete="off" spellcheck="false">
+                                        <button type="button" class="input-clear-btn nb-combobox__clear" data-clear-target="aiTextModel" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                        <button type="button" class="nb-combobox__toggle" aria-label="<?php echo t('ai.model_list_open'); ?>" tabindex="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button>
+                                        <div class="nb-combobox__list" role="listbox" hidden></div>
+                                    </div>
+                                </div>
+                                <div class="form-group" id="aiTextEffortGroup">
+                                    <label for="aiTextEffort"><?php echo t('ai.reasoning_effort'); ?></label>
+                                    <select id="aiTextEffort" class="topbar-select" data-purpose="text"></select>
+                                    <small class="form-hint" id="aiTextEffortHint" aria-live="polite"></small>
                                 </div>
                             </div>
                             <input type="hidden" id="aiImageModel" value="gpt-image-2">
                         </div>
+                        <p class="form-hint ai-section-hint"><?php echo t('ai.reasoning_hint'); ?></p>
                     </fieldset>
 
                     <fieldset class="settings-section">
@@ -2035,11 +2056,36 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </div>
                     </fieldset>
 
-                    <fieldset class="settings-section">
+                    <fieldset class="settings-section" id="aiPricingSection">
                         <legend><?php echo t('ai.pricing'); ?></legend>
-                        <div class="form-row-inline">
-                            <div class="form-group"><label for="aiInputPrice"><?php echo t('ai.input_price'); ?></label><input type="number" id="aiInputPrice" min="0" value="15"></div>
-                            <div class="form-group"><label for="aiOutputPrice"><?php echo t('ai.output_price'); ?></label><input type="number" id="aiOutputPrice" min="0" value="60"></div>
+                        <p class="form-hint ai-section-hint"><?php echo t('ai.pricing_hint'); ?></p>
+                        <div class="info-banner info-banner--warning info-banner--contained" id="aiUnpricedNotice" hidden><?php echo t('ai.price_unknown_notice'); ?></div>
+                        <div class="ai-price-row" id="aiPriceRow_chat" hidden>
+                            <h3 class="ai-model-col__title" data-price-title><?php echo t('ai.model_group_chat'); ?></h3>
+                            <p class="form-hint ai-price-status" data-price-status aria-live="polite"></p>
+                            <div class="form-row-inline">
+                                <div class="form-group"><label for="aiPriceIn_chat"><?php echo t('ai.price_input'); ?></label><input type="number" id="aiPriceIn_chat" min="0" step="any" inputmode="decimal"></div>
+                                <div class="form-group"><label for="aiPriceOut_chat"><?php echo t('ai.price_output'); ?></label><input type="number" id="aiPriceOut_chat" min="0" step="any" inputmode="decimal"></div>
+                                <div class="form-group"><label for="aiPriceCur_chat"><?php echo t('ai.price_currency'); ?></label><select id="aiPriceCur_chat" class="topbar-select"><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-sm" id="aiPriceRemove_chat" hidden><?php echo t('ai.price_remove'); ?></button>
+                        </div>
+                        <div class="ai-price-row" id="aiPriceRow_text" hidden>
+                            <h3 class="ai-model-col__title" data-price-title><?php echo t('ai.model_group_text'); ?></h3>
+                            <p class="form-hint ai-price-status" data-price-status aria-live="polite"></p>
+                            <div class="form-row-inline">
+                                <div class="form-group"><label for="aiPriceIn_text"><?php echo t('ai.price_input'); ?></label><input type="number" id="aiPriceIn_text" min="0" step="any" inputmode="decimal"></div>
+                                <div class="form-group"><label for="aiPriceOut_text"><?php echo t('ai.price_output'); ?></label><input type="number" id="aiPriceOut_text" min="0" step="any" inputmode="decimal"></div>
+                                <div class="form-group"><label for="aiPriceCur_text"><?php echo t('ai.price_currency'); ?></label><select id="aiPriceCur_text" class="topbar-select"><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-sm" id="aiPriceRemove_text" hidden><?php echo t('ai.price_remove'); ?></button>
+                        </div>
+                        <div class="form-row-inline ai-fx-row">
+                            <div class="form-group">
+                                <label for="aiFxRate"><?php echo t('ai.fx_custom'); ?></label>
+                                <input type="number" id="aiFxRate" min="0" step="any" inputmode="decimal">
+                                <small class="form-hint" id="aiFxHint"></small>
+                            </div>
                             <div class="form-group"><label for="aiImagePrice"><?php echo t('ai.image_price'); ?></label><input type="number" id="aiImagePrice" min="0" value="5"></div>
                         </div>
                     </fieldset>
@@ -2088,9 +2134,11 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             </div>
                             <div class="form-group">
                                 <label for="aiPexelsApiKey"><?php echo t('ai.agent_pexels_key'); ?></label>
-                                <input type="password" id="aiPexelsApiKey" autocomplete="new-password">
+                                <div class="secret-field">
+                                    <input type="password" id="aiPexelsApiKey" autocomplete="new-password">
+                                    <button type="button" class="input-clear-btn secret-field__remove" id="aiRemovePexelsApiKey" data-secret-target="pexels" title="<?php echo t('ai.agent_clear_key'); ?>" aria-label="<?php echo t('ai.agent_clear_key'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                </div>
                                 <small class="form-hint" id="aiPexelsApiKeyHint"></small>
-                                <label class="checkbox-label"><input type="checkbox" id="aiClearPexelsApiKey"> <?php echo t('ai.agent_clear_key'); ?></label>
                             </div>
                         </div>
                         <div class="form-group"><label class="toggle-label"><span><?php echo t('ai.agent_credit_in_news'); ?></span><div class="toggle-switch"><input type="checkbox" id="aiAgentCreditInNews"><span class="toggle-slider"></span></div></label></div>
@@ -2102,9 +2150,11 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         <p class="form-hint"><?php echo t('ai.agent_research_hint'); ?></p>
                         <div class="form-group">
                             <label for="aiBraveApiKey"><?php echo t('ai.agent_brave_key'); ?></label>
-                            <input type="password" id="aiBraveApiKey" autocomplete="new-password">
+                            <div class="secret-field">
+                                <input type="password" id="aiBraveApiKey" autocomplete="new-password">
+                                <button type="button" class="input-clear-btn secret-field__remove" id="aiRemoveBraveApiKey" data-secret-target="brave" title="<?php echo t('ai.agent_clear_key'); ?>" aria-label="<?php echo t('ai.agent_clear_key'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                            </div>
                             <small class="form-hint" id="aiBraveApiKeyHint"></small>
-                            <label class="checkbox-label"><input type="checkbox" id="aiClearBraveApiKey"> <?php echo t('ai.agent_clear_key'); ?></label>
                         </div>
                         <div class="form-row-inline">
                             <div class="form-group"><label for="aiAgentAllowDomains"><?php echo t('ai.agent_allow_domains'); ?></label><textarea id="aiAgentAllowDomains" rows="3" spellcheck="false" placeholder="example.org"></textarea></div>

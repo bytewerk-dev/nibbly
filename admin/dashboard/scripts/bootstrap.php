@@ -10,6 +10,7 @@
     const NB_LANG = <?php echo json_encode(array_merge(tEditorAll(), tAll()), JSON_UNESCAPED_UNICODE); ?>;
     window.NB_LANG = NB_LANG;
     window.NB_AI_CATALOG = <?php echo json_encode(nibblyAiModelCatalog(), JSON_UNESCAPED_SLASHES); ?>;
+    window.NB_AI_CAPS = <?php echo json_encode(nibblyAiCapabilitiesForUi(), JSON_UNESCAPED_SLASHES); ?>;
     window.NB_AI_FEATURES_ENABLED = <?php echo json_encode($aiFeaturesEnabled); ?>;
     window.NB_AI_COPILOT_AVAILABLE = <?php echo json_encode($_aiDashboardCopilotAvailable); ?>;
     window.NB_AI_COPILOT_MODE = 'dashboard';
