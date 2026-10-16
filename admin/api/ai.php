@@ -119,6 +119,25 @@ switch ($action) {
         }
         break;
 
+    case 'ai-clear-secret':
+        // Removes one stored key at once, independent of the rest of the form: provider:<provider>, brave or pexels.
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        try {
+            $removed = nibblyAiClearSecret((string)($_POST['target'] ?? ''));
+            nibblyAiAudit('ai-key-removed', true, ['target' => (string)($_POST['target'] ?? '')]);
+            $saved = nibblyAiLoadSettings(true);
+            $saved['agentStatus'] = nibblyAgentStatusForAdmin();
+            jsonResponse(true, ['removed' => $removed, 'settings' => $saved, 'usage' => nibblyAiUsageSummary()], 'API key removed');
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
     case 'ai-test':
         if (!dashboardAiModuleEnabled()) {
             jsonResponse(false, null, 'AI module is disabled');
@@ -1010,6 +1029,7 @@ switch ($action) {
                 // Full content drafts are quality-sensitive: use the chat
                 // model instead of the (typically cheaper) text model.
                 'model' => (string)($settings['chatModel'] ?? ''),
+                'purpose' => 'chat',
                 'maxOutputTokens' => 1200,
                 'temperature' => 0.15,
                 'system' => 'You extract safe nibbly CMS content drafts. Return strict JSON only.'

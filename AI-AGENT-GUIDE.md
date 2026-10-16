@@ -194,6 +194,15 @@ encrypted reasoning items carried in the assistant message as `reasoningItems`)
 for api.openai.com and for models a host refused on chat/completions with
 "use /v1/responses"; everything else stays on chat/completions.
 
+Every gateway call serves a purpose (`purpose` option: `chat` for assistant, agent and full
+drafts, `text` for field suggestions, rewrites and SEO; `nibblyAiGenerateText()` defaults to
+`text`). The purpose and the model decide the reasoning effort through the registry
+`includes/ai/model-capabilities.json` (`nibblyAiReasoningPlan()`); never add a reasoning parameter
+for a model that is not listed there, and never send `temperature` to a model that the registry marks
+`omitTemperature`. Costs come from `includes/ai/pricing.php`: use `nibblyAiCostForUsage()` with the
+model that was really used, never a global price; an unknown price is `priced: false`, not 0.
+Amounts are cents with four decimals (`nibblyAiAddCents()` to sum).
+
 The dashboard assistant (`mode=dashboard` on `ai-copilot-chat`) runs one tool turn with
 `open_section`, `show_location` and `change_setting` (`includes/ai/dashboard-actions.php`).
 Calls are validated per role and returned as `actions` cards; nothing is changed by the chat.

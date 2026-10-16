@@ -9391,21 +9391,115 @@ input.color-hex-input,
     background: var(--nb-surface, var(--nb-bg, #fff));
 }
 
+/* Collapsible groups in the agent section: same look as the other cards (see .scheduled-cron). */
 .ai-agent-details {
-    margin: var(--nb-space-3) 0;
+    margin: var(--nb-space-2) 0;
     border: 1px solid var(--nb-border);
-    border-radius: var(--nb-radius-lg);
-    padding: 0 var(--nb-space-4);
+    border-radius: 8px;
+    background: var(--nb-bg);
 }
 
 .ai-agent-details > summary {
-    padding: var(--nb-space-3) 0;
     cursor: pointer;
-    font-weight: 700;
+    list-style: none;
+    padding: var(--nb-space-3) var(--nb-space-4);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--nb-text);
+}
+
+.ai-agent-details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.ai-agent-details > summary::after {
+    content: "+";
+    float: right;
+    color: var(--nb-text-muted);
+}
+
+.ai-agent-details > summary:hover {
+    background: var(--nb-bg-hover);
 }
 
 .ai-agent-details[open] > summary {
-    margin-bottom: var(--nb-space-2);
+    border-bottom: 1px solid var(--nb-border);
+}
+
+.ai-agent-details[open] > summary::after {
+    content: "-";
+}
+
+.ai-agent-details > :not(summary) {
+    margin-left: var(--nb-space-4);
+    margin-right: var(--nb-space-4);
+}
+
+.ai-agent-details > summary + * {
+    margin-top: var(--nb-space-3);
+}
+
+.ai-agent-details > :last-child {
+    margin-bottom: var(--nb-space-3);
+}
+
+/* A stored key is never shown: the field stays empty (placeholder as a mask) and a small x removes the key. */
+.secret-field {
+    position: relative;
+}
+
+.secret-field input {
+    width: 100%;
+    padding-right: 2rem;
+}
+
+.secret-field input::placeholder {
+    letter-spacing: 0.15em;
+}
+
+/* Models: one column per purpose */
+.ai-model-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--nb-space-4);
+}
+
+.ai-model-col__title {
+    margin: 0 0 var(--nb-space-1);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--nb-text);
+}
+
+.ai-model-col__hint {
+    margin: 0 0 var(--nb-space-3);
+}
+
+.ai-price-row {
+    margin-bottom: var(--nb-space-4);
+}
+
+.ai-price-row[hidden],
+.ai-price-row .btn[hidden],
+.ai-model-col [hidden],
+#aiOrganizationGroup[hidden] {
+    display: none !important;
+}
+
+.ai-price-status {
+    margin: 0 0 var(--nb-space-2);
+}
+
+.ai-price-status--unknown {
+    color: var(--nb-warning-text, #92400e);
+    font-weight: 600;
+}
+
+@media (max-width: 700px) {
+    .ai-model-columns {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 .ai-limit-banner .ai-limit-banner__line { margin: 0 0 var(--nb-space-2); }

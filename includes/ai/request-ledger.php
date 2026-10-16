@@ -45,13 +45,13 @@ function nibblyAiReservedUsage(array $usage): array {
             $usage[$group][$key] = array_replace(nibblyAiEmptyUsageBucket(), $usage[$group][$key] ?? []);
             $usage[$group][$key]['requests']++;
             $usage[$group][$key][$entry['type'] === 'image' ? 'imageRequests' : 'textRequests']++;
-            $usage[$group][$key]['estimatedCostCents'] += $entry['reservedCents'];
+            $usage[$group][$key]['estimatedCostCents'] = nibblyAiAddCents($usage[$group][$key]['estimatedCostCents'], $entry['reservedCents']);
         }
     }
     return $usage;
 }
-function nibblyAiReserve(array $settings, string $type, int $cost, string $id): void {
-    $ok = nibblyJsonUpdate(NIBBLY_AI_USAGE_PATH, static function (&$usage) use ($settings, $type, $cost, $id) {
+function nibblyAiReserve(array $settings, string $type, float $cost, string $id, array $meta = []): void {
+    $ok = nibblyJsonUpdate(NIBBLY_AI_USAGE_PATH, static function (&$usage) use ($settings, $type, $cost, $id, $meta) {
         $previous = $usage['reservations'][$id] ?? null;
         if ($previous) {
             if ($previous['status'] === 'released') throw new RuntimeException('AI reservation was released; create a new request.');
@@ -62,21 +62,21 @@ function nibblyAiReserve(array $settings, string $type, int $cost, string $id): 
         }
         nibblyAiCheckLimits($settings, $type, $cost, nibblyAiReservedUsage($usage));
         $usage['reservations'][$id] = [
-            'id' => $id, 'type' => $type, 'status' => 'reserved', 'reservedCents' => max(0, $cost),
+            'id' => $id, 'type' => $type, 'status' => 'reserved', 'reservedCents' => nibblyAiRoundCents(max(0.0, $cost)),
             'createdAt' => gmdate('c'), 'updatedAt' => gmdate('c'),
             'provider' => $settings['provider'], 'baseUrl' => $settings['baseUrl'],
-            'model' => $type === 'image' ? $settings['imageModel'] : $settings['chatModel'],
+            'model' => $type === 'image' ? $settings['imageModel'] : (string)(($meta['model'] ?? '') ?: $settings['chatModel']),
             'user' => (string)($_SESSION['admin_username'] ?? ''), 'tasks' => []
         ];
     }, ['days' => [], 'months' => [], 'reservations' => []]);
     if (!$ok && !isset(nibblyAiLoadUsage()['reservations'][$id])) throw new RuntimeException('Could not reserve AI budget.');
 }
 function nibblyAiReservationSummary(array $usage): array {
-    $total = 0; $count = 0; $unresolved = [];
+    $total = 0.0; $count = 0; $unresolved = [];
     foreach (($usage['reservations'] ?? []) as $entry) {
         if (!in_array($entry['status'] ?? '', ['reserved', 'uncertain'], true)) continue;
         $count++;
-        if (substr($entry['createdAt'], 0, 7) === gmdate('Y-m')) $total += $entry['reservedCents'];
+        if (substr($entry['createdAt'], 0, 7) === gmdate('Y-m')) $total = nibblyAiAddCents($total, $entry['reservedCents']);
         $unresolved[] = $entry;
     }
     return ['reservedCents' => $total, 'pendingRequests' => $count, 'unresolved' => $unresolved];
@@ -93,7 +93,7 @@ function nibblyAiResolveReservation(string $id, string $resolution): void {
                 $usage[$group][$key] = array_replace(nibblyAiEmptyUsageBucket(), $usage[$group][$key] ?? []);
                 $usage[$group][$key]['requests']++;
                 $usage[$group][$key][$entry['type'] === 'image' ? 'imageRequests' : 'textRequests']++;
-                $usage[$group][$key]['estimatedCostCents'] += $entry['reservedCents'];
+                $usage[$group][$key]['estimatedCostCents'] = nibblyAiAddCents($usage[$group][$key]['estimatedCostCents'], $entry['reservedCents']);
             }
         }
         $usage['reservations'][$id]['status'] = $resolution === 'charged' ? 'settled' : 'released';

@@ -89,7 +89,7 @@ function nibblyAgentRunStart(array $actor, string $goal, string $changesetId = '
         'createdAt' => date('c'),
         'roundStartedAt' => time(),
         'roundTurns' => 0, 'roundToolCalls' => 0,
-        'turns' => 0, 'toolCalls' => 0, 'costCents' => 0, 'nextTurn' => 0,
+        'turns' => 0, 'toolCalls' => 0, 'costCents' => 0, 'unpricedTurns' => 0, 'nextTurn' => 0,
         'failures' => [], 'transcript' => [['role' => 'user', 'content' => $message]], 'pending' => [],
         'events' => [], 'eventSeq' => 0, 'links' => [], 'changesetId' => $changesetId, 'question' => '', 'summary' => '', 'openQuestions' => [], 'finalText' => '', 'error' => '',
     ];
@@ -196,7 +196,7 @@ function nibblyAgentRunPublicState(array $run, int $after = 0): array {
         'cursor' => (int)($run['eventSeq'] ?? 0),
         'changesetId' => $run['changesetId'] !== '' ? $run['changesetId'] : null,
         'limitWarnings' => nibblyAiUsageSummary()['warnings'],
-        'usage' => ['turns' => $run['turns'], 'toolCalls' => $run['toolCalls'], 'costCents' => $run['costCents'],
+        'usage' => ['turns' => $run['turns'], 'toolCalls' => $run['toolCalls'], 'costCents' => $run['costCents'], 'unpricedTurns' => (int)($run['unpricedTurns'] ?? 0),
             'limits' => ['maxTurns' => $limits['maxTurns'], 'maxToolCalls' => $limits['maxToolCalls'], 'maxCostCentsPerRun' => $limits['maxCostCentsPerRun']]],
     ];
     if ($run['status'] === 'waiting_jobs') $state['jobs'] = array_values((array)($run['jobs'] ?? []));
@@ -382,7 +382,9 @@ function nibblyAgentRunModelTurn(array &$run, array $actor, array $limits): void
     }
     $run['turns']++;
     $run['roundTurns']++;
-    $run['costCents'] += (int)$result['usage']['estimatedCostCents'];
+    // Every round counts with the model and price it was made with; a round without a known price adds nothing and is counted apart.
+    $run['costCents'] = nibblyAiAddCents($run['costCents'] ?? 0, (float)$result['usage']['estimatedCostCents']);
+    if (empty($result['usage']['priced'])) $run['unpricedTurns'] = (int)($run['unpricedTurns'] ?? 0) + 1;
     $run['transcript'][] = $result['message'];
     if ($result['kind'] === 'tool_calls') {
         $run['pending'] = array_map(static fn($call) => ['id' => $call['id'], 'name' => $call['name'], 'arguments' => $call['arguments'], 'error' => $call['error']], $result['toolCalls']);

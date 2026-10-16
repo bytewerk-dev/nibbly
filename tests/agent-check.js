@@ -371,7 +371,9 @@ async function mainFlow(browser, user) {
         }
         await page.screenshot({ path: path.join(shots, 'agent-settings.png'), fullPage: false });
         await page.locator('#saveAiSettingsBtn').click();
-        await page.locator('#aiBraveApiKeyHint', { hasText: 'An API key is stored' }).waitFor({ state: 'visible', timeout: 20000 });
+        await page.locator('#aiBraveApiKeyHint', { hasText: 'API key saved' }).waitFor({ state: 'visible', timeout: 20000 });
+        assert((await page.locator('#aiBraveApiKey').getAttribute('placeholder')) === '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022', 'a saved key shows a masked placeholder');
+        assert(await page.locator('#aiRemoveBraveApiKey').isVisible(), 'the remove button appears next to a saved key');
         assert((await page.locator('#aiBraveApiKey').inputValue()) === '', 'the key field is empty again after saving');
         assert(!(await page.content()).includes('BSA-browser-brave-key'), 'the key is never rendered back');
         assert((await page.locator('#aiAgentAllowDomains').inputValue()) === 'example.org\nexample.net', 'domains are shown normalised');
@@ -383,6 +385,16 @@ async function mainFlow(browser, user) {
         await page.locator('#saveAiSettingsBtn').click();
         await page.waitForTimeout(1500);
         assert(JSON.parse(fs.readFileSync(path.join(siteRoot, 'content/ai-secrets.json'), 'utf8')).research.brave.apiKey === 'BSA-browser-brave-key-1234', 'an empty key field keeps the saved key');
+        // The x asks first; cancelling keeps the key, confirming deletes it at once.
+        await page.locator('#aiRemoveBraveApiKey').click();
+        await page.locator('#modalConfirm').waitFor({ state: 'visible' });
+        await page.locator('#modalOverlay .modal-actions .btn-secondary').click();
+        assert(JSON.parse(fs.readFileSync(path.join(siteRoot, 'content/ai-secrets.json'), 'utf8')).research.brave.apiKey === 'BSA-browser-brave-key-1234', 'cancelling keeps the key');
+        await page.locator('#aiRemoveBraveApiKey').click();
+        await page.locator('#modalConfirm').click();
+        await page.locator('#aiBraveApiKeyHint', { hasText: 'No API key stored' }).waitFor({ state: 'visible', timeout: 10000 });
+        assert(!(JSON.parse(fs.readFileSync(path.join(siteRoot, 'content/ai-secrets.json'), 'utf8')).research || {}).brave, 'confirming removes the key from the secrets file');
+        assert(!(await page.locator('#aiRemoveBraveApiKey').isVisible()), 'the remove button is gone without a saved key');
         await page.locator('#aiAgentClearCache').click();
         await page.locator('.toast, [role="status"]', { hasText: 'Cache cleared' }).first().waitFor({ state: 'visible', timeout: 10000 });
         // The system status lists what the agent needs, never a key

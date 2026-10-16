@@ -124,11 +124,13 @@ try:
                        REVIEW_IMAGE=str(Path(folder) / "upload.png"), REVIEW_SITE=str(root))
     script = sys.argv[1] if len(sys.argv) > 1 else str(ROOT / "tests" / "agent-check.js")
     subprocess.run(["node", script], env=environment, cwd=ROOT, check=True, timeout=240)
+    # The AI settings form: legacy installs, effort per purpose, the agent question, own prices, key removal
+    subprocess.run(["node", str(ROOT / "tests" / "ai-settings-check.js")], env=environment, cwd=ROOT, check=True, timeout=240)
     requests = [json.loads(line) for line in log_file.read_text().splitlines()]
     uploads = [r for r in requests if "[flow:upload]" in json.dumps(r["messages"])]
     assert uploads and "[Attached images:" in uploads[0]["messages"][-1]["content"], "the attached image is announced to the agent"
     assert all("<script" not in json.dumps(r) for r in requests), "no markup from the UI reaches the provider"
-    print("PASS agent browser: panel, mode switch, run, review card, preview, apply, publish rights, undo, cancel, request changes, upload chips, resume after reload, mobile layout, dashboard settings, refused requests, safety notes with second confirmation, place cards in new tabs")
+    print("PASS agent browser: panel, mode switch, run, review card, preview, apply, publish rights, undo, cancel, request changes, upload chips, resume after reload, mobile layout, dashboard settings, AI settings form, refused requests, safety notes with second confirmation, place cards in new tabs")
 finally:
     print("Screenshots:", screenshots)
     site.close()

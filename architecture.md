@@ -289,6 +289,26 @@ future core features should use the AI gateway functions or `admin/api.php` AI
 actions so limits, audit logging, key handling, and generated-file storage stay
 centralized.
 
+Models, reasoning effort and prices. `chatModel` and `textModel` (chat/agent and text/SEO
+purposes) and `reasoning.{chat,text}` (`recommended`, `low`, `medium`, `high`, or `legacy` for
+files written before the setting existed: nothing is sent) mirror the active provider; every
+provider's own choices are kept in `providerModels[provider]` and restored when it is selected.
+`includes/ai/model-capabilities.json` is the one registry for UI and backend: which model on
+which provider *and host* has a reasoning setting, its levels, the recommendation per purpose,
+whether `temperature` must be omitted and the thinking headroom. `nibblyAiReasoningPlan()` and
+`nibblyAiApplyReasoning()` add the parameter of the right API (`reasoning.effort` Responses,
+`reasoning_effort` Chat Completions, `output_config.effort` Anthropic) only for registry models;
+unknown models and custom endpoints get nothing. Gateway functions take an option `purpose`.
+
+`includes/ai/pricing-catalog.json` holds USD prices per 1M tokens with source, date, cache rates
+and context tiers, and the exchange rate with its date. `pricing.models["provider|model"]` in the
+settings overrides it (USD or EUR); `pricing.usdPerEur` overrides the rate. `includes/ai/pricing.php`
+resolves the price (override, catalog, else unknown: never 0), normalizes provider usage (OpenAI
+cached tokens are part of the prompt, reasoning tokens part of the output; Anthropic cache fields
+are separate) and computes costs in cents with four decimals. A settled request stores `model` and
+`priceBasis` in its reservation; the audit log carries the same. Unknown prices are booked as an
+`unpricedRequests` count, not as cost.
+
 The file also holds the sections `agent` (enable, limits per run, `roles.editor`
 rights, `mediaFolder`, `creditInNews`, `sourcesInNews`), `research` (`brave.apiKey`,
 `allowDomains`, `denyDomains`, `respectRobots`) and `stock` (`pexels.apiKey`) for the
@@ -1033,6 +1053,10 @@ write automatically. Integrations using these write actions must first load the
 resource and send the returned revision. Field-level copilot changes retain
 signed hash checks and share the page lock. Automatic fallback generation adds
 only a still-missing field in a JSON transaction.
+
+Amounts are kept as cents with four decimals and rounded only for display. Reservations use the
+worst case of the model that is really used (estimated input, the output limit plus thinking
+headroom, tier rates).
 
 AI reservations live beside consumption in `content/ai-usage.json`, under one
 stable lock. Requests move from `reserved` to `settled`, `released` or `uncertain`.

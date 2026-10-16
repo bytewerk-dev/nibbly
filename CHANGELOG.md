@@ -42,6 +42,49 @@ Git milestones and the gaps in publication records.
   (for example Settings › Language › Admin Language) and a link that opens in a
   new tab. The agent has a new tool `find_in_dashboard` and shows the same cards
   with its answer.
+- **Models, reasoning effort and costs in the AI settings.**
+  - New installations start with provider-dependent models: OpenAI `gpt-6.1-sol`
+    (chat/agent) and `gpt-6-luna` (text/SEO), Anthropic `claude-sonnet-5-5` and
+    `claude-haiku-5-5`. Models and effort are remembered per provider and restored
+    when the provider is switched back. A custom OpenAI-compatible endpoint gets no
+    preset; OpenRouter and Kie.ai keep theirs.
+  - "Reasoning effort" per purpose (chat/agent and text/SEO): Recommended, Low,
+    Medium, High. "Recommended" is medium for chat/agent and low for text/SEO and is
+    always sent explicitly. A central registry (`includes/ai/model-capabilities.json`)
+    decides per provider, host and model whether a level exists and which API
+    parameter carries it (`reasoning.effort` on the Responses API, `reasoning_effort`
+    on Chat Completions, `output_config.effort` at Anthropic). Unknown models and
+    custom endpoints get no parameter, and the settings say so. Unsupported levels
+    are reset to "Recommended" and refused on the server. `temperature` is left out
+    for the models that reject it. Thinking counts toward the output limit, so calls
+    with an effort level get extra output headroom (inside the configured limit).
+  - Costs per provider and model instead of one global pair: a central price catalog
+    (`includes/ai/pricing-catalog.json`, USD per 1M tokens, source and date) with
+    context tiers (OpenAI above 272,000 input tokens, Haiku 5.5 above 100,000), cache
+    reads and writes, own prices in USD or EUR for other models and an exchange rate
+    shown with its date (own rate possible). A model without a price is shown as
+    "Price not on file", is never counted as 0 or with another model's price, and is
+    tallied apart in the usage figures. Costs are kept with four decimals of a cent and
+    rounded only for display. Cached and reasoning tokens are read from the provider
+    reports without double counting; there is no surcharge for the effort level.
+    Every settled request stores the model and the price basis it was priced with.
+  - After saving a powerful chat model (Sol, Sonnet) the dashboard asks once whether
+    the AI agent should be enabled.
+- API keys: a saved key is shown by a masked placeholder and a hint, never as a value;
+  a small x with confirmation removes it at once (`ai-clear-secret`). The same for the
+  Brave Search and Pexels keys. Mask characters are never saved as a key.
+
+### Changed
+
+- The AI settings: the "Models" section has two columns (Chat/Agent, Text/SEO); the
+  organization field is labelled "OpenAI organization ID (optional)" with an explanation
+  and only shown for providers that take it; the checkboxes for removing keys are gone.
+- The collapsible groups of the AI agent settings look like the other cards of the
+  dashboard (smaller summary, +/- marker, separator).
+- Existing installations keep their models and credentials. They keep their request
+  behavior (no reasoning parameter is sent until a level is chosen), and the former
+  global input/output price pair carries over as marked estimates for the models in use.
+  See UPGRADING.md.
 
 ### Fixed
 

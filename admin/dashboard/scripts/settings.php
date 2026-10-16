@@ -1251,32 +1251,39 @@
     applyTheme(<?php echo json_encode($siteSettings['theme'] ?? []); ?>);
 
     var aiSettingsForm = document.getElementById('aiSettingsForm');
+
+    async function saveAiSettingsForm() {
+        var btn = document.getElementById('saveAiSettingsBtn');
+        btn.disabled = true;
+        btn.textContent = t('btn.saving');
+        var previous = currentAiSettings;
+        try {
+            var formData = new FormData();
+            formData.append('action', 'save-ai-settings');
+            formData.append('settings', JSON.stringify(collectAiSettingsForm()));
+            formData.append('csrf_token', CSRF_TOKEN);
+            var configuredTimeout = parseInt(document.getElementById('aiRequestTimeout')?.value || '300', 10);
+            var imageTimeoutMs = Math.max(300000, (Number.isFinite(configuredTimeout) ? configuredTimeout : 300) * 1000 + 30000);
+            var result = await fetchJsonWithTimeout('api.php', { method: 'POST', body: formData }, imageTimeoutMs);
+            if (!result.success) throw new Error(result.message);
+            currentAiSettings = result.data.settings;
+            aiLiveModels = {}; // the key or provider may have changed: ask the provider again
+            populateAiSettings(currentAiSettings);
+            updateAiUsage(result.data.usage);
+            showToast(t('ai.settings_saved'), 'success');
+            maybeOfferAiAgent(previous, currentAiSettings);
+        } catch (error) {
+            showToast(error.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = t('ai.save_settings');
+        }
+    }
+
     if (aiSettingsForm) {
-        aiSettingsForm.addEventListener('submit', async function(e) {
+        aiSettingsForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            var btn = document.getElementById('saveAiSettingsBtn');
-            btn.disabled = true;
-            btn.textContent = t('btn.saving');
-            try {
-                var formData = new FormData();
-                formData.append('action', 'save-ai-settings');
-                formData.append('settings', JSON.stringify(collectAiSettingsForm()));
-                formData.append('csrf_token', CSRF_TOKEN);
-                var configuredTimeout = parseInt(document.getElementById('aiRequestTimeout')?.value || '300', 10);
-                var imageTimeoutMs = Math.max(300000, (Number.isFinite(configuredTimeout) ? configuredTimeout : 300) * 1000 + 30000);
-                var result = await fetchJsonWithTimeout('api.php', { method: 'POST', body: formData }, imageTimeoutMs);
-                if (!result.success) throw new Error(result.message);
-                currentAiSettings = result.data.settings;
-                aiLiveModels = {}; // the key or provider may have changed: ask the provider again
-                populateAiSettings(currentAiSettings);
-                updateAiUsage(result.data.usage);
-                showToast(t('ai.settings_saved'), 'success');
-            } catch (error) {
-                showToast(error.message, 'error');
-            } finally {
-                btn.disabled = false;
-                btn.textContent = t('ai.save_settings');
-            }
+            saveAiSettingsForm();
         });
     }
 
