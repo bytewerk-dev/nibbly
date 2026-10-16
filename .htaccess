@@ -18,8 +18,8 @@ Options -MultiViews
     Deny from all
 </FilesMatch>
 
-# Deny access to JSON content files, backups, and trash directories
-RewriteRule ^(content|backups|tests|cli)/ - [F,L,NC]
+# Deny access to JSON content files, backups, trash directories and the local working folder
+RewriteRule ^(content|backups|tests|cli|not-for-git)/ - [F,L,NC]
 RewriteRule (^|/)[^/]*-trash(/|$) - [F,L,NC]
 # Never expose VCS, environment or local tooling files. Keep ACME available.
 RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F,L,NC]
