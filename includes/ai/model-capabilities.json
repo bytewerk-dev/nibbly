@@ -1,0 +1,102 @@
+{
+    "version": 1,
+    "updatedAt": "2026-10-16",
+    "note": "Known models per provider and host. Only models listed here get a reasoning-effort selection and a reasoning parameter in requests; unknown models and hosts are never sent one. Levels offered in the UI: low, medium, high.",
+    "sources": [
+        "https://developers.openai.com/api/docs/models",
+        "https://developers.openai.com/api/docs/guides/reasoning",
+        "https://platform.claude.com/docs/en/build-with-claude/effort",
+        "https://platform.claude.com/docs/en/models/sonnet-5-5/migration-guide"
+    ],
+    "headroomTokens": {
+        "low": 2000,
+        "medium": 4000,
+        "high": 8000
+    },
+    "models": [
+        {
+            "provider": "openai-compatible",
+            "host": "api.openai.com",
+            "model": "gpt-6.1-sol",
+            "label": "GPT-6.1 Sol",
+            "tier": "power",
+            "effort": {
+                "param": "openai",
+                "levels": [
+                    "low",
+                    "medium",
+                    "high"
+                ],
+                "recommended": {
+                    "chat": "medium",
+                    "text": "low"
+                },
+                "providerDefault": "medium"
+            },
+            "omitTemperature": true
+        },
+        {
+            "provider": "openai-compatible",
+            "host": "api.openai.com",
+            "model": "gpt-6-luna",
+            "label": "GPT-6 Luna",
+            "tier": "light",
+            "effort": {
+                "param": "openai",
+                "levels": [
+                    "low",
+                    "medium",
+                    "high"
+                ],
+                "recommended": {
+                    "chat": "medium",
+                    "text": "low"
+                },
+                "providerDefault": "medium"
+            },
+            "omitTemperature": true
+        },
+        {
+            "provider": "anthropic",
+            "host": "api.anthropic.com",
+            "model": "claude-sonnet-5-5",
+            "label": "Claude Sonnet 5.5",
+            "tier": "power",
+            "effort": {
+                "param": "anthropic",
+                "levels": [
+                    "low",
+                    "medium",
+                    "high"
+                ],
+                "recommended": {
+                    "chat": "medium",
+                    "text": "low"
+                },
+                "providerDefault": "high"
+            },
+            "omitTemperature": true
+        },
+        {
+            "provider": "anthropic",
+            "host": "api.anthropic.com",
+            "model": "claude-haiku-5-5",
+            "label": "Claude Haiku 5.5",
+            "tier": "light",
+            "effort": {
+                "param": "anthropic",
+                "levels": [
+                    "low",
+                    "medium",
+                    "high"
+                ],
+                "recommended": {
+                    "chat": "medium",
+                    "text": "low"
+                },
+                "providerDefault": "medium"
+            },
+            "omitTemperature": true
+        }
+    ]
+}

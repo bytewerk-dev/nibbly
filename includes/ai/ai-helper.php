@@ -12,6 +12,8 @@ require_once __DIR__ . '/agent/net.php';
 require_once __DIR__ . '/agent/tool-gateway.php';
 require_once __DIR__ . '/request-ledger.php';
 require_once __DIR__ . '/model-catalog.php';
+require_once __DIR__ . '/model-capabilities.php';
+require_once __DIR__ . '/pricing.php';
 
 require_once __DIR__ . '/settings-store.php';
 if (!defined('NIBBLY_AI_USAGE_PATH')) {
@@ -59,7 +61,11 @@ function nibblyAiDefaults(): array {
             ]
         ],
         'chatModel' => nibblyAiModelCatalog()['openai-compatible']['text']['chat'],
-        'textModel' => '',
+        'textModel' => nibblyAiModelCatalog()['openai-compatible']['text']['text'],
+        // Reasoning effort per purpose: recommended | low | medium | high. Installs from before this setting existed load as "legacy" (nothing sent).
+        'reasoning' => ['chat' => 'recommended', 'text' => 'recommended'],
+        // Models and effort remembered per provider, so switching the provider restores that provider's choices.
+        'providerModels' => [],
         'imageModel' => nibblyAiModelCatalog()['openai-compatible']['images'][0]['value'],
         'organization' => '',
         'allowLocalProvider' => false,
@@ -83,8 +89,11 @@ function nibblyAiDefaults(): array {
             'requestTimeoutSeconds' => 300
         ],
         'pricing' => [
-            'inputCentsPerMillion' => 15,
-            'outputCentsPerMillion' => 60,
+            // Prices per provider and model: {"provider|model": {input, output, cacheRead?, cacheWrite?, currency: USD|EUR, migrated?}}.
+            // Without an entry the price catalog applies; without that, the cost is reported as unknown.
+            'models' => [],
+            'usdPerEur' => 0,
+            'usdPerEurAsOf' => '',
             'imageCentsPerRequest' => 5
         ],
         'systemPrompts' => [
@@ -140,6 +149,15 @@ function nibblyAiResolveProviderSettings(array $settings): array {
     $settings['apiKey'] = (string)($credentials['apiKey'] ?? '');
     $settings['organization'] = (string)($credentials['organization'] ?? '');
 
+    // The models and reasoning levels of the active provider (earlier installs have none per provider: the flat values stay).
+    $slot = $settings['providerModels'][$provider] ?? null;
+    if (is_array($slot)) {
+        foreach (['chatModel', 'textModel'] as $field) {
+            if (array_key_exists($field, $slot)) $settings[$field] = (string)$slot[$field];
+        }
+        if (is_array($slot['reasoning'] ?? null)) $settings['reasoning'] = array_replace((array)($settings['reasoning'] ?? []), $slot['reasoning']);
+    }
+
     return $settings;
 }
 
@@ -148,11 +166,19 @@ function nibblyAiLoadSettings(bool $public = false): array {
     $loaded = nibblyAiReadStoredSettings();
     if ($loaded) {
         $settings = array_replace_recursive($settings, $loaded);
+        // Saved before the reasoning setting existed: keep the former request behavior until someone chooses a level.
+        if (!isset($loaded['reasoning'])) {
+            $settings['reasoning'] = ['chat' => 'legacy', 'text' => 'legacy'];
+        }
     }
 
     $settings = nibblyAiResolveProviderSettings($settings);
     if ($settings['textModel'] === '') {
         $settings['textModel'] = $settings['chatModel'];
+    }
+    // The former global price pair becomes overrides for the models in use, marked as carried over.
+    if ($loaded && !isset($loaded['pricing']['models']) && isset($loaded['pricing']['inputCentsPerMillion'])) {
+        $settings['pricing']['models'] = nibblyAiMigrateLegacyPricing($loaded, nibblyAiProviderKey($settings), [$settings['chatModel'], $settings['textModel']]);
     }
 
     if ($public) {
@@ -165,6 +191,7 @@ function nibblyAiLoadSettings(bool $public = false): array {
             ];
         }
         unset($settings['apiKey']);
+        $settings['pricingInfo'] = nibblyAiPricingForUi($settings);
         // The agent, research and stock sections: limits and rights yes, keys never.
         require_once __DIR__ . '/agent/agent-config.php';
         $settings = array_replace($settings, nibblyAgentSettingsForPublic($settings));
@@ -195,6 +222,8 @@ function nibblyAiSaveSettings(array $input, array $existing = []): array {
     }
 
     $apiKey = trim((string)($input['apiKey'] ?? ''));
+    // A masked placeholder is never a key: only a real entry replaces the stored one.
+    if (nibblyAiIsMaskedSecret($apiKey)) $apiKey = '';
     $newApiKeyProvided = $apiKey !== '';
     $hadProviderApiKey = !empty($currentProviderCredentials['apiKey']);
     if ($apiKey === '' && !empty($currentProviderCredentials['apiKey'])) {
@@ -219,14 +248,50 @@ function nibblyAiSaveSettings(array $input, array $existing = []): array {
         $imageModel = nibblyAiNormalizeKieImageModel($imageModel);
     }
 
+    // Models and reasoning levels of this provider; an empty model falls back to the provider's preset.
+    $presets = nibblyAiProviderModelDefaults($provider, $baseUrl);
+    // What this provider had before: the flat values when it is the active one, otherwise its remembered slot.
+    $before = $provider === ($existing['provider'] ?? '') ? $existing : (array)($existing['providerModels'][$provider] ?? []);
+    $chatModel = nibblyAiCleanModel((string)($input['chatModel'] ?? $before['chatModel'] ?? ''), $presets['chatModel']);
+    $textModel = nibblyAiCleanModel((string)($input['textModel'] ?? $input['chatModel'] ?? $before['textModel'] ?? ''), $presets['textModel']);
+    if ($textModel === '') $textModel = $chatModel;
+    $existingReasoning = (array)($before['reasoning'] ?? []);
+    $reasoning = [];
+    foreach (NIBBLY_AI_PURPOSES as $purpose) {
+        $reasoning[$purpose] = nibblyAiCleanReasoningMode(
+            $input['reasoning'][$purpose] ?? $existingReasoning[$purpose] ?? 'recommended',
+            ($existingReasoning[$purpose] ?? '') === 'legacy',
+            $purpose === 'text' ? $textModel : $chatModel,
+            $provider, $baseUrl
+        );
+    }
+    $providerModels = (array)($existing['providerModels'] ?? []);
+    $providerModels[$provider] = ['chatModel' => $chatModel, 'textModel' => $textModel, 'reasoning' => $reasoning];
+
+    $priceOverrides = nibblyAiCleanPriceOverrides($input['pricing']['models'] ?? null, (array)($existing['pricing']['models'] ?? []));
+    if (!isset($input['pricing']['models']) && isset($input['pricing']['inputCentsPerMillion'])) {
+        // Older callers still send the former global price pair: it becomes overrides for the chosen models.
+        $priceOverrides = array_replace($priceOverrides, nibblyAiMigrateLegacyPricing(['pricing' => $input['pricing']], $provider, [$chatModel, $textModel]));
+    }
+    $usdPerEur = (float)($input['pricing']['usdPerEur'] ?? $existing['pricing']['usdPerEur'] ?? 0);
+    $usdPerEur = $usdPerEur >= 0.01 && $usdPerEur <= 1000 ? round($usdPerEur, 6) : 0.0;
+    $usdPerEurAsOf = $usdPerEur > 0
+        ? (preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($input['pricing']['usdPerEurAsOf'] ?? '')) ? (string)$input['pricing']['usdPerEurAsOf'] : gmdate('Y-m-d'))
+        : '';
+    if ($usdPerEur > 0 && $usdPerEur === (float)($existing['pricing']['usdPerEur'] ?? 0) && !isset($input['pricing']['usdPerEurAsOf'])) {
+        $usdPerEurAsOf = (string)($existing['pricing']['usdPerEurAsOf'] ?? $usdPerEurAsOf);
+    }
+
     $settings = [
         'enabled' => !empty($input['enabled']),
         'provider' => $provider,
         'baseUrl' => $baseUrl,
         'apiKey' => $apiKey,
         'providerCredentials' => $providerCredentials,
-        'chatModel' => nibblyAiCleanModel((string)($input['chatModel'] ?? $defaults['chatModel'])),
-        'textModel' => nibblyAiCleanModel((string)($input['textModel'] ?? $input['chatModel'] ?? $defaults['chatModel'])),
+        'chatModel' => $chatModel,
+        'textModel' => $textModel,
+        'reasoning' => $reasoning,
+        'providerModels' => $providerModels,
         'imageModel' => $imageModel,
         'organization' => $organization,
         'allowLocalProvider' => $allowLocal,
@@ -250,9 +315,10 @@ function nibblyAiSaveSettings(array $input, array $existing = []): array {
             'requestTimeoutSeconds' => nibblyAiClampInt($input['limits']['requestTimeoutSeconds'] ?? 300, 5, 600)
         ],
         'pricing' => [
-            'inputCentsPerMillion' => nibblyAiClampInt($input['pricing']['inputCentsPerMillion'] ?? 15, 0, 100000),
-            'outputCentsPerMillion' => nibblyAiClampInt($input['pricing']['outputCentsPerMillion'] ?? 60, 0, 100000),
-            'imageCentsPerRequest' => nibblyAiClampInt($input['pricing']['imageCentsPerRequest'] ?? 5, 0, 100000)
+            'models' => $priceOverrides,
+            'usdPerEur' => $usdPerEur,
+            'usdPerEurAsOf' => $usdPerEurAsOf,
+            'imageCentsPerRequest' => nibblyAiClampInt($input['pricing']['imageCentsPerRequest'] ?? $existing['pricing']['imageCentsPerRequest'] ?? 5, 0, 100000)
         ],
         'systemPrompts' => [
             'assistant' => substr(trim((string)($input['systemPrompts']['assistant'] ?? $defaults['systemPrompts']['assistant'])), 0, 4000),
@@ -316,17 +382,19 @@ function nibblyAiChatExecute(array $messages, array $options = []): array {
         throw new RuntimeException('AI input is too long for the configured limit.');
     }
 
-    $maxOutput = nibblyAiClampInt($options['maxOutputTokens'] ?? $settings['limits']['maxOutputTokens'], 16, (int)$settings['limits']['maxOutputTokens']);
-    $estimatedCost = nibblyAiEstimateTextCost($settings, $inputTokens, $maxOutput);
-    nibblyAiAssertWithinLimits($settings, 'text', $estimatedCost);
+    $model = (string)($options['model'] ?? $settings['chatModel']);
+    $plan = nibblyAiReasoningPlan($settings, $model, nibblyAiOptionPurpose($options));
+    $maxOutput = nibblyAiOutputBudget($settings, $options, $plan);
+    $reservation = nibblyAiReservationCost($settings, $model, $inputTokens, $maxOutput);
+    nibblyAiAssertWithinLimits($settings, 'text', $reservation['cents'], ['model' => $model, 'priced' => $reservation['priced']]);
 
-    $body = [
-        'model' => (string)($options['model'] ?? $settings['chatModel']),
+    $body = nibblyAiApplyReasoning([
+        'model' => $model,
         'messages' => $cleanMessages,
         'max_tokens' => $maxOutput,
         'temperature' => isset($options['temperature']) ? (float)$options['temperature'] : 0.3,
         'stream' => false
-    ];
+    ], $plan, nibblyAiIsAnthropicSettings($settings) ? 'anthropic' : 'chat');
 
     $started = microtime(true);
     $response = nibblyAiProviderRequest($settings, '/chat/completions', $body);
@@ -340,25 +408,14 @@ function nibblyAiChatExecute(array $messages, array $options = []): array {
         throw new RuntimeException('AI provider returned an empty response.');
     }
 
-    $actualInput = (int)($response['usage']['prompt_tokens'] ?? $inputTokens);
-    $actualOutput = (int)($response['usage']['completion_tokens'] ?? nibblyAiEstimateTokens($text));
-    $actualCost = nibblyAiEstimateTextCost($settings, $actualInput, $actualOutput);
-    nibblyAiRecordUsage('text', $actualInput, $actualOutput, $actualCost);
-    nibblyAiAudit('chat', true, [
-        'model' => $body['model'],
-        'inputTokens' => $actualInput,
-        'outputTokens' => $actualOutput,
-        'estimatedCostCents' => $actualCost,
+    $usage = nibblyAiSettleText($settings, $body['model'], $response['usage'] ?? null, $inputTokens, $text);
+    nibblyAiAudit('chat', true, nibblyAiAuditUsage($body['model'], $usage, $plan) + [
         'durationMs' => (int)round((microtime(true) - $started) * 1000)
     ]);
 
     return [
         'text' => $text,
-        'usage' => [
-            'inputTokens' => $actualInput,
-            'outputTokens' => $actualOutput,
-            'estimatedCostCents' => $actualCost
-        ],
+        'usage' => nibblyAiPublicUsage($usage),
         'limits' => nibblyAiUsageSummary()
     ];
 }
@@ -394,10 +451,12 @@ function nibblyAiChatStreamExecute(array $messages, array $options, callable $on
     if ($inputTokens > (int)$settings['limits']['maxInputTokens']) {
         throw new RuntimeException('AI input is too long for the configured limit.');
     }
-    $maxOutput = nibblyAiClampInt($options['maxOutputTokens'] ?? $settings['limits']['maxOutputTokens'], 16, (int)$settings['limits']['maxOutputTokens']);
-    nibblyAiAssertWithinLimits($settings, 'text', nibblyAiEstimateTextCost($settings, $inputTokens, $maxOutput));
-
     $model = trim((string)($options['model'] ?? '')) ?: (string)$settings['chatModel'];
+    $plan = nibblyAiReasoningPlan($settings, $model, nibblyAiOptionPurpose($options));
+    $maxOutput = nibblyAiOutputBudget($settings, $options, $plan);
+    $reservation = nibblyAiReservationCost($settings, $model, $inputTokens, $maxOutput);
+    nibblyAiAssertWithinLimits($settings, 'text', $reservation['cents'], ['model' => $model, 'priced' => $reservation['priced']]);
+
     $temperature = isset($options['temperature']) ? (float)$options['temperature'] : 0.3;
     if (nibblyAiIsAnthropicSettings($settings)) {
         $url = rtrim((string)$settings['baseUrl'], '/') . '/messages';
@@ -431,6 +490,7 @@ function nibblyAiChatStreamExecute(array $messages, array $options, callable $on
         if ($system) {
             $body['system'] = implode("\n\n", $system);
         }
+        $body = nibblyAiApplyReasoning($body, $plan, 'anthropic');
     } else {
         $url = rtrim((string)$settings['baseUrl'], '/') . '/chat/completions';
         $headers = ['Content-Type: application/json', 'Accept: text/event-stream'];
@@ -441,13 +501,18 @@ function nibblyAiChatStreamExecute(array $messages, array $options, callable $on
         if (!empty($settings['organization'])) {
             $headers[] = 'OpenAI-Organization: ' . $settings['organization'];
         }
-        $body = nibblyAiApplyModelQuirks($settings, [
+        $body = [
             'model' => $model,
             'messages' => $cleanMessages,
             'max_tokens' => $maxOutput,
             'temperature' => $temperature,
             'stream' => true
-        ]);
+        ];
+        // OpenAI itself reports the usage of a stream only on request.
+        if (nibblyAiBaseUrlHost((string)$settings['baseUrl']) === 'api.openai.com') {
+            $body['stream_options'] = ['include_usage' => true];
+        }
+        $body = nibblyAiApplyModelQuirks($settings, nibblyAiApplyReasoning($body, $plan, 'chat'));
     }
 
     $timeout = nibblyAiRequestTimeout($settings);
@@ -457,8 +522,7 @@ function nibblyAiChatStreamExecute(array $messages, array $options, callable $on
         'buffer' => '',
         'raw' => '',
         'text' => '',
-        'inputTokens' => 0,
-        'outputTokens' => 0
+        'usage' => []
     ];
     $parseLine = static function (string $line) use (&$state, $onDelta): void {
         $line = trim($line);
@@ -480,17 +544,16 @@ function nibblyAiChatStreamExecute(array $messages, array $options, callable $on
             $delta = $choice['delta']['content'];
         }
         if (is_array($chunk['usage'] ?? null)) {
-            $state['inputTokens'] = (int)($chunk['usage']['prompt_tokens'] ?? $state['inputTokens']);
-            $state['outputTokens'] = (int)($chunk['usage']['completion_tokens'] ?? $state['outputTokens']);
+            $state['usage'] = array_replace($state['usage'], $chunk['usage']);
         }
         // Anthropic Messages API event shapes.
         $type = (string)($chunk['type'] ?? '');
         if ($type === 'content_block_delta' && (string)($chunk['delta']['type'] ?? '') === 'text_delta') {
             $delta = (string)($chunk['delta']['text'] ?? '');
         } elseif ($type === 'message_start') {
-            $state['inputTokens'] = (int)($chunk['message']['usage']['input_tokens'] ?? $state['inputTokens']);
+            $state['usage'] = array_replace($state['usage'], (array)($chunk['message']['usage'] ?? []));
         } elseif ($type === 'message_delta') {
-            $state['outputTokens'] = (int)($chunk['usage']['output_tokens'] ?? $state['outputTokens']);
+            $state['usage'] = array_replace($state['usage'], (array)($chunk['usage'] ?? []));
         }
         if ($delta !== '') {
             $state['text'] .= $delta;
@@ -558,26 +621,15 @@ function nibblyAiChatStreamExecute(array $messages, array $options, callable $on
         throw new RuntimeException('AI provider returned an empty response.');
     }
 
-    $actualInput = $state['inputTokens'] > 0 ? $state['inputTokens'] : $inputTokens;
-    $actualOutput = $state['outputTokens'] > 0 ? $state['outputTokens'] : nibblyAiEstimateTokens($state['text']);
-    $actualCost = nibblyAiEstimateTextCost($settings, $actualInput, $actualOutput);
-    nibblyAiRecordUsage('text', $actualInput, $actualOutput, $actualCost);
-    nibblyAiAudit('chat', true, [
-        'model' => $model,
+    $usage = nibblyAiSettleText($settings, $model, $state['usage'] ?: null, $inputTokens, $state['text']);
+    nibblyAiAudit('chat', true, nibblyAiAuditUsage($model, $usage, $plan) + [
         'streamed' => true,
-        'inputTokens' => $actualInput,
-        'outputTokens' => $actualOutput,
-        'estimatedCostCents' => $actualCost,
         'durationMs' => (int)round((microtime(true) - $started) * 1000)
     ]);
 
     return [
         'text' => $state['text'],
-        'usage' => [
-            'inputTokens' => $actualInput,
-            'outputTokens' => $actualOutput,
-            'estimatedCostCents' => $actualCost
-        ],
+        'usage' => nibblyAiPublicUsage($usage),
         'limits' => nibblyAiUsageSummary()
     ];
 }
@@ -593,6 +645,7 @@ function nibblyAiGenerateText(string $prompt, array $options = []): array {
     $model = trim((string)($options['model'] ?? ''));
     return nibblyAiChat($messages, [
         'feature' => $feature,
+        'purpose' => in_array($options['purpose'] ?? '', NIBBLY_AI_PURPOSES, true) ? $options['purpose'] : 'text',
         'model' => $model !== '' ? $model : ($settings['textModel'] ?: $settings['chatModel']),
         'maxOutputTokens' => $options['maxOutputTokens'] ?? null,
         'temperature' => $options['temperature'] ?? 0.4
@@ -869,10 +922,71 @@ function nibblyAiEnsureFeature(array $settings, string $feature): void {
     }
 }
 
-function nibblyAiAssertWithinLimits(array $settings, string $type, int $estimatedCostCents): void {
+/** $meta: model (the one the request is made with) and priced (false when no price is known and the reservation is 0). */
+function nibblyAiAssertWithinLimits(array $settings, string $type, float|int $estimatedCostCents, array $meta = []): void {
     $id = $GLOBALS['nibblyAiRequestId'] ?? '';
-    if ($id !== '') { nibblyAiReserve($settings, $type, $estimatedCostCents, $id); return; }
-    nibblyAiCheckLimits($settings, $type, $estimatedCostCents, nibblyAiReservedUsage(nibblyAiLoadUsage()));
+    if ($id !== '') { nibblyAiReserve($settings, $type, (float)$estimatedCostCents, $id, $meta); return; }
+    nibblyAiCheckLimits($settings, $type, (float)$estimatedCostCents, nibblyAiReservedUsage(nibblyAiLoadUsage()));
+}
+
+/** The purpose of a call (chat or text); calls that name none are chat calls. */
+function nibblyAiOptionPurpose(array $options): string {
+    return in_array($options['purpose'] ?? '', NIBBLY_AI_PURPOSES, true) ? $options['purpose'] : 'chat';
+}
+
+/** Output limit of a call: the requested size plus thinking headroom, never above the configured limit. */
+function nibblyAiOutputBudget(array $settings, array $options, array $plan): int {
+    $limit = (int)$settings['limits']['maxOutputTokens'];
+    $requested = nibblyAiClampInt($options['maxOutputTokens'] ?? $limit, 16, $limit);
+    return nibblyAiClampInt($requested + (int)$plan['headroom'], 16, $limit);
+}
+
+/**
+ * Settle a finished text request: normalize the reported usage (an estimate when the provider reported none),
+ * price it with the model that was used, and record it. The price basis is stored with the entry.
+ */
+function nibblyAiSettleText(array $settings, string $model, $rawUsage, int $estimatedInput, string $outputText): array {
+    $usage = is_array($rawUsage) ? nibblyAiNormalizeUsage($rawUsage) : null;
+    $estimated = $usage === null;
+    if ($usage === null) {
+        $usage = ['input' => 0, 'cacheRead' => 0, 'cacheWrite' => 0, 'cacheWrite1h' => 0, 'output' => 0, 'reasoning' => 0];
+    }
+    if (nibblyAiPromptTokens($usage) === 0) { $usage['input'] = $estimatedInput; $estimated = true; }
+    if ($usage['output'] === 0) { $usage['output'] = nibblyAiEstimateTokens($outputText); $estimated = true; }
+    $cost = nibblyAiCostForUsage($settings, $model, $usage);
+    $inputTotal = nibblyAiUsageInputTotal($usage);
+    nibblyAiRecordUsage('text', $inputTotal, $usage['output'], $cost['cents'], [
+        'model' => $model, 'priced' => $cost['priced'], 'basis' => $cost['basis'], 'estimated' => $estimated
+    ]);
+    return [
+        'inputTokens' => $inputTotal, 'outputTokens' => $usage['output'], 'cacheReadTokens' => $usage['cacheRead'],
+        'cacheWriteTokens' => $usage['cacheWrite'] + $usage['cacheWrite1h'], 'reasoningTokens' => $usage['reasoning'],
+        'estimatedCostCents' => $cost['cents'], 'priced' => $cost['priced'], 'usageEstimated' => $estimated, 'basis' => $cost['basis']
+    ];
+}
+
+/** Audit fields of a settled text request. An unknown price is logged as null, never as 0. */
+function nibblyAiAuditUsage(string $model, array $usage, array $plan): array {
+    return [
+        'model' => $model,
+        'inputTokens' => $usage['inputTokens'],
+        'outputTokens' => $usage['outputTokens'],
+        'cacheReadTokens' => $usage['cacheReadTokens'],
+        'cacheWriteTokens' => $usage['cacheWriteTokens'],
+        'reasoningTokens' => $usage['reasoningTokens'],
+        'effort' => $plan['effort'],
+        'usageEstimated' => $usage['usageEstimated'],
+        'estimatedCostCents' => $usage['priced'] ? $usage['estimatedCostCents'] : null,
+        'priceBasis' => $usage['basis']
+    ];
+}
+
+/** What callers and the UI get back about the usage of a request. */
+function nibblyAiPublicUsage(array $usage): array {
+    return [
+        'inputTokens' => $usage['inputTokens'], 'outputTokens' => $usage['outputTokens'], 'reasoningTokens' => $usage['reasoningTokens'],
+        'estimatedCostCents' => $usage['estimatedCostCents'], 'priced' => $usage['priced'], 'usageEstimated' => $usage['usageEstimated']
+    ];
 }
 /**
  * Limits are guides, not hard walls. A request that starts below a limit may finish, and a request that
@@ -887,7 +1001,7 @@ function nibblyAiIsAgentContinuation(): bool {
     return preg_match('/^agent_(read_)?run_[a-z0-9]+_(\d+)$/', $id, $match) === 1 && (!empty($match[1]) || (int)$match[2] > 1);
 }
 
-function nibblyAiCheckLimits(array $settings, string $type, int $estimatedCostCents, array $usage): void {
+function nibblyAiCheckLimits(array $settings, string $type, float|int $estimatedCostCents, array $usage): void {
     $today = gmdate('Y-m-d');
     $month = gmdate('Y-m');
     $dayBucket = $usage['days'][$today] ?? nibblyAiEmptyUsageBucket();
@@ -907,8 +1021,8 @@ function nibblyAiCheckLimits(array $settings, string $type, int $estimatedCostCe
     }
     $budget = (int)$limits['monthlyBudgetCents'];
     if ($budget > 0) {
-        $spent = (int)$monthBucket['estimatedCostCents'];
-        $ceiling = (int)floor($budget * (1 + NIBBLY_AI_LIMIT_TOLERANCE));
+        $spent = (float)$monthBucket['estimatedCostCents'];
+        $ceiling = (float)floor($budget * (1 + NIBBLY_AI_LIMIT_TOLERANCE));
         // Spent includes what running requests have reserved. The worst case of this request only has to fit under the ceiling.
         if (($continuation ? $spent >= $ceiling : $spent >= $budget) || ($spent + $estimatedCostCents) > $ceiling) {
             throw new RuntimeException('Monthly AI budget limit reached.');
@@ -919,7 +1033,7 @@ function nibblyAiCheckLimits(array $settings, string $type, int $estimatedCostCe
 /**
  * Limits that are nearly or fully used, for the warning bars (dashboard, settings, assistant).
  *
- * @return array<int,array{kind:string,level:string,used:int,limit:int,percent:int}>
+ * @return array<int,array{kind:string,level:string,used:int|float,limit:int,percent:int}>
  */
 function nibblyAiLimitWarnings(array $settings, array $usage): array {
     $usage = nibblyAiReservedUsage($usage);
@@ -928,13 +1042,14 @@ function nibblyAiLimitWarnings(array $settings, array $usage): array {
     $limits = (array)($settings['limits'] ?? []);
     $warnings = [];
     foreach ([
-        ['month', (int)$month['estimatedCostCents'], (int)($limits['monthlyBudgetCents'] ?? 0)],
+        ['month', (float)$month['estimatedCostCents'], (int)($limits['monthlyBudgetCents'] ?? 0)],
         ['requests', (int)$day['requests'], (int)($limits['dailyRequests'] ?? 0)],
         ['text', (int)$day['textRequests'], (int)($limits['dailyTextRequests'] ?? 0)],
         ['images', (int)$day['imageRequests'], (int)($limits['dailyImageRequests'] ?? 0)],
     ] as [$kind, $used, $limit]) {
         if ($limit <= 0) continue;
         $percent = (int)floor($used * 100 / $limit);
+        if (is_float($used)) $used = $used == floor($used) ? (int)$used : nibblyAiRoundCents($used);
         if ($used >= $limit) $level = 'reached';
         elseif ($percent >= 80) $level = 'warning';
         else continue;
@@ -943,28 +1058,35 @@ function nibblyAiLimitWarnings(array $settings, array $usage): array {
     return $warnings;
 }
 
-function nibblyAiRecordUsage(string $type, int $inputTokens, int $outputTokens, int $costCents): void {
-    $saved = nibblyJsonUpdate(NIBBLY_AI_USAGE_PATH, function (array &$usage) use ($type, $inputTokens, $outputTokens, $costCents): void {
+/**
+ * Book a finished request. $meta: model, priced, basis (price basis), estimated (usage was not reported).
+ * An unpriced text request counts as a request but adds no cost and is tallied in unpricedRequests.
+ */
+function nibblyAiRecordUsage(string $type, int $inputTokens, int $outputTokens, float|int $costCents, array $meta = []): void {
+    $costCents = (float)$costCents;
+    $saved = nibblyJsonUpdate(NIBBLY_AI_USAGE_PATH, function (array &$usage) use ($type, $inputTokens, $outputTokens, $costCents, $meta): void {
         $id = $GLOBALS['nibblyAiRequestId'] ?? '';
         if ($id !== '' && ($usage['reservations'][$id]['status'] ?? '') === 'settled') return;
         if ($id !== '' && isset($usage['reservations'][$id])) {
             $usage['reservations'][$id]['status'] = 'settled';
             $usage['reservations'][$id]['actualEstimatedCents'] = $costCents;
             $usage['reservations'][$id]['updatedAt'] = gmdate('c');
+            if (!empty($meta['model'])) $usage['reservations'][$id]['model'] = (string)$meta['model'];
+            if (isset($meta['basis'])) $usage['reservations'][$id]['priceBasis'] = $meta['basis'];
+            if (isset($meta['priced'])) $usage['reservations'][$id]['priced'] = (bool)$meta['priced'];
         }
         $requestDate = $usage['reservations'][$id]['createdAt'] ?? gmdate('c');
         $today = substr($requestDate, 0, 10);
         $month = substr($requestDate, 0, 7);
         foreach ([['days', $today], ['months', $month]] as $ref) {
             [$group, $key] = $ref;
-            if (!isset($usage[$group][$key])) {
-                $usage[$group][$key] = nibblyAiEmptyUsageBucket();
-            }
+            $usage[$group][$key] = array_replace(nibblyAiEmptyUsageBucket(), $usage[$group][$key] ?? []);
             $usage[$group][$key]['requests']++;
             $usage[$group][$key][$type === 'image' ? 'imageRequests' : 'textRequests']++;
             $usage[$group][$key]['inputTokens'] += $inputTokens;
             $usage[$group][$key]['outputTokens'] += $outputTokens;
-            $usage[$group][$key]['estimatedCostCents'] += $costCents;
+            $usage[$group][$key]['estimatedCostCents'] = nibblyAiAddCents($usage[$group][$key]['estimatedCostCents'], $costCents);
+            if ($type !== 'image' && isset($meta['priced']) && !$meta['priced']) $usage[$group][$key]['unpricedRequests']++;
         }
         $usage['updatedAt'] = gmdate('c');
         nibblyAiPruneUsage($usage);
@@ -1534,6 +1656,9 @@ function nibblyAiAnthropicChatRequest(array $settings, array $body): array {
     if (isset($body['temperature'])) {
         $anthropicBody['temperature'] = min(1.0, max(0.0, (float)$body['temperature']));
     }
+    if (is_array($body['output_config'] ?? null)) {
+        $anthropicBody['output_config'] = $body['output_config'];
+    }
 
     $response = nibblyAiExecuteJsonRequest($settings, $url, $headers, $anthropicBody);
     $text = '';
@@ -1550,7 +1675,8 @@ function nibblyAiAnthropicChatRequest(array $settings, array $body): array {
             'message' => ['role' => 'assistant', 'content' => $text],
             'finish_reason' => $stopReason === 'max_tokens' ? 'length' : 'stop'
         ]],
-        'usage' => [
+        // The reported usage as is (cache fields included), plus the OpenAI names for readers that expect them.
+        'usage' => (is_array($response['usage'] ?? null) ? $response['usage'] : []) + [
             'prompt_tokens' => (int)($response['usage']['input_tokens'] ?? 0),
             'completion_tokens' => (int)($response['usage']['output_tokens'] ?? 0)
         ]
@@ -2368,7 +2494,8 @@ function nibblyAiEmptyUsageBucket(): array {
         'imageRequests' => 0,
         'inputTokens' => 0,
         'outputTokens' => 0,
-        'estimatedCostCents' => 0
+        'estimatedCostCents' => 0,
+        'unpricedRequests' => 0
     ];
 }
 
@@ -2377,11 +2504,9 @@ function nibblyAiEstimateTokens(string $text): int {
     return max(1, (int)ceil($chars / 4));
 }
 
-function nibblyAiEstimateTextCost(array $settings, int $inputTokens, int $outputTokens): int {
-    $pricing = $settings['pricing'];
-    $cost = ($inputTokens / 1000000) * (int)$pricing['inputCentsPerMillion'];
-    $cost += ($outputTokens / 1000000) * (int)$pricing['outputCentsPerMillion'];
-    return (int)ceil($cost);
+/** Estimated cost in cents of a text request with the chat model (no cache reads); 0 when no price is known. Kept for older callers. */
+function nibblyAiEstimateTextCost(array $settings, int $inputTokens, int $outputTokens, ?string $model = null): float {
+    return nibblyAiCostForUsage($settings, $model ?? (string)$settings['chatModel'], ['input' => $inputTokens, 'output' => $outputTokens])['cents'];
 }
 
 /**
@@ -2744,12 +2869,30 @@ function nibblyAiIsPrivateHost(string $host): bool {
     return false;
 }
 
-function nibblyAiCleanModel(string $model): string {
+function nibblyAiCleanModel(string $model, string $fallback = ''): string {
     $model = trim($model);
     if ($model === '') {
-        return 'gpt-4.1-mini';
+        return $fallback;
     }
     return substr(preg_replace('/[^A-Za-z0-9._:\/-]/', '', $model), 0, 120);
+}
+
+/** True for a value that only consists of mask characters, as shown in place of a stored secret. */
+function nibblyAiIsMaskedSecret(string $value): bool {
+    return $value !== '' && preg_match('/^[\x{2022}\x{25CF}\x{00B7}*\s]+$/u', $value) === 1;
+}
+
+/**
+ * A reasoning mode as it may be stored. "legacy" survives only for a purpose that already was legacy;
+ * a level the model does not support, or any level for a model without a known setting, becomes "recommended".
+ */
+function nibblyAiCleanReasoningMode($mode, bool $wasLegacy, string $model, string $provider, string $baseUrl): string {
+    $mode = is_string($mode) ? $mode : 'recommended';
+    if ($mode === 'legacy') return $wasLegacy ? 'legacy' : 'recommended';
+    if (!in_array($mode, array_merge(['recommended'], NIBBLY_AI_EFFORT_LEVELS), true)) return 'recommended';
+    if ($mode === 'recommended') return 'recommended';
+    $info = nibblyAiModelInfo(['provider' => $provider, 'baseUrl' => $baseUrl], $model);
+    return $info && in_array($mode, $info['effort']['levels'] ?? [], true) ? $mode : 'recommended';
 }
 
 function nibblyAiCleanModelAllowEmpty(string $model): string {

@@ -5,22 +5,66 @@ first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-
 
 ## Upgrading from 2.3.0 to the next release
 
-The next release adds the safety check of the AI agent and the Nibbly map. There are
-no data changes and the documented admin API is unchanged.
+The next release changes how the AI settings store models and prices, adds the safety check
+of the AI agent and the Nibbly map. No manual step is needed for the settings: existing models,
+credentials, limits and request behavior stay as they are. The documented admin API is unchanged.
 
-1. Deploy the complete core as described in
-   [Deploy the complete core](#deploy-the-complete-core). New core files are
-   `includes/ai/agent/safety.php`, `includes/ai/agent/safety-patterns.php` and
-   `includes/ai/nibbly-map.php`; `admin/lang/*.json` gets new texts.
-2. `ai-agent-apply` takes an optional `confirmRisk=1`. A package with safety notes is
+1. Prepare as for any update (backup, preserve site-owned files) and deploy the
+   complete core. New core files: `includes/ai/model-capabilities.json`,
+   `includes/ai/model-capabilities.php`, `includes/ai/pricing-catalog.json` and
+   `includes/ai/pricing.php`.
+2. Models and reasoning effort. A saved `content/ai-settings.json` keeps its
+   `chatModel` and `textModel`; they become the entry of the active provider in the new
+   `providerModels`. The new presets only apply to installations without saved models
+   and to a provider that has none saved yet. Without a stored `reasoning` section the
+   installation runs in "legacy" mode: no effort parameter is sent, exactly as before,
+   and the settings show the extra choice "Previous behavior (provider default)". Choose
+   "Recommended" (or a level) per purpose to opt in. Note that Anthropic's own default
+   effort on Sonnet 5.5 is `high`, so "Recommended" (medium) is cheaper than omitting
+   the parameter.
+3. Prices. The former global prices (`pricing.inputCentsPerMillion`,
+   `outputCentsPerMillion`, euro cents per 1M tokens) become own prices for the chat
+   and text model of the active provider, in EUR, marked "carried-over estimate", so
+   the estimate for these models does not change. Delete such a price in the settings to
+   use the catalog price. Other models use the catalog price or are shown as "Price not
+   on file". Saving the settings once writes the new `pricing.models` section and drops
+   the old pair. Older API callers that still send the pair keep working.
+4. Costs are now stored with four decimals of a cent (`estimatedCostCents` in
+   `content/ai-usage.json` and the audit log may be fractional; reservations too). Old
+   whole-cent values stay valid. New ledger entries also carry `model`, `priced` and
+   `priceBasis`; entries and buckets from before have none. Months of usage now count
+   requests without a known price in `unpricedRequests`.
+5. Code that calls the AI gateway can pass `purpose` (`chat` or `text`; text functions
+   default to `text`, everything else to `chat`) to pick the reasoning level.
+   `nibblyAiEstimateTextCost()` still exists, now with the price of the model.
+6. `ai-settings.json` gains `reasoning`, `providerModels` and `pricing.models`. Keep
+   them in version control and deployments with the file; keys stay in
+   `content/ai-secrets.json`.
+7. Safety check and Nibbly map. New core files: `includes/ai/agent/safety.php`,
+   `includes/ai/agent/safety-patterns.php` and `includes/ai/nibbly-map.php`;
+   `admin/lang/*.json` gets new texts.
+8. `ai-agent-apply` takes an optional `confirmRisk=1`. A package with safety notes is
    refused (`needsRiskConfirm` in the response data) without it. Custom code that calls
    the endpoint for packages must show the notes and send the flag only after the
    person confirmed them.
-3. The agent now refuses requests that would empty a page or the site and stops
+9. The agent now refuses requests that would empty a page or the site and stops
    operations that remove, hide or empty a large share of a page. This is intended;
    work in smaller steps. The thresholds are the constant
    `NIBBLY_AGENT_SAFETY_LIMITS` in `includes/ai/agent/safety.php` and may be lowered,
-   not raised, by site code.
+   not raised, by site code. Suggestions and drafts of the classic Copilot go through the same
+   text check: harmful text is dropped, odd text carries a safety note.
+
+### Supported models
+
+| Provider (official host) | Models with a reasoning setting | Levels offered |
+|---|---|---|
+| OpenAI (`api.openai.com`) | `gpt-6.1-sol`, `gpt-6-luna` | Low, Medium, High |
+| Anthropic (`api.anthropic.com`) | `claude-sonnet-5-5`, `claude-haiku-5-5` | Low, Medium, High |
+
+Prices in the catalog were checked on 2026-10-16 against the providers' documentation
+(see `includes/ai/pricing-catalog.json`). The exchange rate is the ECB reference rate
+of 2026-10-15 and ages; set an own rate in the settings when it matters. Extend the
+JSON files to add models. `none`, `minimal`, `xhigh` and `max` are not offered.
 
 ## Upgrading from 2.2.0 to 2.3.0
 

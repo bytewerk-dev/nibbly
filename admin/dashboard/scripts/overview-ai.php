@@ -3,8 +3,10 @@
     // SETTINGS MANAGEMENT
     // ============================================================
 
+    // Costs are kept with four decimals of a cent; they are rounded here, when shown. Amounts under one cent keep their decimals.
     function formatAiCents(cents) {
-        return ((parseInt(cents || 0, 10) / 100).toFixed(2)) + ' EUR';
+        var euro = (parseFloat(cents) || 0) / 100;
+        return (euro > 0 && euro < 0.01 ? euro.toFixed(4) : euro.toFixed(2)) + ' EUR';
     }
 
     function updateAiUsage(usage) {
@@ -161,6 +163,12 @@
             })
         ));
         const reservations = usage.reservations || {};
+        if (month.unpricedRequests > 0) {
+            var unpriced = document.createElement('p');
+            unpriced.className = 'form-hint ai-unpriced-note';
+            unpriced.textContent = t('ai.usage_unpriced', { count: month.unpricedRequests });
+            body.appendChild(unpriced);
+        }
         grid.appendChild(aiUsageStatTile(formatAiCents(reservations.reservedCents || 0), t('ai.reserved'), t('ai.pending_requests', { count: reservations.pendingRequests || 0 })));
         body.appendChild(grid);
         const budgetHint = document.createElement('p');
@@ -776,46 +784,306 @@
         if (typeof updateAiImageRatioIcon === 'function') updateAiImageRatioIcon();
     }
 
-    function maybeAutofillOpenRouterPricing() {
-        var provider = document.getElementById('aiProvider')?.value;
+    var AI_CAPS = window.NB_AI_CAPS || { models: [], levels: ['low', 'medium', 'high'] };
+    var AI_MASK = '••••••••';
+
+    function aiById(id) { return document.getElementById(id); }
+
+    function aiHostOf(baseUrl) {
+        try { return new URL(baseUrl || '').hostname.toLowerCase(); } catch (e) { return ''; }
+    }
+
+    function aiCurrentProvider() {
+        return aiById('aiProvider')?.value || (currentAiSettings && currentAiSettings.provider) || 'openai-compatible';
+    }
+
+    function aiCurrentBaseUrl() {
+        return aiById('aiBaseUrl')?.value || aiProviderCredentials(currentAiSettings || {}, aiCurrentProvider()).baseUrl || '';
+    }
+
+    // What the registry (includes/ai/model-capabilities.json) knows about a model on its provider; null when unknown.
+    function aiModelCaps(provider, baseUrl, model) {
+        var host = aiHostOf(baseUrl);
+        model = String(model || '').trim().toLowerCase();
+        return AI_CAPS.models.find(function(entry) {
+            return entry.provider === provider && entry.host.toLowerCase() === host && entry.model.toLowerCase() === model;
+        }) || null;
+    }
+
+    // The preset models of a provider; a custom OpenAI-compatible endpoint has its own model ids, so it gets none.
+    function aiProviderModelDefaults(provider, baseUrl) {
+        var preset = AI_TEXT_MODEL_PRESETS[provider] || AI_TEXT_MODEL_PRESETS['openai-compatible'];
+        if (provider === 'openai-compatible' && baseUrl && aiHostOf(baseUrl) !== 'api.openai.com') return { chat: '', text: '' };
+        return { chat: preset.chat, text: preset.text };
+    }
+
+    // ---- Reasoning effort (per purpose) -------------------------------------------------------------------------
+    var aiReasoning = { chat: 'recommended', text: 'recommended' };
+    var aiLegacy = { provider: '', chat: '', text: '' }; // saved before the setting existed: nothing is sent while the model stays the same
+    var aiProviderDrafts = {};                           // unsaved model choices per provider while the page stays open
+    var aiLastProvider = '';
+
+    function aiPurposeModelInput(purpose) { return aiById(purpose === 'chat' ? 'aiChatModel' : 'aiTextModel'); }
+
+    function aiEffortLevelLabel(level) { return t('ai.reasoning_' + level); }
+
+    function aiRenderEffort(purpose) {
+        var P = purpose === 'chat' ? 'Chat' : 'Text';
+        var select = aiById('ai' + P + 'Effort');
+        var hint = aiById('ai' + P + 'EffortHint');
+        var model = String(aiPurposeModelInput(purpose)?.value || '').trim();
+        if (!select || !hint) return;
+        var label = select.closest('.form-group').querySelector('label');
+        var caps = aiModelCaps(aiCurrentProvider(), aiCurrentBaseUrl(), model);
+        var value = aiReasoning[purpose] || 'recommended';
+        var legacyHolds = value === 'legacy' && aiLegacy.provider === aiCurrentProvider() && aiLegacy[purpose] === model.toLowerCase();
+        var note = '';
+        if (!caps) {
+            // Unknown model or endpoint: no parameter is sent, so there is nothing to choose.
+            if (!legacyHolds) aiReasoning[purpose] = 'recommended';
+            select.innerHTML = '';
+            (select.closest('.nb-select') || select).hidden = true;
+            if (label) label.hidden = true;
+            hint.textContent = model ? t('ai.reasoning_unknown') : '';
+            return;
+        }
+        if (value === 'legacy' && !legacyHolds) value = 'recommended';
+        if (value !== 'legacy' && value !== 'recommended' && caps.levels.indexOf(value) === -1) {
+            value = 'recommended';
+            note = t('ai.reasoning_reset');
+        }
+        (select.closest('.nb-select') || select).hidden = false;
+        if (label) label.hidden = false;
+        select.innerHTML = '';
+        var options = [['recommended', t('ai.reasoning_recommended_with', { level: aiEffortLevelLabel((caps.recommended && caps.recommended[purpose]) || 'medium') })]];
+        caps.levels.forEach(function(level) { options.push([level, aiEffortLevelLabel(level)]); });
+        if (legacyHolds) options.push(['legacy', t('ai.reasoning_legacy')]);
+        options.forEach(function(option) {
+            var el = document.createElement('option');
+            el.value = option[0];
+            el.textContent = option[1];
+            select.appendChild(el);
+        });
+        select.value = value;
+        aiReasoning[purpose] = value;
+        hint.textContent = note;
+    }
+
+    ['chat', 'text'].forEach(function(purpose) {
+        var P = purpose === 'chat' ? 'Chat' : 'Text';
+        aiById('ai' + P + 'Effort')?.addEventListener('change', function() { aiReasoning[purpose] = this.value; });
+        ['input', 'change'].forEach(function(type) {
+            aiPurposeModelInput(purpose)?.addEventListener(type, function() {
+                aiRenderEffort(purpose);
+                aiRenderPricing();
+            });
+        });
+    });
+
+    function aiStashProviderModels(provider) {
+        if (!provider) return;
+        aiProviderDrafts[provider] = {
+            chatModel: String(aiById('aiChatModel')?.value || '').trim(),
+            textModel: String(aiById('aiTextModel')?.value || '').trim(),
+            reasoning: Object.assign({}, aiReasoning)
+        };
+    }
+
+    // Show the models and reasoning levels a provider had: unsaved choices of this page first, then what is saved, then its presets.
+    function aiApplyProviderModels(provider, baseUrl) {
+        var settings = currentAiSettings || {};
+        var saved = provider === settings.provider
+            ? { chatModel: settings.chatModel, textModel: settings.textModel, reasoning: settings.reasoning }
+            : (settings.providerModels && settings.providerModels[provider]) || null;
+        var source = aiProviderDrafts[provider] || saved;
+        var defaults = aiProviderModelDefaults(provider, baseUrl);
+        var chatInput = aiById('aiChatModel');
+        var textInput = aiById('aiTextModel');
+        if (chatInput) chatInput.value = source ? (source.chatModel || '') : defaults.chat;
+        if (textInput) textInput.value = source ? (source.textModel || source.chatModel || '') : defaults.text;
+        var reasoning = (source && source.reasoning) || {};
+        aiReasoning = { chat: reasoning.chat || 'recommended', text: reasoning.text || 'recommended' };
+        if (provider === settings.provider && !aiProviderDrafts[provider]) {
+            aiLegacy = { provider: provider, chat: aiReasoning.chat === 'legacy' ? String(chatInput?.value || '').trim().toLowerCase() : '', text: aiReasoning.text === 'legacy' ? String(textInput?.value || '').trim().toLowerCase() : '' };
+        }
+        [chatInput, textInput].forEach(function(input) { if (input) updateClearButton(input); });
+    }
+
+    // ---- Prices per model ---------------------------------------------------------------------------------------
+    var aiPriceChanges = {}; // "provider|model" -> {input, output, currency} (set) or null (remove); only what was touched in this form
+
+    function aiPriceKey(provider, model) { return provider + '|' + String(model || '').trim().toLowerCase(); }
+
+    function aiFormatNumber(value) {
+        var n = parseFloat(value);
+        if (!Number.isFinite(n)) return '';
+        return String(parseFloat(n.toFixed(6)));
+    }
+
+    function aiSavedOverride(key) {
+        var models = currentAiSettings && currentAiSettings.pricing && currentAiSettings.pricing.models;
+        return (models && !Array.isArray(models) && models[key]) || null;
+    }
+
+    function aiStoredOverride(key) {
+        return Object.prototype.hasOwnProperty.call(aiPriceChanges, key) ? aiPriceChanges[key] : aiSavedOverride(key);
+    }
+
+    function aiCatalogPrice(provider, baseUrl, model) {
+        var host = aiHostOf(baseUrl);
+        model = String(model || '').trim().toLowerCase();
+        var info = (currentAiSettings && currentAiSettings.pricingInfo) || { models: [] };
+        return (info.models || []).find(function(entry) {
+            return entry.provider === provider && entry.host.toLowerCase() === host && entry.model.toLowerCase() === model;
+        }) || null;
+    }
+
+    function aiPriceStatus(purpose) {
+        var P = purpose;
+        var provider = aiCurrentProvider();
+        var model = String(aiPurposeModelInput(purpose)?.value || '').trim();
+        var status = aiById('aiPriceRow_' + P)?.querySelector('[data-price-status]');
+        if (!status) return true;
+        var override = aiStoredOverride(aiPriceKey(provider, model));
+        var catalog = aiCatalogPrice(provider, aiCurrentBaseUrl(), model);
+        var known = true;
+        status.classList.remove('ai-price-status--unknown');
+        if (override && override.input !== '' && override.output !== '') {
+            status.textContent = t(override.migrated ? 'ai.price_status_migrated' : 'ai.price_status_override', {
+                input: aiFormatNumber(override.input), output: aiFormatNumber(override.output), currency: override.currency || 'USD'
+            });
+        } else if (catalog) {
+            var text = t('ai.price_status_catalog', { input: aiFormatNumber(catalog.input), output: aiFormatNumber(catalog.output), date: catalog.updatedAt || '' });
+            (catalog.tiers || []).forEach(function(tier) {
+                text += ' ' + (tier.input !== undefined
+                    ? t('ai.price_tier_absolute', { tokens: Number(tier.aboveInputTokens).toLocaleString(), input: aiFormatNumber(tier.input), output: aiFormatNumber(tier.output) })
+                    : t('ai.price_tier_multiplier', { tokens: Number(tier.aboveInputTokens).toLocaleString(), input: aiFormatNumber(tier.inputMultiplier || 1), output: aiFormatNumber(tier.outputMultiplier || 1) }));
+            });
+            status.textContent = text;
+        } else {
+            known = false;
+            status.textContent = t('ai.price_unknown');
+            status.classList.add('ai-price-status--unknown');
+        }
+        return known;
+    }
+
+    function aiRenderPricing() {
+        if (!aiById('aiPricingSection')) return;
+        var provider = aiCurrentProvider();
+        var baseUrl = aiCurrentBaseUrl();
+        var chatModel = String(aiById('aiChatModel')?.value || '').trim();
+        var textModel = String(aiById('aiTextModel')?.value || '').trim();
+        var shared = chatModel.toLowerCase() === textModel.toLowerCase();
+        var anyUnknown = false;
+        ['chat', 'text'].forEach(function(purpose) {
+            var row = aiById('aiPriceRow_' + purpose);
+            var model = purpose === 'chat' ? chatModel : textModel;
+            if (!row) return;
+            if (!model || (purpose === 'text' && shared)) { row.hidden = true; return; }
+            row.hidden = false;
+            var titleKey = purpose === 'chat' ? (shared ? 'ai.model_group_both' : 'ai.model_group_chat') : 'ai.model_group_text';
+            row.querySelector('[data-price-title]').textContent = t(titleKey) + ' · ' + model;
+            var key = aiPriceKey(provider, model);
+            var override = aiStoredOverride(key);
+            var catalog = aiCatalogPrice(provider, baseUrl, model);
+            var inputEl = aiById('aiPriceIn_' + purpose);
+            var outputEl = aiById('aiPriceOut_' + purpose);
+            var currencyEl = aiById('aiPriceCur_' + purpose);
+            var removeEl = aiById('aiPriceRemove_' + purpose);
+            inputEl.value = override ? aiFormatNumber(override.input) : '';
+            outputEl.value = override ? aiFormatNumber(override.output) : '';
+            inputEl.placeholder = catalog ? aiFormatNumber(catalog.input) : '';
+            outputEl.placeholder = catalog ? aiFormatNumber(catalog.output) : '';
+            currencyEl.value = override ? (override.currency || 'USD') : 'USD';
+            removeEl.hidden = !override;
+            if (!aiPriceStatus(purpose)) anyUnknown = true;
+        });
+        var notice = aiById('aiUnpricedNotice');
+        if (notice) notice.hidden = !anyUnknown;
+        var fx = ((currentAiSettings && currentAiSettings.pricingInfo) || {}).fx;
+        var fxInput = aiById('aiFxRate');
+        if (fx && fxInput) {
+            fxInput.placeholder = aiFormatNumber((currentAiSettings.pricingInfo.catalogFx || fx).usdPerEur);
+            aiById('aiFxHint').textContent = t('ai.fx_hint', { rate: aiFormatNumber(fx.usdPerEur), date: fx.asOf || '', source: fx.source === 'settings' ? t('ai.fx_own') : fx.source });
+        }
+    }
+
+    ['chat', 'text'].forEach(function(purpose) {
+        ['aiPriceIn_', 'aiPriceOut_', 'aiPriceCur_'].forEach(function(prefix) {
+            aiById(prefix + purpose)?.addEventListener('input', function() {
+                var key = aiPriceKey(aiCurrentProvider(), aiPurposeModelInput(purpose)?.value);
+                var input = aiById('aiPriceIn_' + purpose).value.trim();
+                var output = aiById('aiPriceOut_' + purpose).value.trim();
+                if (input === '' && output === '') {
+                    if (aiSavedOverride(key)) aiPriceChanges[key] = null; else delete aiPriceChanges[key];
+                } else {
+                    aiPriceChanges[key] = { input: input, output: output, currency: aiById('aiPriceCur_' + purpose).value };
+                }
+                aiById('aiPriceRemove_' + purpose).hidden = !(input !== '' || output !== '');
+                aiPriceStatus(purpose);
+            });
+        });
+        aiById('aiPriceRemove_' + purpose)?.addEventListener('click', function() {
+            aiPriceChanges[aiPriceKey(aiCurrentProvider(), aiPurposeModelInput(purpose)?.value)] = null;
+            aiRenderPricing();
+        });
+    });
+
+    // Only complete entries (input and output) are sent; incomplete ones leave the stored price as it is.
+    function aiCollectPriceChanges() {
+        var out = {};
+        Object.keys(aiPriceChanges).forEach(function(key) {
+            var entry = aiPriceChanges[key];
+            if (entry === null) { out[key] = null; return; }
+            if (entry.input !== '' && entry.output !== '') out[key] = { input: parseFloat(entry.input), output: parseFloat(entry.output), currency: entry.currency };
+        });
+        return out;
+    }
+
+    function maybeAutofillOpenRouterPricing(event) {
+        var provider = aiCurrentProvider();
         if (provider !== 'openrouter' || !aiOpenRouterModelsCache) return;
-        var model = String(document.getElementById('aiChatModel')?.value || '').trim();
+        var model = String(event && event.target ? event.target.value : '').trim();
         var match = (aiOpenRouterModelsCache.textModels || []).find(function(entry) { return entry.id === model; });
         if (!match || (!match.promptCentsPerMillion && !match.completionCentsPerMillion)) return;
-        var inputPrice = document.getElementById('aiInputPrice');
-        var outputPrice = document.getElementById('aiOutputPrice');
-        if (inputPrice && match.promptCentsPerMillion > 0) inputPrice.value = match.promptCentsPerMillion;
-        if (outputPrice && match.completionCentsPerMillion > 0) outputPrice.value = match.completionCentsPerMillion;
+        var key = aiPriceKey(provider, model);
+        if (aiStoredOverride(key)) return;
+        // OpenRouter lists USD per token; the cents per million it gives are USD per million times 100.
+        aiPriceChanges[key] = { input: String(match.promptCentsPerMillion / 100), output: String(match.completionCentsPerMillion / 100), currency: 'USD' };
+        aiRenderPricing();
         if (typeof showToast === 'function') showToast(t('ai.pricing_autofilled'), 'info');
     }
 
-    function aiModelIsPresetDefault(value) {
-        value = String(value || '').trim();
-        if (!value) return true;
-        return Object.keys(AI_TEXT_MODEL_PRESETS).some(function(provider) {
-            var preset = AI_TEXT_MODEL_PRESETS[provider];
-            return preset.chat === value || preset.text === value;
-        });
+    // ---- Stored keys: never shown, only whether one exists --------------------------------------------------------
+    function aiSetSecretField(inputId, removeId, hintId, hasKey) {
+        var input = aiById(inputId);
+        if (input) {
+            input.value = '';
+            input.placeholder = hasKey ? AI_MASK : '';
+        }
+        var hint = aiById(hintId);
+        if (hint) hint.textContent = hasKey ? t('ai.api_key_saved') : t('ai.api_key_missing');
+        var remove = aiById(removeId);
+        if (remove) remove.hidden = !hasKey;
     }
 
-    // Keep the model inputs aligned with the selected provider: adjust
-    // placeholders and suggestions always, and swap the values only when they
-    // still hold another provider's default (never a custom model).
+    // A mask (or anything made only of bullets) is never a key.
+    function aiTypedSecret(id) {
+        var value = String(aiById(id)?.value || '').trim();
+        return /^[•●·*\s]*$/.test(value) ? '' : value;
+    }
+
     function updateAiModelPlaceholders(provider) {
-        var preset = AI_TEXT_MODEL_PRESETS[provider] || AI_TEXT_MODEL_PRESETS['openai-compatible'];
-        var chatInput = document.getElementById('aiChatModel');
-        var textInput = document.getElementById('aiTextModel');
-        if (chatInput) {
-            chatInput.placeholder = preset.chat;
-            if (aiModelIsPresetDefault(chatInput.value)) chatInput.value = preset.chat;
-            updateClearButton(chatInput);
-        }
-        if (textInput) {
-            textInput.placeholder = preset.text;
-            if (aiModelIsPresetDefault(textInput.value)) textInput.value = preset.text;
-            updateClearButton(textInput);
-        }
+        var preset = aiProviderModelDefaults(provider, aiById('aiBaseUrl')?.value || '');
+        var chatInput = aiById('aiChatModel');
+        var textInput = aiById('aiTextModel');
+        if (chatInput) { chatInput.placeholder = preset.chat; updateClearButton(chatInput); }
+        if (textInput) { textInput.placeholder = preset.text; updateClearButton(textInput); }
         aiModelComboboxes.forEach(function(combobox) { combobox.refresh(); });
+        aiRenderEffort('chat');
+        aiRenderEffort('text');
+        aiRenderPricing();
         if (provider === 'openrouter') {
             loadOpenRouterModels();
         } else {
@@ -972,7 +1240,7 @@
         if (combobox) aiModelComboboxes.push(combobox);
     });
 
-    document.getElementById('aiChatModel')?.addEventListener('change', maybeAutofillOpenRouterPricing);
+    ['aiChatModel', 'aiTextModel'].forEach(function(id) { document.getElementById(id)?.addEventListener('change', maybeAutofillOpenRouterPricing); });
 
     var AI_IMAGE_MODEL_OPTIONS = Object.fromEntries(Object.entries(window.NB_AI_CATALOG).map(([key, provider]) => [key, provider.images.map(image => ({ value: image.value, label: image.label.startsWith('ai.') ? t(image.label) : image.label }))]));
 
@@ -1155,8 +1423,6 @@
             aiProvider: provider,
             aiBaseUrl: Object.prototype.hasOwnProperty.call(providerCredentials, 'baseUrl') ? (providerCredentials.baseUrl || '') : (settings.baseUrl || ''),
             aiOrganization: Object.prototype.hasOwnProperty.call(providerCredentials, 'organization') ? (providerCredentials.organization || '') : (settings.organization || ''),
-            aiChatModel: settings.chatModel || 'gpt-4.1-mini',
-            aiTextModel: settings.textModel || settings.chatModel || 'gpt-4.1-mini',
             aiImageModel: Object.prototype.hasOwnProperty.call(settings, 'imageModel') ? (settings.imageModel || '') : 'gpt-image-2',
             aiMonthlyBudget: settings.limits?.monthlyBudgetCents ?? 1000,
             aiDailyRequests: settings.limits?.dailyRequests ?? 300,
@@ -1165,9 +1431,8 @@
             aiMaxInputTokens: settings.limits?.maxInputTokens ?? 64000,
             aiMaxOutputTokens: settings.limits?.maxOutputTokens ?? 16000,
             aiRequestTimeout: settings.limits?.requestTimeoutSeconds ?? 300,
-            aiInputPrice: settings.pricing?.inputCentsPerMillion ?? 15,
-            aiOutputPrice: settings.pricing?.outputCentsPerMillion ?? 60,
-            aiImagePrice: settings.pricing?.imageCentsPerRequest ?? 5
+            aiImagePrice: settings.pricing?.imageCentsPerRequest ?? 5,
+            aiFxRate: settings.pricing?.usdPerEur > 0 ? settings.pricing.usdPerEur : ''
         };
         Object.keys(values).forEach(function(id) {
             var el = document.getElementById(id);
@@ -1175,25 +1440,38 @@
         });
         updateAiImageModelControl(settings);
         populateAgentSettings(settings);
-        var keyInput = document.getElementById('aiApiKey');
-        if (keyInput) keyInput.value = '';
-        var clearKey = document.getElementById('aiClearApiKey');
-        if (clearKey) clearKey.checked = false;
+        // Models and reasoning levels come from the saved settings of the active provider; presets fill what is empty.
+        aiProviderDrafts = {};
+        aiPriceChanges = {};
+        aiLastProvider = provider;
+        var defaults = aiProviderModelDefaults(provider, values.aiBaseUrl);
+        var reasoning = settings.reasoning || {};
+        aiReasoning = { chat: reasoning.chat || 'recommended', text: reasoning.text || 'recommended' };
+        var chatModel = Object.prototype.hasOwnProperty.call(settings, 'chatModel') ? (settings.chatModel || '') : defaults.chat;
+        var textModel = Object.prototype.hasOwnProperty.call(settings, 'textModel') ? (settings.textModel || chatModel) : defaults.text;
+        aiById('aiChatModel').value = chatModel;
+        aiById('aiTextModel').value = textModel;
+        aiLegacy = { provider: provider, chat: aiReasoning.chat === 'legacy' ? chatModel.toLowerCase() : '', text: aiReasoning.text === 'legacy' ? textModel.toLowerCase() : '' };
+        aiUpdateOrganizationVisibility(provider);
         updateAiApiKeyHint(provider);
         updateAiModelPlaceholders(provider);
         updateAiAvailability(settings);
     }
 
     function updateAiApiKeyHint(provider) {
-        var keyHint = document.getElementById('aiApiKeyHint');
-        if (!keyHint) return;
         var credentials = aiProviderCredentials(currentAiSettings || {}, provider || document.getElementById('aiProvider')?.value || 'openai-compatible');
-        keyHint.textContent = credentials.hasApiKey ? t('ai.api_key_saved') : t('ai.api_key_missing');
+        aiSetSecretField('aiApiKey', 'aiRemoveApiKey', 'aiApiKeyHint', !!credentials.hasApiKey);
+    }
+
+    // The organization header only goes to providers that take it.
+    function aiUpdateOrganizationVisibility(provider) {
+        var group = document.getElementById('aiOrganizationGroup');
+        if (group) group.hidden = provider === 'anthropic' || provider === 'kie';
     }
 
     function applyAiDefaultsForNewApiKey() {
         var keyInput = document.getElementById('aiApiKey');
-        if (!keyInput || !keyInput.value.trim()) return;
+        if (!keyInput || !aiTypedSecret('aiApiKey')) return;
         var provider = document.getElementById('aiProvider')?.value || (currentAiSettings && currentAiSettings.provider) || 'openai-compatible';
         var credentials = aiProviderCredentials(currentAiSettings || {}, provider);
         if ((currentAiSettings && currentAiSettings.hasApiKey) || credentials.hasApiKey) return;
@@ -1222,8 +1500,7 @@
             enabled: document.getElementById('aiEnabled').checked,
             provider: provider,
             baseUrl: document.getElementById('aiBaseUrl').value.trim(),
-            apiKey: document.getElementById('aiApiKey').value.trim(),
-            clearApiKey: document.getElementById('aiClearApiKey').checked,
+            apiKey: aiTypedSecret('aiApiKey'),
             organization: document.getElementById('aiOrganization').value.trim(),
             allowLocalProvider: document.getElementById('aiAllowLocalProvider').checked,
             assistantForceEnglish: document.getElementById('aiAssistantForceEnglish').checked,
@@ -1233,6 +1510,7 @@
             },
             chatModel: document.getElementById('aiChatModel').value.trim(),
             textModel: document.getElementById('aiTextModel').value.trim(),
+            reasoning: { chat: aiReasoning.chat, text: aiReasoning.text },
             imageModel: document.getElementById('aiImageModel').value.trim(),
             features: {
                 backendAssistant: document.getElementById('aiFeatureAssistant').checked,
@@ -1249,8 +1527,8 @@
                 requestTimeoutSeconds: parseInt(document.getElementById('aiRequestTimeout').value || '0', 10)
             },
             pricing: {
-                inputCentsPerMillion: parseInt(document.getElementById('aiInputPrice').value || '0', 10),
-                outputCentsPerMillion: parseInt(document.getElementById('aiOutputPrice').value || '0', 10),
+                models: aiCollectPriceChanges(),
+                usdPerEur: parseFloat(document.getElementById('aiFxRate').value || '0') || 0,
                 imageCentsPerRequest: parseInt(document.getElementById('aiImagePrice').value || '0', 10)
             },
             agent: agentPart.agent,
@@ -1290,15 +1568,13 @@
                 sourcesInNews: !!document.getElementById('aiAgentSourcesInNews')?.checked
             },
             research: {
-                braveApiKey: (document.getElementById('aiBraveApiKey')?.value || '').trim(),
-                clearBraveApiKey: !!document.getElementById('aiClearBraveApiKey')?.checked,
+                braveApiKey: aiTypedSecret('aiBraveApiKey'),
                 allowDomains: document.getElementById('aiAgentAllowDomains')?.value || '',
                 denyDomains: document.getElementById('aiAgentDenyDomains')?.value || '',
                 respectRobots: !!document.getElementById('aiAgentRespectRobots')?.checked
             },
             stock: {
-                pexelsApiKey: (document.getElementById('aiPexelsApiKey')?.value || '').trim(),
-                clearPexelsApiKey: !!document.getElementById('aiClearPexelsApiKey')?.checked
+                pexelsApiKey: aiTypedSecret('aiPexelsApiKey')
             }
         };
     }
@@ -1341,14 +1617,8 @@
             var el = document.getElementById(id);
             if (el) el.value = values[id];
         });
-        ['aiClearBraveApiKey', 'aiClearPexelsApiKey'].forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) el.checked = false;
-        });
-        var braveHint = document.getElementById('aiBraveApiKeyHint');
-        if (braveHint) braveHint.textContent = research.hasBraveApiKey ? t('ai.api_key_saved') : t('ai.api_key_missing');
-        var pexelsHint = document.getElementById('aiPexelsApiKeyHint');
-        if (pexelsHint) pexelsHint.textContent = stock.hasPexelsApiKey ? t('ai.api_key_saved') : t('ai.api_key_missing');
+        aiSetSecretField('aiBraveApiKey', 'aiRemoveBraveApiKey', 'aiBraveApiKeyHint', !!research.hasBraveApiKey);
+        aiSetSecretField('aiPexelsApiKey', 'aiRemovePexelsApiKey', 'aiPexelsApiKeyHint', !!stock.hasPexelsApiKey);
         renderAgentStatus(settings);
     }
 
@@ -1401,6 +1671,29 @@
         if (this.checked && raiseAgentLimits()) showToast(t('ai.agent_limits_raised'), 'info');
     });
 
+    // After a save that put a powerful chat model in place, offer the agent once per model while it is off.
+    function maybeOfferAiAgent(previous, saved) {
+        if (!saved || !saved.enabled || !saved.hasApiKey || (saved.agent && saved.agent.enabled)) return;
+        if (!saved.agentStatus || !saved.agentStatus.toolCalling) return;
+        var caps = aiModelCaps(saved.provider, saved.baseUrl, saved.chatModel);
+        if (!caps || caps.tier !== 'power') return;
+        var changed = !previous || previous.provider !== saved.provider || previous.chatModel !== saved.chatModel || !previous.hasApiKey;
+        if (!changed) return;
+        var memo = 'nbAgentOffer:' + saved.provider + '|' + String(saved.chatModel).toLowerCase();
+        try {
+            if (localStorage.getItem(memo)) return;
+            localStorage.setItem(memo, '1');
+        } catch (e) { /* without storage the question may come again */ }
+        showModal(t('ai.agent_offer_title'), t('ai.agent_offer_text', { model: caps.label }), function() {
+            closeModal();
+            var toggle = document.getElementById('aiAgentEnabled');
+            if (!toggle) return;
+            toggle.checked = true;
+            raiseAgentLimits();
+            saveAiSettingsForm();
+        }, { confirmText: t('ai.agent_offer_confirm'), confirmClass: 'btn btn-primary' });
+    }
+
     document.getElementById('aiAgentClearCache')?.addEventListener('click', async function() {
         var button = this;
         button.disabled = true;
@@ -1420,16 +1713,17 @@
     });
 
     document.getElementById('aiProvider')?.addEventListener('change', function() {
+        // The models and levels typed for the provider left behind are kept for this visit; the typed key is dropped.
+        aiStashProviderModels(aiLastProvider);
+        aiLastProvider = this.value;
         var baseUrl = document.getElementById('aiBaseUrl');
         var credentials = aiProviderCredentials(currentAiSettings || {}, this.value);
         if (baseUrl) baseUrl.value = credentials.baseUrl || '';
         var organization = document.getElementById('aiOrganization');
         if (organization) organization.value = credentials.organization || '';
-        var keyInput = document.getElementById('aiApiKey');
-        if (keyInput) keyInput.value = '';
-        var clearKey = document.getElementById('aiClearApiKey');
-        if (clearKey) clearKey.checked = false;
+        aiUpdateOrganizationVisibility(this.value);
         updateAiApiKeyHint(this.value);
+        aiApplyProviderModels(this.value, baseUrl ? baseUrl.value : '');
         updateAiModelPlaceholders(this.value);
         updateAiImageModelControl({
             provider: this.value,
@@ -1466,6 +1760,50 @@
                 draft.hasApiKey = !!(currentAiSettings && currentAiSettings.hasApiKey) || !!document.getElementById('aiApiKey').value.trim();
                 updateAiAvailability(draft);
             }
+        });
+    });
+
+    document.getElementById('aiBaseUrl')?.addEventListener('input', function() {
+        aiRenderEffort('chat');
+        aiRenderEffort('text');
+        aiRenderPricing();
+    });
+
+    // Remove a stored key right away, after asking. Unsaved edits in the form stay as they are.
+    document.querySelectorAll('[data-secret-target]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            var kind = button.getAttribute('data-secret-target');
+            var target = kind === 'provider' ? 'provider:' + aiCurrentProvider() : kind;
+            showModal(t('ai.remove_key_title'), t('ai.remove_key_confirm'), async function() {
+                closeModal();
+                try {
+                    var formData = new FormData();
+                    formData.append('action', 'ai-clear-secret');
+                    formData.append('target', target);
+                    formData.append('csrf_token', CSRF_TOKEN);
+                    var response = await fetch('api.php', { method: 'POST', body: formData });
+                    var result = await response.json();
+                    if (!result.success) throw new Error(result.message);
+                    var fresh = result.data.settings || {};
+                    currentAiSettings = Object.assign({}, currentAiSettings, {
+                        hasApiKey: fresh.hasApiKey,
+                        providerCredentials: fresh.providerCredentials,
+                        research: Object.assign({}, (currentAiSettings || {}).research, { hasBraveApiKey: !!(fresh.research && fresh.research.hasBraveApiKey) }),
+                        stock: Object.assign({}, (currentAiSettings || {}).stock, { hasPexelsApiKey: !!(fresh.stock && fresh.stock.hasPexelsApiKey) }),
+                        agentStatus: fresh.agentStatus
+                    });
+                    aiLiveModels = {};
+                    updateAiApiKeyHint(aiCurrentProvider());
+                    aiSetSecretField('aiBraveApiKey', 'aiRemoveBraveApiKey', 'aiBraveApiKeyHint', !!currentAiSettings.research.hasBraveApiKey);
+                    aiSetSecretField('aiPexelsApiKey', 'aiRemovePexelsApiKey', 'aiPexelsApiKeyHint', !!currentAiSettings.stock.hasPexelsApiKey);
+                    renderAgentStatus(currentAiSettings);
+                    updateAiAvailability(Object.assign({}, currentAiSettings, collectAiSettingsForm(), { hasApiKey: !!currentAiSettings.hasApiKey }));
+                    if (result.data.usage) updateAiUsage(result.data.usage);
+                    showToast(t('ai.key_removed'), 'success');
+                } catch (error) {
+                    showToast(error.message, 'error');
+                }
+            }, { confirmText: t('ai.remove_key_button'), confirmClass: 'btn btn-danger' });
         });
     });
 

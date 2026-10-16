@@ -121,7 +121,7 @@ function nibblyAgentSettingsForSave(array $input, array $existing): array {
     if (is_array($input['research'] ?? null)) {
         $in = $input['research'];
         $key = (string)($stored['brave']['apiKey'] ?? '');
-        if (trim((string)($in['braveApiKey'] ?? '')) !== '') $key = nibblyAgentCleanApiKey((string)$in['braveApiKey']);
+        if (trim((string)($in['braveApiKey'] ?? '')) !== '' && !nibblyAiIsMaskedSecret(trim((string)$in['braveApiKey']))) $key = nibblyAgentCleanApiKey((string)$in['braveApiKey']);
         if (!empty($in['clearBraveApiKey'])) $key = '';
         $out['research'] = [
             'brave' => ['apiKey' => $key],
@@ -137,7 +137,7 @@ function nibblyAgentSettingsForSave(array $input, array $existing): array {
     if (is_array($input['stock'] ?? null)) {
         $in = $input['stock'];
         $key = (string)($stored['pexels']['apiKey'] ?? '');
-        if (trim((string)($in['pexelsApiKey'] ?? '')) !== '') $key = nibblyAgentCleanApiKey((string)$in['pexelsApiKey']);
+        if (trim((string)($in['pexelsApiKey'] ?? '')) !== '' && !nibblyAiIsMaskedSecret(trim((string)$in['pexelsApiKey']))) $key = nibblyAgentCleanApiKey((string)$in['pexelsApiKey']);
         if (!empty($in['clearPexelsApiKey'])) $key = '';
         $out['stock'] = ['pexels' => ['apiKey' => $key]];
     } elseif ($stored) {

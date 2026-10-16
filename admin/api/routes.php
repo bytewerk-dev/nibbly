@@ -34,6 +34,7 @@ return [
     'ai-image-job-run' => 'ai',
     'clear-ai-image-history' => 'ai',
     'save-ai-settings' => 'ai',
+    'ai-clear-secret' => 'ai',
     'ai-test' => 'ai',
     'ai-chat' => 'ai',
     'ai-copilot-context' => 'ai',

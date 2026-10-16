@@ -584,7 +584,8 @@ function nibblyAgentResearchRead(array &$run, int $sequence, string $question, s
         error_log('Nibbly agent read step failed: ' . $e->getMessage());
         throw new RuntimeException('The page could not be analysed.', 0, $e);
     }
-    $run['costCents'] += (int)($result['usage']['estimatedCostCents'] ?? 0);
+    $run['costCents'] = nibblyAiAddCents($run['costCents'] ?? 0, (float)($result['usage']['estimatedCostCents'] ?? 0));
+    if (isset($result['usage']['priced']) && !$result['usage']['priced']) $run['unpricedTurns'] = (int)($run['unpricedTurns'] ?? 0) + 1;
     try {
         $answer = nibblyAgentParseReadAnswer((string)$result['text'], $text);
     } catch (RuntimeException $e) {
