@@ -1439,6 +1439,8 @@
     "copilot.dash_value_unclear": "Je n’ai pas pu utiliser cette valeur. Vous pouvez la régler vous-même ici : {name}",
     "copilot.map_admin_only": "Cette action est réservée aux administrateurs.",
     "copilot.map_module_off": "Ce module est désactivé. Vous pouvez l’activer sous {path}.",
+    "copilot.safety_blocked": "J’ai écarté cette suggestion : elle ressemblait à de la fraude, du phishing, un logiciel malveillant, de la haine ou un contenu adulte ou illégal.",
+    "copilot.safety_note": "Avis de sécurité : ce texte demande des mots de passe ou des données de paiement, contient des liens à vérifier ou des instructions destinées à une IA. Relisez-le attentivement avant de l’appliquer.",
     "ai.image_jobs_title": "Tâches image",
     "ai.image_jobs_check": "Vérifier les tâches",
     "ai.image_jobs_idle": "Aucune tâche image ouverte.",

@@ -43,6 +43,14 @@ Git milestones and the gaps in publication records.
   new tab. The agent has a new tool `find_in_dashboard` and shows the same cards
   with its answer.
 
+- **Safety check for the classic Copilot.** Suggestions (including translations) and
+  content drafts are judged with the same word lists as the agent: harmful text
+  (scams, phishing, malware, hate, adult or illegal content) is dropped before
+  anything is signed or shown, and the person is told why; odd text (asks for
+  passwords or payment details, short or deceptive links, text aimed at an AI)
+  stays signed but carries a visible safety note. Dropped suggestions are audited
+  by category only.
+
 ### Fixed
 
 - "Set the system language to English/German" failed when the model sent a

@@ -99,6 +99,25 @@ function nibblyAgentSafetyScanText(string $text): array {
     return $found;
 }
 
+/**
+ * Judge several texts together: the worst level and the categories that were found.
+ * Shared by the agent's change set check and by the classic Copilot's suggestions and drafts.
+ *
+ * @param string[] $texts plain text, HTML or bare links
+ * @return array{level:string,categories:array<string,string>} level ok|caution|block, category => level
+ */
+function nibblyAgentSafetyJudgeTexts(array $texts): array {
+    $categories = [];
+    foreach ($texts as $text) {
+        if (!is_string($text) || trim($text) === '') continue;
+        foreach (array_merge(nibblyAgentSafetyScanText($text), nibblyAgentSafetyScanLinks($text)) as $finding) {
+            if (!isset($categories[$finding['category']]) || $finding['level'] === 'block') $categories[$finding['category']] = $finding['level'];
+        }
+    }
+    $level = in_array('block', $categories, true) ? 'block' : ($categories ? 'caution' : 'ok');
+    return ['level' => $level, 'categories' => $categories];
+}
+
 /** Links in HTML or a link field: scripts, short-link services, raw IP addresses and text that names another site than the link. */
 function nibblyAgentSafetyScanLinks(string $html): array {
     $found = [];
@@ -337,12 +356,7 @@ function nibblyAgentSafetyAssess(array $cs, array $replay): array {
         }
 
         // New text: what the agent wrote, judged on its own.
-        $categories = [];
-        foreach (array_slice(nibblyAgentSafetyNewTexts($before, $after), 0, 400) as $text) {
-            foreach (array_merge(nibblyAgentSafetyScanText($text), nibblyAgentSafetyScanLinks($text)) as $finding) {
-                if (!isset($categories[$finding['category']]) || $finding['level'] === 'block') $categories[$finding['category']] = $finding['level'];
-            }
-        }
+        $categories = nibblyAgentSafetyJudgeTexts(array_slice(nibblyAgentSafetyNewTexts($before, $after), 0, 400))['categories'];
         $names = implode(', ', array_keys($categories));
         if (in_array('block', $categories, true)) {
             $add('content_blocked', 'block', $target, 'The new text for {target} looks like fraud, phishing, malware, hate, adult or unlawful content.', 'Detected: ' . $names . '. This kind of content is not allowed on the website. Do not write it and do not try another wording; tell the user you cannot help with this.', $opIds, ['target' => $target]);

@@ -1447,6 +1447,8 @@
     "copilot.dash_value_unclear": "I could not use that value. You can set it yourself here: {name}",
     "copilot.map_admin_only": "Only administrators can do this.",
     "copilot.map_module_off": "This module is switched off. You can switch it on under {path}.",
+    "copilot.safety_blocked": "I discarded this suggestion: it looked like fraud, phishing, malware, hate, or adult or unlawful content.",
+    "copilot.safety_note": "Safety note: this text asks for passwords or payment details, has links that need a second look, or contains instructions aimed at an AI. Check it carefully before applying.",
     "ai.image_jobs_title": "Image jobs",
     "ai.image_jobs_check": "Check jobs",
     "ai.image_jobs_idle": "No open image jobs.",

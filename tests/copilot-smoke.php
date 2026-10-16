@@ -215,6 +215,23 @@ try {
     ], $context, $pageData);
     copilotSmokeAssert(count($duplicateFieldProposals) === 1, 'Duplicate proposals for one field should be collapsed to one option.');
     copilotSmokeAssert(($duplicateFieldProposals[0]['value'] ?? '') === 'Final body option', 'Duplicate proposal collapse should keep the final AI option.');
+    // Safety check of what the model wrote: harmful text is dropped before anything is signed, odd text carries a note.
+    $safetyReport = null;
+    $harmful = nibblyCopilotValidateProposals([
+        'proposals' => [
+            ['path' => 'title', 'value' => 'Verdoppeln Sie Ihre Bitcoin in 24 Stunden!'],
+            ['path' => 'body', 'value' => '<p>Please enter your password to verify your account immediately.</p>'],
+        ]
+    ], $context, $pageData, 3, $safetyReport);
+    copilotSmokeAssert($harmful === [] && ($safetyReport['blocked'] ?? 0) === 2, 'Scam and phishing suggestions must be dropped: ' . json_encode([$harmful, $safetyReport]));
+    $noted = nibblyCopilotValidateProposals([
+        'proposals' => [['path' => 'body', 'value' => '<p>See <a href="https://bit.ly/x1">our offer</a></p>']]
+    ], $context, $pageData, 3, $safetyReport);
+    copilotSmokeAssert(count($noted) === 1 && ($safetyReport['blocked'] ?? 1) === 0 && trim((string)($noted[0]['safetyNote'] ?? '')) !== '' && !empty($noted[0]['proposalSignature']), 'A short link gets a safety note and stays signed.');
+    $plain = nibblyCopilotValidateProposals([
+        'proposals' => [['path' => 'title', 'value' => 'Welcome to our cafe']]
+    ], $context, $pageData, 3, $safetyReport);
+    copilotSmokeAssert(count($plain) === 1 && !array_key_exists('safetyNote', $plain[0]), 'An ordinary suggestion carries no safety note.');
     $htmlProposal = null;
     foreach ($proposals as $proposal) {
         if (($proposal['path'] ?? '') === 'body') {
@@ -371,7 +388,11 @@ try {
     ]);
     $auditFile = NIBBLY_AI_AUDIT_DIR . '/' . gmdate('Y-m-d') . '.jsonl';
     copilotSmokeAssert(is_file($auditFile), 'AI audit file was not written.');
-    $auditLines = array_values(array_filter(explode("\n", trim((string)file_get_contents($auditFile)))));
+    $allAuditLines = array_values(array_filter(explode("\n", trim((string)file_get_contents($auditFile)))));
+    $safetyAuditLines = array_values(array_filter($allAuditLines, fn($line) => str_contains($line, '"action":"copilot-safety"')));
+    copilotSmokeAssert(count($safetyAuditLines) === 2, 'Dropped suggestions are audited: ' . count($safetyAuditLines));
+    copilotSmokeAssert(!preg_match('/Bitcoin|password|porn/i', implode("\n", $safetyAuditLines)), 'The safety audit names categories, never the text.');
+    $auditLines = array_values(array_filter($allAuditLines, fn($line) => !str_contains($line, '"action":"copilot-safety"')));
     copilotSmokeAssert(count($auditLines) === 1, 'Unexpected AI audit line count.');
     $auditEntry = json_decode($auditLines[0], true);
     copilotSmokeAssert(is_array($auditEntry), 'AI audit line is not valid JSON.');
@@ -423,6 +444,18 @@ try {
     copilotSmokeAssert(($createdNews['id'] ?? '') === '2026-07-13-ai-news', 'Created news id is not deterministic.');
     $publishedNews = nibblyCopilotPublishNewsData($createdNews);
     copilotSmokeAssert(!array_key_exists('hidden', $publishedNews), 'Published news still has hidden flag.');
+
+    foreach ([
+        ['news', ['title' => 'Win now', 'content' => '<p>Free porn videos</p>']],
+        ['page', ['title' => 'Account check', 'content' => '<p>Your account has been suspended. Enter your password and PIN to verify your account immediately.</p>']],
+        ['event', ['title' => 'Party', 'date' => '2026-12-01', 'time' => '19:00', 'location' => 'Hall', 'description' => '<p>Guaranteed profit, double your bitcoin!</p>']],
+    ] as [$kind, $fields]) {
+        copilotSmokeRejects(fn() => nibblyCopilotNormalizeCreateDraft(['contentType' => $kind, 'missing' => [], 'draft' => $fields + ['lang' => 'en']], $context), "A harmful {$kind} draft must be refused.");
+    }
+    $notedDraft = nibblyCopilotNormalizeCreateDraft(['contentType' => 'news', 'missing' => [], 'draft' => ['title' => 'Offer', 'lang' => 'en', 'date' => '2026-10-10', 'content' => '<p><a href="https://bit.ly/x1">Offer</a></p>']], $context);
+    copilotSmokeAssert(trim((string)($notedDraft['safetyNote'] ?? '')) !== '', 'A draft with a short link carries a safety note.');
+    $cleanDraft = nibblyCopilotNormalizeCreateDraft(['contentType' => 'news', 'missing' => [], 'draft' => ['title' => 'Opening hours', 'lang' => 'en', 'date' => '2026-10-10', 'content' => '<p>We are open from 9 to 5.</p>']], $context);
+    copilotSmokeAssert(!array_key_exists('safetyNote', $cleanDraft), 'An ordinary draft carries no safety note.');
 
     $pageDraft = nibblyCopilotSignCreateDraft(nibblyCopilotNormalizeCreateDraft([
         'contentType' => 'page',

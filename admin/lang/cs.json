@@ -1439,6 +1439,8 @@
     "copilot.dash_value_unclear": "Tuto hodnotu jsem nemohl použít. Můžete ji nastavit sami tady: {name}",
     "copilot.map_admin_only": "To mohou dělat jen správci.",
     "copilot.map_module_off": "Tento modul je vypnutý. Zapnout ho můžete v části {path}.",
+    "copilot.safety_blocked": "Tento návrh jsem zahodil: vypadal jako podvod, phishing, malware, nenávist nebo obsah pro dospělé či protiprávní obsah.",
+    "copilot.safety_note": "Bezpečnostní upozornění: Tento text žádá o hesla nebo platební údaje, obsahuje odkazy, které je třeba zkontrolovat, nebo pokyny pro umělou inteligenci. Před použitím jej pečlivě zkontrolujte.",
     "ai.image_jobs_title": "Úlohy obrázků",
     "ai.image_jobs_check": "Zkontrolovat úlohy",
     "ai.image_jobs_idle": "Nejsou otevřené žádné úlohy obrázků.",

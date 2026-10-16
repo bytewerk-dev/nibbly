@@ -2,6 +2,7 @@
 require_once dirname(__DIR__) . '/page-path.php';
 require_once __DIR__ . '/agent/net.php';
 require_once __DIR__ . '/nibbly-map.php';
+require_once __DIR__ . '/agent/safety.php';
 /**
  * Safe context builder for the frontend AI Assistant.
  *
@@ -997,7 +998,28 @@ function nibblyCopilotBuildTranslatePrompt(array $fields, string $sourceLang, st
         . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 }
 
-function nibblyCopilotValidateProposals(array $raw, array $context, array $pageData, int $maxProposals = 3): array {
+/**
+ * Safety check of text the model wrote for a suggestion or a draft (the same word lists as the agent's check).
+ * block: scams, phishing, malware, hate, adult or illegal content; caution: asks for passwords or payment details,
+ * links that need a second look, text aimed at an AI.
+ *
+ * @return array{level:string,categories:array<string,string>}
+ */
+function nibblyCopilotSafetyJudge(array $texts): array {
+    return nibblyAgentSafetyJudgeTexts($texts);
+}
+
+function nibblyCopilotSafetyAudit(string $stage, array $judged, array $meta = []): void {
+    if (function_exists('nibblyAiAudit')) {
+        nibblyAiAudit('copilot-safety', false, ['stage' => $stage, 'categories' => array_keys($judged['categories'])] + $meta);
+    }
+}
+
+/**
+ * @param array|null $report filled with ['blocked' => n]: suggestions that were dropped by the safety check
+ */
+function nibblyCopilotValidateProposals(array $raw, array $context, array $pageData, int $maxProposals = 3, ?array &$report = null): array {
+    $report = ['blocked' => 0];
     $rawProposals = $raw['proposals'] ?? [];
     if (!is_array($rawProposals)) {
         throw new RuntimeException('AI suggestion JSON has no proposals array.');
@@ -1031,6 +1053,12 @@ function nibblyCopilotValidateProposals(array $raw, array $context, array $pageD
         if ($safeValue === '') {
             continue;
         }
+        $safety = in_array($type, ['boolean', 'select'], true) ? ['level' => 'ok', 'categories' => []] : nibblyCopilotSafetyJudge([$safeValue]);
+        if ($safety['level'] === 'block') { // nothing is signed or shown for this suggestion
+            $report['blocked']++;
+            nibblyCopilotSafetyAudit('suggest', $safety, ['path' => (string)$field['path']]);
+            continue;
+        }
         $current = function_exists('getNestedValue') ? getNestedValue($pageData, (string)$field['path']) : null;
         $currentText = is_array($current)
             ? json_encode($current, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
@@ -1057,6 +1085,9 @@ function nibblyCopilotValidateProposals(array $raw, array $context, array $pageD
             'preview' => in_array($type, ['boolean', 'select'], true) ? $safeValue : nibblyCopilotShortText($safeValue, 800),
             'reason' => nibblyCopilotShortText($proposal['reason'] ?? '', 240)
         ];
+        if ($safety['level'] === 'caution') {
+            $validatedProposal['safetyNote'] = nibblyAgentSafetyText('copilot.safety_note', 'Safety note: this text asks for passwords or payment details, has links that need a second look, or contains instructions aimed at an AI. Check it carefully before applying.');
+        }
         $validatedProposal['proposalSignature'] = nibblyCopilotProposalSignature((string)($context['page']['contentPage'] ?? ''), $validatedProposal);
         $pathKey = (string)$field['path'];
         if (!array_key_exists($pathKey, $validatedByPath) && count($validated) >= $maxProposals) {
@@ -1575,7 +1606,12 @@ function nibblyCopilotNormalizeCreateDraft(array $raw, array $context): array {
     }
 
     $missing = array_values(array_unique(array_filter($missing)));
-    return [
+    $safety = nibblyCopilotSafetyJudge(array_values(array_filter($normalized, 'is_string')));
+    if ($safety['level'] === 'block') {
+        nibblyCopilotSafetyAudit('draft', $safety, ['contentType' => $type]);
+        throw new RuntimeException(nibblyAgentSafetyText('copilot.safety_blocked', 'I discarded this suggestion: it looked like fraud, phishing, malware, hate, or adult or unlawful content.'));
+    }
+    $result = [
         'action' => 'createContentDraft',
         'contentType' => $type,
         'missing' => $missing,
@@ -1583,6 +1619,10 @@ function nibblyCopilotNormalizeCreateDraft(array $raw, array $context): array {
         'canCreate' => empty($missing),
         'draftHash' => hash('sha256', json_encode([$type, $normalized], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES))
     ];
+    if ($safety['level'] === 'caution') {
+        $result['safetyNote'] = nibblyAgentSafetyText('copilot.safety_note', 'Safety note: this text asks for passwords or payment details, has links that need a second look, or contains instructions aimed at an AI. Check it carefully before applying.');
+    }
+    return $result;
 }
 
 function nibblyCopilotBuildCreatedContent(string $type, array $draft): array {
