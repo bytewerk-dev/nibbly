@@ -186,6 +186,7 @@
         if (iconsTab) iconsTab.style.display = tab === 'icons' ? 'block' : 'none';
         document.getElementById('settingsTab').style.display = tab === 'settings' ? 'block' : 'none';
         document.getElementById('backupTab').style.display = tab === 'backup' ? 'block' : 'none';
+        if (typeof syncAssistantEmbed === 'function') syncAssistantEmbed();
 
         // Show/hide topbar selectors — only when editing a page (not on page list)
         const topbarSelectors = document.getElementById('topbarSelectors');

@@ -2005,5 +2005,8 @@
     "ai.image_price_tables_hint": "Berechnet das Modell je Auflösungsstufe oder Qualität unterschiedlich, trage hier den Preis je Bild dafür ein. Eine Anfrage nutzt den Preis ihrer Auflösung, dann den ihrer Qualität, dann den Preis je Bild oben. Leere Felder nutzen den Preis je Bild.",
     "ai.image_price_status_tables": "Zusätzlich sind Preise nach Auflösung oder Qualität hinterlegt.",
     "ai.image_price_status_tables_only": "Preise nach Auflösung oder Qualität sind hinterlegt; Anfragen ohne passenden Eintrag nutzen den Standardpreis je Bild.",
-    "ai.image_service_models_loaded": "{count} Modelle vom Service geladen. Du kannst trotzdem jede Modell-ID eintippen."
+    "ai.image_service_models_loaded": "{count} Modelle vom Service geladen. Du kannst trotzdem jede Modell-ID eintippen.",
+    "ai.image_service_unusable_key": "Für den Bild-Service {service} ist noch kein API-Key hinterlegt. Trage ihn unter KI-Einstellungen → Bilder ein.",
+    "ai.image_service_unusable_model": "Für den Bild-Service {service} ist kein Bildmodell gewählt. Wähle eines unter KI-Einstellungen → Bilder.",
+    "ai.image_price_status_catalog_tables": "Katalogpreise nach Auflösung oder Qualität, Stand {date}."
 }

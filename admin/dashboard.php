@@ -800,7 +800,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 <section class="ai-image-jobs-panel" id="aiImageJobsPanel" hidden>
                     <div class="ai-image-jobs-panel__copy">
                         <h4><?php echo t('ai.image_jobs_title'); ?></h4>
-                        <p id="aiImageJobsStatus"><?php echo t('ai.image_jobs_idle'); ?></p>
+                        <p><span class="nb-spinner" id="aiImageJobsSpinner" aria-hidden="true" hidden></span><span id="aiImageJobsStatus"><?php echo t('ai.image_jobs_idle'); ?></span></p>
                     </div>
                     <div class="ai-image-jobs-panel__actions">
                         <span class="ai-image-jobs-panel__meta" id="aiImageJobsMeta" hidden></span>
@@ -812,7 +812,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 </section>
                 <div class="ai-grid" id="dashboardAiTools" hidden>
                     <section class="ai-card ai-card--assistant" id="aiAssistantCard" data-ai-feature="backendAssistant" hidden>
-                        <h3><?php echo t('ai.assistant'); ?></h3>
+                        <h3><?php echo t('ai.assistant'); ?> <span class="ai-card__badge" id="aiAssistantBadge" hidden><?php echo t('agent.mode_classic'); ?></span></h3>
+                        <?php /* The assistant chat (Agent | Classic) sits here on the home tab; without it the classic chat below is shown. */ ?>
+                        <div class="ai-assistant-embed" id="aiAssistantEmbed" hidden></div>
                         <div class="ai-chat-log" id="aiChatLog" aria-live="polite"></div>
                         <form id="aiChatForm" class="ai-form">
                             <textarea id="aiChatPrompt" rows="4" placeholder="<?php echo htmlspecialchars(t('ai.assistant_placeholder'), ENT_QUOTES, 'UTF-8'); ?>" disabled></textarea>
@@ -2929,8 +2931,32 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     <?php require __DIR__ . '/dashboard/scripts/users-navigation.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/system.php'; ?>
     </script>
+    <?php
+    // The agent chats in the dashboard too (js/ai-agent.js plugs into the assistant). Same conditions as on the website:
+    // switched on, a provider with tool calling, and a role that may chat with it.
+    $_aiDashboardAgentConfig = null;
+    if ($_aiDashboardCopilotAvailable && is_file(__DIR__ . '/../includes/ai/agent/agent-config.php')) {
+        require_once __DIR__ . '/../includes/ai/agent/agent-config.php';
+        $_aiDashboardAgentReason = '';
+        if (nibblyAgentAvailable($_aiDashboardAgentReason) && nibblyAgentCan('chat')) {
+            $_aiDashboardAgentConfig = [
+                'available' => true,
+                'rights' => array_combine(NIBBLY_AGENT_RIGHTS, array_map('nibblyAgentCan', NIBBLY_AGENT_RIGHTS)),
+                'classic' => nibblyAgentSettings()['classicMode'] !== false,
+                'maxUploadFiles' => 6,
+                'maxUploadBytes' => function_exists('getMediaConfig') ? (int)(getMediaConfig('image')['maxSize'] ?? 10485760) : 10485760,
+            ];
+        }
+    }
+    ?>
+    <?php if ($_aiDashboardAgentConfig !== null): ?>
+    <script>window.NB_AI_AGENT = <?php echo json_encode($_aiDashboardAgentConfig, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG); ?>;</script>
+    <?php endif; ?>
     <?php if ($_aiDashboardCopilotAvailable && is_file(__DIR__ . '/../js/ai-copilot.js')): ?>
     <script src="../js/ai-copilot.js?v=<?php echo @filemtime(__DIR__ . '/../js/ai-copilot.js') ?: time(); ?>"></script>
+    <?php if ($_aiDashboardAgentConfig !== null && is_file(__DIR__ . '/../js/ai-agent.js')): ?>
+    <script src="../js/ai-agent.js?v=<?php echo @filemtime(__DIR__ . '/../js/ai-agent.js') ?: time(); ?>"></script>
+    <?php endif; ?>
     <?php endif; ?>
 </body>
 </html>

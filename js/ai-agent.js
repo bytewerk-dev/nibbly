@@ -20,7 +20,8 @@
         return;
     }
 
-    const MODE_KEY = 'nibbly.aiAgent.mode';
+    // The mode is remembered apart for the website and the dashboard: the dashboard's actions (theme, language) are the classic assistant's.
+    const MODE_KEY = 'nibbly.aiAgent.mode' + (window.NB_AI_COPILOT_MODE === 'dashboard' ? '.dashboard' : '');
     const RUN_KEY = 'nibbly-ai-agent:run';
     const LAST_RUN_KEY = 'nibbly-ai-agent:last-run'; // only the run id, shared by all tabs, so a new tab finds the open package again
     const LAST_RUN_MAX_AGE = 48 * 3600 * 1000;

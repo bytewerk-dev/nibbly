@@ -46,6 +46,7 @@ for (const moduleEnabled of [false, true]) {
                     aiUnavailableNoticeDismissed: () => dismissed,
                     aiFeatureEnabled: () => true,
                     aiImageServiceUsable: () => true,
+                    syncAssistantEmbed: () => {},
                     updateDashboardAiStatus: () => {},
                     switchAiToolTab: () => {},
                     t: key => key
@@ -62,6 +63,22 @@ for (const moduleEnabled of [false, true]) {
             }
         }
     }
+}
+// An image service that cannot work (no key yet) keeps the tools visible but switches the image tool off.
+{
+    const ids = ['dashboardAiSection', 'aiUnavailableBanner', 'aiUnavailableText', 'dashboardAiTools', 'aiUsageSummary', 'aiImageJobsPanel', 'aiAssistantCard', 'aiToolsCard'];
+    const elements = Object.fromEntries(ids.map(id => [id, { hidden: false }]));
+    const tabs = [{ dataset: { aiFeature: 'imageGeneration', aiToolTab: 'image' }, hidden: true, classList: { remove() {}, contains: () => true }, setAttribute() {} }];
+    const context = {
+        AI_FEATURES_ENABLED: true, currentAiSettings: { enabled: true }, dashboardAiImageUsable: true,
+        document: { getElementById: id => elements[id] || null, querySelectorAll: () => tabs, querySelector: () => null },
+        window: {}, aiProviderIsConfigured: () => true, aiUnavailableNoticeDismissed: () => false, aiFeatureEnabled: () => true,
+        aiImageServiceUsable: () => false, syncAssistantEmbed: () => {}, updateDashboardAiStatus: () => {}, switchAiToolTab: () => {}, t: key => key
+    };
+    runInNewContext(updater + '\nupdateDashboardAiPanel(currentAiSettings);', context);
+    assert.equal(tabs[0].hidden, false, 'the image tab stays while the service cannot work (it explains why)');
+    assert.equal(context.dashboardAiImageUsable, false, 'but the image tool is off');
+    assert.equal(elements.aiImageJobsPanel.hidden, true, 'and so is the jobs panel');
 }
 runInNewContext(updater + '\nupdateDashboardAiPanel({});', {
     document: { getElementById: () => null }

@@ -1998,3 +1998,31 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 .nb-agent-mode[hidden] {
     display: none;
 }
+
+/* The chat inside a card of the page (dashboard home): no bubble, no floating panel. */
+.nb-copilot.nb-copilot--embedded {
+    position: static;
+    z-index: auto;
+    right: auto;
+    bottom: auto;
+}
+
+.nb-copilot--embedded .nb-copilot-toggle,
+.nb-copilot--embedded .nb-copilot-close,
+.nb-copilot--embedded .nb-copilot-maximize,
+.nb-copilot--embedded .nb-copilot-header__top {
+    display: none; /* the card has its own title */
+}
+
+.nb-copilot--embedded .nb-copilot-panel {
+    position: static;
+    width: 100%;
+    height: min(620px, 70vh);
+    box-shadow: none;
+    border-radius: 8px;
+}
+
+.nb-copilot--embedded.is-maximized .nb-copilot-panel {
+    width: 100%;
+    height: min(620px, 70vh);
+}

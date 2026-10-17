@@ -2005,5 +2005,8 @@
     "ai.image_price_tables_hint": "If the model charges differently per resolution step or quality, enter the price per image for each. A request uses the price of its resolution, then of its quality, then the price per image above. Empty fields use the price per image.",
     "ai.image_price_status_tables": "Prices by resolution or quality are also set.",
     "ai.image_price_status_tables_only": "Prices by resolution or quality are set; requests that match none use the default price per image.",
-    "ai.image_service_models_loaded": "{count} models loaded from the service. You can still type any model ID."
+    "ai.image_service_models_loaded": "{count} models loaded from the service. You can still type any model ID.",
+    "ai.image_service_unusable_key": "The image service {service} has no API key yet. Add one under AI settings → Images.",
+    "ai.image_service_unusable_model": "No image model is chosen for {service}. Choose one under AI settings → Images.",
+    "ai.image_price_status_catalog_tables": "Catalog prices by resolution or quality, as of {date}."
 }
