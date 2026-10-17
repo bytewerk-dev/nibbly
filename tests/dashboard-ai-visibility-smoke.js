@@ -45,6 +45,7 @@ for (const moduleEnabled of [false, true]) {
                     aiProviderIsConfigured: () => configured,
                     aiUnavailableNoticeDismissed: () => dismissed,
                     aiFeatureEnabled: () => true,
+                    aiImageServiceUsable: () => true,
                     updateDashboardAiStatus: () => {},
                     switchAiToolTab: () => {},
                     t: key => key

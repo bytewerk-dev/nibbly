@@ -48,8 +48,7 @@ function nibblyAiRunImageJobClaimed(string $jobId, ?callable $assertAccess = nul
                 throw new RuntimeException('Image job is missing required copilot data.');
             }
             $settings = nibblyAiLoadSettings(false);
-            nibblyAiEnsureEnabled($settings);
-            nibblyAiEnsureFeature($settings, 'imageGeneration');
+            nibblyAiEnsureImageReady($settings, nibblyAiImageServiceResolve($settings));
             $context = nibblyCopilotBuildContext($contentPage, nibblyAiLoadSettings(true));
             $fields = nibblyCopilotAllowedImageFields($context, $fieldRef);
             if (!$fields) {
@@ -100,7 +99,7 @@ function nibblyAiRunImageJobClaimed(string $jobId, ?callable $assertAccess = nul
             $settings = nibblyAiLoadSettings(false);
             nibblyAiRecordImageHistory([
                 'status' => 'error',
-                'model' => (string)($options['model'] ?? $settings['imageModel'] ?? ''),
+                'model' => (string)($options['model'] ?? nibblyAiEffectiveImageModel($settings)),
                 'prompt' => $prompt,
                 'size' => (string)($options['size'] ?? ''),
                 'aspectRatio' => (string)($options['aspectRatio'] ?? ''),

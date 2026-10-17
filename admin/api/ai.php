@@ -1318,9 +1318,9 @@ switch ($action) {
         }
         try {
             $settings = nibblyAiLoadSettings(false);
-            nibblyAiEnsureEnabled($settings);
-            nibblyAiEnsureFeature($settings, 'imageGeneration');
-            if (trim((string)($settings['imageModel'] ?? '')) === '') {
+            $imageService = nibblyAiImageServiceResolve($settings);
+            nibblyAiEnsureImageReady($settings, $imageService);
+            if ($imageService['model'] === '') {
                 throw new RuntimeException('Image model is missing.');
             }
 
@@ -1543,6 +1543,24 @@ switch ($action) {
         }
         break;
 
+    case 'ai-image-models':
+        // The image models fal.ai or Comet list themselves, for the model suggestions (cached for a day).
+        if (!dashboardAiModuleEnabled()) {
+            jsonResponse(false, null, 'AI module is disabled');
+        }
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        try {
+            jsonResponse(true, nibblyAiImageLiveModels(nibblyAiLoadSettings(false), (string)($_POST['service'] ?? ''), !empty($_POST['refresh'])));
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        break;
+
     case 'ai-content-audit':
         if (!dashboardAiModuleEnabled()) {
             jsonResponse(false, null, 'AI module is disabled');
@@ -1731,7 +1749,7 @@ switch ($action) {
             $settings = nibblyAiLoadSettings(false);
             nibblyAiRecordImageHistory([
                 'status' => 'error',
-                'model' => (string)($_POST['model'] ?? $settings['imageModel'] ?? ''),
+                'model' => (string)($_POST['model'] ?? nibblyAiEffectiveImageModel($settings)),
                 'prompt' => $prompt,
                 'size' => (string)($_POST['size'] ?? ''),
                 'aspectRatio' => (string)($_POST['aspectRatio'] ?? ''),

@@ -38,7 +38,8 @@ This is the canonical, tool-neutral guide for AI coding agents. `AGENTS.md` and 
 | Public form submit API | `api/form-submit.php` |
 | Legacy contact form API | `api/contact.php` |
 | AI gateway | `includes/ai/ai-helper.php` |
-| AI settings | `content/ai-settings.json` (no keys), `content/ai-secrets.json` (API keys only) |
+| AI settings | `content/ai-settings.json` (no keys), `content/ai-secrets.json` (API keys only, chat and image services) |
+| AI image services | `includes/ai/image-services.json` (registry), `includes/ai/image-services.php` (adapters) |
 | AI usage/audit | `content/ai-usage.json`, `content/ai-audit/*.jsonl` |
 | AI image history | `content/ai-image-history.json` |
 | Deploy script | `deploy.example.sh` (copy to `deploy.sh` and configure) |
@@ -165,10 +166,57 @@ OpenAI, OpenRouter, Anthropic (Claude), Ollama, LM Studio, or another
 OpenAI-compatible endpoint without replacing keys. The Anthropic provider is
 translated to and from the Messages API inside the gateway (including
 streaming) so all callers keep one OpenAI-style request/response shape; it
-serves chat and text only, not image generation. Chat replies can stream over
+serves chat and text only; images then come from the separate image service. Chat replies can stream over
 Server-Sent Events with an automatic fallback to the buffered JSON response.
 Local/private URLs (`localhost`, private IP ranges, or self-hosted gateways)
 must only be accepted when the explicit local-provider setting is enabled.
+
+Images come from an **image service** that is chosen apart from the chat provider
+(`imageService` in `content/ai-settings.json`, section "Images" in the AI settings). Its default
+`inherit` uses the chat provider's own image models (not available with Anthropic); the other
+choices are OpenAI, OpenRouter, Kie.ai, fal.ai, Comet API and `custom` (any OpenAI-compatible
+`/images/generations` endpoint with base URL, model id, size mode `size`|`aspect_ratio`|`none`,
+authentication `bearer`|`x-api-key` and optional extra parameters). Resolve it with
+`nibblyAiImageServiceResolve($settings)`; never read `imageModel` for the effective model, use
+`nibblyAiEffectiveImageModel()`, and ask `nibblyAiImageServiceUsable()` /
+`nibblyAiImageUnavailableReason()` whether images can be made. Each service has its own key in
+`content/ai-secrets.json` (`imageServices.<id>.apiKey`); OpenAI, OpenRouter and Kie.ai fall back to
+the chat key of the same provider, only when the chat provider's base URL has the service's host
+(`nibblyAiImageChatKey()`), so a key never goes to a host it was not made for. Remove one with `ai-clear-secret` (`image:<id>`).
+
+Adapters live in `includes/ai/image-services.php` and share one input (`prompt`, `count`,
+`aspectRatio`, `size`, `imageScale`, `outputFormat`, `referencePaths`, ...) that
+`nibblyAiGenerateImageExecute()` builds; they return the stored image paths. Existing adapters:
+`openai-images`, `openrouter-chat`, `kie-task`, `fal-queue` (submit, poll `status_url`, fetch
+`response_url`; tasks sit in the request ledger so a stopped job resumes) and `gemini-generate`
+(Comet's `generateContent` route). To add a **service**, add an entry to
+`includes/ai/image-services.json` (adapter, base URL, `keyFrom`, models) and, for a new protocol,
+an adapter function plus its case in `nibblyAiImageAdapterRun()`. To add a **model**, add it to the
+service's `models` with what it accepts (`aspects`, `aspectParam` or `sizeParam` with `sizePresets`,
+`countParam`/`maxCount`, `formatParam`/`formats`, `resolutionParam`/`resolutions`, `references`,
+`price`). Set `verified` to the date you checked the parameters against the provider's official
+documentation, or `false` when you did not; never guess a parameter or a price. A model that is not
+listed uses the `defaults` of its service. Result images are fetched with `nibblyNetSafeFetch()`
+(`nibblyAiImageFetchBinary()`), addresses a provider returns for polling are followed only on the
+service's own host, keys never enter audit entries, jobs, history or error messages, and
+`nibblyAiProviderErrorMessage()` is the one place that reads provider error bodies.
+
+Reference images: the agent's `generate_image` takes `references` (a `mediaRef` of the run or a
+`libraryPath`); `nibblyAgentGenerateReferences()` checks them when the tool is called, and
+`nibblyAiImageServiceSupportsReferences()` says whether the service can use them (OpenAI-style
+`/images/edits`, OpenRouter and Kie as before, fal.ai only for models with an `editModel`, Comet by
+`inline_data`). Results are labelled `modified`, not `generated`.
+
+Live model lists: `nibblyAiImageLiveModels()` (fal.ai `GET /v1/models?category=text-to-image&status=active`,
+Comet `GET /api/models`, entries of `model_type` image) feeds the model suggestions through the admin action
+`ai-image-models`; add a service with a documented list endpoint to `NIBBLY_AI_IMAGE_LIVE_SERVICES` with a
+parser. Tests redirect the list hosts with `NIBBLY_AGENT_TEST_NET.imageListBases`.
+
+Prices per image: `nibblyAiImagePrice()` takes the admin's price for the model
+(`pricing.imageModels["<service>|<model>"]`), then the registry's, then the default price per image
+(`pricing.imageCentsPerRequest`), otherwise the cost is unknown (reservation 0, `priced:false`). An entry is
+`{perImage?, currency, byResolution?: {1K, 2K, 4K}, byQuality?: {low, medium, high}}`; a request is priced by
+its resolution step (`nibblyAiImageRequestResolution()`), then its quality, then `perImage`.
 
 Generated images are validated and saved under `assets/images/generated/`, are
 visible in the Media Library, and are indexed in `content/ai-image-history.json`

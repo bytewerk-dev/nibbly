@@ -41,6 +41,7 @@ const NIBBLY_AGENT_TOOL_RESULT_CHARS = 11000;
 const NIBBLY_AGENT_MAX_STOCK_SEARCHES = 6;
 const NIBBLY_AGENT_MAX_STOCK_IMPORTS = 6;
 const NIBBLY_AGENT_MAX_GENERATED_IMAGES = 2;
+const NIBBLY_AGENT_MAX_REFERENCE_IMAGES = 3;
 
 // ---------------------------------------------------------------------------
 // Definitions
@@ -80,8 +81,9 @@ function nibblyAgentToolDefinitions(): array {
             'parameters' => $object(['query' => $text(200), 'orientation' => ['type' => 'string', 'enum' => ['landscape', 'portrait', 'square']], 'count' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 8]], ['query']), 'right' => 'stockImages', 'handler' => 'nibblyAgentToolStockSearch', 'available' => 'nibblyAgentStockAvailable'],
         'import_stock_image' => ['description' => 'Download a stock photo from the last search results into this run. Returns a mediaRef for set_image, stage_create_news (imageRef) or list items. You write the alt text yourself.',
             'parameters' => $object(['sid' => $text(20)], ['sid']), 'right' => 'stockImages', 'handler' => 'nibblyAgentToolStockImport', 'available' => 'nibblyAgentStockAvailable'],
-        'generate_image' => ['description' => 'Generate an image from a description (AI). The image is labelled as AI-generated on the site. It takes a while; at most ' . NIBBLY_AGENT_MAX_GENERATED_IMAGES . ' per run, so use it only when no photo fits or the user asked for it. Returns a mediaRef.',
-            'parameters' => $object(['prompt' => $text(1500), 'aspect' => ['type' => 'string', 'enum' => ['1:1', '3:2', '2:3', '16:9']]], ['prompt']), 'right' => 'generateImages', 'handler' => 'nibblyAgentToolGenerateImage', 'available' => 'nibblyAgentImagesAvailable'],
+        'generate_image' => ['description' => 'Generate an image from a description (AI). The image is labelled as AI-generated on the site. It takes a while; at most ' . NIBBLY_AGENT_MAX_GENERATED_IMAGES . ' per run, so use it only when no photo fits or the user asked for it. To change or build on existing pictures (a style, a product photo, the logo), give up to ' . NIBBLY_AGENT_MAX_REFERENCE_IMAGES . ' references: a mediaRef of this run (m_...) or a libraryPath from list_media; the result is then labelled AI-modified. Not every image service takes references; the error says so. Returns a mediaRef.',
+            'parameters' => $object(['prompt' => $text(1500), 'aspect' => ['type' => 'string', 'enum' => ['1:1', '3:2', '2:3', '16:9', '4:3', '3:4', '9:16']],
+                'references' => ['type' => 'array', 'maxItems' => NIBBLY_AGENT_MAX_REFERENCE_IMAGES, 'items' => $text(300), 'description' => 'Optional reference images: mediaRef (m_...) or libraryPath (/assets/images/...).']], ['prompt']), 'right' => 'generateImages', 'handler' => 'nibblyAgentToolGenerateImage', 'available' => 'nibblyAgentImagesAvailable'],
 
         'search_web' => ['description' => 'Search the web. Returns result ids (rid), titles, hosts and short snippets, no page content. Read a result with read_web_result. At most ' . NIBBLY_AGENT_MAX_WEB_SEARCHES . ' searches per run; do not put personal or confidential data into the query.',
             'parameters' => $object(['query' => $text(200), 'lang' => $lang, 'count' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 8]], ['query']), 'right' => 'research', 'handler' => 'nibblyAgentToolSearchWeb', 'available' => 'nibblyAgentResearchAvailable'],
@@ -516,7 +518,8 @@ function nibblyAgentStockAvailable(): bool {
 
 function nibblyAgentImagesAvailable(): bool {
     $ai = nibblyAiLoadSettings(false);
-    return !empty($ai['features']['imageGeneration']) && !empty(nibblyAiModelCatalog()[nibblyAiProviderKey($ai)]['capabilities']['images']);
+    // The image service is chosen apart from the chat provider: an Anthropic chat with fal.ai or Kie.ai for images works.
+    return !empty($ai['features']['imageGeneration']) && nibblyAiImageServiceUsable($ai);
 }
 
 function nibblyAgentToolStockSearch(string $name, array $args, array &$run, array $actor): array {
@@ -562,8 +565,39 @@ function nibblyAgentToolStockImport(string $name, array $args, array &$run, arra
 /** Pixel size and aspect ratio option for the provider. */
 function nibblyAgentImageSize(string $aspect): array {
     return match ($aspect) {
-        '3:2' => ['1536x1024', '3:2'], '2:3' => ['1024x1536', '2:3'], '16:9' => ['1536x1024', '16:9'], default => ['1024x1024', '1:1']
+        '3:2' => ['1536x1024', '3:2'], '2:3' => ['1024x1536', '2:3'], '16:9' => ['1536x1024', '16:9'],
+        '4:3' => ['1536x1024', '4:3'], '3:4' => ['1024x1536', '3:4'], '9:16' => ['1024x1536', '9:16'], default => ['1024x1024', '1:1']
     };
+}
+
+/**
+ * Reference images of generate_image: mediaRefs of this run (staged files) and library paths, checked now so a wrong
+ * one fails the tool call instead of the job later.
+ *
+ * @return array{files:string[],library:string[]}
+ */
+function nibblyAgentGenerateReferences(array $references, string $csId): array {
+    $cs = nibblyAgentChangesetLoad($csId);
+    $files = [];
+    $library = [];
+    foreach (array_slice($references, 0, NIBBLY_AGENT_MAX_REFERENCE_IMAGES) as $reference) {
+        $reference = trim((string)$reference);
+        if ($reference === '') continue;
+        if (preg_match('/^m_[a-f0-9]{8}$/', $reference)) {
+            $media = $cs['media'][$reference] ?? null;
+            $file = is_array($media) ? nibblyAgentAbsolute((string)($media['stagingFile'] ?? '')) : '';
+            if ($file === '' || !is_file($file)) throw new NibblyAgentOpException("Unknown reference image {$reference}.", 'Use a mediaRef from list_run_media or a libraryPath from list_media.');
+            $files[] = $file;
+        } else {
+            try {
+                nibblyAiResolveReferenceMediaPath($reference);
+            } catch (RuntimeException $e) {
+                throw new NibblyAgentOpException('The reference image is not available: ' . $reference, 'Use a libraryPath from list_media or a mediaRef from list_run_media.');
+            }
+            $library[] = $reference;
+        }
+    }
+    return ['files' => array_values(array_unique($files)), 'library' => array_values(array_unique($library))];
 }
 
 function nibblyAgentToolGenerateImage(string $name, array $args, array &$run, array $actor): array {
@@ -576,10 +610,20 @@ function nibblyAgentToolGenerateImage(string $name, array $args, array &$run, ar
         $dir = nibblyAgentMediaStagingDir($csId);
         if (!is_dir($dir) && !@mkdir($dir, 0755, true)) throw new NibblyAgentOpException('Could not prepare the image folder.');
         [$size, $ratio] = nibblyAgentImageSize((string)($args['aspect'] ?? '3:2'));
+        $options = ['count' => 1, 'size' => $size, 'aspectRatio' => $ratio, 'outputFormat' => 'webp', 'quality' => 'auto', 'filenameHint' => 'generated', 'storageDir' => $dir];
+        $references = nibblyAgentGenerateReferences((array)($args['references'] ?? []), $csId);
+        if ($references['files'] || $references['library']) {
+            $service = nibblyAiImageServiceResolve(nibblyAiLoadSettings(false));
+            if (!nibblyAiImageServiceSupportsReferences($service)) {
+                throw new NibblyAgentOpException('The image service of this site cannot use reference images.', 'Generate the image from the description alone, or use a photo from the library.');
+            }
+            $options['referenceImagePaths'] = $references['files'];
+            $options['referenceMediaPaths'] = $references['library'];
+        }
         $job = nibblyAiCreateImageJob('agent', [
             'prompt' => trim((string)$args['prompt']),
             'runId' => $run['id'], 'csId' => $csId,
-            'options' => ['count' => 1, 'size' => $size, 'aspectRatio' => $ratio, 'outputFormat' => 'webp', 'quality' => 'auto', 'filenameHint' => 'generated', 'storageDir' => $dir],
+            'options' => $options,
         ]);
         $call['jobId'] = $job['id'];
         $run['imagesRequested'] = (int)($run['imagesRequested'] ?? 0) + 1;
@@ -610,7 +654,9 @@ function nibblyAgentToolGenerateImage(string $name, array $args, array &$run, ar
     }
     try {
         $image = nibblyAgentIngestImage($real);
-        $record = nibblyAgentMediaRegister($csId, $image, ['source' => 'generated', 'name' => mb_substr((string)$job['payload']['prompt'], 0, 40, 'UTF-8'), 'ai' => 'generated']);
+        // A picture made from references is an edit of existing pictures: "AI-modified"; from the description alone it is "AI-generated".
+        $usedReferences = !empty($job['payload']['options']['referenceImagePaths']) || !empty($job['payload']['options']['referenceMediaPaths']);
+        $record = nibblyAgentMediaRegister($csId, $image, ['source' => 'generated', 'name' => mb_substr((string)$job['payload']['prompt'], 0, 40, 'UTF-8'), 'ai' => $usedReferences ? 'modified' : 'generated']);
     } catch (RuntimeException $e) {
         throw new NibblyAgentOpException($e->getMessage());
     } finally {

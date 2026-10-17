@@ -97,6 +97,8 @@ content/ai-requests.json
 content/ai-agent/
 content/ai-model-quirks.json
 content/ai-model-quirks.json.lock
+# Model lists of image services (fal.ai, Comet), refreshed daily
+content/ai-image-models-cache.json
 # Search engine check result
 content/seo-check.json
 content/seo-check.json.lock

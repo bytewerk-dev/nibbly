@@ -1765,6 +1765,8 @@ function nibblyCopilotBuildContext(?string $contentPage, array $settings = []): 
         'ai' => [
             'enabled' => !empty($settings['enabled']),
             'hasApiKey' => !empty($settings['hasApiKey']),
+            // Images come from their own service (an Anthropic chat can use fal.ai for images), so this does not follow hasApiKey.
+            'imageUsable' => !empty($settings['imageServiceStatus']['active']['usable']),
             'features' => [
                 'backendAssistant' => !empty($settings['features']['backendAssistant']),
                 'seoTextGeneration' => !empty($settings['features']['seoTextGeneration']),
@@ -1772,7 +1774,7 @@ function nibblyCopilotBuildContext(?string $contentPage, array $settings = []): 
             ],
             'models' => [
                 'chat' => (string)($settings['chatModel'] ?? ''),
-                'image' => (string)($settings['imageModel'] ?? '')
+                'image' => nibblyAiEffectiveImageModel($settings)
             ]
         ],
         'knowledgeBase' => nibblyCopilotKnowledgeBase(),

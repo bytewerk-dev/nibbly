@@ -4,7 +4,7 @@
  *
  *   content/ai-settings.json  everything except the keys (models, limits, rights, domains): site configuration,
  *                             safe to keep in version control
- *   content/ai-secrets.json   the API keys only: the provider keys, the Brave Search key and the Pexels key;
+ *   content/ai-secrets.json   the API keys only: the provider keys, the image service keys, the Brave Search key and the Pexels key;
  *                             never commit it (it is in .gitignore) and never serve it
  *
  * Readers get one array with both merged, so the rest of the code does not know about the split. Writers hand
@@ -37,7 +37,7 @@ function nibblyAiReadStoredSettings(): array {
 /**
  * The keys of a settings array in the shape of the secrets file. Empty keys are left out.
  *
- * @return array{providerCredentials?:array,research?:array,stock?:array}
+ * @return array{providerCredentials?:array,imageServices?:array,research?:array,stock?:array}
  */
 function nibblyAiExtractSecrets(array $settings): array {
     $secrets = [];
@@ -51,6 +51,10 @@ function nibblyAiExtractSecrets(array $settings): array {
     foreach ($credentials as $provider => $entry) {
         $key = is_array($entry) ? trim((string)($entry['apiKey'] ?? '')) : '';
         if ($key !== '') $secrets['providerCredentials'][(string)$provider]['apiKey'] = $key;
+    }
+    foreach ((array)($settings['imageServices'] ?? []) as $id => $entry) {
+        $key = is_array($entry) ? trim((string)($entry['apiKey'] ?? '')) : '';
+        if ($key !== '') $secrets['imageServices'][(string)$id]['apiKey'] = $key;
     }
     $brave = trim((string)($settings['research']['brave']['apiKey'] ?? ''));
     if ($brave !== '') $secrets['research']['brave']['apiKey'] = $brave;
@@ -67,6 +71,7 @@ function nibblyAiStripSecrets(array $settings): array {
             if (is_array($entry)) unset($settings['providerCredentials'][$provider]['apiKey']);
         }
     }
+    unset($settings['imageServices']);
     if (is_array($settings['research']['brave'] ?? null)) {
         unset($settings['research']['brave']['apiKey']);
         if (!$settings['research']['brave']) unset($settings['research']['brave']);
@@ -121,7 +126,7 @@ function nibblyAiMigrateSecrets(): bool {
 }
 
 /**
- * Delete one stored key right away. $target: "provider:<provider>", "brave" or "pexels". Anything else is refused.
+ * Delete one stored key right away. $target: "provider:<provider>", "image:<service>", "brave" or "pexels". Anything else is refused.
  * Returns whether a key existed.
  */
 function nibblyAiClearSecret(string $target): bool {
@@ -135,6 +140,12 @@ function nibblyAiClearSecret(string $target): bool {
         unset($secrets['providerCredentials'][$provider]['apiKey']);
         if (empty($secrets['providerCredentials'][$provider])) unset($secrets['providerCredentials'][$provider]);
         if (empty($secrets['providerCredentials'])) unset($secrets['providerCredentials']);
+    } elseif (str_starts_with($target, 'image:')) {
+        $service = substr($target, 6);
+        if (!in_array($service, ['openai-compatible', 'openrouter', 'kie', 'fal', 'comet', 'custom'], true)) throw new InvalidArgumentException('Unknown image service.');
+        $existed = trim((string)($secrets['imageServices'][$service]['apiKey'] ?? '')) !== '';
+        unset($secrets['imageServices'][$service]);
+        if (empty($secrets['imageServices'])) unset($secrets['imageServices']);
     } elseif ($target === 'brave') {
         $existed = trim((string)($secrets['research']['brave']['apiKey'] ?? '')) !== '';
         unset($secrets['research']);
