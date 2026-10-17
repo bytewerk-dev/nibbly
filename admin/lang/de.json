@@ -1962,6 +1962,13 @@
     "ai.agent_offer_title": "KI-Agent aktivieren?",
     "ai.agent_offer_text": "Mit {model} arbeitet der KI-Agent besonders zuverlässig. Soll er jetzt aktiviert werden?",
     "ai.agent_offer_confirm": "Agent aktivieren",
+    "mails.storage_off_title": "Neue Nachrichten werden hier nicht gespeichert",
+    "mails.storage_off_text": "Bei keinem aktivierten Formular ist „Lokal speichern“ eingeschaltet. Eingehende Nachrichten erscheinen deshalb nicht in dieser Liste und kommen nur per E-Mail an, sofern der Versand eingerichtet ist.",
+    "mails.forms_disabled_title": "Kein Formular ist aktiviert",
+    "mails.forms_disabled_text": "Solange kein Formular aktiviert ist, können Besucher keine Nachrichten senden, und diese Liste bleibt leer.",
+    "mails.open_forms_settings": "Formulare öffnen",
+    "ai.agent_classic_mode": "Klassischen Modus im Chat anbieten",
+    "ai.agent_classic_mode_hint": "Im Chat lässt sich zwischen dem Agenten und dem klassischen Assistenten wechseln. Der klassische Modus ist schneller und günstiger für Fragen und einzelne Textvorschläge. Schalte ihn aus, wenn der Chat nur den Agenten zeigen soll.",
     "ai.images_section": "Bilder",
     "ai.images_section_hint": "Bilder kommen von einem eigenen Dienst, unabhängig vom Chat-Anbieter. Der KI-Agent, der Assistent und der Bildgenerator nutzen ihn gemeinsam.",
     "ai.image_service": "Bild-Service",
@@ -1998,5 +2005,8 @@
     "ai.image_price_tables_hint": "Berechnet das Modell je Auflösungsstufe oder Qualität unterschiedlich, trage hier den Preis je Bild dafür ein. Eine Anfrage nutzt den Preis ihrer Auflösung, dann den ihrer Qualität, dann den Preis je Bild oben. Leere Felder nutzen den Preis je Bild.",
     "ai.image_price_status_tables": "Zusätzlich sind Preise nach Auflösung oder Qualität hinterlegt.",
     "ai.image_price_status_tables_only": "Preise nach Auflösung oder Qualität sind hinterlegt; Anfragen ohne passenden Eintrag nutzen den Standardpreis je Bild.",
-    "ai.image_service_models_loaded": "{count} Modelle vom Service geladen. Du kannst trotzdem jede Modell-ID eintippen."
+    "ai.image_service_models_loaded": "{count} Modelle vom Service geladen. Du kannst trotzdem jede Modell-ID eintippen.",
+    "ai.image_service_unusable_key": "Für den Bild-Service {service} ist noch kein API-Key hinterlegt. Trage ihn unter KI-Einstellungen → Bilder ein.",
+    "ai.image_service_unusable_model": "Für den Bild-Service {service} ist kein Bildmodell gewählt. Wähle eines unter KI-Einstellungen → Bilder.",
+    "ai.image_price_status_catalog_tables": "Katalogpreise nach Auflösung oder Qualität, Stand {date}."
 }

@@ -201,6 +201,13 @@ listed uses the `defaults` of its service. Result images are fetched with `nibbl
 service's own host, keys never enter audit entries, jobs, history or error messages, and
 `nibblyAiProviderErrorMessage()` is the one place that reads provider error bodies.
 
+The registry entry of a model may carry its own `adapter` and a `basePath` below the service address (Comet: Nano
+Banana over `gemini-generate`, GPT Image 2.5 over `openai-images` below `/v1` with an `openai.params` list of what the
+route takes, Seedream over `comet-task`), and for Kie.ai a `kie` block with the task id and the separate image-to-image
+id, `resolutionMap` (Kie's Seedream takes `quality` basic/high for 1K/2K), `formatAliases`, `aspectAuto` and
+`references.param`. `nibblyAiKieTaskInput()` builds a Kie task from it; `nibblyAiImageTaskRun()` is the queue runner
+shared by fal.ai and Comet's asynchronous route (submit what the ledger does not know, poll, download, clean the ledger).
+
 Reference images: the agent's `generate_image` takes `references` (a `mediaRef` of the run or a
 `libraryPath`); `nibblyAgentGenerateReferences()` checks them when the tool is called, and
 `nibblyAiImageServiceSupportsReferences()` says whether the service can use them (OpenAI-style
@@ -408,7 +415,7 @@ confirmation, and image generation respects the edit-vs-generate choice.
 
 ### AI Agent (Frontend Copilot)
 
-The agent is an optional mode of the frontend Copilot. The editor describes a
+The agent is an optional mode of the assistant chat: on the website (the frontend Copilot) and, since 2.3.2, in the dashboard, where the "Assistant" card of the home tab embeds the chat (`NibblyAiCopilot.embed(host)`; `syncAssistantEmbed()` in `admin/dashboard/scripts/overview-ai.php` moves it between the card and the floating bubble when the tab changes). `js/ai-agent.js` reads `window.NB_AI_AGENT` (set by `includes/footer.php` and `admin/dashboard.php` under the same conditions) and remembers its mode apart for the two. The editor describes a
 goal in the chat; the server works through it with a fixed set of tools, stages
 all changes in a **change set** (a package of operations) and presents it. The
 editor reviews it (before/after, images, sources, checks), can open a preview

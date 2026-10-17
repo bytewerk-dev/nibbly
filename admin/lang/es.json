@@ -1811,6 +1811,13 @@
     "ai.agent_offer_title": "¿Activar el agente de IA?",
     "ai.agent_offer_text": "El agente de IA funciona especialmente bien con {model}. ¿Quieres activarlo ahora?",
     "ai.agent_offer_confirm": "Activar agente",
+    "mails.storage_off_title": "Los mensajes nuevos no se guardan aquí",
+    "mails.storage_off_text": "«Guardar localmente» está desactivado en todos los formularios activados. Por eso los mensajes recibidos no aparecen en esta lista y solo llegan por correo, si el envío está configurado.",
+    "mails.forms_disabled_title": "Ningún formulario está activado",
+    "mails.forms_disabled_text": "Mientras no haya ningún formulario activado, los visitantes no pueden enviar mensajes y esta lista seguirá vacía.",
+    "mails.open_forms_settings": "Abrir formularios",
+    "ai.agent_classic_mode": "Ofrecer el modo clásico en el chat",
+    "ai.agent_classic_mode_hint": "El chat permite cambiar entre el agente y el asistente clásico. El modo clásico es más rápido y barato para preguntas y sugerencias de texto sueltas. Desactívalo si el chat solo debe mostrar el agente.",
     "ai.images_section": "Imágenes",
     "ai.images_section_hint": "Las imágenes vienen de un servicio propio, independiente del proveedor de chat. El agente de IA, el asistente y el generador de imágenes lo usan en común.",
     "ai.image_service": "Servicio de imágenes",
@@ -1847,5 +1854,8 @@
     "ai.image_price_tables_hint": "Si el modelo cobra distinto según la resolución o la calidad, introduce aquí el precio por imagen de cada una. Una solicitud usa el precio de su resolución, luego el de su calidad y, por último, el precio por imagen de arriba. Los campos vacíos usan el precio por imagen.",
     "ai.image_price_status_tables": "También hay precios por resolución o calidad.",
     "ai.image_price_status_tables_only": "Hay precios por resolución o calidad; las solicitudes sin coincidencia usan el precio por defecto por imagen.",
-    "ai.image_service_models_loaded": "{count} modelos cargados del servicio. Aun así puedes escribir cualquier ID de modelo."
+    "ai.image_service_models_loaded": "{count} modelos cargados del servicio. Aun así puedes escribir cualquier ID de modelo.",
+    "ai.image_service_unusable_key": "El servicio de imágenes {service} aún no tiene clave API. Añádela en Ajustes de IA → Imágenes.",
+    "ai.image_service_unusable_model": "No hay ningún modelo de imagen elegido para {service}. Elige uno en Ajustes de IA → Imágenes.",
+    "ai.image_price_status_catalog_tables": "Precios de catálogo por resolución o calidad, a fecha de {date}."
 }

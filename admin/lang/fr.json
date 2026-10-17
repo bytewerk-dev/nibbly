@@ -1811,6 +1811,13 @@
     "ai.agent_offer_title": "Activer l’agent IA ?",
     "ai.agent_offer_text": "L’agent IA fonctionne particulièrement bien avec {model}. Veux-tu l’activer maintenant ?",
     "ai.agent_offer_confirm": "Activer l’agent",
+    "mails.storage_off_title": "Les nouveaux messages ne sont pas enregistrés ici",
+    "mails.storage_off_text": "« Enregistrer localement » est désactivé pour tous les formulaires activés. Les messages reçus n’apparaissent donc pas dans cette liste et n’arrivent que par e-mail, si l’envoi est configuré.",
+    "mails.forms_disabled_title": "Aucun formulaire n’est activé",
+    "mails.forms_disabled_text": "Tant qu’aucun formulaire n’est activé, les visiteurs ne peuvent pas envoyer de messages et cette liste reste vide.",
+    "mails.open_forms_settings": "Ouvrir les formulaires",
+    "ai.agent_classic_mode": "Proposer le mode classique dans le chat",
+    "ai.agent_classic_mode_hint": "Le chat permet de passer de l’agent à l’assistant classique. Le mode classique est plus rapide et moins cher pour les questions et les suggestions de texte isolées. Désactive-le si le chat ne doit montrer que l’agent.",
     "ai.images_section": "Images",
     "ai.images_section_hint": "Les images viennent d’un service à part, indépendant du fournisseur de chat. L’agent IA, l’assistant et le générateur d’images l’utilisent ensemble.",
     "ai.image_service": "Service d’images",
@@ -1847,5 +1854,8 @@
     "ai.image_price_tables_hint": "Si le modèle facture différemment selon la résolution ou la qualité, saisis ici le prix par image de chacune. Une requête utilise le prix de sa résolution, puis celui de sa qualité, puis le prix par image ci-dessus. Les champs vides utilisent le prix par image.",
     "ai.image_price_status_tables": "Des prix par résolution ou qualité sont aussi renseignés.",
     "ai.image_price_status_tables_only": "Des prix par résolution ou qualité sont renseignés ; les requêtes sans correspondance utilisent le prix par défaut par image.",
-    "ai.image_service_models_loaded": "{count} modèles chargés depuis le service. Tu peux toujours saisir n’importe quel ID de modèle."
+    "ai.image_service_models_loaded": "{count} modèles chargés depuis le service. Tu peux toujours saisir n’importe quel ID de modèle.",
+    "ai.image_service_unusable_key": "Le service d’images {service} n’a pas encore de clé API. Ajoutes-en une dans Paramètres IA → Images.",
+    "ai.image_service_unusable_model": "Aucun modèle d’images n’est choisi pour {service}. Choisis-en un dans Paramètres IA → Images.",
+    "ai.image_price_status_catalog_tables": "Prix du catalogue par résolution ou qualité, au {date}."
 }

@@ -1811,6 +1811,13 @@
     "ai.agent_offer_title": "Yapay zekâ ajanı etkinleştirilsin mi?",
     "ai.agent_offer_text": "Yapay zekâ ajanı {model} ile özellikle iyi çalışır. Şimdi etkinleştirmek ister misin?",
     "ai.agent_offer_confirm": "Ajanı etkinleştir",
+    "mails.storage_off_title": "Yeni mesajlar burada saklanmıyor",
+    "mails.storage_off_text": "Etkin olan hiçbir formda “Yerel olarak sakla” açık değil. Bu yüzden gelen mesajlar bu listede görünmez ve e-posta gönderimi ayarlıysa yalnızca e-posta ile ulaşır.",
+    "mails.forms_disabled_title": "Hiçbir form etkin değil",
+    "mails.forms_disabled_text": "Hiçbir form etkin olmadığı sürece ziyaretçiler mesaj gönderemez ve bu liste boş kalır.",
+    "mails.open_forms_settings": "Formları aç",
+    "ai.agent_classic_mode": "Sohbette klasik modu sun",
+    "ai.agent_classic_mode_hint": "Sohbette ajan ile klasik asistan arasında geçiş yapılabilir. Klasik mod, sorular ve tekil metin önerileri için daha hızlı ve daha ucuzdur. Sohbet yalnızca ajanı göstermeliyse kapat.",
     "ai.images_section": "Görseller",
     "ai.images_section_hint": "Görseller, sohbet sağlayıcısından bağımsız ayrı bir hizmetten gelir. Yapay zeka ajanı, asistan ve görsel oluşturucu bunu birlikte kullanır.",
     "ai.image_service": "Görsel hizmeti",
@@ -1847,5 +1854,8 @@
     "ai.image_price_tables_hint": "Model çözünürlük kademesine veya kaliteye göre farklı ücret alıyorsa, her biri için görsel başına fiyatı buraya gir. Bir istek önce çözünürlüğünün, sonra kalitesinin, en sonunda da yukarıdaki görsel başına fiyatın değerini kullanır. Boş alanlar görsel başına fiyatı kullanır.",
     "ai.image_price_status_tables": "Çözünürlüğe veya kaliteye göre fiyatlar da girilmiş.",
     "ai.image_price_status_tables_only": "Çözünürlüğe veya kaliteye göre fiyatlar girilmiş; eşleşmeyen istekler görsel başına varsayılan fiyatı kullanır.",
-    "ai.image_service_models_loaded": "Hizmetten {count} model yüklendi. Yine de istediğin model kimliğini yazabilirsin."
+    "ai.image_service_models_loaded": "Hizmetten {count} model yüklendi. Yine de istediğin model kimliğini yazabilirsin.",
+    "ai.image_service_unusable_key": "{service} görsel hizmeti için henüz API anahtarı yok. Yapay zeka ayarları → Görseller bölümünden ekle.",
+    "ai.image_service_unusable_model": "{service} için görsel modeli seçilmedi. Yapay zeka ayarları → Görseller bölümünden seç.",
+    "ai.image_price_status_catalog_tables": "Çözünürlüğe veya kaliteye göre katalog fiyatları, {date} itibarıyla."
 }

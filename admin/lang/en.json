@@ -1962,6 +1962,13 @@
     "ai.agent_offer_title": "Enable the AI agent?",
     "ai.agent_offer_text": "The AI agent works especially well with {model}. Enable it now?",
     "ai.agent_offer_confirm": "Enable agent",
+    "mails.storage_off_title": "New messages are not stored here",
+    "mails.storage_off_text": "“Store locally” is turned off for every enabled form. Incoming messages therefore do not appear in this list and only arrive by email, if email delivery is set up.",
+    "mails.forms_disabled_title": "No form is enabled",
+    "mails.forms_disabled_text": "As long as no form is enabled, visitors cannot send messages and this list stays empty.",
+    "mails.open_forms_settings": "Open forms",
+    "ai.agent_classic_mode": "Offer the classic mode in the chat",
+    "ai.agent_classic_mode_hint": "The chat can switch between the agent and the classic assistant. The classic mode is faster and cheaper for questions and single text suggestions. Turn it off if the chat should show the agent only.",
     "ai.images_section": "Images",
     "ai.images_section_hint": "Images come from their own service, independent of the chat provider. The AI agent, the assistant and the image generator all use it.",
     "ai.image_service": "Image service",
@@ -1998,5 +2005,8 @@
     "ai.image_price_tables_hint": "If the model charges differently per resolution step or quality, enter the price per image for each. A request uses the price of its resolution, then of its quality, then the price per image above. Empty fields use the price per image.",
     "ai.image_price_status_tables": "Prices by resolution or quality are also set.",
     "ai.image_price_status_tables_only": "Prices by resolution or quality are set; requests that match none use the default price per image.",
-    "ai.image_service_models_loaded": "{count} models loaded from the service. You can still type any model ID."
+    "ai.image_service_models_loaded": "{count} models loaded from the service. You can still type any model ID.",
+    "ai.image_service_unusable_key": "The image service {service} has no API key yet. Add one under AI settings → Images.",
+    "ai.image_service_unusable_model": "No image model is chosen for {service}. Choose one under AI settings → Images.",
+    "ai.image_price_status_catalog_tables": "Catalog prices by resolution or quality, as of {date}."
 }

@@ -14,11 +14,14 @@
     'use strict';
 
     const config = window.NB_AI_AGENT;
+    // Whether the chat offers the classic assistant next to the agent (Settings > AI agent). Off: agent only, no switch.
+    const classicAllowed = !window.NB_AI_AGENT || window.NB_AI_AGENT.classic !== false;
     if (!config || config.available !== true || !window.NibblyAiCopilot || typeof window.NibblyAiCopilot.registerAgent !== 'function') {
         return;
     }
 
-    const MODE_KEY = 'nibbly.aiAgent.mode';
+    // The mode is remembered apart for the website and the dashboard: the dashboard's actions (theme, language) are the classic assistant's.
+    const MODE_KEY = 'nibbly.aiAgent.mode' + (window.NB_AI_COPILOT_MODE === 'dashboard' ? '.dashboard' : '');
     const RUN_KEY = 'nibbly-ai-agent:run';
     const LAST_RUN_KEY = 'nibbly-ai-agent:last-run'; // only the run id, shared by all tabs, so a new tab finds the open package again
     const LAST_RUN_MAX_AGE = 48 * 3600 * 1000;
@@ -71,6 +74,7 @@
     }
 
     function readMode() {
+        if (!classicAllowed) return 'agent';
         try {
             return window.localStorage && window.localStorage.getItem(MODE_KEY) === 'classic' ? 'classic' : 'agent';
         } catch (error) {
@@ -880,7 +884,7 @@
             attach.title = blocked ? label('agent.attach_blocked', 'Attach images before you send a request.') : label('agent.attach_hint', 'Attach images (JPEG, PNG or WebP). The agent can use them in the package.');
         }
         const mode = root.querySelector('.nb-agent-mode');
-        if (mode) mode.hidden = false;
+        if (mode) mode.hidden = !classicAllowed;
         renderChips();
         if (host) host.updateActions();
     }
@@ -1015,6 +1019,7 @@
     }
 
     function setMode(mode) {
+        if (mode === 'classic' && !classicAllowed) return;
         if (state.mode === mode) return;
         state.mode = mode;
         writeMode(mode);

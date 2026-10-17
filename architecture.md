@@ -297,6 +297,8 @@ may carry tables by resolution step and by quality, looked up with the resolutio
 The model lists of fal.ai and Comet are fetched by the server (`ai-image-models`) and cached for a day in
 `content/ai-image-models-cache.json`. The agent can pass reference images (a run's `mediaRef` or a library path)
 to `generate_image` where the service supports them.
+The agent's chat is also embedded in the "Assistant" card of the dashboard home tab (`NibblyAiCopilot.embed()`); the Kie.ai, fal.ai and Comet
+models (five each) and their parameters are listed in `includes/ai/image-services.json`.
 
 Usage counters live in `content/ai-usage.json`; request audit lines live in
 `content/ai-audit/YYYY-MM-DD.jsonl`; generated image metadata lives in

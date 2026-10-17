@@ -633,10 +633,12 @@
         var usage = document.getElementById('aiUsageSummary');
         var assistantEnabled = usable && aiFeatureEnabled(settings, 'backendAssistant');
         var textEnabled = usable && aiFeatureEnabled(settings, 'seoTextGeneration');
-        var imageEnabled = usable && aiFeatureEnabled(settings, 'imageGeneration') && aiImageServiceUsable(settings);
+        // The tab stays while the feature is on, so a missing key of the image service is explained instead of the tab vanishing.
+        var imageEnabled = usable && aiFeatureEnabled(settings, 'imageGeneration');
+        var imageReady = imageEnabled && aiImageServiceUsable(settings);
         var imageJobsPanel = document.getElementById('aiImageJobsPanel');
 
-        dashboardAiImageUsable = imageEnabled;
+        dashboardAiImageUsable = imageReady;
         if (window.NbImageManager && typeof NbImageManager.refresh === 'function') {
             NbImageManager.refresh();
         }
@@ -659,10 +661,11 @@
         }
 
         if (tools) tools.hidden = !usable || (!assistantEnabled && !textEnabled && !imageEnabled);
-        if (imageJobsPanel) imageJobsPanel.hidden = !imageEnabled;
+        if (imageJobsPanel) imageJobsPanel.hidden = !imageReady;
 
         var assistantCard = document.getElementById('aiAssistantCard');
         if (assistantCard) assistantCard.hidden = !assistantEnabled;
+        syncAssistantEmbed();
 
         var toolsCard = document.getElementById('aiToolsCard');
         if (toolsCard) toolsCard.hidden = !textEnabled && !imageEnabled;
@@ -684,6 +687,34 @@
     }
 
     document.getElementById('aiUnavailableDismiss')?.addEventListener('click', dismissAiUnavailableNotice);
+
+    // The assistant card holds the chat (Agent | Classic) on the home tab; on every other tab the chat floats as the bubble.
+    // Without the chat script the card shows the classic chat form, labelled as such.
+    function syncAssistantEmbed() {
+        var card = document.getElementById('aiAssistantCard');
+        var host = document.getElementById('aiAssistantEmbed');
+        if (!card || !host) return;
+        var classic = [document.getElementById('aiChatLog'), document.getElementById('aiChatForm')];
+        var badge = document.getElementById('aiAssistantBadge');
+        var homeTab = document.getElementById('homeTab');
+        var onHome = !homeTab || homeTab.style.display !== 'none';
+        var copilot = window.NibblyAiCopilot;
+        var embedded = false;
+        if (copilot && typeof copilot.embed === 'function' && window.NB_AI_COPILOT_AVAILABLE !== false) {
+            embedded = onHome && !card.hidden ? copilot.embed(host) : (copilot.embed(null), false);
+        }
+        host.hidden = !embedded;
+        classic.forEach(function(el) { if (el) el.hidden = embedded; });
+        if (badge) {
+            // Say which chat this is: the classic one (also the fallback form), or the agent alone when the classic mode is off.
+            // With both available the mode switch inside the chat says it.
+            var agentOnly = embedded && window.NB_AI_AGENT && window.NB_AI_AGENT.available === true && window.NB_AI_AGENT.classic === false;
+            var both = embedded && window.NB_AI_AGENT && window.NB_AI_AGENT.available === true && !agentOnly;
+            badge.textContent = t(agentOnly ? 'agent.mode_agent' : 'agent.mode_classic');
+            badge.hidden = both;
+        }
+    }
+    window.addEventListener('nibbly:copilot-ready', syncAssistantEmbed);
 
     function aiIsLocalProviderUrl(baseUrl) {
         try {
@@ -1276,7 +1307,7 @@
         var aliases = window.NB_AI_CATALOG.kie.imageAliases;
         model = aliases[model] || model;
         return AI_IMAGE_MODEL_OPTIONS.kie.some(function(option) { return option.value === model; })
-            ? model : 'gpt-image-2';
+            ? model : AI_IMAGE_MODEL_OPTIONS.kie[0].value;
     }
 
     function currentAiProviderKey(settings) {
@@ -1373,6 +1404,22 @@
         return (hasKey || local) && base !== '' && aiImageServiceModelValue(id) !== '';
     }
 
+    // Why images cannot be generated with the service as chosen in the form ('' when they can). Shown in the image tool.
+    function aiImageUnavailableMessage(settings) {
+        settings = settings || currentAiSettings || {};
+        var id = aiImageServiceId(settings);
+        if (id === 'inherit') return aiUsesAnthropic(settings) ? t('ai.image_service_inherit_anthropic') : '';
+        var entry = AI_IMG.services[id] || {};
+        var name = entry.label ? t(entry.label) : id;
+        var status = aiImageServiceStatusOf(id, settings);
+        var base = id === 'custom' ? String(aiById('aiImageCustomBaseUrl')?.value || ((settings.imageService || {}).custom || {}).baseUrl || '').trim() : 'x';
+        var local = !!settings.allowLocalProvider && id === 'custom' && aiIsLocalProviderUrl(base);
+        if (id === 'custom' && base === '') return t('ai.image_service_custom_base_url_missing');
+        if (!aiTypedSecret('aiImageApiKey') && !status.hasApiKey && !status.chatKeyAvailable && !local) return t('ai.image_service_unusable_key', { service: name });
+        if (aiImageServiceModelValue(id) === '') return t('ai.image_service_unusable_model', { service: name });
+        return '';
+    }
+
     // The service and model the image price belongs to; null when no image can be generated.
     function aiImagePriceContext() {
         var id = aiImageServiceId();
@@ -1451,6 +1498,7 @@
         var unknown = false;
         if (shown && String(shown.perImage || '') !== '') status.textContent = t('ai.image_price_status_override', { price: aiFormatNumber(shown.perImage), currency: shown.currency || 'USD' }) + (tables(shown) ? ' ' + t('ai.image_price_status_tables') : '');
         else if (tables(shown)) status.textContent = t('ai.image_price_status_tables_only');
+        else if (catalog && catalog.perImage === undefined && (catalog.byResolution || catalog.byQuality)) status.textContent = t('ai.image_price_status_catalog_tables', { date: catalog.updatedAt || '' });
         else if (catalog && catalog.perImage !== undefined) status.textContent = t('ai.image_price_status_catalog', { price: aiFormatNumber(catalog.perImage), currency: catalog.currency || 'USD', date: catalog.updatedAt || '' });
         else if (defaultCents > 0) status.textContent = t('ai.image_price_status_default', { cents: aiFormatNumber(defaultCents) });
         else { status.textContent = t('ai.price_unknown'); unknown = true; }
@@ -1732,9 +1780,15 @@
             imageButton.disabled = !imageUsable || imageModelMissing;
         }
         if (imageModelNote) {
-            imageModelNote.textContent = aiUsesOpenRouter(settings) && aiImageServiceId(settings) === 'inherit'
-                ? t('ai.image_openrouter_note') : t('ai.image_model_missing_note');
-            imageModelNote.hidden = !imageUsable || (!imageModelMissing && !(aiUsesOpenRouter(settings) && aiImageServiceId(settings) === 'inherit'));
+            var imageUnavailable = usable && aiFeatureEnabled(settings, 'imageGeneration') ? aiImageUnavailableMessage(settings) : '';
+            if (imageUnavailable) {
+                imageModelNote.textContent = imageUnavailable;
+                imageModelNote.hidden = false;
+            } else {
+                imageModelNote.textContent = aiUsesOpenRouter(settings) && aiImageServiceId(settings) === 'inherit'
+                    ? t('ai.image_openrouter_note') : t('ai.image_model_missing_note');
+                imageModelNote.hidden = !imageUsable || (!imageModelMissing && !(aiUsesOpenRouter(settings) && aiImageServiceId(settings) === 'inherit'));
+            }
         }
 
         document.querySelectorAll('#aiFeatureAssistant, #aiFeatureSeo, #aiFeatureImages').forEach(function(el) {
@@ -1816,6 +1870,7 @@
         updateAiApiKeyHint(provider);
         updateAiModelPlaceholders(provider);
         updateAiAvailability(settings);
+        aiSyncDashboardCopilot(settings);
     }
 
     function updateAiApiKeyHint(provider) {
@@ -1918,6 +1973,7 @@
         return {
             agent: {
                 enabled: !!document.getElementById('aiAgentEnabled')?.checked,
+                classicMode: document.getElementById('aiAgentClassicMode') ? !!document.getElementById('aiAgentClassicMode').checked : true,
                 limits: {
                     runsPerHour: agentInt('aiAgentRunsPerHour', 10),
                     maxTurns: agentInt('aiAgentMaxTurns', 14),
@@ -1951,6 +2007,7 @@
         var stock = settings.stock || {};
         var checks = {
             aiAgentEnabled: !!agent.enabled,
+            aiAgentClassicMode: agent.classicMode !== false,
             aiAgentCreditInNews: agent.creditInNews !== false,
             aiAgentSourcesInNews: agent.sourcesInNews !== false,
             aiAgentRespectRobots: research.respectRobots !== false
@@ -2035,17 +2092,20 @@
         if (this.checked && raiseAgentLimits()) showToast(t('ai.agent_limits_raised'), 'info');
     });
 
-    // After a save that put a powerful chat model in place, offer the agent once per model while it is off.
+    // After a save that adds a key or puts a powerful chat model in place, offer the agent while it is off.
+    // A key that was just added always gets the question; a changed model only once per model.
     function maybeOfferAiAgent(previous, saved) {
         if (!saved || !saved.enabled || !saved.hasApiKey || (saved.agent && saved.agent.enabled)) return;
         if (!saved.agentStatus || !saved.agentStatus.toolCalling) return;
         var caps = aiModelCaps(saved.provider, saved.baseUrl, saved.chatModel);
         if (!caps || caps.tier !== 'power') return;
-        var changed = !previous || previous.provider !== saved.provider || previous.chatModel !== saved.chatModel || !previous.hasApiKey;
-        if (!changed) return;
+        var before = previous && previous.providerCredentials && previous.providerCredentials[saved.provider];
+        var keyAdded = !before || !before.hasApiKey;
+        var modelChanged = !previous || previous.provider !== saved.provider || previous.chatModel !== saved.chatModel;
+        if (!keyAdded && !modelChanged) return;
         var memo = 'nbAgentOffer:' + saved.provider + '|' + String(saved.chatModel).toLowerCase();
         try {
-            if (localStorage.getItem(memo)) return;
+            if (!keyAdded && localStorage.getItem(memo)) return;
             localStorage.setItem(memo, '1');
         } catch (e) { /* without storage the question may come again */ }
         showModal(t('ai.agent_offer_title'), t('ai.agent_offer_text', { model: caps.label }), function() {
@@ -2056,6 +2116,32 @@
             raiseAgentLimits();
             saveAiSettingsForm();
         }, { confirmText: t('ai.agent_offer_confirm'), confirmClass: 'btn btn-primary' });
+    }
+
+    // The assistant button (bottom right) belongs to the page only when the assistant is usable. The page loads its script
+    // and styles only then, so after the first key is saved they are loaded here, and the button goes away when it stops being usable.
+    var aiCopilotLoading = false;
+    function aiSyncDashboardCopilot(settings) {
+        if (!AI_FEATURES_ENABLED || !settings) return;
+        var available = !!settings.enabled && !!settings.hasApiKey && !!(settings.features && settings.features.backendAssistant)
+            && !(settings.assistantSurfaces && settings.assistantSurfaces.dashboard === false);
+        var root = document.querySelector('.nb-copilot');
+        if (root) {
+            root.style.display = available ? '' : 'none';
+            if (!available && window.NibblyAiCopilot) window.NibblyAiCopilot.close();
+            return;
+        }
+        if (!available || window.NibblyAiCopilot || aiCopilotLoading) return;
+        aiCopilotLoading = true;
+        window.NB_AI_COPILOT_AVAILABLE = true;
+        var style = document.createElement('link');
+        style.rel = 'stylesheet';
+        style.href = '../css/ai-copilot.css?v=<?php echo @filemtime(__DIR__ . '/../../../css/ai-copilot.css') ?: time(); ?>';
+        document.head.appendChild(style);
+        var script = document.createElement('script');
+        script.src = '../js/ai-copilot.js?v=<?php echo @filemtime(__DIR__ . '/../../../js/ai-copilot.js') ?: time(); ?>';
+        script.onerror = function() { aiCopilotLoading = false; };
+        document.body.appendChild(script);
     }
 
     document.getElementById('aiAgentClearCache')?.addEventListener('click', async function() {
@@ -2189,6 +2275,7 @@
                     aiSetSecretField('aiBraveApiKey', 'aiRemoveBraveApiKey', 'aiBraveApiKeyHint', !!currentAiSettings.research.hasBraveApiKey);
                     aiSetSecretField('aiPexelsApiKey', 'aiRemovePexelsApiKey', 'aiPexelsApiKeyHint', !!currentAiSettings.stock.hasPexelsApiKey);
                     renderAgentStatus(currentAiSettings);
+                    aiSyncDashboardCopilot(currentAiSettings);
                     updateAiAvailability(Object.assign({}, currentAiSettings, collectAiSettingsForm(), { hasApiKey: !!currentAiSettings.hasApiKey }));
                     if (result.data.usage) updateAiUsage(result.data.usage);
                     showToast(t('ai.key_removed'), 'success');
@@ -2198,6 +2285,19 @@
             }, { confirmText: t('ai.remove_key_button'), confirmClass: 'btn btn-danger' });
         });
     });
+
+    // The "thinking" bubble at the end of the chat while an answer is on its way; the caller removes it.
+    function appendAiThinking() {
+        var log = document.getElementById('aiChatLog');
+        if (!log) return null;
+        var item = document.createElement('div');
+        item.className = 'ai-chat-message ai-chat-message--thinking';
+        item.setAttribute('role', 'status');
+        item.innerHTML = '<span class="nb-spinner" aria-hidden="true"></span><span>' + escapeHtml(t('ai.answering')) + '</span><span class="nb-thinking-dots" aria-hidden="true"><i></i><i></i><i></i></span>';
+        log.appendChild(item);
+        log.scrollTop = log.scrollHeight;
+        return item;
+    }
 
     function appendAiChat(role, text) {
         var log = document.getElementById('aiChatLog');

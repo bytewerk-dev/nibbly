@@ -3963,22 +3963,27 @@ select.modal-input {
 }
 
 .forms-fields-table tr.forms-field-row {
+    position: relative;
     display: grid;
-    grid-template-columns: 126px minmax(112px, 0.85fr) minmax(132px, 1.1fr) minmax(132px, 1.1fr) 126px 76px 48px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--nb-space-3);
     align-items: end;
-    padding: var(--nb-space-3);
+    /* Room on the right for the delete button, which sits in the corner of the card, level with the first input. */
+    padding: var(--nb-space-3) calc(36px + var(--nb-space-3) * 2) var(--nb-space-3) var(--nb-space-3);
     border: 1px solid var(--nb-border);
     border-radius: var(--nb-radius-md);
     background: var(--nb-surface-item, var(--nb-bg));
 }
 
-.forms-fields-table tr.forms-field-row td:nth-child(7) {
-    grid-column: 1 / -2;
+.forms-fields-table tr.forms-field-row td.forms-field-options {
+    grid-column: 1 / -1;
 }
 
-.forms-fields-table tr.forms-field-row td:nth-child(8) {
-    grid-column: -2 / -1;
+.forms-fields-table tr.forms-field-row td.users-table__actions {
+    position: absolute;
+    top: calc(var(--nb-space-3) + 28px);
+    right: var(--nb-space-3);
+    width: 36px;
 }
 
 .forms-fields-table td,
@@ -4043,20 +4048,22 @@ select.modal-input {
 }
 
 .forms-field-check {
-    justify-items: center;
+    justify-items: start;
 }
 
-.forms-field-check input {
-    width: auto;
+.forms-fields-table td.forms-field-check input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
     min-height: 0;
-    margin: 2px 0 0;
+    margin: 0;
     align-self: center;
+    justify-self: start;
 }
 
 .forms-fields-table .users-table__actions {
     display: flex;
     align-items: flex-end;
-    justify-content: center;
+    justify-content: flex-end;
     padding-bottom: 0;
 }
 
@@ -8123,6 +8130,11 @@ input.color-hex-input,
     display: none;
 }
 
+.ai-size-group,
+.ai-size-option {
+    flex: 0 0 auto;
+}
+
 .ai-size-group {
     padding: 8px 10px 2px;
     color: var(--nb-text-muted, #737373);
@@ -8961,12 +8973,63 @@ input.color-hex-input,
 
 .ai-running-indicator::before {
     content: "";
-    width: 8px;
-    height: 8px;
-    border-radius: 999px;
-    background: var(--nb-primary, #3858e9);
-    animation: aiPulse 0.9s ease-in-out infinite;
+    width: 1em;
+    height: 1em;
+    border: 2px solid color-mix(in srgb, var(--nb-primary, #3858e9) 25%, transparent);
+    border-top-color: var(--nb-primary, #3858e9);
+    border-radius: 50%;
+    animation: backup-spin 0.8s linear infinite;
 }
+
+/* Ring spinner for work in progress (image jobs, thinking bubble). Motion stops for prefers-reduced-motion. */
+.nb-spinner {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 1.05em;
+    height: 1.05em;
+    border: 2px solid color-mix(in srgb, var(--nb-primary, #3858e9) 25%, transparent);
+    border-top-color: var(--nb-primary, #3858e9);
+    border-radius: 50%;
+    vertical-align: -0.15em;
+    animation: backup-spin 0.8s linear infinite;
+}
+
+.nb-spinner[hidden] {
+    display: none;
+}
+
+.ai-image-jobs-panel__copy p {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* The assistant is working on an answer: a bubble in the chat with the ring and three dots. */
+.ai-chat-message--thinking {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--nb-bg-elevated, #fff);
+    color: var(--nb-text-muted, #737373);
+    border: 1px solid var(--nb-border, #e5e5e5);
+}
+
+.ai-chat-message--thinking .nb-thinking-dots {
+    display: inline-flex;
+    gap: 3px;
+}
+
+.ai-chat-message--thinking .nb-thinking-dots i {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: aiPulse 1.1s ease-in-out infinite;
+}
+
+.ai-chat-message--thinking .nb-thinking-dots i:nth-child(2) { animation-delay: 0.18s; }
+.ai-chat-message--thinking .nb-thinking-dots i:nth-child(3) { animation-delay: 0.36s; }
 
 @keyframes aiPulse {
     0%, 100% {
@@ -9164,19 +9227,6 @@ input.color-hex-input,
         grid-template-columns: 1fr;
     }
 
-    .forms-fields-table tr.forms-field-row {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .forms-fields-table tr.forms-field-row td:nth-child(7),
-    .forms-fields-table tr.forms-field-row td:nth-child(8) {
-        grid-column: 1 / -1;
-    }
-
-    .forms-fields-table .users-table__actions {
-        justify-content: flex-start;
-    }
-
     .mail-form-filter {
         width: 100%;
     }
@@ -9335,9 +9385,6 @@ input.color-hex-input,
 .settings-mobile-navigation { display: none; }
 .forms-admin-list__head { grid-template-columns: minmax(0, 1fr) auto; }
 .forms-fields-table { display: block; }
-.forms-fields-table tr.forms-field-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.forms-fields-table tr.forms-field-row td:nth-child(7) { grid-column: 1 / -1; }
-.forms-fields-table tr.forms-field-row td:nth-child(8) { grid-column: 1 / -1; }
 .forms-fields-table td { grid-template-rows: auto minmax(38px, auto); }
 .forms-fields-table td input, .forms-fields-table td textarea { width: 100%; min-width: 0; }
 .access-maintenance-grid, .settings-visual-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); }
@@ -9364,7 +9411,8 @@ input.color-hex-input,
     .users-table-wrap { overflow-x: auto; }
 }
 @container settings (min-width: 60rem) {
-    .forms-fields-table tr.forms-field-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    /* Wide: type, key, label, placeholder, width and required in one line, the options below. */
+    .forms-fields-table tr.forms-field-row { grid-template-columns: 8rem minmax(7rem, 0.8fr) minmax(8rem, 1.1fr) minmax(8rem, 1.1fr) 7.5rem 5rem; }
 }
 .ai-image-filename-row { flex-wrap: wrap; }
 .ai-image-filename-row input { flex: 1 1 12rem; }
@@ -9505,3 +9553,30 @@ input.color-hex-input,
 .ai-limit-banner .ai-limit-banner__line { margin: 0 0 var(--nb-space-2); }
 .ai-limit-banner .ai-limit-banner__line--reached { font-weight: 700; }
 .ai-limit-banner .ai-limit-banner__actions { margin-top: var(--nb-space-2); }
+
+/* Assistant card on the dashboard home: the chat (Agent | Classic) is embedded; the classic form carries a label. */
+.ai-assistant-embed[hidden],
+.ai-card--assistant .ai-chat-log[hidden],
+.ai-card--assistant .ai-form[hidden] {
+    display: none;
+}
+
+.ai-assistant-embed .nb-copilot-panel {
+    background: var(--nb-bg-elevated, #fff);
+}
+
+.ai-card__badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 8px;
+    border: 1px solid var(--nb-border, #d4d4d4);
+    border-radius: 999px;
+    color: var(--nb-text-muted, #737373);
+    font-size: 0.72rem;
+    font-weight: 500;
+    vertical-align: middle;
+}
+
+.ai-card__badge[hidden] {
+    display: none;
+}

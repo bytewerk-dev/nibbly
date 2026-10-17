@@ -704,8 +704,6 @@ function nibblyAiGenerateImageExecute(string $prompt, array $options = []): arra
         throw new RuntimeException('Image prompt is too long for the configured limit.');
     }
 
-    // From here on the image service's credentials stand in for the chat provider's.
-    $img = nibblyAiImageEffectiveSettings($settings, $service);
     $count = nibblyAiClampInt($options['count'] ?? 1, 1, 10);
     $model = (string)($options['model'] ?? $service['model']);
     if ($service['adapter'] === 'openrouter-chat') {
@@ -718,10 +716,9 @@ function nibblyAiGenerateImageExecute(string $prompt, array $options = []): arra
     if (trim($model) === '') {
         throw new RuntimeException('Image model is missing.');
     }
-    if ($model !== $service['model'] && !$service['inherit'] && !empty($service['spec'])) {
-        $service['spec'] = nibblyAiImageModelSpec($service['id'], $model);
-    }
-    $img['imageModel'] = $model;
+    // The model decides the spec, the adapter and the address; from here on the image service's credentials stand in for the chat provider's.
+    $service = nibblyAiImageServiceWithModel($service, $model, $settings);
+    $img = nibblyAiImageEffectiveSettings($settings, $service);
 
     $isGptImageModel = (bool)preg_match('/^(gpt-image|chatgpt-image)/i', $model);
     $isGptImage2Model = (bool)preg_match('/^gpt-image-2/i', $model);
@@ -840,7 +837,7 @@ function nibblyAiEnsureImageReady(array $settings, array $service): void {
         throw new RuntimeException('AI base URL is missing.');
     }
     nibblyAiValidateBaseUrl($service['baseUrl'], !empty($settings['allowLocalProvider']));
-    if ($service['apiKey'] === '' && !nibblyAiIsLocalBaseUrl($service['baseUrl'])) {
+    if ($service['apiKey'] === '' && !nibblyAiImageServiceMayBeKeyless($settings, $service)) {
         throw new RuntimeException('The API key of the image service is missing.');
     }
 }
@@ -1981,10 +1978,6 @@ function nibblyAiGenerateKieImages(array $settings, array $options): array {
     $headers = ['Content-Type: application/json', 'Accept: application/json'];
     $key = trim((string)($settings['apiKey'] ?? ''));
     if ($key !== '') $headers[] = 'Authorization: Bearer ' . $key;
-    $aspectRatio = nibblyAiCleanAspectRatio((string)($options['aspectRatio'] ?? 'auto'));
-    if ($aspectRatio === 'auto' && preg_match('/^(\d+)x(\d+)$/', (string)($options['size'] ?? ''), $dimensions)) {
-        $aspectRatio = nibblyAiNearestOpenRouterAspectRatio((int)$dimensions[1], (int)$dimensions[2]);
-    }
     // Preserve UTF-8 at the provider's prompt-length boundary.
     $prompt = (string)($options['prompt'] ?? '');
     $prompt = nibblyAiUtf8Prefix($prompt, 8000);
@@ -2007,22 +2000,7 @@ function nibblyAiGenerateKieImages(array $settings, array $options): array {
             $tasks[$savedTasks[$index]['id']] = $index;
             continue;
         }
-        $taskModel = $model;
-        $input = ['prompt' => $prompt, 'aspect_ratio' => $aspectRatio];
-        if ($model === 'gpt-image-2') {
-            $taskModel = $references ? 'gpt-image-2-image-to-image' : 'gpt-image-2-text-to-image';
-            if ($references) $input['input_urls'] = $references;
-        } elseif ($model === 'nano-banana-2') {
-            $input['resolution'] = nibblyAiKieResolution($options['imageScale'] ?? 2048);
-            $input['output_format'] = nibblyAiKieProviderOutputFormat($options, $model);
-            $input['image_input'] = $references;
-        } else {
-            $taskModel = $references ? 'seedream/5-pro-image-to-image' : 'seedream/5-pro-text-to-image';
-            if ($references) $input['image_urls'] = $references;
-            $input['quality'] = (string)($options['quality'] ?? '') === 'high' ? 'high' : 'basic';
-            $input['output_format'] = nibblyAiKieProviderOutputFormat($options, $model);
-            $input['nsfw_checker'] = false;
-        }
+        [$taskModel, $input] = nibblyAiKieTaskInput(nibblyAiImageModelSpec('kie', $model), $model, $prompt, $options, $references, (array)($settings['imageExtraParams'] ?? []));
         $savedTasks[$index] = ['state' => 'submitting', 'model' => $taskModel];
         if ($requestId !== '') nibblyAiRequestPatch($requestId, ['tasks' => $savedTasks]);
         $response = nibblyAiExecuteJsonRequest($settings, $baseUrl . '/api/v1/jobs/createTask', $headers, ['model' => $taskModel, 'input' => $input]);
@@ -2064,10 +2042,35 @@ function nibblyAiGenerateKieImages(array $settings, array $options): array {
 }
 
 function nibblyAiKieResolution($scale): string { $scale = (int)$scale; return $scale >= 3072 ? '4K' : ($scale >= 1536 ? '2K' : '1K'); }
-function nibblyAiKieProviderOutputFormat(array $options, string $model): string {
-    $format = strtolower(trim((string)($options['outputFormat'] ?? 'webp')));
-    if ($format === 'webp') return 'png';
-    return $format === 'png' ? 'png' : (nibblyAiNormalizeKieImageModel($model) === 'seedream-5-0-pro' ? 'jpeg' : 'jpg');
+/**
+ * The model and input of one Kie.ai task, from the spec of the model: the id (a separate one when reference images are
+ * sent), the aspect ratio, the resolution step (or the quality that stands for it), the output format and the images.
+ *
+ * @return array{0:string,1:array}
+ */
+function nibblyAiKieTaskInput(array $spec, string $model, string $prompt, array $options, array $references, array $extra = []): array {
+    $kie = (array)($spec['kie'] ?? []);
+    $taskModel = $references && !empty($kie['editModel']) ? (string)$kie['editModel'] : (string)($kie['model'] ?? $model);
+    $input = ['prompt' => $prompt];
+    $aspects = (array)($spec['aspects'] ?? []);
+    if (!empty($spec['aspectParam'])) {
+        $ratio = nibblyAiImageRequestedRatio($options);
+        $input[$spec['aspectParam']] = $ratio === 'auto'
+            ? (!empty($spec['aspectAuto']) ? 'auto' : (string)($aspects[0] ?? '1:1'))
+            : nibblyAiImageNearestAspect($ratio, $aspects);
+    }
+    if (!empty($spec['resolutionParam']) && !empty($spec['resolutions'])) {
+        $step = nibblyAiImageResolutionFor($options['imageScale'] ?? 2048, (array)$spec['resolutions']);
+        $input[$spec['resolutionParam']] = (string)($spec['resolutionMap'][$step] ?? $step);
+    }
+    if (!empty($spec['formatParam']) && !empty($spec['formats'])) {
+        $format = strtolower(trim((string)($options['outputFormat'] ?? 'webp')));
+        $input[$spec['formatParam']] = in_array($format, $spec['formats'], true)
+            ? $format
+            : (string)($spec['formatAliases'][$format] ?? (in_array('png', $spec['formats'], true) ? 'png' : $spec['formats'][0]));
+    }
+    if ($references) $input[(string)($spec['references']['param'] ?? 'image_urls')] = array_values($references);
+    return [$taskModel, $input + $extra];
 }
 function nibblyAiKieUploadReference(array $settings, string $path): string {
     $headers = ['Content-Type: application/json', 'Accept: application/json'];

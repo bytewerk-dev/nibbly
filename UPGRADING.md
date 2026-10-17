@@ -3,6 +3,27 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.3.1 to 2.3.2
+
+Version 2.3.2 is a compatible release: the AI agent can chat in the dashboard, the image models of
+Kie.ai, fal.ai and Comet were renewed, and the image tool stays visible while its service cannot
+work yet. No manual step is needed.
+
+1. Deploy the complete core. `admin/lang/*.json` gets new texts; `js/ai-agent.js`, `js/ai-copilot.js`,
+   `css/ai-copilot.css` and the dashboard scripts changed. A site that copies `js/ai-copilot.js` or
+   `js/ai-agent.js` into its own template must take the new versions: the dashboard now loads both, and the
+   agent registers in the dashboard mode as well.
+2. Image models. Saved Kie.ai model ids are read through aliases (`gpt-image-2` becomes
+   `gpt-image-2-5-flare`, `nano-banana-2` becomes `nano-banana-2-1`), so nothing needs saving again. A fal.ai
+   or Comet model that is no longer listed (for example `fal-ai/nano-banana-2`, `fal-ai/flux/schnell`,
+   `gemini-3.1-flash-image-preview`) keeps working as a typed model ID with the service defaults; choose one of the
+   new models to get its exact parameters. Prices you entered for a model stay. Kie.ai prices come from its marketing
+   pages, not from its API documentation, and may change: override them in the settings when they matter.
+3. Custom code that calls `nibblyAiGenerateKieImages()` with the former model ids keeps working through the aliases.
+   `nibblyAiKieProviderOutputFormat()` is gone (replaced by `nibblyAiKieTaskInput()`).
+4. `nibblyAiImageServiceResolve()` now returns the adapter and address per model (`nibblyAiImageServiceWithModel()`);
+   code that read `$service['adapter']` of a Comet service must resolve with the model in use.
+
 ## Upgrading from 2.3.0 to 2.3.1
 
 Version 2.3.1 changes how the AI settings store models and prices, adds the safety check

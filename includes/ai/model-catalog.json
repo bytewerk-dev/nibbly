@@ -109,12 +109,20 @@
         },
         "images": [
             {
-                "value": "gpt-image-2",
-                "label": "Kie.ai: GPT Image 2"
+                "value": "nano-banana-pro",
+                "label": "Kie.ai: Nano Banana Pro"
             },
             {
-                "value": "nano-banana-2",
-                "label": "Kie.ai: Nano Banana 2"
+                "value": "nano-banana-2-1",
+                "label": "Kie.ai: Nano Banana 2.1"
+            },
+            {
+                "value": "gpt-image-2-5-flare",
+                "label": "Kie.ai: GPT Image 2.5 Flare"
+            },
+            {
+                "value": "gpt-image-2-5-sunburst",
+                "label": "Kie.ai: GPT Image 2.5 Sunburst"
             },
             {
                 "value": "seedream-5-0-pro",
@@ -130,8 +138,14 @@
             "persistentTasks": true
         },
         "imageAliases": {
-            "gpt-image-2-text-to-image": "gpt-image-2",
-            "gpt-image-2-image-to-image": "gpt-image-2",
+            "nano-banana-2": "nano-banana-2-1",
+            "gpt-image-2": "gpt-image-2-5-flare",
+            "gpt-image-2-text-to-image": "gpt-image-2-5-flare",
+            "gpt-image-2-image-to-image": "gpt-image-2-5-flare",
+            "gpt-image-2-5-flare-text-to-image": "gpt-image-2-5-flare",
+            "gpt-image-2-5-flare-image-to-image": "gpt-image-2-5-flare",
+            "gpt-image-2-5-sunburst-text-to-image": "gpt-image-2-5-sunburst",
+            "gpt-image-2-5-sunburst-image-to-image": "gpt-image-2-5-sunburst",
             "seedream/5-pro-text-to-image": "seedream-5-0-pro",
             "seedream/5-pro-image-to-image": "seedream-5-0-pro"
         }

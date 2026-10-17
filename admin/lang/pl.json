@@ -1811,6 +1811,13 @@
     "ai.agent_offer_title": "Włączyć agenta AI?",
     "ai.agent_offer_text": "Agent AI działa szczególnie dobrze z modelem {model}. Czy włączyć go teraz?",
     "ai.agent_offer_confirm": "Włącz agenta",
+    "mails.storage_off_title": "Nowe wiadomości nie są tu zapisywane",
+    "mails.storage_off_text": "Opcja „Zapisuj lokalnie” jest wyłączona we wszystkich włączonych formularzach. Przychodzące wiadomości nie pojawiają się więc na tej liście i docierają tylko e-mailem, o ile wysyłka jest skonfigurowana.",
+    "mails.forms_disabled_title": "Żaden formularz nie jest włączony",
+    "mails.forms_disabled_text": "Dopóki żaden formularz nie jest włączony, odwiedzający nie mogą wysyłać wiadomości, a ta lista pozostaje pusta.",
+    "mails.open_forms_settings": "Otwórz formularze",
+    "ai.agent_classic_mode": "Oferuj tryb klasyczny w czacie",
+    "ai.agent_classic_mode_hint": "W czacie można przełączać się między agentem a klasycznym asystentem. Tryb klasyczny jest szybszy i tańszy przy pytaniach i pojedynczych podpowiedziach tekstu. Wyłącz go, jeśli czat ma pokazywać tylko agenta.",
     "ai.images_section": "Obrazy",
     "ai.images_section_hint": "Obrazy pochodzą z osobnej usługi, niezależnej od dostawcy czatu. Korzystają z niej wspólnie agent AI, asystent i generator obrazów.",
     "ai.image_service": "Usługa obrazów",
@@ -1847,5 +1854,8 @@
     "ai.image_price_tables_hint": "Jeśli model liczy inaczej za poziom rozdzielczości lub jakość, wpisz tu cenę za obraz dla każdej z nich. Żądanie używa ceny swojej rozdzielczości, potem swojej jakości, a na końcu ceny za obraz podanej wyżej. Puste pola używają ceny za obraz.",
     "ai.image_price_status_tables": "Podano też ceny według rozdzielczości lub jakości.",
     "ai.image_price_status_tables_only": "Podano ceny według rozdzielczości lub jakości; żądania bez dopasowania używają domyślnej ceny za obraz.",
-    "ai.image_service_models_loaded": "Z usługi wczytano {count} modeli. Nadal możesz wpisać dowolny identyfikator modelu."
+    "ai.image_service_models_loaded": "Z usługi wczytano {count} modeli. Nadal możesz wpisać dowolny identyfikator modelu.",
+    "ai.image_service_unusable_key": "Usługa obrazów {service} nie ma jeszcze klucza API. Dodaj go w Ustawieniach AI → Obrazy.",
+    "ai.image_service_unusable_model": "Dla {service} nie wybrano modelu obrazów. Wybierz go w Ustawieniach AI → Obrazy.",
+    "ai.image_price_status_catalog_tables": "Ceny z katalogu według rozdzielczości lub jakości, stan na {date}."
 }

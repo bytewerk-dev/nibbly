@@ -711,6 +711,7 @@ $_footerSummary = [
             $_aiAgentConfig = [
                 'available' => true,
                 'rights' => array_combine(NIBBLY_AGENT_RIGHTS, array_map('nibblyAgentCan', NIBBLY_AGENT_RIGHTS)),
+                'classic' => nibblyAgentSettings()['classicMode'] !== false,
                 'maxUploadFiles' => 6,
                 'maxUploadBytes' => function_exists('getMediaConfig') ? (int)(getMediaConfig('image')['maxSize'] ?? 10485760) : 10485760,
             ];

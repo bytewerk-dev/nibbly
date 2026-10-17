@@ -1106,6 +1106,7 @@
     }
 
     function setOpen(open) {
+        if (state.embedded && !open) return; // an embedded chat is always open; leaving the card closes nothing
         if (open && !state.open) {
             state.lastFocusedBeforeOpen = document.activeElement instanceof HTMLElement ? document.activeElement : null;
         }
@@ -1118,7 +1119,7 @@
         if (open) {
             loadContext();
             const input = panel.querySelector('.nb-copilot-input');
-            if (input) setTimeout(() => input.focus(), 0);
+            if (input && !state.embedded) setTimeout(() => input.focus(), 0);
         } else {
             const restoreTarget = state.lastFocusedBeforeOpen && document.contains(state.lastFocusedBeforeOpen)
                 ? state.lastFocusedBeforeOpen
@@ -2975,7 +2976,7 @@
                 currentSessionId: state.currentSessionId || '',
                 lastInstruction: String(state.lastInstruction || '').slice(0, 3000),
                 lastImageResult: state.lastImageResult,
-                open: state.open === true,
+                open: (state.embedded ? state.openBeforeEmbed : state.open) === true,
                 maximized: state.maximized === true
             }));
             archiveSessionDebounced();
@@ -3038,8 +3039,33 @@
         };
     }
 
+    /**
+     * Put the chat into a container of the page (a card) instead of the floating bubble, or back (host null). The same
+     * chat and state move; the bubble and the close and maximize buttons are hidden while it sits in a card. Afterwards it is as
+     * open as before, or open when a conversation is going on.
+     */
+    function embed(host) {
+        const root = document.querySelector('.nb-copilot');
+        if (!root) return false;
+        if (host) {
+            if (!state.embedded) state.openBeforeEmbed = state.open === true;
+            state.embedded = true;
+            host.appendChild(root);
+            root.classList.add('nb-copilot--embedded');
+            if (!state.open) setOpen(true);
+            else loadContext();
+        } else if (state.embedded) {
+            state.embedded = false;
+            document.body.appendChild(root);
+            root.classList.remove('nb-copilot--embedded');
+            // Leaving the card while a conversation is going on (a card that opens a settings page): the chat stays open as the floating panel.
+            setOpen(state.openBeforeEmbed === true || state.messages.some(message => message.role === 'user'));
+        }
+        return true;
+    }
+
     function registerAgent(hook) {
-        if (agentHook || !hook || copilotMode !== 'frontend') return false;
+        if (agentHook || !hook) return false;
         agentHook = hook;
         const root = document.querySelector('.nb-copilot');
         if (root) {
@@ -3054,9 +3080,15 @@
         close: () => setOpen(false),
         maximize: () => setMaximized(true),
         minimize: () => setMaximized(false),
+        embed,
         registerAgent
     };
     window.NibblyAiAssistant = window.NibblyAiCopilot;
+
+    // Pages that embed the chat (the dashboard) wait for this: the chat exists from now on.
+    function announceReady() {
+        window.dispatchEvent(new CustomEvent('nibbly:copilot-ready'));
+    }
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
@@ -3064,11 +3096,13 @@
             renderShell();
             startImageJobPolling('');
             if (state.open) setOpen(true);
+            announceReady();
         });
     } else {
         restoreSession();
         renderShell();
         startImageJobPolling('');
         if (state.open) setOpen(true);
+        announceReady();
     }
 })();
