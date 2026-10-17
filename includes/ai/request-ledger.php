@@ -65,9 +65,11 @@ function nibblyAiReserve(array $settings, string $type, float $cost, string $id,
             'id' => $id, 'type' => $type, 'status' => 'reserved', 'reservedCents' => nibblyAiRoundCents(max(0.0, $cost)),
             'createdAt' => gmdate('c'), 'updatedAt' => gmdate('c'),
             'provider' => $settings['provider'], 'baseUrl' => $settings['baseUrl'],
-            'model' => $type === 'image' ? $settings['imageModel'] : (string)(($meta['model'] ?? '') ?: $settings['chatModel']),
+            'model' => $type === 'image' ? (string)(($meta['model'] ?? '') ?: $settings['imageModel']) : (string)(($meta['model'] ?? '') ?: $settings['chatModel']),
             'user' => (string)($_SESSION['admin_username'] ?? ''), 'tasks' => []
         ];
+        if (isset($meta['service'])) $usage['reservations'][$id]['service'] = (string)$meta['service'];
+        if ($type === 'image' && isset($meta['priced'])) $usage['reservations'][$id]['priced'] = (bool)$meta['priced'];
     }, ['days' => [], 'months' => [], 'reservations' => []]);
     if (!$ok && !isset(nibblyAiLoadUsage()['reservations'][$id])) throw new RuntimeException('Could not reserve AI budget.');
 }

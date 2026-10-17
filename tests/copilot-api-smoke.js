@@ -103,7 +103,7 @@ assertContains(blocks['ai-copilot-apply'], "nibblyCopilotCan('applyField')", 'Co
 assertContains(blocks['ai-copilot-apply-visibility'], "nibblyCopilotCan('toggleVisibility')", 'Copilot visibility apply should require visibility permission.');
 assertContains(blocks['ai-copilot-undo'], "nibblyCopilotCan('undoField')", 'Copilot undo should require undo permission.');
 assertContains(blocks['ai-copilot-generate-image'], "nibblyCopilotCan('generateImage')", 'Copilot image generation should require image permission.');
-assertContains(blocks['ai-copilot-generate-image'], "nibblyAiEnsureFeature($settings, 'imageGeneration')", 'Copilot image generation should require the imageGeneration feature.');
+assertContains(blocks['ai-copilot-generate-image'], 'nibblyAiEnsureImageReady($settings, $imageService)', 'Copilot image generation should require the imageGeneration feature and a usable image service.');
 assertContains(blocks['ai-copilot-generate-image'], "['auto', '1024x1024', '1536x1024', '1024x1536']", 'Copilot image generation should allowlist image sizes.');
 assertContains(blocks['ai-copilot-generate-image'], 'max(1, min(4', 'Copilot image generation should clamp variant count.');
 assertContains(blocks['ai-copilot-generate-image'], "['auto', 'low', 'medium', 'high']", 'Copilot image generation should allowlist image quality.');

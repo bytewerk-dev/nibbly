@@ -11,6 +11,60 @@ Git milestones and the gaps in publication records.
 
 ### Added
 
+- **An image service of its own, apart from the chat provider.** The AI settings
+  have a new section "Images". The agent, the assistant and the image generator
+  now take images from the service chosen there: "Same as chat provider" (as
+  before), OpenAI, OpenRouter, Kie.ai, **fal.ai**, **Comet API** or a custom
+  OpenAI-compatible service (base URL, model, size parameter, authentication,
+  optional extra parameters). With Anthropic as chat provider, which has no
+  image API, the agent can now create images through any of them. Each service has
+  its own API key in `content/ai-secrets.json` (`imageServices.<id>.apiKey`); a
+  service of OpenAI, OpenRouter or Kie.ai without an own key uses the chat key of the
+  same provider, but only when that chat provider talks to the service's own host (a key for
+  Groq, Mistral or a local gateway is never sent to api.openai.com). Keys are masked in the form and can be removed with the x button
+  (`ai-clear-secret`, target `image:<id>`). Adapters (`includes/ai/image-services.php`)
+  map one input (prompt, count, aspect ratio or size, scale, format, reference
+  images) to each provider's parameters and run its queue or synchronous call; the
+  registry `includes/ai/image-services.json` describes services and models and
+  marks parameters that were not checked against the provider's documentation
+  (`verified: false`, shown in the settings). Existing OpenAI, OpenRouter and Kie.ai
+  paths, image jobs, the request ledger and resume are unchanged.
+- **Prices per image model.** `pricing.imageModels` holds a price per image for a
+  service and model (USD or EUR); the registry can carry one with source and date.
+  Without either, the flat price per image (`pricing.imageCentsPerRequest`) applies as
+  the default price; with that at 0 too the price is "not on file": the request counts
+  against the daily limit but not the budget, and is tallied as
+  `unpricedImageRequests`. Ledger entries record service, model and price basis.
+- The agent can ask for the aspect ratios 4:3, 3:4 and 9:16 as well.
+- **Reference images in the agent's `generate_image`.** The new parameter `references`
+  (up to three) takes a `mediaRef` of the run or a `libraryPath` from `list_media`, to
+  build on existing pictures (a style, a product photo). Wrong references fail the tool
+  call at once; an image service without reference support (a fal.ai model without an
+  edit endpoint, a custom service without it) says so. A picture made from references is
+  labelled "AI-modified", one made from the description alone "AI-generated".
+- **Prices by resolution and quality.** A price for an image model can carry tables by
+  resolution step (`byResolution`: 1K, 2K, 4K) and by quality (`byQuality`: low, medium,
+  high) next to the price for any image, in the settings (under the image price, "Prices
+  by resolution and quality") and in the registry. A request uses the price of its
+  resolution, then of its quality, then the price for any image, then the default price per
+  image. Ledger entries record which one applied (`priceBasis.basis`), and the cost estimate
+  of the image generator follows the chosen resolution and quality.
+- **Live model lists for fal.ai and Comet API.** The model field suggests the models the
+  service lists itself (`ai-image-models`, admin only): fal.ai's public model search
+  (`text-to-image`, active) and Comet's public catalog (`model_type` image), fetched through
+  the server, cached for a day in `content/ai-image-models-cache.json`, served stale when the
+  service does not answer. Any model ID can still be typed.
+
+### Changed
+
+- Result images that a provider returns as an address are now downloaded through the
+  hardened fetch used for web reading (public addresses only, pinned DNS, size and
+  type limits, redirects checked; ports 80, 443, 8080 and 8443); only a provider that the administrator explicitly
+  allowed as local is contacted directly. The agent's image tool is offered when the
+  image service is usable (it needs a key), not when the chat provider has images.
+- The copilot context reports `ai.imageUsable`; the assistant offers image drafts
+  by the image service, not by the chat key.
+
 - **Safety check for the AI agent, enforced on the server.** What a change set
   would do to the site is judged on the replayed content, not on the tool
   arguments or the model's words, in `includes/ai/agent/safety.php`: removing,

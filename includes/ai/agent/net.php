@@ -241,7 +241,8 @@ function nibblyNetPrepareUrl(string $url, array $options = []): array {
     if (isset($parts['user']) || isset($parts['pass'])) {
         throw new NibblyNetException('credentials', 'URLs with credentials are not allowed.');
     }
-    $allowedPorts = [80, 443];
+    // Callers may add ports for their own purpose (extraPorts); the public web stays on 80 and 443.
+    $allowedPorts = array_values(array_unique(array_merge([80, 443], array_map('intval', (array)($options['extraPorts'] ?? [])))));
     $testing = in_array(PHP_SAPI, ['cli', 'cli-server'], true);
     if ($testing && is_array($options['testAllowedPorts'] ?? null)) {
         $allowedPorts = array_map('intval', $options['testAllowedPorts']);
