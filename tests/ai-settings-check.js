@@ -102,7 +102,7 @@ const assert = (c, m) => { if (!c) throw new Error('ASSERT: ' + m); };
   await page.locator('#modalConfirm').click();
   await page.waitForTimeout(1200);
   assert(!JSON.parse(fs.readFileSync(path.join(site, 'content/ai-secrets.json'), 'utf8')).imageServices, 'image key removed from the secrets file');
-  assert(!(await page.locator('#aiRemoveImageApiKey').isVisible()) && (await page.locator('#aiImageApiKeyHint').textContent()).startsWith('No API key stored for this service'), 'form shows no image key');
+  assert(!(await page.locator('#aiRemoveImageApiKey').isVisible()) && (await page.locator('#aiImageApiKeyHint').textContent()).startsWith('No API key stored for this service'), 'form shows no image key: ' + await page.locator('#aiImageApiKeyHint').textContent() + ' / remove visible: ' + await page.locator('#aiRemoveImageApiKey').isVisible());
   await page.selectOption('#aiImageService', 'custom');
   assert(await page.locator('#aiImageCustomGroup').isVisible() && await page.locator('#aiImageExtraGroup').isVisible(), 'custom service shows base URL, size mode and parameters');
   await page.selectOption('#aiImageService', 'inherit');

@@ -163,11 +163,20 @@ function nibblyAiImageEffectiveSettings(array $settings, array $service): array 
     return $settings;
 }
 
+/**
+ * Whether a service without a key may still work: a local service the admin allowed (an Ollama-style gateway). Only
+ * services whose address the admin chose can be local; the fixed hosts of fal.ai, Comet and the others never are, so
+ * they are not looked up in DNS (this runs whenever the settings are loaded).
+ */
+function nibblyAiImageServiceMayBeKeyless(array $settings, array $service): bool {
+    return !empty($settings['allowLocalProvider']) && ($service['inherit'] || $service['id'] === 'custom') && nibblyAiIsLocalBaseUrl($service['baseUrl']);
+}
+
 /** Whether images can be generated with this service: adapter present, model and key (or a permitted local address) set. */
 function nibblyAiImageServiceUsable(array $settings): bool {
     $service = nibblyAiImageServiceResolve($settings);
     if (!$service['supported'] || $service['model'] === '') return false;
-    return $service['apiKey'] !== '' || (!empty($settings['allowLocalProvider']) && nibblyAiIsLocalBaseUrl($service['baseUrl']));
+    return $service['apiKey'] !== '' || nibblyAiImageServiceMayBeKeyless($settings, $service);
 }
 
 /** Whether the image service takes reference images (edit endpoint, inline data or multipart upload). */
@@ -190,7 +199,7 @@ function nibblyAiImageUnavailableReason(array $settings): string {
     $service = nibblyAiImageServiceResolve($settings);
     if (!$service['supported']) return $service['reason'];
     if ($service['model'] === '') return 'model_missing';
-    if ($service['apiKey'] === '' && !(!empty($settings['allowLocalProvider']) && nibblyAiIsLocalBaseUrl($service['baseUrl']))) return 'key_missing';
+    if ($service['apiKey'] === '' && !nibblyAiImageServiceMayBeKeyless($settings, $service)) return 'key_missing';
     return '';
 }
 

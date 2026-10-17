@@ -840,7 +840,7 @@ function nibblyAiEnsureImageReady(array $settings, array $service): void {
         throw new RuntimeException('AI base URL is missing.');
     }
     nibblyAiValidateBaseUrl($service['baseUrl'], !empty($settings['allowLocalProvider']));
-    if ($service['apiKey'] === '' && !nibblyAiIsLocalBaseUrl($service['baseUrl'])) {
+    if ($service['apiKey'] === '' && !nibblyAiImageServiceMayBeKeyless($settings, $service)) {
         throw new RuntimeException('The API key of the image service is missing.');
     }
 }
