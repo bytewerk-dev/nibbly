@@ -1810,5 +1810,10 @@
     "ai.key_removed": "La chiave salvata è stata rimossa.",
     "ai.agent_offer_title": "Attivare l’agente IA?",
     "ai.agent_offer_text": "L’agente IA funziona particolarmente bene con {model}. Vuoi attivarlo ora?",
-    "ai.agent_offer_confirm": "Attiva agente"
+    "ai.agent_offer_confirm": "Attiva agente",
+    "mails.storage_off_title": "I nuovi messaggi non vengono salvati qui",
+    "mails.storage_off_text": "«Salva localmente» è disattivato per tutti i moduli attivi. I messaggi in arrivo quindi non compaiono in questo elenco e arrivano solo via e-mail, se l’invio è configurato.",
+    "mails.forms_disabled_title": "Nessun modulo è attivo",
+    "mails.forms_disabled_text": "Finché nessun modulo è attivo, i visitatori non possono inviare messaggi e questo elenco resta vuoto.",
+    "mails.open_forms_settings": "Apri moduli"
 }

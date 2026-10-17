@@ -105,7 +105,7 @@
                 ${[3, 4, 6, 8, 12].map(width => `<option value="${width}"${Number(field.width || 12) === width ? ' selected' : ''}>${width}/12</option>`).join('')}
             </select></td>
             <td class="forms-field-check" data-label="${escapeHtml(t('forms.required'))}"><input type="checkbox" data-field-prop="required"${field.required ? ' checked' : ''}></td>
-            <td data-label="${escapeHtml(t('forms.options'))}"><textarea data-field-prop="options" rows="2">${escapeHtml(optionsText)}</textarea></td>
+            <td class="forms-field-options" data-label="${escapeHtml(t('forms.options'))}"><textarea data-field-prop="options" rows="2">${escapeHtml(optionsText)}</textarea></td>
             <td class="users-table__actions"><button type="button" class="btn-icon btn-icon--danger" title="${escapeHtml(t('btn.delete'))}">${icon('trash', 14, '2')}</button></td>
         `;
         tr.querySelector('.btn-icon--danger').addEventListener('click', () => tr.remove());

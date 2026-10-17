@@ -177,6 +177,7 @@ function nibblyFormsList(): array
             'label' => $form['label'],
             'description' => $form['description'],
             'enabled' => $form['enabled'],
+            'store' => !empty($form['submit']['store']),
             'fieldCount' => count($form['fields']),
         ];
     }

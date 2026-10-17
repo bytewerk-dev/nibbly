@@ -156,6 +156,13 @@ input.modal-input {
     display: none;
 }
 
+/* The list is a flex column with a maximum height: rows must never shrink to fit it
+   (they would be squeezed and clip their text); the list scrolls instead. */
+.nb-select__option,
+.nb-select__group {
+    flex: 0 0 auto;
+}
+
 .nb-select__option {
     padding: 7px 10px;
     border-radius: var(--nb-radius-sm, 6px);

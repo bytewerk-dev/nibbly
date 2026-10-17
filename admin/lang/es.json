@@ -1810,5 +1810,10 @@
     "ai.key_removed": "Se eliminó la clave guardada.",
     "ai.agent_offer_title": "¿Activar el agente de IA?",
     "ai.agent_offer_text": "El agente de IA funciona especialmente bien con {model}. ¿Quieres activarlo ahora?",
-    "ai.agent_offer_confirm": "Activar agente"
+    "ai.agent_offer_confirm": "Activar agente",
+    "mails.storage_off_title": "Los mensajes nuevos no se guardan aquí",
+    "mails.storage_off_text": "«Guardar localmente» está desactivado en todos los formularios activados. Por eso los mensajes recibidos no aparecen en esta lista y solo llegan por correo, si el envío está configurado.",
+    "mails.forms_disabled_title": "Ningún formulario está activado",
+    "mails.forms_disabled_text": "Mientras no haya ningún formulario activado, los visitantes no pueden enviar mensajes y esta lista seguirá vacía.",
+    "mails.open_forms_settings": "Abrir formularios"
 }

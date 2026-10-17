@@ -1810,5 +1810,10 @@
     "ai.key_removed": "Zapisany klucz został usunięty.",
     "ai.agent_offer_title": "Włączyć agenta AI?",
     "ai.agent_offer_text": "Agent AI działa szczególnie dobrze z modelem {model}. Czy włączyć go teraz?",
-    "ai.agent_offer_confirm": "Włącz agenta"
+    "ai.agent_offer_confirm": "Włącz agenta",
+    "mails.storage_off_title": "Nowe wiadomości nie są tu zapisywane",
+    "mails.storage_off_text": "Opcja „Zapisuj lokalnie” jest wyłączona we wszystkich włączonych formularzach. Przychodzące wiadomości nie pojawiają się więc na tej liście i docierają tylko e-mailem, o ile wysyłka jest skonfigurowana.",
+    "mails.forms_disabled_title": "Żaden formularz nie jest włączony",
+    "mails.forms_disabled_text": "Dopóki żaden formularz nie jest włączony, odwiedzający nie mogą wysyłać wiadomości, a ta lista pozostaje pusta.",
+    "mails.open_forms_settings": "Otwórz formularze"
 }

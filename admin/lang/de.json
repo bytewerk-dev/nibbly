@@ -1961,5 +1961,10 @@
     "ai.key_removed": "Der gespeicherte Key wurde entfernt.",
     "ai.agent_offer_title": "KI-Agent aktivieren?",
     "ai.agent_offer_text": "Mit {model} arbeitet der KI-Agent besonders zuverlässig. Soll er jetzt aktiviert werden?",
-    "ai.agent_offer_confirm": "Agent aktivieren"
+    "ai.agent_offer_confirm": "Agent aktivieren",
+    "mails.storage_off_title": "Neue Nachrichten werden hier nicht gespeichert",
+    "mails.storage_off_text": "Bei keinem aktivierten Formular ist „Lokal speichern“ eingeschaltet. Eingehende Nachrichten erscheinen deshalb nicht in dieser Liste und kommen nur per E-Mail an, sofern der Versand eingerichtet ist.",
+    "mails.forms_disabled_title": "Kein Formular ist aktiviert",
+    "mails.forms_disabled_text": "Solange kein Formular aktiviert ist, können Besucher keine Nachrichten senden, und diese Liste bleibt leer.",
+    "mails.open_forms_settings": "Formulare öffnen"
 }

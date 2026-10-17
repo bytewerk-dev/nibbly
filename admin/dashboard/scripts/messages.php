@@ -30,6 +30,7 @@
                 renderMails();
                 updateMailBadge();
                 updateMailConfigBanner();
+                updateMailStorageBanner();
             } else {
                 showToast(result.message, 'error');
             }
@@ -289,6 +290,30 @@
         title.textContent = titleText;
         text.textContent = bodyText;
         banner.hidden = false;
+    }
+
+    // This list only shows messages stored locally. Warn when no form that is switched on stores them.
+    function updateMailStorageBanner() {
+        const banner = document.getElementById('mailStorageBanner');
+        if (!banner) return;
+        const forms = mailFormsData || [];
+        const enabled = forms.filter(form => form.enabled);
+        let key = '';
+        if (!enabled.length) key = 'forms_disabled';
+        else if (!enabled.some(form => form.store)) key = 'storage_off';
+        if (!key) {
+            banner.hidden = true;
+            return;
+        }
+        document.getElementById('mailStorageBannerTitle').textContent = t('mails.' + key + '_title');
+        document.getElementById('mailStorageBannerText').textContent = t('mails.' + key + '_text');
+        banner.hidden = false;
+    }
+
+    function openFormsSettings() {
+        switchTab('settings');
+        const formsTab = document.querySelector('[data-settings-tab="forms"]');
+        if (formsTab) formsTab.click();
     }
 
     function openEmailSettings() {

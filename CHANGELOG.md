@@ -11,6 +11,9 @@ Git milestones and the gaps in publication records.
 
 ### Added
 
+- Messages page: a notice appears when no enabled form stores messages locally
+  ("Store locally" off everywhere) or when no form is enabled at all, with a button
+  to the form settings.
 - **Safety check for the AI agent, enforced on the server.** What a change set
   would do to the site is judged on the replayed content, not on the tool
   arguments or the model's words, in `includes/ai/agent/safety.php`: removing,
@@ -95,6 +98,15 @@ Git milestones and the gaps in publication records.
   by category only.
 
 ### Fixed
+
+- Dropdown lists (`nb-select`, also the mobile settings navigation and the editor)
+  squeezed their rows and cut off the text when the list was higher than the room
+  below the field; the rows now keep their height and the list scrolls. A browser
+  check (`tests/dropdown-check.js`) opens every dropdown of the dashboard at four
+  window sizes and fails on squeezed rows.
+- Form field cards in Settings → Forms: the delete button sits in the corner of its
+  card level with the first input, and the "Required" checkbox is a normal box at the
+  left of its cell instead of a stretched, centered control.
 
 - "Set the system language to English/German" failed when the model sent a
   language name ("English", "Englisch", "Français") instead of the code, and the

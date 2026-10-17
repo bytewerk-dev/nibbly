@@ -1961,5 +1961,10 @@
     "ai.key_removed": "The stored key was removed.",
     "ai.agent_offer_title": "Enable the AI agent?",
     "ai.agent_offer_text": "The AI agent works especially well with {model}. Enable it now?",
-    "ai.agent_offer_confirm": "Enable agent"
+    "ai.agent_offer_confirm": "Enable agent",
+    "mails.storage_off_title": "New messages are not stored here",
+    "mails.storage_off_text": "“Store locally” is turned off for every enabled form. Incoming messages therefore do not appear in this list and only arrive by email, if email delivery is set up.",
+    "mails.forms_disabled_title": "No form is enabled",
+    "mails.forms_disabled_text": "As long as no form is enabled, visitors cannot send messages and this list stays empty.",
+    "mails.open_forms_settings": "Open forms"
 }

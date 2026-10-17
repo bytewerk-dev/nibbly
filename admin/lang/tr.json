@@ -1810,5 +1810,10 @@
     "ai.key_removed": "Kayıtlı anahtar kaldırıldı.",
     "ai.agent_offer_title": "Yapay zekâ ajanı etkinleştirilsin mi?",
     "ai.agent_offer_text": "Yapay zekâ ajanı {model} ile özellikle iyi çalışır. Şimdi etkinleştirmek ister misin?",
-    "ai.agent_offer_confirm": "Ajanı etkinleştir"
+    "ai.agent_offer_confirm": "Ajanı etkinleştir",
+    "mails.storage_off_title": "Yeni mesajlar burada saklanmıyor",
+    "mails.storage_off_text": "Etkin olan hiçbir formda “Yerel olarak sakla” açık değil. Bu yüzden gelen mesajlar bu listede görünmez ve e-posta gönderimi ayarlıysa yalnızca e-posta ile ulaşır.",
+    "mails.forms_disabled_title": "Hiçbir form etkin değil",
+    "mails.forms_disabled_text": "Hiçbir form etkin olmadığı sürece ziyaretçiler mesaj gönderemez ve bu liste boş kalır.",
+    "mails.open_forms_settings": "Formları aç"
 }

@@ -1810,5 +1810,10 @@
     "ai.key_removed": "Uložený klíč byl odebrán.",
     "ai.agent_offer_title": "Zapnout AI agenta?",
     "ai.agent_offer_text": "AI agent funguje obzvlášť dobře s modelem {model}. Chceš jej nyní zapnout?",
-    "ai.agent_offer_confirm": "Zapnout agenta"
+    "ai.agent_offer_confirm": "Zapnout agenta",
+    "mails.storage_off_title": "Nové zprávy se zde neukládají",
+    "mails.storage_off_text": "U žádného zapnutého formuláře není zapnuto „Ukládat lokálně“. Příchozí zprávy se proto v tomto seznamu nezobrazí a dorazí jen e-mailem, pokud je odesílání nastaveno.",
+    "mails.forms_disabled_title": "Není zapnut žádný formulář",
+    "mails.forms_disabled_text": "Dokud není zapnut žádný formulář, návštěvníci nemohou odesílat zprávy a tento seznam zůstane prázdný.",
+    "mails.open_forms_settings": "Otevřít formuláře"
 }

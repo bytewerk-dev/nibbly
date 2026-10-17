@@ -1810,5 +1810,10 @@
     "ai.key_removed": "La clé enregistrée a été supprimée.",
     "ai.agent_offer_title": "Activer l’agent IA ?",
     "ai.agent_offer_text": "L’agent IA fonctionne particulièrement bien avec {model}. Veux-tu l’activer maintenant ?",
-    "ai.agent_offer_confirm": "Activer l’agent"
+    "ai.agent_offer_confirm": "Activer l’agent",
+    "mails.storage_off_title": "Les nouveaux messages ne sont pas enregistrés ici",
+    "mails.storage_off_text": "« Enregistrer localement » est désactivé pour tous les formulaires activés. Les messages reçus n’apparaissent donc pas dans cette liste et n’arrivent que par e-mail, si l’envoi est configuré.",
+    "mails.forms_disabled_title": "Aucun formulaire n’est activé",
+    "mails.forms_disabled_text": "Tant qu’aucun formulaire n’est activé, les visiteurs ne peuvent pas envoyer de messages et cette liste reste vide.",
+    "mails.open_forms_settings": "Ouvrir les formulaires"
 }

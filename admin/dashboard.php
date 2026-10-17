@@ -659,6 +659,16 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     <button type="button" class="info-banner__cta info-banner__cta-button" onclick="openEmailSettings()"><?php echo t('mails.open_email_settings'); ?> &rarr;</button>
                 </div>
             </div>
+            <div class="info-banner info-banner--warning mail-config-banner" id="mailStorageBanner" hidden>
+                <div class="info-banner__inner">
+                    <span class="info-banner__icon"><?php echo nbIcon('alert'); ?></span>
+                    <span class="info-banner__content">
+                        <strong class="info-banner__title"><span id="mailStorageBannerTitle"></span></strong>
+                        <span class="info-banner__body" id="mailStorageBannerText"></span>
+                    </span>
+                    <button type="button" class="info-banner__cta info-banner__cta-button" onclick="openFormsSettings()"><?php echo t('mails.open_forms_settings'); ?> &rarr;</button>
+                </div>
+            </div>
             <div class="page-list-header page-list-header--mails">
                 <div class="page-list-header-left">
                     <div class="page-list-title-stack">
