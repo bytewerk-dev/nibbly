@@ -1854,5 +1854,8 @@
     "ai.image_price_tables_hint": "Jeśli model liczy inaczej za poziom rozdzielczości lub jakość, wpisz tu cenę za obraz dla każdej z nich. Żądanie używa ceny swojej rozdzielczości, potem swojej jakości, a na końcu ceny za obraz podanej wyżej. Puste pola używają ceny za obraz.",
     "ai.image_price_status_tables": "Podano też ceny według rozdzielczości lub jakości.",
     "ai.image_price_status_tables_only": "Podano ceny według rozdzielczości lub jakości; żądania bez dopasowania używają domyślnej ceny za obraz.",
-    "ai.image_service_models_loaded": "Z usługi wczytano {count} modeli. Nadal możesz wpisać dowolny identyfikator modelu."
+    "ai.image_service_models_loaded": "Z usługi wczytano {count} modeli. Nadal możesz wpisać dowolny identyfikator modelu.",
+    "ai.image_service_unusable_key": "Usługa obrazów {service} nie ma jeszcze klucza API. Dodaj go w Ustawieniach AI → Obrazy.",
+    "ai.image_service_unusable_model": "Dla {service} nie wybrano modelu obrazów. Wybierz go w Ustawieniach AI → Obrazy.",
+    "ai.image_price_status_catalog_tables": "Ceny z katalogu według rozdzielczości lub jakości, stan na {date}."
 }

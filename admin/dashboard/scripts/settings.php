@@ -1349,6 +1349,7 @@
             var indicator = document.getElementById('aiChatIndicator');
             btn.disabled = true;
             if (indicator) indicator.hidden = false;
+            var thinking = appendAiThinking();
             try {
                 var formData = new FormData();
                 formData.append('action', 'ai-chat');
@@ -1363,6 +1364,7 @@
             } catch (error) {
                 appendAiChat('error', error.message);
             } finally {
+                if (thinking && thinking.parentNode) thinking.parentNode.removeChild(thinking);
                 btn.disabled = false;
                 if (indicator) indicator.hidden = true;
             }
@@ -1641,6 +1643,9 @@
         var openJobs = jobs.filter(function(job) {
             return job && (job.status === 'queued' || job.status === 'running');
         });
+        var spinner = document.getElementById('aiImageJobsSpinner');
+        if (spinner) spinner.hidden = !openJobs.length;
+        panel.setAttribute('aria-busy', openJobs.length ? 'true' : 'false');
         var latest = jobs[0] || null;
         if (openJobs.length) {
             status.textContent = t('ai.image_jobs_open', { count: openJobs.length });
@@ -2265,14 +2270,7 @@
         }
 
         if (providerKey === 'kie') {
-            var kieCosts = {
-                'gpt-image-2': 5,
-                'nano-banana-2': 4,
-                'seedream-5-0-pro': 5
-            };
-            if (kieCosts[model] != null) {
-                return { cents: kieCosts[model], estimated: true };
-            }
+            // The price tables of the Kie.ai models come from the registry (above); without one the default price applies.
             return configuredCents ? { cents: configuredCents, estimated: true } : null;
         }
 

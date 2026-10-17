@@ -1854,5 +1854,8 @@
     "ai.image_price_tables_hint": "Se o modelo cobra de forma diferente por resolução ou qualidade, introduz aqui o preço por imagem de cada uma. Um pedido usa o preço da sua resolução, depois o da sua qualidade e, por fim, o preço por imagem acima. Os campos vazios usam o preço por imagem.",
     "ai.image_price_status_tables": "Também há preços por resolução ou qualidade.",
     "ai.image_price_status_tables_only": "Há preços por resolução ou qualidade; os pedidos sem correspondência usam o preço predefinido por imagem.",
-    "ai.image_service_models_loaded": "{count} modelos carregados do serviço. Podes na mesma escrever qualquer ID de modelo."
+    "ai.image_service_models_loaded": "{count} modelos carregados do serviço. Podes na mesma escrever qualquer ID de modelo.",
+    "ai.image_service_unusable_key": "O serviço de imagens {service} ainda não tem chave API. Adiciona-a em Definições de IA → Imagens.",
+    "ai.image_service_unusable_model": "Não há nenhum modelo de imagem escolhido para {service}. Escolhe um em Definições de IA → Imagens.",
+    "ai.image_price_status_catalog_tables": "Preços de catálogo por resolução ou qualidade, a {date}."
 }

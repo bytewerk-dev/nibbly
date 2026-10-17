@@ -11,6 +11,7 @@
  *   kie-task         Kie.ai task API (create task, poll, download)
  *   fal-queue        fal.ai queue API (submit, poll status, fetch result, download)
  *   gemini-generate  Gemini generateContent route (Comet API)
+ *   comet-task       Comet API's asynchronous images route (Seedream)
  *
  * The first three live in ai-helper.php; they get the chat settings with the credentials of the service put in
  * (nibblyAiImageEffectiveSettings) and run unchanged. With the service "inherit" (default) everything behaves as it
@@ -120,12 +121,13 @@ function nibblyAiImageServiceResolve(array $settings): array {
         $id = nibblyAiProviderKey($settings);
         $adapter = ['openai-compatible' => 'openai-images', 'openrouter' => 'openrouter-chat', 'kie' => 'kie-task'][$id] ?? '';
         $key = trim((string)($settings['apiKey'] ?? ''));
-        return [
+        $service = [
             'id' => $id, 'inherit' => true, 'adapter' => $adapter, 'baseUrl' => rtrim((string)($settings['baseUrl'] ?? ''), '/'), 'apiKey' => $key,
             'organization' => (string)($settings['organization'] ?? ''), 'model' => (string)($settings['imageModel'] ?? ''),
             'keySource' => $key !== '' ? 'chat' : 'none', 'supported' => $adapter !== '', 'reason' => $adapter === '' ? 'chat_provider_without_images' : '',
-            'spec' => [], 'authStyle' => 'bearer', 'extraParams' => [], 'sizeMode' => 'size',
+            'spec' => [], 'authStyle' => 'bearer', 'extraParams' => $id === 'kie' ? $cfg['custom']['extraParams'] : [], 'sizeMode' => 'size',
         ];
+        return nibblyAiImageServiceWithModel($service, $service['model'], $settings);
     }
     $id = $cfg['provider'];
     $entry = $registry[$id];
@@ -136,18 +138,33 @@ function nibblyAiImageServiceResolve(array $settings): array {
     if ($model === '') {
         $model = !empty($entry['catalogModels']) ? (string)(nibblyAiModelCatalog()[$id]['images'][0]['value'] ?? '') : (string)($entry['defaultModel'] ?? '');
     }
-    $baseUrl = nibblyAiImageServiceBaseUrl($id, $settings);
     $reason = '';
-    if ($id === 'custom' && $baseUrl === '') $reason = 'custom_base_url_missing';
-    return [
-        'id' => $id, 'inherit' => false, 'adapter' => (string)$entry['adapter'], 'baseUrl' => $baseUrl, 'apiKey' => $key,
+    if ($id === 'custom' && nibblyAiImageServiceBaseUrl($id, $settings) === '') $reason = 'custom_base_url_missing';
+    $service = [
+        'id' => $id, 'inherit' => false, 'adapter' => (string)$entry['adapter'], 'baseUrl' => '', 'apiKey' => $key,
         'organization' => $own === '' && $chatKey !== '' && $id === 'openai-compatible' ? (string)($settings['providerCredentials']['openai-compatible']['organization'] ?? '') : '',
         'model' => $model, 'keySource' => $own !== '' ? 'own' : ($chatKey !== '' ? 'chat' : 'none'), 'supported' => $reason === '', 'reason' => $reason,
-        'spec' => !empty($entry['catalogModels']) ? [] : nibblyAiImageModelSpec($id, $model),
-        'authStyle' => $id === 'custom' ? $cfg['custom']['authStyle'] : 'bearer',
-        'extraParams' => in_array($id, ['fal', 'comet', 'custom'], true) ? $cfg['custom']['extraParams'] : [],
+        'spec' => [], 'authStyle' => $id === 'custom' ? $cfg['custom']['authStyle'] : 'bearer',
+        'extraParams' => in_array($id, ['kie', 'fal', 'comet', 'custom'], true) ? $cfg['custom']['extraParams'] : [],
         'sizeMode' => $cfg['custom']['sizeMode'],
     ];
+    return nibblyAiImageServiceWithModel($service, $model, $settings);
+}
+
+/**
+ * The service with a model put in: the spec of that model, the adapter it needs (a model may name its own, as Comet's GPT
+ * Image does) and the address the adapter talks to (a model may add a path to the service's address).
+ */
+function nibblyAiImageServiceWithModel(array $service, string $model, array $settings = []): array {
+    $entry = nibblyAiImageServiceRegistry()['services'][$service['id']] ?? [];
+    $spec = !empty($entry['catalogModels']) || $entry === [] ? [] : nibblyAiImageModelSpec($service['id'], $model);
+    $service['model'] = $model;
+    $service['spec'] = $spec;
+    if (!$service['inherit']) {
+        $service['adapter'] = (string)($spec['adapter'] ?? $entry['adapter'] ?? '');
+        $service['baseUrl'] = rtrim(nibblyAiImageServiceBaseUrl($service['id'], $settings), '/') . (string)($spec['basePath'] ?? '');
+    }
+    return $service;
 }
 
 /** The chat settings with the credentials and model of the image service put in; the existing image functions run on this. */
@@ -160,6 +177,7 @@ function nibblyAiImageEffectiveSettings(array $settings, array $service): array 
     }
     $settings['imageModel'] = $service['model'];
     $settings['authStyle'] = $service['authStyle'];
+    $settings['imageExtraParams'] = $service['extraParams'];
     return $settings;
 }
 
@@ -182,9 +200,10 @@ function nibblyAiImageServiceUsable(array $settings): bool {
 /** Whether the image service takes reference images (edit endpoint, inline data or multipart upload). */
 function nibblyAiImageServiceSupportsReferences(array $service): bool {
     return match ($service['adapter']) {
-        'openai-images', 'openrouter-chat', 'kie-task' => $service['inherit'] || $service['id'] !== 'custom' || !empty($service['spec']['references']),
+        'openai-images' => $service['inherit'] || $service['id'] === 'openai-compatible' || !empty($service['spec']['references']),
+        'openrouter-chat' => true,
+        'kie-task', 'gemini-generate' => !empty($service['spec']['references']),
         'fal-queue' => !empty($service['spec']['references']['editModel']),
-        'gemini-generate' => !empty($service['spec']['references']),
         default => false,
     };
 }
@@ -365,18 +384,11 @@ function nibblyAiImagePrice(array $settings, array $service, string $model, arra
  */
 function nibblyAiImageRequestResolution(array $service, string $model, array $options): string {
     $scale = $options['imageScale'] ?? null;
-    switch ($service['adapter']) {
-        case 'fal-queue':
-        case 'gemini-generate':
-            $spec = $service['spec'];
-            return !empty($spec['resolutionParam']) && !empty($spec['resolutions']) ? nibblyAiImageResolutionFor($scale, (array)$spec['resolutions']) : '';
-        case 'kie-task':
-            return $model === 'nano-banana-2' ? nibblyAiKieResolution($scale ?? 2048) : '';
-        case 'openrouter-chat':
-            return (string)(nibblyAiOpenRouterImageConfig((string)($options['size'] ?? 'auto'), (string)($options['aspectRatio'] ?? 'auto'), $scale, $model)['image_size'] ?? '');
-        default:
-            return '';
+    if ($service['adapter'] === 'openrouter-chat') {
+        return (string)(nibblyAiOpenRouterImageConfig((string)($options['size'] ?? 'auto'), (string)($options['aspectRatio'] ?? 'auto'), $scale, $model)['image_size'] ?? '');
     }
+    $spec = $service['spec'];
+    return !empty($spec['resolutions']) ? nibblyAiImageResolutionFor($scale, (array)$spec['resolutions']) : '';
 }
 
 /** Validated per-model image prices from the settings form. A null or empty entry removes one; those not mentioned stay. */
@@ -648,6 +660,7 @@ function nibblyAiImageAdapterRun(array $img, array $service, array $p): array {
         'openrouter-chat' => nibblyAiGenerateOpenRouterImages($img, $p),
         'kie-task' => nibblyAiGenerateKieImages($img, $p),
         'fal-queue' => nibblyAiImageAdapterFal($img, $service, $p),
+        'comet-task' => nibblyAiImageAdapterCometTask($img, $service, $p),
         'gemini-generate' => nibblyAiImageAdapterGemini($img, $service, $p),
         default => throw new RuntimeException('This image service is not supported.'),
     };
@@ -659,17 +672,31 @@ function nibblyAiImageStore(string $binary, array $p, int $index): string {
 
 /** OpenAI and compatible services: /images/generations, or /images/edits (multipart) with reference images. */
 function nibblyAiImageAdapterOpenAi(array $img, array $service, array $p): array {
+    $spec = $service['spec'];
     $custom = !$service['inherit'] && $service['id'] === 'custom';
+    // A service with its own parameter set for the OpenAI protocol (Comet's GPT Image): the spec names what it takes.
+    $own = !$service['inherit'] && !empty($spec['openai']);
     $model = (string)$p['model'];
     $count = (int)$p['count'];
     $isGptImage = (bool)preg_match('/^(gpt-image|chatgpt-image)/i', $model);
-    $body = ['model' => $model, 'prompt' => substr((string)$p['prompt'], 0, 8000), 'n' => $count];
+    $perRequest = $own || $custom ? max(1, (int)($spec['maxCount'] ?? $count)) : $count;
     $ratio = nibblyAiImageRequestedRatio($p);
-    if ($custom) {
-        if ($service['sizeMode'] === 'size') $body['size'] = nibblyAiImageCustomSize($ratio);
-        elseif ($service['sizeMode'] === 'aspect_ratio' && $ratio !== 'auto') $body['aspect_ratio'] = nibblyAiImageNearestAspect($ratio, (array)(nibblyAiImageServiceRegistry()['services']['custom']['defaults']['aspects'] ?? []));
-        $body += $service['extraParams'];
-    } else {
+    $references = array_slice((array)$p['referencePaths'], 0, max(1, (int)($spec['references']['max'] ?? 16)));
+    $build = function (int $n) use ($p, $service, $spec, $custom, $own, $model, $isGptImage, $ratio): array {
+        $body = ['model' => $model, 'prompt' => substr((string)$p['prompt'], 0, 8000), 'n' => $n];
+        if ($custom) {
+            if ($service['sizeMode'] === 'size') $body['size'] = nibblyAiImageCustomSize($ratio);
+            elseif ($service['sizeMode'] === 'aspect_ratio' && $ratio !== 'auto') $body['aspect_ratio'] = nibblyAiImageNearestAspect($ratio, (array)($spec['aspects'] ?? []));
+            return $body + $service['extraParams'];
+        }
+        if ($own) {
+            $body['size'] = nibblyAiImageCustomSize($ratio);
+            $params = (array)$spec['openai']['params'];
+            if (in_array('quality', $params, true) && in_array($p['quality'], ['low', 'medium', 'high', 'auto'], true)) $body['quality'] = (string)$p['quality'];
+            if (in_array('output_format', $params, true)) $body['output_format'] = (string)$p['outputFormat'];
+            if (in_array('output_compression', $params, true) && in_array($p['outputFormat'], ['jpeg', 'webp'], true)) $body['output_compression'] = (int)$p['outputCompression'];
+            return $body + $service['extraParams'];
+        }
         $body['size'] = (string)$p['size'];
         if ($isGptImage) {
             $body['output_format'] = (string)$p['outputFormat'];
@@ -677,38 +704,48 @@ function nibblyAiImageAdapterOpenAi(array $img, array $service, array $p): array
             $body['moderation'] = (string)$p['moderation'];
             if (in_array($p['outputFormat'], ['jpeg', 'webp'], true)) $body['output_compression'] = (int)$p['outputCompression'];
         }
-    }
-    $references = (array)$p['referencePaths'];
-    if ($references) {
-        $files = [];
-        foreach (array_slice($references, 0, 16) as $index => $path) $files[count($references) > 1 ? 'image[' . $index . ']' : 'image'] = $path;
-        $response = nibblyAiProviderMultipartRequest($img, '/images/edits', $body, $files);
-    } elseif ($custom) {
-        $headers = ['Content-Type: application/json', 'Accept: application/json'];
-        $auth = nibblyAiImageAuthHeader($img);
-        if ($auth !== '') $headers[] = $auth;
-        $response = nibblyAiCompatRequest($img, rtrim($img['baseUrl'], '/') . '/images/generations', $headers, $body);
-    } else {
-        $response = nibblyAiProviderRequest($img, '/images/generations', $body);
-    }
-    $items = is_array($response['data'] ?? null) ? $response['data'] : [];
-    if (!$items) throw new RuntimeException('AI provider returned no image.');
+        return $body;
+    };
     $paths = [];
     $revised = [];
-    foreach ($items as $item) {
-        if (!is_array($item)) continue;
-        if (!empty($item['revised_prompt'])) $revised[] = trim((string)$item['revised_prompt']);
-        if (!empty($item['b64_json'])) {
-            $binary = base64_decode((string)$item['b64_json'], true);
-            if ($binary === false) throw new RuntimeException('AI provider returned invalid image data.');
-        } elseif (!empty($item['url'])) {
-            $binary = nibblyAiDownloadProviderImage((string)$item['url'], (string)$img['baseUrl']);
-        } else {
-            continue;
+    for ($left = $count; $left > 0; $left -= $perRequest) {
+        try {
+            $body = $build(min($perRequest, $left));
+            if ($references) {
+                $files = [];
+                foreach ($references as $index => $path) $files[count($references) > 1 ? 'image[' . $index . ']' : 'image'] = $path;
+                $response = nibblyAiProviderMultipartRequest($img, '/images/edits', $body, $files);
+            } elseif ($custom || $own) {
+                $headers = ['Content-Type: application/json', 'Accept: application/json'];
+                $auth = nibblyAiImageAuthHeader($img);
+                if ($auth !== '') $headers[] = $auth;
+                $response = nibblyAiCompatRequest($img, rtrim($img['baseUrl'], '/') . '/images/generations', $headers, $body);
+            } else {
+                $response = nibblyAiProviderRequest($img, '/images/generations', $body);
+            }
+            $items = is_array($response['data'] ?? null) ? $response['data'] : [];
+            if (!$items) throw new RuntimeException('AI provider returned no image.');
+            $before = count($paths);
+            foreach ($items as $item) {
+                if (!is_array($item)) continue;
+                if (!empty($item['revised_prompt'])) $revised[] = trim((string)$item['revised_prompt']);
+                if (!empty($item['b64_json'])) {
+                    $binary = base64_decode((string)$item['b64_json'], true);
+                    if ($binary === false) throw new RuntimeException('AI provider returned invalid image data.');
+                } elseif (!empty($item['url'])) {
+                    $binary = nibblyAiDownloadProviderImage((string)$item['url'], (string)$img['baseUrl']);
+                } else {
+                    continue;
+                }
+                $paths[] = nibblyAiImageStore($binary, $p, count($paths) + 1);
+            }
+            if (count($paths) === $before) throw new RuntimeException('AI provider returned no usable image data.');
+        } catch (Throwable $e) {
+            if (!$paths) throw $e;
+            nibblyAiAudit('image-partial', false, ['requested' => $count, 'created' => count($paths), 'message' => $e->getMessage()]);
+            break;
         }
-        $paths[] = nibblyAiImageStore($binary, $p, count($paths) + 1);
     }
-    if (!$paths) throw new RuntimeException('AI provider returned no usable image data.');
     return [$paths, $revised];
 }
 
@@ -728,33 +765,29 @@ function nibblyAiFalInput(array $spec, array $service, array $p, array $referenc
         $input[$spec['formatParam']] = in_array($format, $spec['formats'], true) ? $format : (in_array('png', $spec['formats'], true) ? 'png' : (string)$spec['formats'][0]);
     }
     if (!empty($spec['resolutionParam']) && !empty($spec['resolutions'])) $input[$spec['resolutionParam']] = nibblyAiImageResolutionFor($p['imageScale'] ?? null, (array)$spec['resolutions']);
+    if (!empty($spec['qualityParam']) && !empty($spec['qualities']) && in_array((string)$p['quality'], $spec['qualities'], true)) $input[$spec['qualityParam']] = (string)$p['quality'];
     if ($references) {
         $input[(string)($spec['references']['param'] ?? 'image_urls')] = array_map('nibblyAiReferenceImageDataUrl', $references);
     }
     return $input + $service['extraParams'];
 }
 
-/** fal.ai queue: submit, poll the status URL, fetch the result URL, download. Tasks are kept in the request ledger so a stopped job resumes. */
-function nibblyAiImageAdapterFal(array $img, array $service, array $p): array {
-    $spec = $service['spec'];
-    $base = rtrim((string)$img['baseUrl'], '/');
-    $headers = ['Content-Type: application/json', 'Accept: application/json', 'Authorization: Key ' . $img['apiKey']];
-    $getHeaders = ['Accept: application/json', 'Authorization: Key ' . $img['apiKey']];
-    $references = array_slice((array)$p['referencePaths'], 0, max(1, (int)($spec['references']['max'] ?? 8)));
-    $endpoint = (string)$p['model'];
-    if ((array)$p['referencePaths']) {
-        if (empty($spec['references']['editModel'])) throw new RuntimeException('This image model does not take reference images. Choose a model with an edit endpoint or remove the reference images.');
-        $endpoint = (string)$spec['references']['editModel'];
-    }
+/**
+ * The queue part of the adapters that submit tasks and poll them (fal.ai, Comet's Seedream). What the request ledger
+ * already knows is not submitted again; tasks with an id are polled until they finish or the request times out; the
+ * result addresses are downloaded; the ledger is cleaned afterwards, so a stopped job resumes without paying twice.
+ *
+ * @param int[]    $batches images per task
+ * @param callable $submit  fn(int $index, int $n): array  the task: id plus whatever poll needs
+ * @param callable $poll    fn(array $task): array  ['state' => 'waiting'|'running'|'done', 'urls' => string[]]; a RuntimeException with a 4xx code is final, anything else is tried again
+ */
+function nibblyAiImageTaskRun(array $img, array $p, string $model, array $batches, callable $submit, callable $poll): array {
     $requestId = $GLOBALS['nibblyAiRequestId'] ?? '';
     $entry = nibblyAiLoadUsage()['reservations'][$requestId] ?? [];
     if ($entry && (($entry['provider'] ?? '') !== ($img['provider'] ?? '') || ($entry['baseUrl'] ?? '') !== ($img['baseUrl'] ?? ''))) {
         throw new RuntimeException('Restore the original AI provider settings to resume this request.');
     }
     if (!empty($entry['outputs']) && !array_filter($entry['outputs'], fn($path) => !is_file(dirname(__DIR__, 2) . $path))) return [$entry['outputs'], []];
-    $perTask = max(1, (int)($spec['maxCount'] ?? 1));
-    $batches = [];
-    for ($left = (int)$p['count']; $left > 0; $left -= $perTask) $batches[] = min($perTask, $left);
     $saved = $entry['tasks'] ?? [];
     $tasks = [];
     foreach ($batches as $index => $n) {
@@ -763,49 +796,31 @@ function nibblyAiImageAdapterFal(array $img, array $service, array $p): array {
             if (!in_array($saved[$index]['state'] ?? '', ['success', 'fail'], true)) $tasks[$index] = true;
             continue;
         }
-        $saved[$index] = ['state' => 'submitting', 'model' => $endpoint];
+        $saved[$index] = ['state' => 'submitting', 'model' => $model];
         if ($requestId !== '') nibblyAiRequestPatch($requestId, ['tasks' => $saved]);
-        $response = nibblyAiExecuteJsonRequest($img, $base . '/' . $endpoint, $headers, nibblyAiFalInput($spec, $service, $p, $references, $n));
-        $id = trim((string)($response['request_id'] ?? ''));
-        if ($id === '') throw new RuntimeException('The image service did not return a request ID.');
-        $statusUrl = (string)($response['status_url'] ?? '');
-        $resultUrl = (string)($response['response_url'] ?? '');
-        $root = preg_replace('#^(fal-ai/[^/]+|[^/]+/[^/]+).*$#', '$1', $endpoint);
-        // Only addresses of the service itself are followed (the key goes with them); otherwise use the documented pattern.
-        if (!nibblyAiImageTrustedUrl($statusUrl, $base)) $statusUrl = $base . '/' . $root . '/requests/' . rawurlencode($id) . '/status';
-        if (!nibblyAiImageTrustedUrl($resultUrl, $base)) $resultUrl = $base . '/' . $root . '/requests/' . rawurlencode($id);
-        $saved[$index] = ['id' => $id, 'state' => 'waiting', 'model' => $endpoint, 'statusUrl' => $statusUrl, 'responseUrl' => $resultUrl];
+        $task = $submit($index, $n);
+        if (empty($task['id'])) throw new RuntimeException('The image service did not return a request ID.');
+        $saved[$index] = $task + ['state' => 'waiting', 'model' => $model];
         if ($requestId !== '') nibblyAiRequestPatch($requestId, ['tasks' => $saved]);
         $tasks[$index] = true;
     }
     $deadline = microtime(true) + nibblyAiRequestTimeout($img);
     $urls = [];
     $failures = [];
-    foreach ($saved as $index => $task) {
+    foreach ($saved as $task) {
         if (($task['state'] ?? '') === 'success' && !empty($task['urls'])) array_push($urls, ...$task['urls']);
     }
     while ($tasks && microtime(true) < $deadline) {
         foreach (array_keys($tasks) as $index) {
-            $task = $saved[$index];
             try {
-                $status = nibblyAiImageGetJson($img, (string)$task['statusUrl'], $getHeaders);
-                $state = strtoupper((string)($status['status'] ?? ''));
-                if ($state === 'COMPLETED' && empty($status['error'])) {
-                    $result = nibblyAiImageGetJson($img, (string)$task['responseUrl'], $getHeaders);
-                    $found = [];
-                    foreach ((array)($result['images'] ?? (isset($result['image']) ? [$result['image']] : [])) as $image) {
-                        $url = is_array($image) ? (string)($image['url'] ?? '') : (string)$image;
-                        if (preg_match('#^(https?://|data:image/)#i', $url)) $found[] = $url;
-                    }
-                    if (!$found) throw new RuntimeException('The image service returned no image.', 422);
+                $result = $poll($saved[$index]);
+                if (($result['state'] ?? '') === 'done') {
                     $saved[$index]['state'] = 'success';
-                    $saved[$index]['urls'] = $found;
-                    array_push($urls, ...$found);
+                    $saved[$index]['urls'] = array_values((array)$result['urls']);
+                    array_push($urls, ...$saved[$index]['urls']);
                     unset($tasks[$index]);
-                } elseif ($state === 'COMPLETED') {
-                    throw new RuntimeException(nibblyAiProviderErrorMessage($status, 'The image service reported an error.'), 422);
                 } else {
-                    $saved[$index]['state'] = $state === 'IN_PROGRESS' ? 'running' : 'waiting';
+                    $saved[$index]['state'] = ($result['state'] ?? '') === 'running' ? 'running' : 'waiting';
                 }
             } catch (RuntimeException $e) {
                 // A failed request is final; a hiccup of the connection is tried again until the deadline.
@@ -830,6 +845,76 @@ function nibblyAiImageAdapterFal(array $img, array $service, array $p): array {
         nibblyAiRequestPatch($requestId, ['outputs' => $paths, 'tasks' => $saved]);
     }
     return [$paths, []];
+}
+
+/** fal.ai queue: submit, poll the status URL, fetch the result URL, download. */
+function nibblyAiImageAdapterFal(array $img, array $service, array $p): array {
+    $spec = $service['spec'];
+    $base = rtrim((string)$img['baseUrl'], '/');
+    $headers = ['Content-Type: application/json', 'Accept: application/json', 'Authorization: Key ' . $img['apiKey']];
+    $getHeaders = ['Accept: application/json', 'Authorization: Key ' . $img['apiKey']];
+    $references = array_slice((array)$p['referencePaths'], 0, max(1, (int)($spec['references']['max'] ?? 8)));
+    $endpoint = (string)$p['model'];
+    if ((array)$p['referencePaths']) {
+        if (empty($spec['references']['editModel'])) throw new RuntimeException('This image model does not take reference images. Choose a model with an edit endpoint or remove the reference images.');
+        $endpoint = (string)$spec['references']['editModel'];
+    }
+    $perTask = max(1, (int)($spec['maxCount'] ?? 1));
+    $batches = [];
+    for ($left = (int)$p['count']; $left > 0; $left -= $perTask) $batches[] = min($perTask, $left);
+    $submit = function (int $index, int $n) use ($img, $service, $spec, $p, $references, $base, $headers, $endpoint): array {
+        $response = nibblyAiExecuteJsonRequest($img, $base . '/' . $endpoint, $headers, nibblyAiFalInput($spec, $service, $p, $references, $n));
+        $id = trim((string)($response['request_id'] ?? ''));
+        $statusUrl = (string)($response['status_url'] ?? '');
+        $resultUrl = (string)($response['response_url'] ?? '');
+        $root = preg_replace('#^(fal-ai/[^/]+|[^/]+/[^/]+).*$#', '$1', $endpoint);
+        // Only addresses of the service itself are followed (the key goes with them); otherwise use the documented pattern.
+        if (!nibblyAiImageTrustedUrl($statusUrl, $base)) $statusUrl = $base . '/' . $root . '/requests/' . rawurlencode($id) . '/status';
+        if (!nibblyAiImageTrustedUrl($resultUrl, $base)) $resultUrl = $base . '/' . $root . '/requests/' . rawurlencode($id);
+        return ['id' => $id, 'statusUrl' => $statusUrl, 'responseUrl' => $resultUrl];
+    };
+    $poll = function (array $task) use ($img, $getHeaders): array {
+        $status = nibblyAiImageGetJson($img, (string)$task['statusUrl'], $getHeaders);
+        $state = strtoupper((string)($status['status'] ?? ''));
+        if ($state !== 'COMPLETED') return ['state' => $state === 'IN_PROGRESS' ? 'running' : 'waiting'];
+        if (!empty($status['error'])) throw new RuntimeException(nibblyAiProviderErrorMessage($status, 'The image service reported an error.'), 422);
+        $result = nibblyAiImageGetJson($img, (string)$task['responseUrl'], $getHeaders);
+        $found = [];
+        foreach ((array)($result['images'] ?? (isset($result['image']) ? [$result['image']] : [])) as $image) {
+            $url = is_array($image) ? (string)($image['url'] ?? '') : (string)$image;
+            if (preg_match('#^(https?://|data:image/)#i', $url)) $found[] = $url;
+        }
+        if (!$found) throw new RuntimeException('The image service returned no image.', 422);
+        return ['state' => 'done', 'urls' => $found];
+    };
+    return nibblyAiImageTaskRun($img, $p, $endpoint, $batches, $submit, $poll);
+}
+
+/** Comet API's asynchronous images route (Seedream): create a task, poll it, download. One image per task. */
+function nibblyAiImageAdapterCometTask(array $img, array $service, array $p): array {
+    $spec = $service['spec'];
+    $base = rtrim((string)$img['baseUrl'], '/');
+    $headers = ['Content-Type: application/json', 'Accept: application/json', 'Authorization: Bearer ' . $img['apiKey']];
+    $getHeaders = ['Accept: application/json', 'Authorization: Bearer ' . $img['apiKey']];
+    if ((array)$p['referencePaths']) throw new RuntimeException('This image model does not take reference images on Comet.');
+    $size = nibblyAiImageResolutionFor($p['imageScale'] ?? null, (array)($spec['resolutions'] ?? ['2K']));
+    $batches = array_fill(0, (int)$p['count'], 1);
+    $submit = function (int $index, int $n) use ($img, $service, $p, $base, $headers, $size): array {
+        $body = ['model' => (string)$p['model'], 'prompt' => nibblyAiUtf8Prefix((string)$p['prompt'], 8000), 'size' => $size, 'response_format' => 'url', 'watermark' => false, 'async' => true];
+        $response = nibblyAiExecuteJsonRequest($img, $base . '/images/generations', $headers, $body + $service['extraParams']);
+        return ['id' => trim((string)($response['data']['task_id'] ?? $response['task_id'] ?? ''))];
+    };
+    $poll = function (array $task) use ($img, $base, $getHeaders): array {
+        $response = nibblyAiImageGetJson($img, $base . '/images/generations/' . rawurlencode((string)$task['id']), $getHeaders);
+        $data = is_array($response['data'] ?? null) ? $response['data'] : [];
+        $status = strtolower((string)($data['status'] ?? ''));
+        if ($status === 'failure' || $status === 'failed') throw new RuntimeException(nibblyAiProviderErrorMessage(['message' => $data['fail_reason'] ?? ''], 'The image service reported an error.'), 422);
+        if ($status !== 'success') return ['state' => 'waiting'];
+        $url = (string)($data['data'][0]['url'] ?? '');
+        if (!preg_match('#^https?://#i', $url)) throw new RuntimeException('The image service returned no image.', 422);
+        return ['state' => 'done', 'urls' => [$url]];
+    };
+    return nibblyAiImageTaskRun($img, $p, (string)$p['model'], $batches, $submit, $poll);
 }
 
 /** The body of one Gemini generateContent request (Comet API). */

@@ -1854,5 +1854,8 @@
     "ai.image_price_tables_hint": "Pokud model účtuje jinak podle stupně rozlišení nebo kvality, zadej sem cenu za obrázek pro každou z nich. Požadavek použije cenu svého rozlišení, potom své kvality a nakonec cenu za obrázek uvedenou výše. Prázdná pole použijí cenu za obrázek.",
     "ai.image_price_status_tables": "Jsou zadány také ceny podle rozlišení nebo kvality.",
     "ai.image_price_status_tables_only": "Jsou zadány ceny podle rozlišení nebo kvality; požadavky bez shody použijí výchozí cenu za obrázek.",
-    "ai.image_service_models_loaded": "Ze služby bylo načteno {count} modelů. Libovolné ID modelu můžeš stále zadat ručně."
+    "ai.image_service_models_loaded": "Ze služby bylo načteno {count} modelů. Libovolné ID modelu můžeš stále zadat ručně.",
+    "ai.image_service_unusable_key": "Služba obrázků {service} zatím nemá klíč API. Přidej ho v Nastavení AI → Obrázky.",
+    "ai.image_service_unusable_model": "Pro {service} není vybrán žádný obrazový model. Vyber ho v Nastavení AI → Obrázky.",
+    "ai.image_price_status_catalog_tables": "Katalogové ceny podle rozlišení nebo kvality, stav k {date}."
 }

@@ -16,7 +16,7 @@ KEY_CUSTOM = "custom-secret-key-789"
 KEY_CHAT = "sk-ant-chat-secret-000"
 
 PNG = subprocess.check_output(["php", "-r", "$i=imagecreatetruecolor(64,48); imagefill($i,0,0,imagecolorallocate($i,30,120,200)); ob_start(); imagepng($i); echo ob_get_clean();"])
-state = {"list_fail": False, "list_reject_key": False, "status": "ok", "foreign": False, "private_result": False, "num": 1, "submits": 0, "gemini_thought": True, "custom_url": False}
+state = {"comet_status": "success", "list_fail": False, "list_reject_key": False, "status": "ok", "foreign": False, "private_result": False, "num": 1, "submits": 0, "gemini_thought": True, "custom_url": False}
 log = []        # (method, path, headers, body)
 internal_hits = []
 chat_queue = []
@@ -48,7 +48,7 @@ class Mock(BaseHTTPRequestHandler):
         body = self.body()
         log.append(("POST", self.path, dict(self.headers), body))
         port = self.server.server_port
-        if self.path.startswith("/fal-ai/") and "/requests/" not in self.path:
+        if self.path.startswith(("/fal-ai/", "/google/", "/openai/", "/bytedance/")) and "/requests/" not in self.path:
             state["submits"] += 1
             state["num"] = int(body.get("num_images", 1)) if isinstance(body, dict) else 1
             status_url = f"http://127.0.0.1:{self.server.internal_port}/stolen/status" if state["foreign"] else f"http://127.0.0.1:{port}{self.path}/requests/req1/status"
@@ -60,6 +60,8 @@ class Mock(BaseHTTPRequestHandler):
             parts.append({"text": "Here is your image."})
             parts.append({"inlineData": {"mimeType": "image/png", "data": base64.b64encode(PNG).decode()}})
             return reply(self, 200, {"candidates": [{"content": {"parts": parts}}]})
+        if self.path == "/v1/images/generations" and isinstance(body, dict) and body.get("async"):
+            return reply(self, 200, {"data": {"task_id": "t1", "status": "pending"}})
         if self.path == "/v1/images/generations":
             if state["custom_url"]:
                 return reply(self, 200, {"data": [{"url": f"http://127.0.0.1:{port}/img.png"}]})
@@ -82,6 +84,12 @@ class Mock(BaseHTTPRequestHandler):
             if "cursor=c2" in self.path:
                 return reply(self, 200, {"models": [{"endpoint_id": "fal-ai/second", "metadata": {"display_name": "Second <b>model</b>"}}, {"endpoint_id": "bad id!!"}], "has_more": False, "next_cursor": None})
             return reply(self, 200, {"models": [{"endpoint_id": "fal-ai/nano-banana-2", "metadata": {"display_name": "Nano Banana 2"}}, {"endpoint_id": "fal-ai/flux/dev", "metadata": {"display_name": "FLUX.1 [dev]"}}], "has_more": True, "next_cursor": "c2"})
+        if self.path.startswith("/v1/images/generations/"):
+            if state["comet_status"] == "pending":
+                return reply(self, 200, {"data": {"task_id": "t1", "status": "pending"}})
+            if state["comet_status"] == "failure":
+                return reply(self, 200, {"data": {"status": "failure", "fail_reason": "blocked by policy"}})
+            return reply(self, 200, {"data": {"status": "success", "data": [{"url": f"http://cdn.fal.test:{port}/img.png"}]}})
         if self.path.endswith("/status"):
             mode = state["status"]
             if mode == "progress":
@@ -177,12 +185,12 @@ with tempfile.TemporaryDirectory(prefix="nibbly-image-service-") as folder:
         # ---- fal.ai with an Anthropic chat: the case that was impossible before -------------------------------------------------
         configure()
         status = json.loads(php("echo json_encode(nibblyAiImageServicePublic(nibblyAiLoadSettings(false))['active']);"))
-        assert status["usable"] and status["id"] == "fal" and status["keySource"] == "own" and status["model"] == "fal-ai/nano-banana-2", status
+        assert status["usable"] and status["id"] == "fal" and status["keySource"] == "own" and status["model"] == "google/nano-banana-2.1", status
         result = generate(aspectRatio="16:9", size="1536x1024", outputFormat="webp", imageScale=2048)
         assert len(result["paths"]) == 1 and (root / result["paths"][0].lstrip("/")).is_file(), result
         head = (root / result["paths"][0].lstrip("/")).read_bytes()
         assert head[8:12] == b"WEBP", "stored in the requested format"
-        submit = last("POST", "/fal-ai/nano-banana-2")
+        submit = last("POST", "/google/nano-banana-2.1")
         assert submit[2].get("Authorization") == "Key " + KEY_FAL, "fal takes 'Key <key>'"
         body = submit[3]
         assert body["aspect_ratio"] == "16:9" and body["output_format"] == "webp" and body["resolution"] == "2K" and "num_images" not in body and body["prompt"] == "A friendly robot", body
@@ -190,27 +198,27 @@ with tempfile.TemporaryDirectory(prefix="nibbly-image-service-") as folder:
         meta = json.loads((root / "content/media-meta.json").read_text())["image"]
         assert any(v.get("ai") == "generated" for v in meta.values()), "the AI label is stored with the image: %s" % meta
         reservation = list(reservations().values())[-1]
-        assert reservation["model"] == "fal-ai/nano-banana-2" and reservation["service"] == "fal" and reservation["provider"] == "fal" and reservation["status"] == "settled", reservation
+        assert reservation["model"] == "google/nano-banana-2.1" and reservation["service"] == "fal" and reservation["provider"] == "fal" and reservation["status"] == "settled", reservation
         assert reservation["reservedCents"] == 5.0 and reservation["priced"] is True, "the default price per image applies when nothing else is on file: %s" % reservation
 
         # two images in one task; aspect ratios the model does not know go to the nearest one
         before = state["submits"]
         result = generate(count=2, aspectRatio="4:3", outputFormat="png")
         assert len(result["paths"]) == 2 and state["submits"] == before + 1, "one request for two images (num_images)"
-        body = last("POST", "/fal-ai/nano-banana-2")[3]
+        body = last("POST", "/google/nano-banana-2.1")[3]
         assert body["num_images"] == 2 and body["aspect_ratio"] == "4:3" and body["output_format"] == "png", body
         assert list(reservations().values())[-1]["reservedCents"] == 10.0
         generate(aspectRatio="auto", size="1024x1536")
-        assert last("POST", "/fal-ai/nano-banana-2")[3]["aspect_ratio"] == "2:3", "a pixel size becomes its ratio"
+        assert last("POST", "/google/nano-banana-2.1")[3]["aspect_ratio"] == "2:3", "a pixel size becomes its ratio"
 
-        # a model with image_size presets (not verified in the registry) and custom parameters
-        configure(image={"provider": "fal", "model": "fal-ai/flux/schnell", "models": {}, "custom": {"baseUrl": "", "sizeMode": "size", "authStyle": "bearer", "extraParams": {"enable_safety_checker": False}}})
+        # a model with image_size presets, a quality and custom parameters
+        configure(image={"provider": "fal", "model": "openai/gpt-image-2.5/flare/text-to-image", "models": {}, "custom": {"baseUrl": "", "sizeMode": "size", "authStyle": "bearer", "extraParams": {"enable_safety_checker": False}}})
         generate(aspectRatio="16:9", outputFormat="webp")
-        body = last("POST", "/fal-ai/flux/schnell")[3]
-        assert body["image_size"] == "landscape_16_9" and body["output_format"] == "png", body  # webp is not offered by the model: png
+        body = last("POST", "/openai/gpt-image-2.5/flare/text-to-image")[3]
+        assert body["image_size"] == "landscape_16_9" and body["output_format"] == "webp" and body["quality"] == "auto" and "aspect_ratio" not in body, body
         assert body["enable_safety_checker"] is False, "custom parameters are added to the request"
         info = json.loads(php("echo json_encode(nibblyAiImageServicePublic(nibblyAiLoadSettings(false))['active']);"))
-        assert info["verified"] is False and info["note"], "unverified parameters are marked"
+        assert info["verified"] == "2026-10-17" and info["note"], "the date of the check is reported: %s" % info
         # an unknown model gets the defaults of the service, also marked
         configure(image={"provider": "fal", "model": "fal-ai/brand-new-model", "models": {}, "custom": {"baseUrl": "", "sizeMode": "size", "authStyle": "bearer", "extraParams": {}}})
         generate(aspectRatio="3:2")
@@ -221,9 +229,9 @@ with tempfile.TemporaryDirectory(prefix="nibbly-image-service-") as folder:
         configure()
         ref = root / "assets/images/placeholder-image.webp"
         result = generate(referenceMediaPaths=["/assets/images/placeholder-image.webp"])
-        edit = last("POST", "/fal-ai/nano-banana-2/edit")[3]
+        edit = last("POST", "/google/nano-banana-2.1/edit")[3]
         assert edit["image_urls"][0].startswith("data:image/") and result["paths"], "reference image sent to the edit endpoint"
-        configure(image={"provider": "fal", "model": "fal-ai/flux/schnell", "models": {}, "custom": {"baseUrl": "", "sizeMode": "size", "authStyle": "bearer", "extraParams": {}}})
+        configure(image={"provider": "fal", "model": "fal-ai/brand-new-model", "models": {}, "custom": {"baseUrl": "", "sizeMode": "size", "authStyle": "bearer", "extraParams": {}}})
         assert "reference" in fails("nibblyAiGenerateImage('x', ['referenceMediaPaths' => ['/assets/images/placeholder-image.webp']]);").lower()
 
         # ---- failures -----------------------------------------------------------------------------------------------------------
@@ -260,13 +268,36 @@ with tempfile.TemporaryDirectory(prefix="nibbly-image-service-") as folder:
         configure(image={"provider": "comet", "model": "", "models": {}, "custom": {"baseUrl": "", "sizeMode": "size", "authStyle": "bearer", "extraParams": {"safetySettings": [{"category": "x"}]}}}, keys={"comet": KEY_COMET})
         result = generate(aspectRatio="16:9", imageScale=3840, outputFormat="webp")
         entry = last("POST", ":generateContent")
-        assert entry[1] == "/v1beta/models/gemini-3.1-flash-image-preview:generateContent" and entry[2].get("Authorization") == "Bearer " + KEY_COMET, entry[:2]
+        assert entry[1] == "/v1beta/models/gemini-nano-banana-2.1:generateContent" and entry[2].get("Authorization") == "Bearer " + KEY_COMET, entry[:2]
         gen = entry[3]["generationConfig"]
         assert gen["imageConfig"] == {"aspectRatio": "16:9", "imageSize": "4K"} and gen["responseModalities"] == ["TEXT", "IMAGE"] and entry[3]["safetySettings"], entry[3]
         assert (root / result["paths"][0].lstrip("/")).read_bytes()[8:12] == b"WEBP", "the thought part is skipped, the real image stored"
         result = generate(referenceMediaPaths=["/assets/images/placeholder-image.webp"])
         parts = last("POST", ":generateContent")[3]["contents"][0]["parts"]
         assert parts[1]["inline_data"]["mime_type"] == "image/webp" and parts[1]["inline_data"]["data"] and not parts[1]["inline_data"]["data"].startswith("data:"), "raw base64, no data: prefix"
+
+        # Comet: GPT Image 2.5 over the OpenAI images route (below /v1), one image per request
+        gpt = {"provider": "comet", "model": "gpt-image-2.5-flare", "models": {}, "custom": {"baseUrl": "", "sizeMode": "size", "authStyle": "bearer", "extraParams": {}}}
+        configure(image=gpt, keys={"comet": KEY_COMET})
+        generate(aspectRatio="16:9", outputFormat="webp", quality="high")
+        entry = last("POST", "/v1/images/generations")
+        assert entry[2].get("Authorization") == "Bearer " + KEY_COMET and entry[3]["model"] == "gpt-image-2.5-flare", entry[:2]
+        assert entry[3]["size"] == "1536x1024" and entry[3]["quality"] == "high" and entry[3]["output_format"] == "webp" and entry[3]["n"] == 1 and "moderation" not in entry[3], entry[3]
+        posts_before = len([e for e in log if e[0] == "POST" and e[1] == "/v1/images/generations"])
+        result = generate(count=2)
+        assert len(result["paths"]) == 2 and len([e for e in log if e[0] == "POST" and e[1] == "/v1/images/generations"]) == posts_before + 2, "n stays 1: one request per image"
+        # Comet: Seedream 5.0 Pro over the asynchronous route
+        seed = dict(gpt, model="seedream-5-0-pro-260628")
+        configure(image=seed, keys={"comet": KEY_COMET})
+        generate(imageScale=2048)
+        create = [e for e in log if e[0] == "POST" and e[1] == "/v1/images/generations" and isinstance(e[3], dict) and e[3].get("async")][-1]
+        assert create[3]["model"] == "seedream-5-0-pro-260628" and create[3]["size"] == "2K" and create[3]["response_format"] == "url" and create[3]["watermark"] is False, create[3]
+        assert last("GET", "/v1/images/generations/t1")[2].get("Authorization") == "Bearer " + KEY_COMET
+        state["comet_status"] = "failure"
+        message = fails("nibblyAiGenerateImage('x');")
+        assert "blocked by policy" in message, message
+        state["comet_status"] = "success"
+        assert "reference" in fails("nibblyAiGenerateImage('x', ['referenceMediaPaths' => ['/assets/images/placeholder-image.webp']]);").lower(), "Comet Seedream takes no references"
 
         # ---- custom OpenAI-compatible service ----------------------------------------------------------------------------------------------
         custom = {"provider": "custom", "model": "my-image-model", "models": {}, "custom": {"baseUrl": base + "/v1", "sizeMode": "size", "authStyle": "bearer", "extraParams": {"style": "natural"}}}
@@ -285,7 +316,7 @@ with tempfile.TemporaryDirectory(prefix="nibbly-image-service-") as folder:
 
         # ---- keys: stored apart, masked, removed ---------------------------------------------------------------------------------------------
         configure(keys={})
-        save = {"enabled": True, "provider": "anthropic", "allowLocalProvider": True, "apiKey": KEY_CHAT, "imageService": {"provider": "fal", "model": "fal-ai/nano-banana-2"},
+        save = {"enabled": True, "provider": "anthropic", "allowLocalProvider": True, "apiKey": KEY_CHAT, "imageService": {"provider": "fal", "model": "google/nano-banana-2.1"},
                 "imageServices": {"fal": {"apiKey": KEY_FAL}}, "features": {"imageGeneration": True}}
         php("nibblyAiSaveSettings(json_decode(" + json.dumps(json.dumps(save)) + ", true));")
         secrets = json.loads((root / "content/ai-secrets.json").read_text())
@@ -298,16 +329,16 @@ with tempfile.TemporaryDirectory(prefix="nibbly-image-service-") as folder:
         assert KEY_FAL not in public and KEY_CHAT not in public, "no key in the settings that go to the browser"
         assert json.loads(public)["imageServiceStatus"]["services"]["fal"] == {"hasApiKey": True, "chatKeyAvailable": False, "keySource": "own"}
         # prices per model
-        priced = dict(save, pricing={"imageModels": {"fal|fal-ai/nano-banana-2": {"perImage": 0.04, "currency": "USD"}, "bad key": {"perImage": 1}}})
+        priced = dict(save, pricing={"imageModels": {"fal|google/nano-banana-2.1": {"perImage": 0.04, "currency": "USD"}, "bad key": {"perImage": 1}}})
         php("nibblyAiSaveSettings(json_decode(" + json.dumps(json.dumps(priced)) + ", true));")
         stored = json.loads((root / "content/ai-settings.json").read_text())["pricing"]["imageModels"]
-        assert stored == {"fal|fal-ai/nano-banana-2": {"perImage": 0.04, "currency": "USD"}}, stored
+        assert stored == {"fal|google/nano-banana-2.1": {"perImage": 0.04, "currency": "USD"}}, stored
         generate()
         reservation = list(reservations().values())[-1]
         assert 3 < reservation["reservedCents"] < 4 and reservation["priced"] is True, "USD price converted to euro cents: %s" % reservation
         assert json.loads((root / "content/ai-usage.json").read_text())["reservations"][reservation["id"]]["priceBasis"]["source"] == "override"
         # no price at all: shown as unknown, not as free
-        none = dict(save, pricing={"imageCentsPerRequest": 0, "imageModels": {"fal|fal-ai/nano-banana-2": None}})
+        none = dict(save, pricing={"imageCentsPerRequest": 0, "imageModels": {"fal|google/nano-banana-2.1": None}})
         php("nibblyAiSaveSettings(json_decode(" + json.dumps(json.dumps(none)) + ", true));")
         generate()
         reservation = list(reservations().values())[-1]
@@ -356,7 +387,7 @@ with tempfile.TemporaryDirectory(prefix="nibbly-image-service-") as folder:
         assert "generate_image" in names, "an Anthropic chat with a fal.ai image service gives the agent its image tool"
 
         # ---- price by resolution and quality --------------------------------------------------------------------------------------------
-        configure(extra={"pricing": {"imageCentsPerRequest": 5, "usdPerEur": 0, "imageModels": {"fal|fal-ai/nano-banana-2": {"currency": "EUR", "byResolution": {"1K": 0.02, "4K": 0.2}}}, "models": {}}})
+        configure(extra={"pricing": {"imageCentsPerRequest": 5, "usdPerEur": 0, "imageModels": {"fal|google/nano-banana-2.1": {"currency": "EUR", "byResolution": {"1K": 0.02, "4K": 0.2}}}, "models": {}}})
         generate(imageScale=3840)
         reservation = list(reservations().values())[-1]
         assert reservation["reservedCents"] == 20.0 and reservation["priceBasis"]["basis"] == "resolution:4K" and reservation["priceBasis"]["source"] == "override", reservation
@@ -423,7 +454,7 @@ with tempfile.TemporaryDirectory(prefix="nibbly-image-service-") as folder:
             if payload["data"]["status"] not in ("running", "busy", "waiting_jobs"):
                 break
         assert payload["data"]["status"] == "awaiting_review", states
-        assert state["submits"] == submits + 1 and last("POST", "/fal-ai/nano-banana-2")[3]["aspect_ratio"] == "16:9", "the agent's image came from the image service"
+        assert state["submits"] == submits + 1 and last("POST", "/google/nano-banana-2.1")[3]["aspect_ratio"] == "16:9", "the agent's image came from the image service"
         changeset = next((root / "content/ai-agent/changesets").glob("*.json"))
         media = json.loads(changeset.read_text())["media"]
         assert [m["source"] for m in media.values()] == ["generated"] and next(iter(media.values()))["ai"] == "generated", media
@@ -476,7 +507,7 @@ with tempfile.TemporaryDirectory(prefix="nibbly-image-service-") as folder:
             if payload["data"]["status"] not in ("running", "busy", "waiting_jobs"):
                 break
         assert "Unknown reference image" in json.dumps(chat_requests[-1]["messages"]), "the tool error reaches the model"
-        configure(chat="openai", image={"provider": "fal", "model": "fal-ai/flux/schnell", "models": {}, "custom": {"baseUrl": "", "sizeMode": "size", "authStyle": "bearer", "extraParams": {}}})
+        configure(chat="openai", image={"provider": "fal", "model": "fal-ai/brand-new-model", "models": {}, "custom": {"baseUrl": "", "sizeMode": "size", "authStyle": "bearer", "extraParams": {}}})
         chat_queue[:] = [tool_calls("generate_image", {"prompt": "x", "references": ["/assets/images/placeholder-image.webp"]}, "e2"), say("ok")]
         status, payload = api("ai-agent-start", goal="Reference with a service that cannot")
         run_four = payload["data"]["runId"]

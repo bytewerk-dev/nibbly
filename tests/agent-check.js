@@ -259,8 +259,15 @@ async function mainFlow(browser, user) {
 
         // ---- Dashboard assistant: cards that open an area or change the dashboard look -------------------------------------------------------
         ({ context, page } = await login(browser, 'admin'));
-        await page.locator('.nb-copilot-toggle').click();
-        await page.locator('#nb-copilot-panel').waitFor({ state: 'visible' });
+        // On the home tab the chat sits in the assistant card (no bubble, nothing to open)
+        await page.locator('#aiAssistantEmbed #nb-copilot-panel').waitFor({ state: 'visible' });
+        assert(!(await page.locator('.nb-copilot-toggle').isVisible()), 'the bubble gives way to the chat in the card');
+        // The card offers both chats, labelled; the agent is the default, the dashboard's own actions belong to Classic
+        const modes = await page.locator('#aiAssistantEmbed .nb-agent-mode button').allTextContents();
+        assert(modes.join('|') === 'Agent|Classic', 'the card offers Agent and Classic: ' + modes.join('|'));
+        assert(await page.locator('#aiAssistantEmbed .nb-agent-mode button[data-arg="agent"]').getAttribute('aria-pressed') === 'true', 'the agent is selected first');
+        assert(!(await page.locator('#aiChatForm').isVisible()), 'the old classic form gives way to the embedded chat');
+        await page.locator('#aiAssistantEmbed .nb-agent-mode button[data-arg="classic"]').click();
         await send(page, 'Please switch the dashboard to dark mode');
         await page.locator('.nb-copilot-dash', { hasText: 'Change dashboard theme' }).waitFor({ state: 'visible', timeout: 30000 });
         assert((await page.locator('.nb-copilot-dash').first().textContent()).includes('Light → Dark'), 'the card says what changes');
@@ -299,8 +306,8 @@ async function mainFlow(browser, user) {
 
         // ---- Places in the dashboard: a card with a link that opens in a new tab, and refusals --------------------------------------------------
         ({ context, page } = await login(browser, 'admin'));
-        await page.locator('.nb-copilot-toggle').click();
-        await page.locator('#nb-copilot-panel').waitFor({ state: 'visible' });
+        await page.locator('#aiAssistantEmbed #nb-copilot-panel').waitFor({ state: 'visible' });
+        await page.locator('#aiAssistantEmbed .nb-agent-mode button[data-arg="classic"]').click();
         await send(page, 'Please set the system language to English');
         const placeCard = page.locator('.nb-copilot-dash--link', { hasText: 'Admin Language' });
         await placeCard.waitFor({ state: 'visible', timeout: 30000 });

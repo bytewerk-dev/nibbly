@@ -25,9 +25,10 @@ assertContains(agent, 'window.NB_AI_AGENT', 'The agent reads its availability an
 assertContains(agent, 'config.available !== true', 'Without the page flag the agent does nothing.');
 assertContains(agent, 'window.NibblyAiCopilot.registerAgent', 'The agent plugs into the assistant through registerAgent.');
 assertContains(copilot, 'function registerAgent(hook)', 'The assistant offers registerAgent.');
-assertContains(copilot, "copilotMode !== 'frontend'", 'The agent is a frontend feature only.');
+assertContains(copilot, 'if (agentHook || !hook) return false;', 'The agent registers in both modes: the website and the dashboard.');
+if (copilot.includes("copilotMode !== 'frontend'")) fail('The agent also runs in the dashboard: registerAgent must not be limited to the frontend.');
 assertContains(copilot, 'if (agentHook) agentHook.mount(root, agentHost());', 'The shell mounts the agent controls.');
-assertContains(copilot, 'registerAgent\n    };', 'registerAgent is part of the public assistant API.');
+assertContains(copilot, 'embed,\n        registerAgent\n    };', 'embed and registerAgent are part of the public assistant API.');
 assertContains(footer, "window.NB_AI_AGENT = <?php echo json_encode($_aiAgentConfig, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG); ?>;", 'The page config is JSON-encoded with HEX_TAG.');
 
 // ---- A "yes" never applies a package -------------------------------------------------------------------

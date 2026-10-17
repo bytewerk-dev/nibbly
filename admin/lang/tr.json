@@ -1854,5 +1854,8 @@
     "ai.image_price_tables_hint": "Model çözünürlük kademesine veya kaliteye göre farklı ücret alıyorsa, her biri için görsel başına fiyatı buraya gir. Bir istek önce çözünürlüğünün, sonra kalitesinin, en sonunda da yukarıdaki görsel başına fiyatın değerini kullanır. Boş alanlar görsel başına fiyatı kullanır.",
     "ai.image_price_status_tables": "Çözünürlüğe veya kaliteye göre fiyatlar da girilmiş.",
     "ai.image_price_status_tables_only": "Çözünürlüğe veya kaliteye göre fiyatlar girilmiş; eşleşmeyen istekler görsel başına varsayılan fiyatı kullanır.",
-    "ai.image_service_models_loaded": "Hizmetten {count} model yüklendi. Yine de istediğin model kimliğini yazabilirsin."
+    "ai.image_service_models_loaded": "Hizmetten {count} model yüklendi. Yine de istediğin model kimliğini yazabilirsin.",
+    "ai.image_service_unusable_key": "{service} görsel hizmeti için henüz API anahtarı yok. Yapay zeka ayarları → Görseller bölümünden ekle.",
+    "ai.image_service_unusable_model": "{service} için görsel modeli seçilmedi. Yapay zeka ayarları → Görseller bölümünden seç.",
+    "ai.image_price_status_catalog_tables": "Çözünürlüğe veya kaliteye göre katalog fiyatları, {date} itibarıyla."
 }

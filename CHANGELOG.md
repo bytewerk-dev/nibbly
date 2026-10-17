@@ -9,14 +9,50 @@ Git milestones and the gaps in publication records.
 
 ## Unreleased
 
+## [2.3.2] — 2026-10-17
+
 ### Added
 
+- **The AI agent also chats in the dashboard.** The "Assistant" card on the home tab now
+  holds the same chat as the website (Agent | Classic switch, attachments, review cards)
+  instead of a separate classic form; on every other tab it is the floating bubble as
+  before. With "Offer the classic mode in the chat" off, the card shows the agent alone
+  and says so; without the agent it shows the classic chat, labelled "Classic". The chat
+  stays open as the panel when a card sends you to a settings page. The mode is remembered
+  apart for the website and the dashboard (the dashboard's own actions, such as the theme
+  or the language, are the classic assistant's). `NibblyAiCopilot.embed(host)` puts the chat
+  into a container; `registerAgent()` no longer refuses the dashboard.
+- **Animated feedback while the AI works:** a ring spinner in the image jobs panel while
+  jobs are queued or running, a "thinking" bubble in the classic chat of the card, and a ring
+  in the running indicator.
+- **Image models of Kie.ai, fal.ai and Comet API reduced to five:** Nano Banana Pro,
+  Nano Banana 2.1, GPT Image 2.5 Flare, GPT Image 2.5 Sunburst and Seedream 5.0 Pro
+  (the live model lists still add what the services report). Parameters, ids and reference
+  image support come from the providers' documentation and schemas (checked 2026-10-17;
+  Comet's Seedream and a few parameters are marked unverified). The Kie.ai adapter is now driven
+  by the registry (`includes/ai/image-services.json`) like the others; Comet routes by model
+  (Gemini route for Nano Banana, OpenAI images route for GPT Image 2.5, an asynchronous route for
+  Seedream). Prices by resolution of the Kie.ai models and of fal.ai's Nano Banana Pro are
+  in the registry with source and date.
 - Option "Offer the classic mode in the chat" (Settings → AI Settings → AI agent,
   `agent.classicMode`, on by default). Off, the chat shows the agent only, without
   the mode switch.
 - Messages page: a notice appears when no enabled form stores messages locally
   ("Store locally" off everywhere) or when no form is enabled at all, with a button
   to the form settings.
+
+### Changed
+
+- The former Kie.ai image models lead to their successors: `gpt-image-2` becomes
+  `gpt-image-2-5-flare`, `nano-banana-2` becomes `nano-banana-2-1`; Seedream is unchanged.
+  Saved settings keep working through these aliases.
+- fal.ai and Comet no longer list their earlier presets (Nano Banana 2, FLUX.1 schnell, Gemini 3.1
+  Flash Image); any model ID can still be typed and is sent with the service's defaults.
+
+### Fixed
+
+- **The image tool no longer disappears** when an image service other than "Same as chat provider"
+  is chosen and cannot work yet (no key, no model): the tab stays and says what is missing.
 
 ## [2.3.1] — 2026-10-17
 
