@@ -9,6 +9,8 @@ Git milestones and the gaps in publication records.
 
 ## Unreleased
 
+## [2.3.1] — 2026-10-17
+
 ### Added
 
 - **An image service of its own, apart from the chat provider.** The AI settings

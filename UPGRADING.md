@@ -3,10 +3,10 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
-## Upgrading from 2.3.0 to the next release
+## Upgrading from 2.3.0 to 2.3.1
 
-The next release changes how the AI settings store models and prices, adds the safety check
-of the AI agent and the Nibbly map. No manual step is needed for the settings: existing models,
+Version 2.3.1 changes how the AI settings store models and prices, adds the safety check
+of the AI agent, the Nibbly map and a separate image service. No manual step is needed for the settings: existing models,
 credentials, limits and request behavior stay as they are. The documented admin API is unchanged.
 
 1. Prepare as for any update (backup, preserve site-owned files) and deploy the
