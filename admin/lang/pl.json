@@ -1815,5 +1815,7 @@
     "mails.storage_off_text": "Opcja „Zapisuj lokalnie” jest wyłączona we wszystkich włączonych formularzach. Przychodzące wiadomości nie pojawiają się więc na tej liście i docierają tylko e-mailem, o ile wysyłka jest skonfigurowana.",
     "mails.forms_disabled_title": "Żaden formularz nie jest włączony",
     "mails.forms_disabled_text": "Dopóki żaden formularz nie jest włączony, odwiedzający nie mogą wysyłać wiadomości, a ta lista pozostaje pusta.",
-    "mails.open_forms_settings": "Otwórz formularze"
+    "mails.open_forms_settings": "Otwórz formularze",
+    "ai.agent_classic_mode": "Oferuj tryb klasyczny w czacie",
+    "ai.agent_classic_mode_hint": "W czacie można przełączać się między agentem a klasycznym asystentem. Tryb klasyczny jest szybszy i tańszy przy pytaniach i pojedynczych podpowiedziach tekstu. Wyłącz go, jeśli czat ma pokazywać tylko agenta."
 }

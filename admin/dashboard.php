@@ -2107,6 +2107,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         <div class="form-group ai-enable-row">
                             <label class="toggle-label"><span><?php echo t('ai.agent_enable'); ?></span><div class="toggle-switch"><input type="checkbox" id="aiAgentEnabled"><span class="toggle-slider"></span></div></label>
                         </div>
+                        <div class="form-group ai-enable-row">
+                            <label class="toggle-label"><span><?php echo t('ai.agent_classic_mode'); ?></span><div class="toggle-switch"><input type="checkbox" id="aiAgentClassicMode"><span class="toggle-slider"></span></div></label>
+                            <small class="form-hint"><?php echo t('ai.agent_classic_mode_hint'); ?></small>
+                        </div>
 
                         <details class="ai-agent-details">
                         <summary><?php echo t('ai.agent_limits'); ?></summary>

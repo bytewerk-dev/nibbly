@@ -1815,5 +1815,7 @@
     "mails.storage_off_text": "« Enregistrer localement » est désactivé pour tous les formulaires activés. Les messages reçus n’apparaissent donc pas dans cette liste et n’arrivent que par e-mail, si l’envoi est configuré.",
     "mails.forms_disabled_title": "Aucun formulaire n’est activé",
     "mails.forms_disabled_text": "Tant qu’aucun formulaire n’est activé, les visiteurs ne peuvent pas envoyer de messages et cette liste reste vide.",
-    "mails.open_forms_settings": "Ouvrir les formulaires"
+    "mails.open_forms_settings": "Ouvrir les formulaires",
+    "ai.agent_classic_mode": "Proposer le mode classique dans le chat",
+    "ai.agent_classic_mode_hint": "Le chat permet de passer de l’agent à l’assistant classique. Le mode classique est plus rapide et moins cher pour les questions et les suggestions de texte isolées. Désactive-le si le chat ne doit montrer que l’agent."
 }

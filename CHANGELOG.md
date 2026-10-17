@@ -11,6 +11,9 @@ Git milestones and the gaps in publication records.
 
 ### Added
 
+- Option "Offer the classic mode in the chat" (Settings → AI Settings → AI agent,
+  `agent.classicMode`, on by default). Off, the chat shows the agent only, without
+  the mode switch.
 - Messages page: a notice appears when no enabled form stores messages locally
   ("Store locally" off everywhere) or when no form is enabled at all, with a button
   to the form settings.
@@ -99,6 +102,11 @@ Git milestones and the gaps in publication records.
 
 ### Fixed
 
+- The agent question after saving AI settings is now asked whenever a key is newly
+  added for a powerful model, not only once per model in the browser.
+- The assistant button in the dashboard appears right after the first key is saved
+  (script and styles are loaded then) and disappears when the key is removed,
+  instead of needing a page reload.
 - Dropdown lists (`nb-select`, also the mobile settings navigation and the editor)
   squeezed their rows and cut off the text when the list was higher than the room
   below the field; the rows now keep their height and the list scrolls. A browser

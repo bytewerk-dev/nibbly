@@ -1994,3 +1994,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     font-size: 12px;
     line-height: 1.45;
 }
+
+.nb-agent-mode[hidden] {
+    display: none;
+}

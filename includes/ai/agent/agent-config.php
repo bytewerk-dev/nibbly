@@ -13,6 +13,8 @@ const NIBBLY_AGENT_RIGHTS = ['publish', 'stockImages', 'uploadImages', 'generate
 function nibblyAgentDefaultSettings(): array {
     return [
         'enabled' => false,
+        // Offer the classic assistant next to the agent in the chat (the mode switch). Off: the chat is the agent only.
+        'classicMode' => true,
         'limits' => [
             'maxTurns' => 14,
             'maxToolCalls' => 40,
@@ -49,7 +51,7 @@ function nibblyAgentNormalizeSettings(array $raw): array {
             $settings['roles']['editor'][$right] = (bool)$raw['roles']['editor'][$right];
         }
     }
-    foreach (['creditInNews', 'sourcesInNews'] as $flag) {
+    foreach (['creditInNews', 'sourcesInNews', 'classicMode'] as $flag) {
         if (array_key_exists($flag, $raw)) $settings[$flag] = (bool)$raw[$flag];
     }
     if (isset($raw['mediaFolder']) && is_string($raw['mediaFolder']) && preg_match('/^[a-z0-9_-]{1,40}$/', $raw['mediaFolder'])) {

@@ -1815,5 +1815,7 @@
     "mails.storage_off_text": "«Salva localmente» è disattivato per tutti i moduli attivi. I messaggi in arrivo quindi non compaiono in questo elenco e arrivano solo via e-mail, se l’invio è configurato.",
     "mails.forms_disabled_title": "Nessun modulo è attivo",
     "mails.forms_disabled_text": "Finché nessun modulo è attivo, i visitatori non possono inviare messaggi e questo elenco resta vuoto.",
-    "mails.open_forms_settings": "Apri moduli"
+    "mails.open_forms_settings": "Apri moduli",
+    "ai.agent_classic_mode": "Offri la modalità classica nella chat",
+    "ai.agent_classic_mode_hint": "Nella chat si può passare dall’agente all’assistente classico. La modalità classica è più rapida ed economica per domande e singoli suggerimenti di testo. Disattivala se la chat deve mostrare solo l’agente."
 }

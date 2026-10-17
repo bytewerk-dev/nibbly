@@ -1815,5 +1815,7 @@
     "mails.storage_off_text": "Etkin olan hiçbir formda “Yerel olarak sakla” açık değil. Bu yüzden gelen mesajlar bu listede görünmez ve e-posta gönderimi ayarlıysa yalnızca e-posta ile ulaşır.",
     "mails.forms_disabled_title": "Hiçbir form etkin değil",
     "mails.forms_disabled_text": "Hiçbir form etkin olmadığı sürece ziyaretçiler mesaj gönderemez ve bu liste boş kalır.",
-    "mails.open_forms_settings": "Formları aç"
+    "mails.open_forms_settings": "Formları aç",
+    "ai.agent_classic_mode": "Sohbette klasik modu sun",
+    "ai.agent_classic_mode_hint": "Sohbette ajan ile klasik asistan arasında geçiş yapılabilir. Klasik mod, sorular ve tekil metin önerileri için daha hızlı ve daha ucuzdur. Sohbet yalnızca ajanı göstermeliyse kapat."
 }

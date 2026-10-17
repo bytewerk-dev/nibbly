@@ -1815,5 +1815,7 @@
     "mails.storage_off_text": "«Guardar localmente» está desativado em todos os formulários ativos. Por isso, as mensagens recebidas não aparecem nesta lista e só chegam por e-mail, se o envio estiver configurado.",
     "mails.forms_disabled_title": "Nenhum formulário está ativo",
     "mails.forms_disabled_text": "Enquanto nenhum formulário estiver ativo, os visitantes não podem enviar mensagens e esta lista fica vazia.",
-    "mails.open_forms_settings": "Abrir formulários"
+    "mails.open_forms_settings": "Abrir formulários",
+    "ai.agent_classic_mode": "Oferecer o modo clássico no chat",
+    "ai.agent_classic_mode_hint": "O chat permite alternar entre o agente e o assistente clássico. O modo clássico é mais rápido e barato para perguntas e sugestões de texto avulsas. Desativa-o se o chat deve mostrar apenas o agente."
 }

@@ -1456,6 +1456,7 @@
         updateAiApiKeyHint(provider);
         updateAiModelPlaceholders(provider);
         updateAiAvailability(settings);
+        aiSyncDashboardCopilot(settings);
     }
 
     function updateAiApiKeyHint(provider) {
@@ -1554,6 +1555,7 @@
         return {
             agent: {
                 enabled: !!document.getElementById('aiAgentEnabled')?.checked,
+                classicMode: document.getElementById('aiAgentClassicMode') ? !!document.getElementById('aiAgentClassicMode').checked : true,
                 limits: {
                     runsPerHour: agentInt('aiAgentRunsPerHour', 10),
                     maxTurns: agentInt('aiAgentMaxTurns', 14),
@@ -1587,6 +1589,7 @@
         var stock = settings.stock || {};
         var checks = {
             aiAgentEnabled: !!agent.enabled,
+            aiAgentClassicMode: agent.classicMode !== false,
             aiAgentCreditInNews: agent.creditInNews !== false,
             aiAgentSourcesInNews: agent.sourcesInNews !== false,
             aiAgentRespectRobots: research.respectRobots !== false
@@ -1671,17 +1674,20 @@
         if (this.checked && raiseAgentLimits()) showToast(t('ai.agent_limits_raised'), 'info');
     });
 
-    // After a save that put a powerful chat model in place, offer the agent once per model while it is off.
+    // After a save that adds a key or puts a powerful chat model in place, offer the agent while it is off.
+    // A key that was just added always gets the question; a changed model only once per model.
     function maybeOfferAiAgent(previous, saved) {
         if (!saved || !saved.enabled || !saved.hasApiKey || (saved.agent && saved.agent.enabled)) return;
         if (!saved.agentStatus || !saved.agentStatus.toolCalling) return;
         var caps = aiModelCaps(saved.provider, saved.baseUrl, saved.chatModel);
         if (!caps || caps.tier !== 'power') return;
-        var changed = !previous || previous.provider !== saved.provider || previous.chatModel !== saved.chatModel || !previous.hasApiKey;
-        if (!changed) return;
+        var before = previous && previous.providerCredentials && previous.providerCredentials[saved.provider];
+        var keyAdded = !before || !before.hasApiKey;
+        var modelChanged = !previous || previous.provider !== saved.provider || previous.chatModel !== saved.chatModel;
+        if (!keyAdded && !modelChanged) return;
         var memo = 'nbAgentOffer:' + saved.provider + '|' + String(saved.chatModel).toLowerCase();
         try {
-            if (localStorage.getItem(memo)) return;
+            if (!keyAdded && localStorage.getItem(memo)) return;
             localStorage.setItem(memo, '1');
         } catch (e) { /* without storage the question may come again */ }
         showModal(t('ai.agent_offer_title'), t('ai.agent_offer_text', { model: caps.label }), function() {
@@ -1692,6 +1698,32 @@
             raiseAgentLimits();
             saveAiSettingsForm();
         }, { confirmText: t('ai.agent_offer_confirm'), confirmClass: 'btn btn-primary' });
+    }
+
+    // The assistant button (bottom right) belongs to the page only when the assistant is usable. The page loads its script
+    // and styles only then, so after the first key is saved they are loaded here, and the button goes away when it stops being usable.
+    var aiCopilotLoading = false;
+    function aiSyncDashboardCopilot(settings) {
+        if (!AI_FEATURES_ENABLED || !settings) return;
+        var available = !!settings.enabled && !!settings.hasApiKey && !!(settings.features && settings.features.backendAssistant)
+            && !(settings.assistantSurfaces && settings.assistantSurfaces.dashboard === false);
+        var root = document.querySelector('.nb-copilot');
+        if (root) {
+            root.style.display = available ? '' : 'none';
+            if (!available && window.NibblyAiCopilot) window.NibblyAiCopilot.close();
+            return;
+        }
+        if (!available || window.NibblyAiCopilot || aiCopilotLoading) return;
+        aiCopilotLoading = true;
+        window.NB_AI_COPILOT_AVAILABLE = true;
+        var style = document.createElement('link');
+        style.rel = 'stylesheet';
+        style.href = '../css/ai-copilot.css?v=<?php echo @filemtime(__DIR__ . '/../../../css/ai-copilot.css') ?: time(); ?>';
+        document.head.appendChild(style);
+        var script = document.createElement('script');
+        script.src = '../js/ai-copilot.js?v=<?php echo @filemtime(__DIR__ . '/../../../js/ai-copilot.js') ?: time(); ?>';
+        script.onerror = function() { aiCopilotLoading = false; };
+        document.body.appendChild(script);
     }
 
     document.getElementById('aiAgentClearCache')?.addEventListener('click', async function() {
@@ -1797,6 +1829,7 @@
                     aiSetSecretField('aiBraveApiKey', 'aiRemoveBraveApiKey', 'aiBraveApiKeyHint', !!currentAiSettings.research.hasBraveApiKey);
                     aiSetSecretField('aiPexelsApiKey', 'aiRemovePexelsApiKey', 'aiPexelsApiKeyHint', !!currentAiSettings.stock.hasPexelsApiKey);
                     renderAgentStatus(currentAiSettings);
+                    aiSyncDashboardCopilot(currentAiSettings);
                     updateAiAvailability(Object.assign({}, currentAiSettings, collectAiSettingsForm(), { hasApiKey: !!currentAiSettings.hasApiKey }));
                     if (result.data.usage) updateAiUsage(result.data.usage);
                     showToast(t('ai.key_removed'), 'success');

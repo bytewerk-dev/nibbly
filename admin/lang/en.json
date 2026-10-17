@@ -1966,5 +1966,7 @@
     "mails.storage_off_text": "“Store locally” is turned off for every enabled form. Incoming messages therefore do not appear in this list and only arrive by email, if email delivery is set up.",
     "mails.forms_disabled_title": "No form is enabled",
     "mails.forms_disabled_text": "As long as no form is enabled, visitors cannot send messages and this list stays empty.",
-    "mails.open_forms_settings": "Open forms"
+    "mails.open_forms_settings": "Open forms",
+    "ai.agent_classic_mode": "Offer the classic mode in the chat",
+    "ai.agent_classic_mode_hint": "The chat can switch between the agent and the classic assistant. The classic mode is faster and cheaper for questions and single text suggestions. Turn it off if the chat should show the agent only."
 }

@@ -1815,5 +1815,7 @@
     "mails.storage_off_text": "U žádného zapnutého formuláře není zapnuto „Ukládat lokálně“. Příchozí zprávy se proto v tomto seznamu nezobrazí a dorazí jen e-mailem, pokud je odesílání nastaveno.",
     "mails.forms_disabled_title": "Není zapnut žádný formulář",
     "mails.forms_disabled_text": "Dokud není zapnut žádný formulář, návštěvníci nemohou odesílat zprávy a tento seznam zůstane prázdný.",
-    "mails.open_forms_settings": "Otevřít formuláře"
+    "mails.open_forms_settings": "Otevřít formuláře",
+    "ai.agent_classic_mode": "Nabízet v chatu klasický režim",
+    "ai.agent_classic_mode_hint": "V chatu lze přepínat mezi agentem a klasickým asistentem. Klasický režim je rychlejší a levnější pro dotazy a jednotlivé návrhy textu. Vypni jej, pokud má chat zobrazovat jen agenta."
 }
