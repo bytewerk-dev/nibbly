@@ -104,6 +104,8 @@ class Provider(BaseHTTPRequestHandler):
 provider = ThreadingHTTPServer(("127.0.0.1", 0), Provider)
 Thread(target=provider.serve_forever, daemon=True).start()
 os.environ["PHP_CLI_SERVER_WORKERS"] = "8"
+# The model lists of fal.ai and Comet point at a closed local address: the settings page must not reach the internet in this check.
+os.environ["NIBBLY_AGENT_TEST_NET"] = json.dumps({"imageListBases": {"fal": "http://127.0.0.1:9", "comet": "http://127.0.0.1:9"}})
 site = Site(folder + "/site")
 root = site.root
 write_json(root / "content/settings.json", {"modules": {"ai": True}, "privacy": {"analyticsEnabled": False}})

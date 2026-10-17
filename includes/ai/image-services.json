@@ -1,0 +1,140 @@
+{
+    "version": 1,
+    "updatedAt": "2026-10-17",
+    "note": "Image services (kept apart from the chat provider). Each service names an adapter (see image-services.php) and what its models accept. A field 'verified' holds the date the parameters were checked against the provider's official documentation, or false when they were not: those entries are best effort and shown as such in the settings. Extra parameters for a model can be added in the settings (custom parameters) without changing code. Prices are only entered with a source; none are guessed.",
+    "sources": [
+        "https://fal.ai/docs/model-apis/model-endpoints/queue",
+        "https://fal.ai/models/fal-ai/nano-banana-2/llms.txt",
+        "https://fal.ai/models/fal-ai/nano-banana-2/edit/llms.txt",
+        "https://fal.ai/models/fal-ai/flux/schnell/llms.txt",
+        "https://apidoc.cometapi.com/api/image/gemini/generate-image-guide.md"
+    ],
+    "services": {
+        "openai-compatible": {
+            "label": "ai.image_service_openai",
+            "adapter": "openai-images",
+            "baseUrl": "https://api.openai.com/v1",
+            "keyFrom": "openai-compatible",
+            "catalogModels": true
+        },
+        "openrouter": {
+            "label": "ai.image_service_openrouter",
+            "adapter": "openrouter-chat",
+            "baseUrl": "https://openrouter.ai/api/v1",
+            "keyFrom": "openrouter",
+            "catalogModels": true
+        },
+        "kie": {
+            "label": "ai.image_service_kie",
+            "adapter": "kie-task",
+            "baseUrl": "https://api.kie.ai",
+            "keyFrom": "kie",
+            "catalogModels": true
+        },
+        "fal": {
+            "label": "ai.image_service_fal",
+            "adapter": "fal-queue",
+            "baseUrl": "https://queue.fal.run",
+            "keyFrom": null,
+            "docs": "https://fal.ai/docs/model-apis/model-endpoints/queue",
+            "defaultModel": "fal-ai/nano-banana-2",
+            "defaults": {
+                "verified": false,
+                "note": "Unknown fal model: prompt, aspect_ratio and num_images are sent as most fal image models accept them. Add model specific parameters under custom parameters.",
+                "aspectParam": "aspect_ratio",
+                "aspects": ["21:9", "16:9", "3:2", "4:3", "5:4", "1:1", "4:5", "3:4", "2:3", "9:16"],
+                "countParam": "num_images",
+                "maxCount": 4,
+                "references": null,
+                "price": null
+            },
+            "models": [
+                {
+                    "id": "fal-ai/nano-banana-2",
+                    "label": "fal.ai: Nano Banana 2",
+                    "verified": "2026-10-17",
+                    "aspectParam": "aspect_ratio",
+                    "aspects": ["21:9", "16:9", "3:2", "4:3", "5:4", "1:1", "4:5", "3:4", "2:3", "9:16", "4:1", "1:4", "8:1", "1:8"],
+                    "countParam": "num_images",
+                    "maxCount": 4,
+                    "formatParam": "output_format",
+                    "formats": ["png", "jpeg", "webp"],
+                    "resolutionParam": "resolution",
+                    "resolutions": ["1K", "2K", "4K"],
+                    "references": {
+                        "editModel": "fal-ai/nano-banana-2/edit",
+                        "param": "image_urls",
+                        "transport": "data-uri",
+                        "max": 8,
+                        "verified": false,
+                        "note": "The edit endpoint and image_urls are documented; whether it accepts data URIs for images is not stated there."
+                    },
+                    "price": null
+                },
+                {
+                    "id": "fal-ai/flux/schnell",
+                    "label": "fal.ai: FLUX.1 schnell",
+                    "verified": false,
+                    "note": "image_size presets were not verified against the OpenAPI schema of the model.",
+                    "sizeParam": "image_size",
+                    "aspects": ["1:1", "4:3", "3:4", "16:9", "9:16"],
+                    "sizePresets": {"1:1": "square_hd", "4:3": "landscape_4_3", "3:4": "portrait_4_3", "16:9": "landscape_16_9", "9:16": "portrait_16_9"},
+                    "countParam": "num_images",
+                    "maxCount": 4,
+                    "formatParam": "output_format",
+                    "formats": ["jpeg", "png"],
+                    "references": null,
+                    "price": null
+                }
+            ]
+        },
+        "comet": {
+            "label": "ai.image_service_comet",
+            "adapter": "gemini-generate",
+            "baseUrl": "https://api.cometapi.com",
+            "keyFrom": null,
+            "docs": "https://apidoc.cometapi.com/api/image/gemini/generate-image-guide.md",
+            "defaultModel": "gemini-3.1-flash-image-preview",
+            "defaults": {
+                "verified": false,
+                "note": "Unknown Comet model: sent through the Gemini generateContent route. Other routes (for example /v1/images/generations) are available as custom service.",
+                "aspectParam": "aspectRatio",
+                "aspects": ["21:9", "16:9", "3:2", "4:3", "5:4", "1:1", "4:5", "3:4", "2:3", "9:16"],
+                "resolutionParam": "imageSize",
+                "resolutions": ["1K", "2K", "4K"],
+                "maxCount": 1,
+                "references": {"transport": "inline-data", "max": 8, "verified": false},
+                "price": null
+            },
+            "models": [
+                {
+                    "id": "gemini-3.1-flash-image-preview",
+                    "label": "Comet: Gemini 3.1 Flash Image (Nano Banana)",
+                    "verified": "2026-10-17",
+                    "note": "Route, authentication, imageConfig and inline image input are documented; the list of aspect ratios was not.",
+                    "aspectParam": "aspectRatio",
+                    "aspects": ["21:9", "16:9", "3:2", "4:3", "5:4", "1:1", "4:5", "3:4", "2:3", "9:16"],
+                    "resolutionParam": "imageSize",
+                    "resolutions": ["1K", "2K", "4K"],
+                    "maxCount": 1,
+                    "references": {"transport": "inline-data", "max": 14, "verified": "2026-10-17"},
+                    "price": null
+                }
+            ]
+        },
+        "custom": {
+            "label": "ai.image_service_custom",
+            "adapter": "openai-images",
+            "baseUrl": "",
+            "keyFrom": null,
+            "defaults": {
+                "verified": false,
+                "note": "Any service with an OpenAI compatible /images/generations endpoint.",
+                "aspects": ["21:9", "16:9", "3:2", "4:3", "5:4", "1:1", "4:5", "3:4", "2:3", "9:16"],
+                "maxCount": 4,
+                "references": {"transport": "multipart", "max": 8, "verified": false},
+                "price": null
+            }
+        }
+    }
+}

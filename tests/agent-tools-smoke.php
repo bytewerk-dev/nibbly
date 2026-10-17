@@ -56,7 +56,8 @@ file_put_contents($site . '/content/pages/en_secret.json', json_encode(['page' =
 toolBoot($site);
 $settingsFile = $site . '/content/ai-settings.json';
 function toolSettings(string $file, array $agent): void {
-    file_put_contents($file, json_encode(['enabled' => true, 'agent' => $agent]));
+    // A key stands in for the chat key: the image tool needs a usable image service (here: the chat provider's own images).
+    file_put_contents($file, json_encode(['enabled' => true, 'apiKey' => 'fixture-key', 'agent' => $agent]));
 }
 toolSettings($settingsFile, ['enabled' => true]);
 

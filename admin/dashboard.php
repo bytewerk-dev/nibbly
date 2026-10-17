@@ -2027,6 +2027,74 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         <p class="form-hint ai-section-hint"><?php echo t('ai.reasoning_hint'); ?></p>
                     </fieldset>
 
+                    <fieldset class="settings-section" id="aiImageServiceSection">
+                        <legend><?php echo t('ai.images_section'); ?></legend>
+                        <p class="form-hint ai-section-hint"><?php echo t('ai.images_section_hint'); ?></p>
+                        <div class="info-banner info-banner--warning info-banner--contained" id="aiImageServiceNotice" aria-live="polite" hidden></div>
+                        <div class="ai-settings-compact">
+                            <div class="form-group">
+                                <label for="aiImageService"><?php echo t('ai.image_service'); ?></label>
+                                <select id="aiImageService" class="topbar-select">
+                                    <option value="inherit"><?php echo t('ai.image_service_inherit'); ?></option>
+                                    <option value="openai-compatible"><?php echo t('ai.image_service_openai'); ?></option>
+                                    <option value="openrouter"><?php echo t('ai.image_service_openrouter'); ?></option>
+                                    <option value="kie"><?php echo t('ai.image_service_kie'); ?></option>
+                                    <option value="fal"><?php echo t('ai.image_service_fal'); ?></option>
+                                    <option value="comet"><?php echo t('ai.image_service_comet'); ?></option>
+                                    <option value="custom"><?php echo t('ai.image_service_custom'); ?></option>
+                                </select>
+                                <small class="form-hint" id="aiImageServiceHint"></small>
+                            </div>
+                            <div class="form-group" id="aiImageServiceModelGroup" hidden>
+                                <label for="aiImageServiceModel"><?php echo t('ai.image_model'); ?></label>
+                                <div class="nb-combobox" data-model-combobox data-image-combobox>
+                                    <input type="text" id="aiImageServiceModel" placeholder="" role="combobox" aria-autocomplete="list" aria-expanded="false" autocomplete="off" spellcheck="false">
+                                    <button type="button" class="input-clear-btn nb-combobox__clear" data-clear-target="aiImageServiceModel" aria-label="<?php echo t('btn.clear'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                    <button type="button" class="nb-combobox__toggle" aria-label="<?php echo t('ai.model_list_open'); ?>" tabindex="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button>
+                                    <div class="nb-combobox__list" role="listbox" hidden></div>
+                                </div>
+                                <small class="form-hint" id="aiImageServiceModelHint"></small>
+                            </div>
+                            <div class="form-group" id="aiImageServiceKeyGroup" hidden>
+                                <label for="aiImageApiKey"><?php echo t('ai.api_key'); ?></label>
+                                <div class="secret-field">
+                                    <input type="password" id="aiImageApiKey" autocomplete="new-password">
+                                    <button type="button" class="input-clear-btn secret-field__remove" id="aiRemoveImageApiKey" data-secret-target="image" title="<?php echo t('ai.clear_api_key'); ?>" aria-label="<?php echo t('ai.clear_api_key'); ?>" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                                </div>
+                                <small class="form-hint" id="aiImageApiKeyHint"></small>
+                            </div>
+                        </div>
+                        <div id="aiImageCustomGroup" hidden>
+                            <div class="form-group">
+                                <label for="aiImageCustomBaseUrl"><?php echo t('ai.image_service_custom_base_url'); ?></label>
+                                <input type="url" id="aiImageCustomBaseUrl" placeholder="https://api.example.com/v1" autocomplete="off">
+                                <small class="form-hint"><?php echo t('ai.image_service_custom_base_url_hint'); ?></small>
+                            </div>
+                            <div class="form-row-inline">
+                                <div class="form-group">
+                                    <label for="aiImageCustomSizeMode"><?php echo t('ai.image_service_size_mode'); ?></label>
+                                    <select id="aiImageCustomSizeMode" class="topbar-select">
+                                        <option value="size"><?php echo t('ai.image_service_size_mode_size'); ?></option>
+                                        <option value="aspect_ratio"><?php echo t('ai.image_service_size_mode_aspect'); ?></option>
+                                        <option value="none"><?php echo t('ai.image_service_size_mode_none'); ?></option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="aiImageCustomAuth"><?php echo t('ai.image_service_auth_style'); ?></label>
+                                    <select id="aiImageCustomAuth" class="topbar-select">
+                                        <option value="bearer">Authorization: Bearer</option>
+                                        <option value="x-api-key">x-api-key</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group" id="aiImageExtraGroup" hidden>
+                            <label for="aiImageCustomParams"><?php echo t('ai.image_service_extra_params'); ?></label>
+                            <textarea id="aiImageCustomParams" rows="3" spellcheck="false" placeholder='{"param": "value"}'></textarea>
+                            <small class="form-hint"><?php echo t('ai.image_service_extra_params_hint'); ?></small>
+                        </div>
+                    </fieldset>
+
                     <fieldset class="settings-section">
                         <legend><?php echo t('ai.features'); ?></legend>
                         <div class="form-group access-toggle-row ai-feature-toggle-grid">
@@ -2079,6 +2147,29 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                                 <div class="form-group"><label for="aiPriceCur_text"><?php echo t('ai.price_currency'); ?></label><select id="aiPriceCur_text" class="topbar-select"><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
                             </div>
                             <button type="button" class="btn btn-secondary btn-sm" id="aiPriceRemove_text" hidden><?php echo t('ai.price_remove'); ?></button>
+                        </div>
+                        <div class="ai-price-row" id="aiPriceRow_image" hidden>
+                            <h3 class="ai-model-col__title" data-price-title><?php echo t('ai.image_price_model'); ?></h3>
+                            <p class="form-hint ai-price-status" data-price-status aria-live="polite"></p>
+                            <div class="form-row-inline">
+                                <div class="form-group"><label for="aiPriceImage"><?php echo t('ai.image_price_per_image'); ?></label><input type="number" id="aiPriceImage" min="0" step="any" inputmode="decimal"></div>
+                                <div class="form-group"><label for="aiPriceCur_image"><?php echo t('ai.price_currency'); ?></label><select id="aiPriceCur_image" class="topbar-select"><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
+                            </div>
+                            <details class="ai-agent-details" id="aiPriceImageDetails">
+                                <summary><?php echo t('ai.image_price_tables'); ?></summary>
+                                <p class="form-hint"><?php echo t('ai.image_price_tables_hint'); ?></p>
+                                <div class="form-row-inline">
+                                    <?php foreach (['1K', '2K', '4K'] as $_step): ?>
+                                    <div class="form-group"><label for="aiPriceRes_<?php echo $_step; ?>"><?php echo $_step; ?></label><input type="number" id="aiPriceRes_<?php echo $_step; ?>" min="0" step="any" inputmode="decimal"></div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <div class="form-row-inline">
+                                    <div class="form-group"><label for="aiPriceQual_low"><?php echo t('ai.image_quality_low'); ?></label><input type="number" id="aiPriceQual_low" min="0" step="any" inputmode="decimal"></div>
+                                    <div class="form-group"><label for="aiPriceQual_medium"><?php echo t('ai.image_quality_medium'); ?></label><input type="number" id="aiPriceQual_medium" min="0" step="any" inputmode="decimal"></div>
+                                    <div class="form-group"><label for="aiPriceQual_high"><?php echo t('ai.image_quality_high'); ?></label><input type="number" id="aiPriceQual_high" min="0" step="any" inputmode="decimal"></div>
+                                </div>
+                            </details>
+                            <button type="button" class="btn btn-secondary btn-sm" id="aiPriceRemove_image" hidden><?php echo t('ai.price_remove'); ?></button>
                         </div>
                         <div class="form-row-inline ai-fx-row">
                             <div class="form-group">

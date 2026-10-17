@@ -163,6 +163,12 @@
             })
         ));
         const reservations = usage.reservations || {};
+        if (month.unpricedImageRequests > 0) {
+            var unpricedImages = document.createElement('p');
+            unpricedImages.className = 'form-hint ai-unpriced-note';
+            unpricedImages.textContent = t('ai.usage_unpriced_images', { count: month.unpricedImageRequests });
+            body.appendChild(unpricedImages);
+        }
         if (month.unpricedRequests > 0) {
             var unpriced = document.createElement('p');
             unpriced.className = 'form-hint ai-unpriced-note';
@@ -627,7 +633,7 @@
         var usage = document.getElementById('aiUsageSummary');
         var assistantEnabled = usable && aiFeatureEnabled(settings, 'backendAssistant');
         var textEnabled = usable && aiFeatureEnabled(settings, 'seoTextGeneration');
-        var imageEnabled = usable && aiFeatureEnabled(settings, 'imageGeneration');
+        var imageEnabled = usable && aiFeatureEnabled(settings, 'imageGeneration') && aiImageServiceUsable(settings);
         var imageJobsPanel = document.getElementById('aiImageJobsPanel');
 
         dashboardAiImageUsable = imageEnabled;
@@ -778,7 +784,10 @@
         var provider = document.getElementById('aiProvider')?.value || (currentAiSettings && currentAiSettings.provider) || '';
         if (provider === 'openrouter') {
             updateAiModelPlaceholders('openrouter');
+        }
+        if (provider === 'openrouter' || aiImageServiceId() === 'openrouter') {
             updateAiImageModelControl(currentAiSettings || {});
+            if (aiImageServiceId() === 'openrouter') aiRenderImageService(false);
         }
         // Refresh the size/cost note now that live image prices are available.
         if (typeof updateAiImageRatioIcon === 'function') updateAiImageRatioIcon();
@@ -999,6 +1008,7 @@
             removeEl.hidden = !override;
             if (!aiPriceStatus(purpose)) anyUnknown = true;
         });
+        if (aiRenderImagePrice()) anyUnknown = true;
         var notice = aiById('aiUnpricedNotice');
         if (notice) notice.hidden = !anyUnknown;
         var fx = ((currentAiSettings && currentAiSettings.pricingInfo) || {}).fx;
@@ -1169,7 +1179,7 @@
         }
 
         function open(filterText) {
-            var all = aiModelSuggestions();
+            var all = root.hasAttribute('data-image-combobox') ? aiImageServiceSuggestions() : aiModelSuggestions();
             var filter = String(filterText || '').trim().toLowerCase();
             items = filter && all.indexOf(input.value.trim()) === -1
                 ? all.filter(function(model) { return model.toLowerCase().indexOf(filter) !== -1; })
@@ -1276,12 +1286,356 @@
         return provider === 'openrouter' || aiUsesOpenRouter(settings) ? 'openrouter' : 'openai-compatible';
     }
 
+    // ---- Image service: chosen apart from the chat provider ----------------------------------------------------
+    var AI_IMG = window.NB_AI_IMAGE_SERVICES || { services: {}, ids: [] };
+    var aiImagePriceChanges = {};
+
+    function aiImageServiceId(settings) {
+        settings = settings || currentAiSettings || {};
+        return aiById('aiImageService')?.value || (settings.imageService && settings.imageService.provider) || 'inherit';
+    }
+
+    function aiImageServiceStatusOf(id, settings) {
+        settings = settings || currentAiSettings || {};
+        return ((settings.imageServiceStatus || {}).services || {})[id] || {};
+    }
+
+    // The model in effect for an explicit service: typed, otherwise the default of the service.
+    function aiImageServiceModelValue(id) {
+        id = id || aiImageServiceId();
+        var typed = String(aiById('aiImageServiceModel')?.value || '').trim();
+        if (typed) return typed;
+        var entry = AI_IMG.services[id] || {};
+        if (entry.catalogModels) { var options = AI_IMAGE_MODEL_OPTIONS[id] || []; return options[0] ? options[0].value : ''; }
+        return entry.defaultModel || '';
+    }
+
+    // Models the services list themselves (fal.ai, Comet): loaded through the server, kept for this page view.
+    var aiLiveImageModels = {};
+    var aiLiveImageLoading = {};
+
+    function aiImageServiceSuggestions() {
+        var id = aiImageServiceId();
+        var entry = AI_IMG.services[id];
+        if (!entry) return [];
+        if (entry.catalogModels) return (AI_IMAGE_MODEL_OPTIONS[id] || []).map(function(option) { return option.value; });
+        var ids = (entry.models || []).map(function(model) { return model.id; });
+        ((aiLiveImageModels[id] || {}).models || []).forEach(function(model) { if (ids.indexOf(model.id) === -1) ids.push(model.id); });
+        return ids;
+    }
+
+    function aiLoadLiveImageModels(id, refresh) {
+        if (id !== 'fal' && id !== 'comet') return;
+        if ((aiLiveImageModels[id] && !refresh) || aiLiveImageLoading[id]) return;
+        aiLiveImageLoading[id] = true;
+        var hint = aiById('aiImageServiceModelHint');
+        if (hint && aiImageServiceId() === id) hint.textContent = t('ai.models_loading');
+        var formData = new FormData();
+        formData.append('action', 'ai-image-models');
+        formData.append('service', id);
+        if (refresh) formData.append('refresh', '1');
+        formData.append('csrf_token', CSRF_TOKEN);
+        fetch('api.php', { method: 'POST', body: formData, cache: 'no-store' })
+            .then(function(response) { return response.json(); })
+            .then(function(result) {
+                if (!result.success) throw new Error(result.message || '');
+                aiLiveImageModels[id] = result.data;
+            })
+            .catch(function(error) {
+                aiLiveImageModels[id] = { models: [], failed: String(error.message || '') };
+            })
+            .finally(function() {
+                aiLiveImageLoading[id] = false;
+                if (aiImageServiceId() === id) {
+                    aiRenderImageService(false);
+                    updateAiImageModelControl(currentAiSettings || {});
+                }
+            });
+    }
+
+    // What the registry knows about a model: a listed model, or the defaults of the service (not verified).
+    function aiImageModelInfo(id, model) {
+        var entry = AI_IMG.services[id];
+        if (!entry || entry.catalogModels) return null;
+        var found = (entry.models || []).find(function(item) { return item.id.toLowerCase() === String(model || '').toLowerCase(); });
+        return found || { id: model, verified: (entry.defaults || {}).verified, note: (entry.defaults || {}).note, known: false, price: null, resolutions: (entry.defaults || {}).resolutions || [] };
+    }
+
+    // Whether images can be generated with the service as it is chosen in the form (a typed key counts).
+    function aiImageServiceUsable(settings) {
+        settings = settings || currentAiSettings || {};
+        var id = aiImageServiceId(settings);
+        if (id === 'inherit') return !aiUsesAnthropic(settings);
+        var status = aiImageServiceStatusOf(id, settings);
+        var hasKey = !!aiTypedSecret('aiImageApiKey') || !!status.hasApiKey || !!status.chatKeyAvailable;
+        var base = id === 'custom' ? String(aiById('aiImageCustomBaseUrl')?.value || ((settings.imageService || {}).custom || {}).baseUrl || '').trim() : 'x';
+        var local = !!settings.allowLocalProvider && id === 'custom' && aiIsLocalProviderUrl(base);
+        return (hasKey || local) && base !== '' && aiImageServiceModelValue(id) !== '';
+    }
+
+    // The service and model the image price belongs to; null when no image can be generated.
+    function aiImagePriceContext() {
+        var id = aiImageServiceId();
+        if (id === 'inherit') {
+            if (aiUsesAnthropic()) return null;
+            id = currentAiProviderKey();
+            var model = String(aiById('aiImageModelPicker')?.value || aiById('aiImageModel')?.value || '').trim();
+            return model ? { service: id, model: model, inherit: true } : null;
+        }
+        var chosen = aiImageServiceModelValue(id);
+        return chosen ? { service: id, model: chosen, inherit: false } : null;
+    }
+
+    function aiImagePriceKey(service, model) { return service + '|' + String(model || '').trim().toLowerCase(); }
+    function aiStoredImagePrice(key) { return (((currentAiSettings || {}).pricing || {}).imageModels || {})[key] || null; }
+
+    var AI_IMG_RESOLUTIONS = ['1K', '2K', '4K'];
+    var AI_IMG_QUALITIES = ['low', 'medium', 'high'];
+
+    // The inputs of the image price row as one entry: a price for any image and optional tables by resolution and quality.
+    function aiReadImagePriceInputs() {
+        var entry = { perImage: aiById('aiPriceImage').value.trim(), currency: aiById('aiPriceCur_image').value, byResolution: {}, byQuality: {} };
+        AI_IMG_RESOLUTIONS.forEach(function(step) { entry.byResolution[step] = aiById('aiPriceRes_' + step).value.trim(); });
+        AI_IMG_QUALITIES.forEach(function(step) { entry.byQuality[step] = aiById('aiPriceQual_' + step).value.trim(); });
+        return entry;
+    }
+
+    function aiImagePriceEntryEmpty(entry) {
+        if (!entry) return true;
+        var any = String(entry.perImage || '') !== '';
+        Object.keys(entry.byResolution || {}).forEach(function(step) { if (String(entry.byResolution[step]) !== '') any = true; });
+        Object.keys(entry.byQuality || {}).forEach(function(step) { if (String(entry.byQuality[step]) !== '') any = true; });
+        return !any;
+    }
+
+    function aiFillImagePriceInputs(entry, placeholder) {
+        entry = entry || {};
+        aiById('aiPriceImage').value = entry.perImage !== undefined ? entry.perImage : '';
+        aiById('aiPriceImage').placeholder = placeholder && placeholder.perImage !== undefined ? aiFormatNumber(placeholder.perImage) : '';
+        AI_IMG_RESOLUTIONS.forEach(function(step) {
+            aiById('aiPriceRes_' + step).value = entry.byResolution && entry.byResolution[step] !== undefined ? entry.byResolution[step] : '';
+            aiById('aiPriceRes_' + step).placeholder = placeholder && placeholder.byResolution && placeholder.byResolution[step] !== undefined ? aiFormatNumber(placeholder.byResolution[step]) : '';
+        });
+        AI_IMG_QUALITIES.forEach(function(step) {
+            aiById('aiPriceQual_' + step).value = entry.byQuality && entry.byQuality[step] !== undefined ? entry.byQuality[step] : '';
+            aiById('aiPriceQual_' + step).placeholder = placeholder && placeholder.byQuality && placeholder.byQuality[step] !== undefined ? aiFormatNumber(placeholder.byQuality[step]) : '';
+        });
+    }
+
+    function aiRenderImagePrice() {
+        var row = aiById('aiPriceRow_image');
+        if (!row) return false;
+        var context = aiImagePriceContext();
+        if (!context) { row.hidden = true; return false; }
+        row.hidden = false;
+        row.querySelector('[data-price-title]').textContent = t('ai.image_price_model') + ' · ' + context.model;
+        var key = aiImagePriceKey(context.service, context.model);
+        var pending = Object.prototype.hasOwnProperty.call(aiImagePriceChanges, key) ? aiImagePriceChanges[key] : undefined;
+        var stored = aiStoredImagePrice(key);
+        var shown = pending === undefined ? stored : pending;
+        if (shown && aiImagePriceEntryEmpty(shown)) shown = null;
+        var info = context.inherit ? null : aiImageModelInfo(context.service, context.model);
+        var catalog = info && info.price ? info.price : null;
+        // Typing keeps its own inputs: refill only when the model or the stored state changed
+        if (row.getAttribute('data-for') !== key + '|' + (pending === undefined ? 's' : 'p')) {
+            aiFillImagePriceInputs(shown, catalog);
+            aiById('aiPriceCur_image').value = shown ? (shown.currency || 'USD') : (catalog ? (catalog.currency || 'USD') : 'USD');
+            row.setAttribute('data-for', key + '|' + (pending === undefined ? 's' : 'p'));
+        }
+        aiById('aiPriceRemove_image').hidden = !shown;
+        var tables = function(entry) { return !!entry && (Object.keys(entry.byResolution || {}).some(function(k) { return String(entry.byResolution[k]) !== ''; }) || Object.keys(entry.byQuality || {}).some(function(k) { return String(entry.byQuality[k]) !== ''; })); };
+        var details = aiById('aiPriceImageDetails');
+        if (details && (tables(shown) || (catalog && (catalog.byResolution || catalog.byQuality)))) details.open = true;
+        var defaultCents = parseFloat(aiById('aiImagePrice')?.value || '0') || 0;
+        var status = row.querySelector('[data-price-status]');
+        var unknown = false;
+        if (shown && String(shown.perImage || '') !== '') status.textContent = t('ai.image_price_status_override', { price: aiFormatNumber(shown.perImage), currency: shown.currency || 'USD' }) + (tables(shown) ? ' ' + t('ai.image_price_status_tables') : '');
+        else if (tables(shown)) status.textContent = t('ai.image_price_status_tables_only');
+        else if (catalog && catalog.perImage !== undefined) status.textContent = t('ai.image_price_status_catalog', { price: aiFormatNumber(catalog.perImage), currency: catalog.currency || 'USD', date: catalog.updatedAt || '' });
+        else if (defaultCents > 0) status.textContent = t('ai.image_price_status_default', { cents: aiFormatNumber(defaultCents) });
+        else { status.textContent = t('ai.price_unknown'); unknown = true; }
+        return unknown;
+    }
+
+    {
+        ['aiPriceImage', 'aiPriceCur_image'].concat(AI_IMG_RESOLUTIONS.map(function(step) { return 'aiPriceRes_' + step; }), AI_IMG_QUALITIES.map(function(step) { return 'aiPriceQual_' + step; })).forEach(function(id) {
+            aiById(id)?.addEventListener('input', function() {
+                var context = aiImagePriceContext();
+                if (!context) return;
+                var key = aiImagePriceKey(context.service, context.model);
+                var entry = aiReadImagePriceInputs();
+                if (aiImagePriceEntryEmpty(entry)) {
+                    if (aiStoredImagePrice(key)) aiImagePriceChanges[key] = null; else delete aiImagePriceChanges[key];
+                } else {
+                    aiImagePriceChanges[key] = entry;
+                }
+                aiById('aiPriceRow_image').setAttribute('data-for', key + '|' + (Object.prototype.hasOwnProperty.call(aiImagePriceChanges, key) ? 'p' : 's'));
+                aiById('aiPriceRemove_image').hidden = aiImagePriceEntryEmpty(entry);
+                aiRenderImagePrice();
+            });
+        });
+    }
+    aiById('aiPriceRemove_image')?.addEventListener('click', function() {
+        var context = aiImagePriceContext();
+        if (context) aiImagePriceChanges[aiImagePriceKey(context.service, context.model)] = null;
+        aiById('aiPriceRow_image')?.removeAttribute('data-for');
+        aiRenderImagePrice();
+    });
+    aiById('aiImagePrice')?.addEventListener('input', aiRenderImagePrice);
+
+    function aiCollectImagePriceChanges() {
+        var out = {};
+        var number = function(value) { return String(value) !== '' && !isNaN(parseFloat(value)) ? parseFloat(value) : null; };
+        Object.keys(aiImagePriceChanges).forEach(function(key) {
+            var entry = aiImagePriceChanges[key];
+            if (entry === null) { out[key] = null; return; }
+            var clean = { currency: entry.currency };
+            if (number(entry.perImage) !== null) clean.perImage = number(entry.perImage);
+            ['byResolution', 'byQuality'].forEach(function(field) {
+                Object.keys(entry[field] || {}).forEach(function(step) {
+                    if (number(entry[field][step]) !== null) { clean[field] = clean[field] || {}; clean[field][step] = number(entry[field][step]); }
+                });
+            });
+            out[key] = Object.keys(clean).length > 1 ? clean : null;
+        });
+        return out;
+    }
+
+    // Key field: the hint says where the key in use comes from. resetField clears what was typed.
+    function aiRenderImageKey(resetField) {
+        var id = aiImageServiceId();
+        var status = aiImageServiceStatusOf(id);
+        if (resetField) aiSetSecretField('aiImageApiKey', 'aiRemoveImageApiKey', 'aiImageApiKeyHint', !!status.hasApiKey);
+        var input = aiById('aiImageApiKey');
+        var hint = aiById('aiImageApiKeyHint');
+        if (!input || !hint) return;
+        var source = status.hasApiKey ? 'own' : (status.chatKeyAvailable ? 'chat' : 'none');
+        input.placeholder = status.hasApiKey ? AI_MASK : '';
+        hint.textContent = t('ai.image_service_key_' + source);
+        var remove = aiById('aiRemoveImageApiKey');
+        if (remove) remove.hidden = !status.hasApiKey;
+    }
+
+    function aiRenderImageService(resetKey) {
+        if (!aiById('aiImageServiceSection')) return;
+        var id = aiImageServiceId();
+        var explicit = id !== 'inherit';
+        aiById('aiImageServiceModelGroup').hidden = !explicit;
+        aiById('aiImageServiceKeyGroup').hidden = !explicit;
+        aiById('aiImageCustomGroup').hidden = id !== 'custom';
+        aiById('aiImageExtraGroup').hidden = !(id === 'fal' || id === 'comet' || id === 'custom');
+        var entry = AI_IMG.services[id] || {};
+        var modelInput = aiById('aiImageServiceModel');
+        if (modelInput) { modelInput.placeholder = entry.defaultModel || ''; updateClearButton(modelInput); }
+        if (id === 'openrouter') loadOpenRouterModels(); // the live list of image models, also under another chat provider
+        aiRenderImageKey(resetKey);
+        var notice = aiById('aiImageServiceNotice');
+        var hint = aiById('aiImageServiceHint');
+        var modelHint = aiById('aiImageServiceModelHint');
+        var text = '';
+        var kind = 'warning';
+        if (!explicit) {
+            hint.textContent = t('ai.image_service_inherit_hint');
+            if (aiUsesAnthropic()) text = t('ai.image_service_inherit_anthropic');
+            modelHint.textContent = '';
+        } else {
+            hint.textContent = '';
+            var model = aiImageServiceModelValue(id);
+            var info = aiImageModelInfo(id, model);
+            modelHint.textContent = '';
+            if (info && info.verified === false) { text = t('ai.image_service_unverified'); kind = 'info'; modelHint.textContent = info.note || ''; }
+            else if (info && info.note) modelHint.textContent = info.note;
+            if (id === 'fal' || id === 'comet') {
+                var live = aiLiveImageModels[id];
+                if (!live && !aiLiveImageLoading[id]) aiLoadLiveImageModels(id, false);
+                else if (aiLiveImageLoading[id]) modelHint.textContent = t('ai.models_loading');
+                else if (live && live.failed !== undefined) modelHint.textContent = t('ai.models_failed', { message: live.failed });
+                else if (live) modelHint.textContent = t('ai.image_service_models_loaded', { count: (live.models || []).length });
+            }
+            if (id === 'custom' && !String(aiById('aiImageCustomBaseUrl')?.value || '').trim()) { text = t('ai.image_service_custom_base_url_missing'); kind = 'warning'; }
+        }
+        if (notice) {
+            notice.hidden = text === '';
+            notice.textContent = text;
+            notice.classList.toggle('info-banner--warning', kind === 'warning');
+        }
+        aiRenderImagePrice();
+    }
+
+    function aiPopulateImageService(settings) {
+        var image = (settings && settings.imageService) || {};
+        var custom = image.custom || {};
+        var provider = image.provider || 'inherit';
+        if (aiById('aiImageService')) aiById('aiImageService').value = provider;
+        if (aiById('aiImageServiceModel')) aiById('aiImageServiceModel').value = image.model || (image.models || {})[provider] || '';
+        if (aiById('aiImageCustomBaseUrl')) aiById('aiImageCustomBaseUrl').value = custom.baseUrl || '';
+        if (aiById('aiImageCustomSizeMode')) aiById('aiImageCustomSizeMode').value = custom.sizeMode || 'size';
+        if (aiById('aiImageCustomAuth')) aiById('aiImageCustomAuth').value = custom.authStyle || 'bearer';
+        var params = custom.extraParams;
+        if (aiById('aiImageCustomParams')) aiById('aiImageCustomParams').value = params && Object.keys(params).length ? JSON.stringify(params, null, 2) : '';
+        aiImagePriceChanges = {};
+        aiRenderImageService(true);
+    }
+
+    function aiCollectImageService() {
+        var id = aiImageServiceId();
+        var typedKey = aiTypedSecret('aiImageApiKey');
+        var keys = {};
+        if (typedKey && id !== 'inherit') keys[id] = { apiKey: typedKey };
+        return {
+            imageService: {
+                provider: id,
+                model: String(aiById('aiImageServiceModel')?.value || '').trim(),
+                custom: {
+                    baseUrl: String(aiById('aiImageCustomBaseUrl')?.value || '').trim(),
+                    sizeMode: aiById('aiImageCustomSizeMode')?.value || 'size',
+                    authStyle: aiById('aiImageCustomAuth')?.value || 'bearer',
+                    extraParams: String(aiById('aiImageCustomParams')?.value || '').trim()
+                }
+            },
+            imageServices: keys
+        };
+    }
+
+    function aiImageServiceChanged() {
+        var id = aiImageServiceId();
+        var remembered = ((currentAiSettings || {}).imageService || {}).models || {};
+        var modelInput = aiById('aiImageServiceModel');
+        if (modelInput) modelInput.value = remembered[id] || '';
+        var keyInput = aiById('aiImageApiKey');
+        if (keyInput) keyInput.value = '';
+        aiRenderImageService(true);
+        updateAiImageModelControl(currentAiSettings || {});
+        var draft = Object.assign({}, currentAiSettings || {}, collectAiSettingsForm());
+        draft.hasApiKey = !!(currentAiSettings && currentAiSettings.hasApiKey) || !!aiById('aiApiKey')?.value.trim();
+        updateAiAvailability(draft);
+    }
+
     function updateAiImageModelControl(settings) {
         settings = settings || currentAiSettings || {};
         var providerKey = currentAiProviderKey(settings);
         var input = document.getElementById('aiImageModel');
         var picker = document.getElementById('aiImageModelPicker');
         if (!input) return;
+        var serviceId = aiImageServiceId(settings);
+        if (serviceId !== 'inherit') {
+            // An own image service: the picker lists its models and keeps the model of the settings form in step.
+            if (picker) {
+                var current = aiImageServiceModelValue(serviceId);
+                var suggestions = aiImageServiceSuggestions().slice();
+                if (current && suggestions.indexOf(current) === -1) suggestions.unshift(current);
+                var labels = {};
+                var entry = AI_IMG.services[serviceId] || {};
+                (entry.models || []).forEach(function(model) { labels[model.id] = model.label; });
+                (AI_IMAGE_MODEL_OPTIONS[serviceId] || []).forEach(function(option) { labels[option.value] = option.label; });
+                picker.innerHTML = suggestions.map(function(value) {
+                    return '<option value="' + escapeHtml(value) + '">' + escapeHtml(labels[value] || value) + '</option>';
+                }).join('');
+                picker.value = current;
+            }
+            updateAiImageScaleOptions();
+            return;
+        }
         var options = AI_IMAGE_MODEL_OPTIONS[providerKey] || AI_IMAGE_MODEL_OPTIONS['openai-compatible'];
         var selected = providerKey === 'openrouter'
             ? normalizeOpenRouterImageModel(settings.imageModel || input.value || '')
@@ -1303,6 +1657,11 @@
 
     function aiSelectedImageModelSupports4K() {
         var model = String(document.getElementById('aiImageModelPicker')?.value || document.getElementById('aiImageModel')?.value || '').trim();
+        var serviceId = aiImageServiceId();
+        if (serviceId !== 'inherit') {
+            var info = aiImageModelInfo(serviceId, model);
+            if (info) return (info.resolutions || []).indexOf('4K') !== -1;
+        }
         return !/(^|\/)gpt-5\.4-image-2(?:$|-)|^gpt-image-2(?:$|-)/i.test(model);
     }
 
@@ -1342,7 +1701,7 @@
         var usable = configured && enabled;
         var assistantUsable = usable && aiFeatureEnabled(settings, 'backendAssistant');
         var textUsable = usable && aiFeatureEnabled(settings, 'seoTextGeneration');
-        var imageUsable = usable && aiFeatureEnabled(settings, 'imageGeneration') && !aiUsesAnthropic(settings);
+        var imageUsable = usable && aiFeatureEnabled(settings, 'imageGeneration') && aiImageServiceUsable(settings);
         dashboardAiImageUsable = imageUsable;
         var status = document.getElementById('aiProviderStatus');
         if (status) {
@@ -1365,7 +1724,7 @@
             el.disabled = !imageUsable;
         });
 
-        var imageModel = String(document.getElementById('aiImageModelPicker')?.value || settings.imageModel || document.getElementById('aiImageModel')?.value || '').trim();
+        var imageModel = String(document.getElementById('aiImageModelPicker')?.value || (aiImageServiceId(settings) === 'inherit' ? settings.imageModel : aiImageServiceModelValue()) || document.getElementById('aiImageModel')?.value || '').trim();
         var imageModelMissing = imageUsable && !imageModel;
         var imageModelNote = document.getElementById('aiImageModelNote');
         var imageButton = document.getElementById('aiGenerateImageButton');
@@ -1373,10 +1732,9 @@
             imageButton.disabled = !imageUsable || imageModelMissing;
         }
         if (imageModelNote) {
-            imageModelNote.textContent = aiUsesAnthropic(settings)
-                ? t('ai.image_anthropic_note')
-                : (aiUsesOpenRouter(settings) ? t('ai.image_openrouter_note') : t('ai.image_model_missing_note'));
-            imageModelNote.hidden = !imageUsable || (!imageModelMissing && !aiUsesOpenRouter(settings));
+            imageModelNote.textContent = aiUsesOpenRouter(settings) && aiImageServiceId(settings) === 'inherit'
+                ? t('ai.image_openrouter_note') : t('ai.image_model_missing_note');
+            imageModelNote.hidden = !imageUsable || (!imageModelMissing && !(aiUsesOpenRouter(settings) && aiImageServiceId(settings) === 'inherit'));
         }
 
         document.querySelectorAll('#aiFeatureAssistant, #aiFeatureSeo, #aiFeatureImages').forEach(function(el) {
@@ -1439,6 +1797,8 @@
             if (el) el.value = values[id];
         });
         updateAiImageModelControl(settings);
+        aiPopulateImageService(settings);
+        updateAiImageModelControl(settings);
         populateAgentSettings(settings);
         // Models and reasoning levels come from the saved settings of the active provider; presets fill what is empty.
         aiProviderDrafts = {};
@@ -1492,9 +1852,10 @@
         applyAiDefaultsForNewApiKey();
         var provider = document.getElementById('aiProvider').value;
         var imagePicker = document.getElementById('aiImageModelPicker');
-        if (imagePicker) {
+        if (imagePicker && aiImageServiceId() === 'inherit') {
             document.getElementById('aiImageModel').value = imagePicker.value;
         }
+        var imagePart = aiCollectImageService();
         var agentPart = collectAgentSettings();
         return {
             enabled: document.getElementById('aiEnabled').checked,
@@ -1512,6 +1873,8 @@
             textModel: document.getElementById('aiTextModel').value.trim(),
             reasoning: { chat: aiReasoning.chat, text: aiReasoning.text },
             imageModel: document.getElementById('aiImageModel').value.trim(),
+            imageService: imagePart.imageService,
+            imageServices: imagePart.imageServices,
             features: {
                 backendAssistant: document.getElementById('aiFeatureAssistant').checked,
                 seoTextGeneration: document.getElementById('aiFeatureSeo').checked,
@@ -1528,6 +1891,7 @@
             },
             pricing: {
                 models: aiCollectPriceChanges(),
+                imageModels: aiCollectImagePriceChanges(),
                 usdPerEur: parseFloat(document.getElementById('aiFxRate').value || '0') || 0,
                 imageCentsPerRequest: parseInt(document.getElementById('aiImagePrice').value || '0', 10)
             },
@@ -1737,7 +2101,14 @@
 
     document.getElementById('aiImageModelPicker')?.addEventListener('change', function() {
         var imageInput = document.getElementById('aiImageModel');
-        if (imageInput) imageInput.value = this.value;
+        if (aiImageServiceId() !== 'inherit') {
+            var serviceModel = document.getElementById('aiImageServiceModel');
+            if (serviceModel) { serviceModel.value = this.value; updateClearButton(serviceModel); }
+            aiRenderImageService(false);
+        } else if (imageInput) {
+            imageInput.value = this.value;
+            aiRenderImagePrice();
+        }
         updateAiImageScaleOptions();
         var draft = Object.assign({}, currentAiSettings || {}, collectAiSettingsForm());
         draft.hasApiKey = !!(currentAiSettings && currentAiSettings.hasApiKey) || !!document.getElementById('aiApiKey').value.trim();
@@ -1763,6 +2134,25 @@
         });
     });
 
+    aiById('aiImageService')?.addEventListener('change', aiImageServiceChanged);
+    ['input', 'change'].forEach(function(type) {
+        aiById('aiImageServiceModel')?.addEventListener(type, function() {
+            aiRenderImageService(false);
+            updateAiImageModelControl(currentAiSettings || {});
+            var draft = Object.assign({}, currentAiSettings || {}, collectAiSettingsForm());
+            draft.hasApiKey = !!(currentAiSettings && currentAiSettings.hasApiKey) || !!aiById('aiApiKey')?.value.trim();
+            updateAiAvailability(draft);
+        });
+    });
+    ['aiImageApiKey', 'aiImageCustomBaseUrl'].forEach(function(id) {
+        aiById(id)?.addEventListener('input', function() {
+            aiRenderImageService(false);
+            var draft = Object.assign({}, currentAiSettings || {}, collectAiSettingsForm());
+            draft.hasApiKey = !!(currentAiSettings && currentAiSettings.hasApiKey) || !!aiById('aiApiKey')?.value.trim();
+            updateAiAvailability(draft);
+        });
+    });
+
     document.getElementById('aiBaseUrl')?.addEventListener('input', function() {
         aiRenderEffort('chat');
         aiRenderEffort('text');
@@ -1773,7 +2163,7 @@
     document.querySelectorAll('[data-secret-target]').forEach(function(button) {
         button.addEventListener('click', function() {
             var kind = button.getAttribute('data-secret-target');
-            var target = kind === 'provider' ? 'provider:' + aiCurrentProvider() : kind;
+            var target = kind === 'provider' ? 'provider:' + aiCurrentProvider() : (kind === 'image' ? 'image:' + aiImageServiceId() : kind);
             showModal(t('ai.remove_key_title'), t('ai.remove_key_confirm'), async function() {
                 closeModal();
                 try {
@@ -1790,10 +2180,12 @@
                         providerCredentials: fresh.providerCredentials,
                         research: Object.assign({}, (currentAiSettings || {}).research, { hasBraveApiKey: !!(fresh.research && fresh.research.hasBraveApiKey) }),
                         stock: Object.assign({}, (currentAiSettings || {}).stock, { hasPexelsApiKey: !!(fresh.stock && fresh.stock.hasPexelsApiKey) }),
-                        agentStatus: fresh.agentStatus
+                        agentStatus: fresh.agentStatus,
+                        imageServiceStatus: fresh.imageServiceStatus
                     });
                     aiLiveModels = {};
                     updateAiApiKeyHint(aiCurrentProvider());
+                    aiRenderImageService(true);
                     aiSetSecretField('aiBraveApiKey', 'aiRemoveBraveApiKey', 'aiBraveApiKeyHint', !!currentAiSettings.research.hasBraveApiKey);
                     aiSetSecretField('aiPexelsApiKey', 'aiRemovePexelsApiKey', 'aiPexelsApiKeyHint', !!currentAiSettings.stock.hasPexelsApiKey);
                     renderAgentStatus(currentAiSettings);

@@ -2451,7 +2451,7 @@
         const models = ai.models || {};
         return hasPermission('generateImage')
             && ai.enabled === true
-            && ai.hasApiKey === true
+            && (ai.imageUsable === undefined ? ai.hasApiKey === true : ai.imageUsable === true)
             && features.imageGeneration === true
             && Boolean(models.image)
             && getImageFields().length > 0;

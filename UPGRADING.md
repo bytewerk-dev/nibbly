@@ -3,10 +3,10 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
-## Upgrading from 2.3.0 to the next release
+## Upgrading from 2.3.0 to 2.3.1
 
-The next release changes how the AI settings store models and prices, adds the safety check
-of the AI agent and the Nibbly map. No manual step is needed for the settings: existing models,
+Version 2.3.1 changes how the AI settings store models and prices, adds the safety check
+of the AI agent, the Nibbly map and a separate image service. No manual step is needed for the settings: existing models,
 credentials, limits and request behavior stay as they are. The documented admin API is unchanged.
 
 1. Prepare as for any update (backup, preserve site-owned files) and deploy the
@@ -53,6 +53,27 @@ credentials, limits and request behavior stay as they are. The documented admin 
    `NIBBLY_AGENT_SAFETY_LIMITS` in `includes/ai/agent/safety.php` and may be lowered,
    not raised, by site code. Suggestions and drafts of the classic Copilot go through the same
    text check: harmful text is dropped, odd text carries a safety note.
+10. Image service. No manual step: `imageService.provider` defaults to `inherit`, which keeps
+    the chat provider's own image models and the flat `imageModel`. New core files:
+    `includes/ai/image-services.php` and `includes/ai/image-services.json`;
+    `admin/lang/*.json` gets new texts. `content/ai-settings.json` gains `imageService`
+    (choice, model per service, custom service) and `pricing.imageModels`; keys of image
+    services go to `content/ai-secrets.json` under `imageServices` (owner-only, not in
+    version control). The agent's image tool now needs a usable image service with a key;
+    with Anthropic as chat provider, choose one under AI settings -> Images. fal.ai and Comet
+    have no preset price: set a price per image for the model or keep the default price
+    per image. Sites that replace `nibblyAiDownloadProviderImage()` or call it with one
+    argument keep working (the second argument is optional).
+11. Result images of providers are now fetched with the hardened fetch of `includes/ai/agent/net.php`:
+    only public hosts and the ports 80, 443, 8080 and 8443 (new option `extraPorts` of
+    `nibblyNetSafeFetch()`). A provider that serves its images from another port needs the
+    image host on one of those ports. Model ids lose empty and `.`/`..` path segments when saved.
+12. Image service extras. New: the agent's `generate_image` takes `references`; image prices may
+    carry `byResolution` and `byQuality` tables (`pricing.imageModels` and the registry's `price`);
+    `nibblyAiImagePrice()` takes an optional request array, and `nibblyAiImagePriceTable()` is the
+    table behind it. The admin API gets `ai-image-models` (admin only, POST with CSRF token), which
+    writes `content/ai-image-models-cache.json` (already in `.gitignore`, safe to delete). Ledger entries
+    of images carry `priceBasis.centsPerImage` and `.basis` instead of `.perImage`.
 
 ### Supported models
 

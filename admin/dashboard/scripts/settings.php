@@ -2229,13 +2229,29 @@
     function aiResolveImageCost() {
         var settings = currentAiSettings || {};
         var providerKey = aiSavedProviderKey();
-        if (providerKey === 'anthropic') {
-            return null; // Anthropic does not generate images.
+        var ownService = !!(settings.imageService && settings.imageService.provider && settings.imageService.provider !== 'inherit');
+        if (providerKey === 'anthropic' && !ownService) {
+            return null; // Anthropic does not generate images; an own image service does.
         }
         var model = String(document.getElementById('aiImageModelPicker')?.value
             || document.getElementById('aiImageModel')?.value
             || settings.imageModel || '').trim();
         var configuredCents = parseInt((settings.pricing && settings.pricing.imageCentsPerRequest) || 0, 10);
+
+        // A price the admin or the registry set for this model (server side, in euro cents), by resolution or quality.
+        var active = (settings.imageServiceStatus && settings.imageServiceStatus.active) || {};
+        var table = active.priceTable;
+        if (table && table.source !== 'default' && (!model || model === active.model)) {
+            var scale = parseInt(document.getElementById('aiImageScale')?.value || '2048', 10) || 2048;
+            var step = scale >= 3072 ? '4K' : (scale >= 1536 ? '2K' : '1K');
+            var quality = String(document.getElementById('aiImageQuality')?.value || 'auto');
+            var tableCents = (table.byResolution && table.byResolution[step] != null) ? table.byResolution[step]
+                : ((table.byQuality && table.byQuality[quality] != null) ? table.byQuality[quality] : table.default);
+            if (tableCents != null) return { cents: tableCents, estimated: false };
+        }
+        if (ownService) {
+            return configuredCents ? { cents: configuredCents, estimated: true } : null;
+        }
 
         if (providerKey === 'openrouter') {
             var entry = aiOpenRouterModelsCache && Array.isArray(aiOpenRouterModelsCache.imageModels)

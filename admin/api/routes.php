@@ -58,6 +58,7 @@ return [
     'ai-generate-text' => 'ai',
     'ai-generate-seo' => 'ai',
     'ai-openrouter-models' => 'ai',
+    'ai-image-models' => 'ai',
     'ai-list-models' => 'ai',
     'ai-content-audit' => 'ai',
     'ai-content-audit-suggest' => 'ai',
