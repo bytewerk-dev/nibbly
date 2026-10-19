@@ -126,7 +126,11 @@
     }
 
     // Auto-load page/hash route, otherwise show page list.
-    applyDashboardRoute(true);
+    // Deferred by one microtask: every fragment shares this script block, and a
+    // route into News or Events reads flags (newsLoaded, eventsLoaded) that are
+    // declared further down. Running synchronously here hit their temporal dead
+    // zone and left those tabs empty after a direct #news / #events load.
+    Promise.resolve().then(() => applyDashboardRoute(true));
 
     // Browser back/forward navigation
     window.addEventListener('popstate', async (e) => {

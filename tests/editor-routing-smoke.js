@@ -12,7 +12,7 @@ const source = execFileSync('php', ['-r', `
     include 'admin/dashboard/scripts/navigation.php';
 `], {cwd: resolve(__dirname, '..'), encoding: 'utf8'})
     // The harness invokes routing explicitly after the full script initializes.
-    .replace(/^    applyDashboardRoute\(true\);$/m, '');
+    .replace(/^    (?:Promise\.resolve\(\)\.then\(\(\) => )?applyDashboardRoute\(true\)\)?;$/m, '');
 
 class Element {
     constructor(tag = 'div') {
