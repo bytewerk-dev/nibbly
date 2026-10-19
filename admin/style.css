@@ -10319,3 +10319,41 @@ html[data-density="compact"] .sidebar-nav,
 html[data-density="compact"] .sidebar-bottom {
     gap: 1px;
 }
+
+/* "Erweitert": colours left, button style right, side by side when there is room */
+.settings-advanced__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0 var(--nb-space-8);
+}
+
+@media (min-width: 1100px) {
+    .settings-advanced__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.settings-advanced__col > .form-group {
+    margin-bottom: var(--nb-space-4);
+}
+
+.settings-advanced__col > .form-group:last-child {
+    margin-bottom: 0;
+}
+
+.settings-advanced__col .range-input-group {
+    max-width: none;
+}
+
+/* Compact density: tighter settings sub-navigation */
+html[data-density="compact"] .settings-tab-btn {
+    padding-block: var(--nb-space-1);
+}
+
+html[data-density="compact"] .settings-tabs {
+    gap: var(--nb-space-3);
+}
+
+html[data-density="compact"] .settings-nav-group h3 {
+    margin-bottom: var(--nb-space-1);
+}

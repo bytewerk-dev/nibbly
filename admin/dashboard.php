@@ -1451,6 +1451,8 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
 
                     <details class="settings-advanced" id="themeAdvanced">
                         <summary><?php echo t('settings.advanced'); ?></summary>
+                        <div class="settings-advanced__grid">
+                        <div class="settings-advanced__col">
 
                         <div class="form-group">
                             <label for="settingsAccentColor"><?php echo t('settings.accent_color'); ?></label>
@@ -1487,6 +1489,9 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                             <small class="theme-contrast-feedback" data-contrast-for="darkSidebarBg"></small>
                         </div>
 
+                        </div>
+                        <div class="settings-advanced__col">
+
                         <div class="form-group">
                             <label for="settingsButtonRadius"><?php echo t('settings.button_radius'); ?></label>
                             <div class="range-input-group">
@@ -1513,6 +1518,9 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                                 <button type="button" class="btn-preview-primary" id="previewBtnPrimary"><?php echo t('settings.preview_primary'); ?></button>
                                 <button type="button" class="btn-preview-secondary" id="previewBtnSecondary"><?php echo t('settings.preview_secondary'); ?></button>
                             </div>
+                        </div>
+
+                        </div>
                         </div>
                     </details>
 
