@@ -490,7 +490,7 @@ $_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : 
 $siteSettings = [
     'favicon' => $_defaultFavicon,
     'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both'],
-    'theme' => ['adminTheme' => 'light', 'primaryColor' => '#3858e9', 'accentColor' => '#3858e9'],
+    'theme' => ['adminTheme' => 'light', 'preset' => 'soft', 'density' => 'auto', 'font' => 'system', 'primaryColor' => '#3858e9', 'accentColor' => '', 'sidebarBg' => '', 'darkSidebarBg' => ''],
     'login' => ['brandAsset' => 'favicon', 'image' => '', 'imageLayout' => 'none', 'overlayColor' => '', 'overlayOpacity' => 86, 'boxStyle' => 'card', 'boxColor' => '', 'boxTextColor' => '']
 ];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
@@ -506,6 +506,11 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     }
 }
 $adminTheme = $siteSettings['theme']['adminTheme'] ?? 'light';
+$_themePreset = in_array($siteSettings['theme']['preset'] ?? '', ['soft', 'classic', 'paper', 'studio'], true) ? $siteSettings['theme']['preset'] : 'soft';
+$_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist', 'inter'], true) ? $siteSettings['theme']['font'] : 'system';
+$_loginBase = preg_match('/^#[0-9a-fA-F]{6}$/', (string)$siteSettings['theme']['primaryColor']) ? strtolower((string)$siteSettings['theme']['primaryColor']) : '#3858e9';
+$_loginAccentRaw = strtolower((string)($siteSettings['theme']['accentColor'] ?? ''));
+$_loginAccent = (preg_match('/^#[0-9a-fA-F]{6}$/', $_loginAccentRaw) && $_loginAccentRaw !== $_loginBase) ? $_loginAccentRaw : $_loginBase;
 $showBranding = $siteSettings['branding']['showBranding'] ?? true;
 // Backend uses the configured login asset, with admin logo preferred for "logo".
 $loginSettings = $siteSettings['login'] ?? [];
@@ -547,7 +552,7 @@ $loginBoxStyleAttr = $loginBoxVariables
     : '';
 ?>
 <!DOCTYPE html>
-<html lang="en" data-site-theme="<?php echo htmlspecialchars($adminTheme === 'system' ? 'light' : $adminTheme); ?>">
+<html lang="en" data-site-theme="<?php echo htmlspecialchars($adminTheme === 'system' ? 'light' : $adminTheme); ?>" data-theme-preset="<?php echo $_themePreset; ?>" data-font="<?php echo $_themeFont; ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -558,6 +563,7 @@ $loginBoxStyleAttr = $loginBoxVariables
     $_loginFaviconType = pathinfo($_loginFavicon, PATHINFO_EXTENSION) === 'svg' ? 'image/svg+xml' : 'image/png';
     ?>
     <link rel="icon" href="<?php echo htmlspecialchars($_loginFavicon); ?>" type="<?php echo $_loginFaviconType; ?>">
+    <link rel="stylesheet" href="fonts.css">
     <link rel="stylesheet" href="style.css">
     <?php if ($adminTheme === 'system'): ?>
     <script>
@@ -568,21 +574,20 @@ $loginBoxStyleAttr = $loginBoxVariables
     })();
     </script>
     <?php endif; ?>
-    <?php if ($siteSettings['theme']['primaryColor'] !== '#3858e9' || $siteSettings['theme']['accentColor'] !== '#3858e9'): ?>
     <style>
     :root {
-        <?php $pc = htmlspecialchars($siteSettings['theme']['primaryColor']); ?>
-        <?php if ($siteSettings['theme']['primaryColor'] !== '#3858e9'): ?>
-        --nb-primary: <?php echo $pc; ?>;
-        --nb-primary-btn: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $pc; ?> 70%, white) 0%, <?php echo $pc; ?> 70%);
-        --nb-primary-btn-hover: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $pc; ?> 50%, white) 0%, <?php echo $pc; ?> 70%);
-        <?php endif; ?>
-        <?php if ($siteSettings['theme']['accentColor'] !== '#3858e9'): ?>
-        --nb-brand: <?php echo htmlspecialchars($siteSettings['theme']['accentColor']); ?>;
-        <?php endif; ?>
+        --nb-base: <?php echo $_loginBase; ?>;
+        --nb-accent-base: <?php echo $_loginAccent; ?>;
+    }
+    @supports not (color: oklch(from red l c h)) {
+    :root {
+        --nb-primary: <?php echo $_loginBase; ?>;
+        --nb-primary-btn: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $_loginBase; ?> 70%, white) 0%, <?php echo $_loginBase; ?> 70%);
+        --nb-primary-btn-hover: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $_loginBase; ?> 50%, white) 0%, <?php echo $_loginBase; ?> 70%);
+        --nb-brand: <?php echo $_loginAccent; ?>;
+    }
     }
     </style>
-    <?php endif; ?>
 </head>
 <body class="<?php echo htmlspecialchars($loginBodyClass); ?>"<?php echo $loginImageLayout !== 'none' ? ' style="--login-image: url(&quot;' . htmlspecialchars($loginCssImage, ENT_QUOTES, 'UTF-8') . '&quot;)' . $loginOverlayStyle . '"' : ''; ?>>
     <div class="login-media" aria-hidden="true"></div>

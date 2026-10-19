@@ -15,6 +15,27 @@
         return '#' + publicTab + (subtab ? '/' + subtab : '');
     }
 
+    // Topbar breadcrumb: ["Einstellungen", "Design"] → Einstellungen › Design
+    function nbSetTopbarTitle(parts) {
+        const el = document.getElementById('topbarTitle');
+        if (!el) return;
+        const list = (Array.isArray(parts) ? parts : [parts]).filter(Boolean);
+        el.textContent = '';
+        list.forEach((text, i) => {
+            if (i > 0) {
+                const sep = document.createElement('span');
+                sep.className = 'topbar-crumb-sep';
+                sep.setAttribute('aria-hidden', 'true');
+                sep.textContent = '›';
+                el.appendChild(sep);
+            }
+            const span = document.createElement('span');
+            span.className = i < list.length - 1 ? 'topbar-crumb' : 'topbar-crumb-current';
+            span.textContent = text;
+            el.appendChild(span);
+        });
+    }
+    window.nbSetTopbarTitle = nbSetTopbarTitle;
     function parseDashboardHash() {
         const raw = (window.location.hash || '').replace(/^#/, '');
         if (!raw) return { tab: 'home', subtab: '' };
@@ -214,8 +235,7 @@
 
         // Update topbar title
         const titles = { system: t('system.title'), home: t('dashboard_home.title'), content: currentPage ? t('editor.title') : t('pages.title'), news: t('news.title'), mails: t('mails.title'), events: t('events.title'), media: t('nav.media_library'), icons: t('icons.title'), settings: t('settings.title'), backup: t('settings.backup') };
-        const topbarTitle = document.getElementById('topbarTitle');
-        if (topbarTitle) topbarTitle.textContent = titles[tab] || 'Dashboard';
+        nbSetTopbarTitle([titles[tab] || 'Dashboard']);
 
         // Close sidebar on mobile after tab switch
         document.getElementById('adminSidebar').classList.remove('open');

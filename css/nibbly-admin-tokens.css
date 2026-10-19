@@ -35,6 +35,24 @@
     --nb-bg-hover: #edf3fd;
     --nb-sidebar-bg: #e4ecfd;
     --nb-surface-panel: var(--nb-bg-elevated);
+
+    /* Base colour: the one colour a site picks. Everything interactive and
+       every tinted surface derives from it (see THEME PRESETS below). The
+       accent base defaults to the base colour; "Erweitert" may override it. */
+    --nb-base: #3858e9;
+    --nb-accent-base: var(--nb-base);
+
+    /* Shell chrome (sidebar + topbar). Presets recolour these; the admin
+       stylesheet only ever reads them. */
+    --nb-sidebar-text: var(--nb-text-secondary);
+    --nb-sidebar-text-active: var(--nb-primary);
+    --nb-sidebar-hover-bg: var(--nb-primary-subtle);
+    --nb-sidebar-active-bg: var(--nb-primary-subtle);
+    --nb-sidebar-border: rgba(0, 0, 0, 0.06);
+    --nb-topbar-bg: var(--nb-sidebar-bg);
+    --nb-topbar-text: var(--nb-text);
+    --nb-topbar-text-muted: var(--nb-text-secondary);
+    --nb-topbar-border: var(--nb-border);
     --nb-surface-group: color-mix(in srgb, var(--nb-bg-elevated) 88%, var(--nb-bg));
     --nb-surface-item: var(--nb-bg);
 
@@ -71,20 +89,48 @@
     --nb-shadow-xl: 0 8px 16px rgba(37, 99, 235, 0.06), 0 16px 48px rgba(0, 0, 0, 0.16);
 
     /* Typography */
-    --nb-font-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --nb-font-mono: 'Geist Mono', 'SF Mono', Menlo, Consolas, monospace;
+    --nb-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --nb-font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
     --nb-font-display: var(--nb-font-sans);
 
-    /* Spacing (8px base grid) */
-    --nb-space-1: 0.25rem;   /* 4px */
-    --nb-space-2: 0.5rem;    /* 8px */
-    --nb-space-3: 0.75rem;   /* 12px */
-    --nb-space-4: 1rem;      /* 16px */
-    --nb-space-5: 1.25rem;   /* 20px */
-    --nb-space-6: 1.5rem;    /* 24px */
-    --nb-space-8: 2rem;      /* 32px */
-    --nb-space-10: 2.5rem;   /* 40px */
-    --nb-space-12: 3rem;     /* 48px */
+    /* Density factor. The admin sets it from the viewport or the user's
+       "Dichte" setting (see admin/style.css); everywhere else it is 1.
+       It scales spacing and control heights, never font sizes. */
+    --nb-d: 1;
+
+    /* Spacing (4px grid, scaled by density). Values in comments are for
+       --nb-d: 1 at 16px root size. */
+    --nb-space-0-5: calc(0.125rem * var(--nb-d, 1)); /* 2px */
+    --nb-space-1: calc(0.25rem * var(--nb-d, 1));    /* 4px */
+    --nb-space-1-5: calc(0.375rem * var(--nb-d, 1)); /* 6px */
+    --nb-space-2: calc(0.5rem * var(--nb-d, 1));     /* 8px */
+    --nb-space-2-5: calc(0.625rem * var(--nb-d, 1)); /* 10px */
+    --nb-space-3: calc(0.75rem * var(--nb-d, 1));    /* 12px */
+    --nb-space-3-5: calc(0.875rem * var(--nb-d, 1)); /* 14px */
+    --nb-space-4: calc(1rem * var(--nb-d, 1));       /* 16px */
+    --nb-space-5: calc(1.25rem * var(--nb-d, 1));    /* 20px */
+    --nb-space-6: calc(1.5rem * var(--nb-d, 1));     /* 24px */
+    --nb-space-8: calc(2rem * var(--nb-d, 1));       /* 32px */
+    --nb-space-10: calc(2.5rem * var(--nb-d, 1));    /* 40px */
+    --nb-space-12: calc(3rem * var(--nb-d, 1));      /* 48px */
+
+    /* Type scale: six steps. Size separates the levels, weight is secondary. */
+    --nb-text-xs: 0.75rem;     /* table heads, group labels, meta, pills */
+    --nb-text-sm: 0.8125rem;   /* hints, descriptions */
+    --nb-text-md: 0.875rem;    /* body, labels, buttons, inputs */
+    --nb-text-lg: 1rem;        /* h3 card titles */
+    --nb-text-xl: 1.375rem;    /* h2 page titles */
+    --nb-text-2xl: 1.75rem;    /* stat numbers */
+
+    /* Controls: one height for inputs, selects and buttons, one small
+       variant for toolbars and table rows. */
+    --nb-control-h: calc(2.25rem * var(--nb-d, 1) + 0.25rem);     /* 40px */
+    --nb-control-h-sm: calc(1.75rem * var(--nb-d, 1) + 0.25rem);  /* 32px */
+
+    /* Admin shell geometry (rem so it grows with the root font size) */
+    --nb-sidebar-w: 12.5rem;    /* 200px */
+    --nb-topbar-h: 3.0625rem;   /* 49px */
+    --nb-content-max: 100rem;   /* 1600px at 16px root */
 
     /* Border radii */
     --nb-radius-sm: 4px;
@@ -119,6 +165,7 @@
     --nb-bg-hover: #253040;
     --nb-sidebar-bg: #0e1420;
     --nb-surface-panel: var(--nb-bg-elevated);
+    --nb-sidebar-border: rgba(255, 255, 255, 0.06);
     --nb-surface-group: color-mix(in srgb, var(--nb-bg-elevated) 82%, var(--nb-bg));
     --nb-surface-item: var(--nb-bg);
 
@@ -148,6 +195,271 @@
     --nb-warning-subtle: rgba(217, 119, 6, 0.1);
     --nb-warning-text: #fbbf24;
     --nb-warning-text-strong: #fcd34d;
+}
+
+
+/* ============================================================
+   THEME PRESETS + BASE COLOUR DERIVATION
+   ------------------------------------------------------------
+   Needs relative colour syntax (Chrome 119, Safari 16.4, Firefox 128).
+   Older browsers keep the static values above. The <html> element carries
+   data-theme-preset="soft|classic|paper|studio" (default soft),
+   data-font="system|geist|inter" and data-density; admin/dashboard.php
+   sets --nb-base / --nb-accent-base inline from the saved settings.
+   ============================================================ */
+
+@supports (color: oklch(from red l c h)) {
+
+    /* --- Interactive colour, every preset, light --- */
+    :root,
+    [data-site-theme="light"] {
+        --nb-primary-src: var(--nb-base);
+        --nb-primary: oklch(from var(--nb-primary-src) l c h);
+        --nb-primary-hover: oklch(from var(--nb-primary-src) calc(l - 0.06) c h);
+        --nb-primary-active: oklch(from var(--nb-primary-src) calc(l - 0.11) c h);
+        --nb-primary-subtle: oklch(from var(--nb-primary-src) l c h / 0.09);
+        --nb-primary-muted: oklch(from var(--nb-primary-src) l c h / 0.17);
+        --nb-primary-medium: oklch(from var(--nb-primary-src) l c h / 0.30);
+        --nb-primary-btn: radial-gradient(ellipse at 50% 0%, oklch(from var(--nb-primary-src) calc(l + 0.12) c h) 0%, var(--nb-primary) 70%);
+        --nb-primary-btn-hover: radial-gradient(ellipse at 50% 0%, oklch(from var(--nb-primary-src) calc(l + 0.18) c h) 0%, var(--nb-primary) 70%);
+        --nb-border-focus: var(--nb-primary);
+        --nb-focus-ring: var(--nb-primary-muted);
+        --nb-brand: oklch(from var(--nb-accent-base) l c h);
+        --nb-brand-light: oklch(from var(--nb-accent-base) calc(l + 0.12) c h);
+        --nb-brand-dark: oklch(from var(--nb-accent-base) calc(l - 0.10) c h);
+        --nb-brand-darker: oklch(from var(--nb-accent-base) calc(l - 0.18) c h);
+        --nb-brand-subtle: oklch(from var(--nb-accent-base) l c h / 0.12);
+        --nb-success: var(--nb-primary);
+    }
+
+    /* --- Interactive colour, every preset, dark: never darker than l 0.72 --- */
+    [data-site-theme="dark"] {
+        --nb-primary: oklch(from var(--nb-primary-src) max(l, 0.72) c h);
+        --nb-primary-hover: oklch(from var(--nb-primary-src) calc(max(l, 0.72) + 0.06) c h);
+        --nb-primary-active: oklch(from var(--nb-primary-src) calc(max(l, 0.72) - 0.08) c h);
+        --nb-primary-subtle: oklch(from var(--nb-primary-src) max(l, 0.72) c h / 0.14);
+        --nb-primary-muted: oklch(from var(--nb-primary-src) max(l, 0.72) c h / 0.24);
+        --nb-primary-medium: oklch(from var(--nb-primary-src) max(l, 0.72) c h / 0.40);
+        --nb-primary-btn: radial-gradient(ellipse at 50% 0%, oklch(from var(--nb-primary-src) calc(max(l, 0.72) + 0.10) c h) 0%, var(--nb-primary) 70%);
+        --nb-primary-btn-hover: radial-gradient(ellipse at 50% 0%, oklch(from var(--nb-primary-src) calc(max(l, 0.72) + 0.16) c h) 0%, var(--nb-primary) 70%);
+        --nb-brand: oklch(from var(--nb-accent-base) max(l, 0.72) c h);
+        --nb-brand-light: oklch(from var(--nb-accent-base) calc(max(l, 0.72) + 0.10) c h);
+        --nb-brand-dark: oklch(from var(--nb-accent-base) calc(max(l, 0.72) - 0.10) c h);
+        --nb-brand-subtle: oklch(from var(--nb-accent-base) max(l, 0.72) c h / 0.18);
+        --nb-text-muted: #a1a5ad;
+        /* The lifted primary is light, so text on it has to be dark to stay readable */
+        --nb-text-on-primary: #11141b;
+    }
+
+    /* ---------- SOFT (default): tinted sidebar, white cards, calm colour ---------- */
+    :root,
+    [data-theme-preset="soft"] {
+        /* Soft keeps the hue but caps saturation, so even a loud brand colour sits quietly */
+        --nb-primary-src: oklch(from var(--nb-base) l min(c, 0.15) h);
+        --nb-sidebar-bg: oklch(from var(--nb-base) 0.945 min(c, 0.03) h);
+        --nb-bg: oklch(from var(--nb-base) 0.975 min(c, 0.012) h);
+        --nb-bg-elevated: #ffffff;
+        --nb-bg-sunken: oklch(from var(--nb-base) 0.93 min(c, 0.025) h);
+        --nb-bg-hover: oklch(from var(--nb-base) 0.955 min(c, 0.02) h);
+        --nb-border: oklch(from var(--nb-base) 0.875 min(c, 0.03) h);
+        --nb-border-strong: oklch(from var(--nb-base) 0.78 min(c, 0.035) h);
+        --nb-sidebar-text: #3a3f4a;
+        --nb-sidebar-text-active: var(--nb-primary);
+        --nb-sidebar-hover-bg: oklch(from var(--nb-base) 0.90 min(c, 0.04) h);
+        --nb-sidebar-active-bg: oklch(from var(--nb-base) 0.885 min(c, 0.06) h);
+        --nb-topbar-bg: var(--nb-sidebar-bg);
+        --nb-topbar-text: var(--nb-text);
+        --nb-topbar-text-muted: #4a4f5a;
+        --nb-topbar-border: var(--nb-border);
+        --nb-radius-sm: 4px;
+        --nb-radius-md: 6px;
+        --nb-radius-lg: 10px;
+        --nb-radius-xl: 16px;
+    }
+
+    [data-site-theme="dark"],
+    [data-theme-preset="soft"][data-site-theme="dark"] {
+        --nb-sidebar-bg: oklch(from var(--nb-base) 0.17 min(c, 0.035) h);
+        --nb-bg: oklch(from var(--nb-base) 0.215 min(c, 0.025) h);
+        --nb-bg-elevated: oklch(from var(--nb-base) 0.265 min(c, 0.025) h);
+        --nb-bg-sunken: oklch(from var(--nb-base) 0.15 min(c, 0.025) h);
+        --nb-bg-hover: oklch(from var(--nb-base) 0.31 min(c, 0.025) h);
+        --nb-border: oklch(from var(--nb-base) 0.36 min(c, 0.035) h);
+        --nb-border-strong: oklch(from var(--nb-base) 0.47 min(c, 0.04) h);
+        --nb-sidebar-text: #cfd3da;
+        --nb-sidebar-text-active: #ffffff;
+        --nb-sidebar-hover-bg: oklch(from var(--nb-base) 0.26 min(c, 0.05) h);
+        --nb-sidebar-active-bg: oklch(from var(--nb-base) 0.32 min(c, 0.08) h);
+        --nb-topbar-bg: var(--nb-sidebar-bg);
+        --nb-topbar-text: #e8eaee;
+        --nb-topbar-text-muted: #b4b9c2;
+        --nb-topbar-border: var(--nb-border);
+    }
+
+    /* ---------- CLASSIC: WordPress-like dark chrome, light stage, flat and square ---------- */
+    [data-theme-preset="classic"] {
+        --nb-primary-src: var(--nb-base);
+        --nb-sidebar-bg: #1d2327;
+        --nb-bg: #f0f0f1;
+        --nb-bg-elevated: #ffffff;
+        --nb-bg-sunken: #e6e7e8;
+        --nb-bg-hover: #f6f7f7;
+        --nb-border: #c3c4c7;
+        --nb-border-strong: #8c8f94;
+        --nb-border-subtle: #dcdcde;
+        --nb-text: #1d2327;
+        --nb-text-secondary: #3c434a;
+        --nb-text-muted: #646970;
+        --nb-sidebar-text: #f0f0f1;
+        --nb-sidebar-text-active: var(--nb-text-on-primary);
+        --nb-sidebar-hover-bg: rgba(255, 255, 255, 0.08);
+        --nb-sidebar-active-bg: var(--nb-primary);
+        --nb-sidebar-border: rgba(255, 255, 255, 0.08);
+        --nb-topbar-bg: #1d2327;
+        --nb-topbar-text: #f0f0f1;
+        --nb-topbar-text-muted: #c3c4c7;
+        --nb-topbar-border: rgba(255, 255, 255, 0.12);
+        --nb-radius-sm: 3px;
+        --nb-radius-md: 4px;
+        --nb-radius-lg: 6px;
+        --nb-radius-xl: 8px;
+        --nb-shadow-sm: 0 1px 1px rgba(0, 0, 0, 0.04);
+    }
+
+    [data-theme-preset="classic"][data-site-theme="dark"] {
+        --nb-sidebar-bg: #0e1113;
+        --nb-bg: #15181b;
+        --nb-bg-elevated: #1e2327;
+        --nb-bg-sunken: #101316;
+        --nb-bg-hover: #262c31;
+        --nb-border: #3a4248;
+        --nb-border-strong: #4f5962;
+        --nb-border-subtle: #2b3238;
+        --nb-text: #e9ecef;
+        --nb-text-secondary: #c4cacf;
+        --nb-text-muted: #9aa2aa;
+        --nb-sidebar-hover-bg: rgba(255, 255, 255, 0.07);
+        --nb-topbar-bg: #0e1113;
+        --nb-topbar-text: #e9ecef;
+        --nb-topbar-text-muted: #9aa2aa;
+    }
+
+    /* ---------- PAPER: white, hairlines instead of tints, light sidebar ---------- */
+    [data-theme-preset="paper"] {
+        --nb-primary-src: var(--nb-base);
+        --nb-sidebar-bg: #fafaf8;
+        --nb-bg: #ffffff;
+        --nb-bg-elevated: #ffffff;
+        --nb-bg-sunken: #f4f4f1;
+        --nb-bg-hover: #f6f6f3;
+        --nb-border: #e3e3df;
+        --nb-border-strong: #c9c9c3;
+        --nb-border-subtle: #ececea;
+        --nb-text: #171717;
+        --nb-text-secondary: #4b4b4b;
+        --nb-text-muted: #6f6f6f;
+        --nb-sidebar-text: #333333;
+        --nb-sidebar-text-active: var(--nb-text);
+        --nb-sidebar-hover-bg: rgba(0, 0, 0, 0.045);
+        --nb-sidebar-active-bg: rgba(0, 0, 0, 0.035);
+        --nb-sidebar-border: #e3e3df;
+        --nb-topbar-bg: #ffffff;
+        --nb-topbar-text: #171717;
+        --nb-topbar-text-muted: #6f6f6f;
+        --nb-topbar-border: #e3e3df;
+        --nb-radius-sm: 4px;
+        --nb-radius-md: 6px;
+        --nb-radius-lg: 8px;
+        --nb-radius-xl: 12px;
+        --nb-shadow-sm: none;
+        --nb-shadow-md: 0 2px 10px rgba(0, 0, 0, 0.06);
+    }
+
+    [data-theme-preset="paper"][data-site-theme="dark"] {
+        --nb-sidebar-bg: #0d0d0d;
+        --nb-bg: #121212;
+        --nb-bg-elevated: #181818;
+        --nb-bg-sunken: #0f0f0f;
+        --nb-bg-hover: #1e1e1e;
+        --nb-border: #2c2c2c;
+        --nb-border-strong: #3f3f3f;
+        --nb-border-subtle: #222222;
+        --nb-text: #ededed;
+        --nb-text-secondary: #c8c8c8;
+        --nb-text-muted: #9d9d9d;
+        --nb-sidebar-text: #d0d0d0;
+        --nb-sidebar-text-active: #ffffff;
+        --nb-sidebar-hover-bg: rgba(255, 255, 255, 0.06);
+        --nb-sidebar-active-bg: rgba(255, 255, 255, 0.05);
+        --nb-sidebar-border: #2c2c2c;
+        --nb-topbar-bg: #0d0d0d;
+        --nb-topbar-text: #ededed;
+        --nb-topbar-text-muted: #9d9d9d;
+        --nb-topbar-border: #2c2c2c;
+    }
+
+    /* ---------- STUDIO: sidebar in the base colour, white topbar, dense ---------- */
+    [data-theme-preset="studio"] {
+        --nb-primary-src: var(--nb-base);
+        --nb-sidebar-bg: oklch(from var(--nb-base) 0.32 min(c, 0.09) h);
+        --nb-bg: #f4f5f7;
+        --nb-bg-elevated: #ffffff;
+        --nb-bg-sunken: #eaecef;
+        --nb-bg-hover: #eceef2;
+        --nb-border: #d9dce2;
+        --nb-border-strong: #b7bcc6;
+        --nb-border-subtle: #e6e8ec;
+        --nb-text: #15171a;
+        --nb-text-secondary: #44484f;
+        --nb-text-muted: #666c76;
+        --nb-sidebar-text: oklch(from var(--nb-base) 0.90 min(c, 0.03) h);
+        --nb-sidebar-text-active: #ffffff;
+        --nb-sidebar-hover-bg: rgba(255, 255, 255, 0.10);
+        --nb-sidebar-active-bg: oklch(from var(--nb-base) 0.42 min(c, 0.12) h);
+        --nb-sidebar-border: rgba(255, 255, 255, 0.10);
+        --nb-topbar-bg: #ffffff;
+        --nb-topbar-text: #15171a;
+        --nb-topbar-text-muted: #666c76;
+        --nb-topbar-border: #d9dce2;
+        --nb-radius-sm: 5px;
+        --nb-radius-md: 8px;
+        --nb-radius-lg: 10px;
+        --nb-radius-xl: 14px;
+        --nb-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    [data-theme-preset="studio"][data-site-theme="dark"] {
+        --nb-sidebar-bg: oklch(from var(--nb-base) 0.22 min(c, 0.07) h);
+        --nb-bg: #0f1114;
+        --nb-bg-elevated: #171a1f;
+        --nb-bg-sunken: #0b0d10;
+        --nb-bg-hover: #1f2329;
+        --nb-border: #2e333b;
+        --nb-border-strong: #434a55;
+        --nb-border-subtle: #252a31;
+        --nb-text: #eceef1;
+        --nb-text-secondary: #c3c7cd;
+        --nb-text-muted: #959ca6;
+        --nb-sidebar-active-bg: oklch(from var(--nb-base) 0.34 min(c, 0.11) h);
+        --nb-topbar-bg: #171a1f;
+        --nb-topbar-text: #eceef1;
+        --nb-topbar-text-muted: #959ca6;
+        --nb-topbar-border: #2e333b;
+    }
+}
+
+
+/* ============================================================
+   FONTS — local files only (admin/fonts.css declares the faces)
+   ============================================================ */
+
+[data-font="geist"] {
+    --nb-font-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --nb-font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+[data-font="inter"] {
+    --nb-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 
