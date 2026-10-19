@@ -112,7 +112,9 @@
 
         const events = (eventsData && eventsData.events) || [];
         if (events.length === 0) {
-            nbRenderEmptyRow(tbody, 4, t('events.no_events'), { label: t('events.new_event'), onClick: addNewEvent });
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="4" style="color: var(--nb-text-muted); text-align: center; padding: var(--nb-space-6);">${escapeHtml(t('events.no_events'))}</td>`;
+            tbody.appendChild(tr);
             renderAdminListFooter('eventsListFooter', 'events', 0, getDashboardPageSize(), renderEventsList, 'eventsListFooterTop');
             return;
         }
@@ -213,7 +215,7 @@
 
             const tdDate = document.createElement('td');
             tdDate.className = 'page-list-cell-date';
-            tdDate.textContent = dateStr ? (window.nbFormatDate ? nbFormatDate(dateStr) : dateStr) : '—';
+            tdDate.textContent = dateStr;
 
             const tdLocation = document.createElement('td');
             tdLocation.textContent = event.location?.[DEFAULT_LANG] || event.location?.en || event.location?.de || '';
@@ -594,7 +596,7 @@
             tdDeletedAt.className = 'page-list-cell-date';
             if (item.deletedAt) {
                 const d = new Date(item.deletedAt);
-                tdDeletedAt.textContent = nbFormatDate(d, 'datetime');
+                tdDeletedAt.textContent = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
             }
             tr.appendChild(tdDeletedAt);
 

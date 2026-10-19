@@ -18,11 +18,8 @@ switch ($action) {
             ],
             'theme' => [
                 'adminTheme' => 'light',
-                'preset' => 'soft',
-                'density' => 'auto',
-                'font' => 'system',
                 'primaryColor' => '#3858e9',
-                'accentColor' => '',
+                'accentColor' => '#3858e9',
                 'sidebarBg' => '',
                 'darkPrimaryColor' => '',
                 'darkAccentColor' => '',
@@ -135,7 +132,7 @@ switch ($action) {
         // Whitelist allowed keys
         $allowed = [
             'branding' => ['logo', 'logoDark', 'adminLogo', 'name', 'showBranding', 'logoDisplay', 'logoSize'],
-            'theme' => ['adminTheme', 'publicDefault', 'preset', 'density', 'font', 'primaryColor', 'accentColor', 'sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg', 'buttonGlow', 'buttonRadius'],
+            'theme' => ['adminTheme', 'publicDefault', 'primaryColor', 'accentColor', 'sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg', 'buttonGlow', 'buttonRadius'],
             'general' => ['adminLanguage', 'frontendLoginRedirect', 'aiLabelArtwork'],
             'email' => ['method', 'recipientEmail', 'bccEmail', 'fromEmail', 'fromName', 'smtpHost', 'smtpPort', 'smtpUsername', 'smtpPassword', 'smtpEncryption'],
             'seo' => ['siteUrl', 'organizationName', 'defaultOgImage', 'noindexSite']
@@ -164,16 +161,15 @@ switch ($action) {
                 if (array_key_exists($key, $settings[$group])) {
                     $value = $settings[$group][$key];
 
-                    // Validate the base colour — required (must be set)
-                    if ($key === 'primaryColor') {
+                    // Validate color values — required (must be set)
+                    if (in_array($key, ['primaryColor', 'accentColor'])) {
                         if (!preg_match('/^#[0-9a-fA-F]{6}$/', $value)) {
                             jsonResponse(false, null, 'Invalid color value for ' . $key);
                         }
                     }
 
                     // Validate optional color values — empty string means "auto"
-                    // (accentColor derives from the base colour unless overridden)
-                    if (in_array($key, ['accentColor', 'sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg'])) {
+                    if (in_array($key, ['sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg'])) {
                         $value = (string)$value;
                         if ($value !== '' && !preg_match('/^#[0-9a-fA-F]{6}$/', $value)) {
                             jsonResponse(false, null, 'Invalid color value for ' . $key);
@@ -183,15 +179,6 @@ switch ($action) {
                     // Validate theme choices
                     if (in_array($key, ['adminTheme', 'publicDefault'], true) && !in_array($value, ['light', 'dark', 'system'], true)) {
                         jsonResponse(false, null, 'Invalid theme value');
-                    }
-                    if ($key === 'preset' && !in_array($value, ['soft', 'classic', 'paper', 'studio'], true)) {
-                        jsonResponse(false, null, 'Invalid theme preset');
-                    }
-                    if ($key === 'density' && !in_array($value, ['auto', 'compact', 'comfortable'], true)) {
-                        jsonResponse(false, null, 'Invalid density value');
-                    }
-                    if ($key === 'font' && !in_array($value, ['system', 'geist', 'inter'], true)) {
-                        jsonResponse(false, null, 'Invalid font value');
                     }
 
                     // Validate buttonGlow (boolean)

@@ -219,7 +219,7 @@
             if (!unixOrIso) return '—';
             var d = (typeof unixOrIso === 'number') ? new Date(unixOrIso * 1000) : new Date(unixOrIso);
             if (isNaN(d.getTime())) return '—';
-            return nbFormatDate(d, 'datetime');
+            return d.toLocaleString();
         }
         function selectedCronMode() {
             var checked = cronModeEls.find(function(input) { return input.checked; });
