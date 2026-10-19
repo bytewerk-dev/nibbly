@@ -585,6 +585,46 @@ when adding related UI:
 - **AI dashboard panel**: hide disabled AI tools. If AI services are disabled or
   unconfigured, show only a compact dismissible notice where appropriate.
 
+### Dashboard design system (2.4)
+
+The dashboard is built from one token set and five shared patterns. Keep to
+them when adding admin UI:
+
+- **Tokens live in `css/nibbly-admin-tokens.css`**, prefixed `--nb-*`. Spacing
+  (`--nb-space-1 … 12`, with half steps like `--nb-space-2-5`), a six-step type
+  scale (`--nb-text-xs … 2xl`), one control height for inputs, selects and
+  buttons (`--nb-control-h`, `--nb-control-h-sm`), radii and shell geometry
+  (`--nb-sidebar-w`, `--nb-topbar-h`, `--nb-content-max`). Write new admin CSS
+  with these tokens, never with pixel values.
+- **Everything scales with the root font size.** `admin/style.css` sets
+  `html { font-size: clamp(14px, …, 18px) }`, and `--nb-d` (density, from the
+  viewport or the user's "Dichte" setting via `data-density` on `<html>`)
+  multiplies spacing and control heights. Do not reintroduce fixed widths for
+  the sidebar, topbar or container.
+- **One base colour.** `theme.primaryColor` is the base; the stylesheet derives
+  primary, hover, tints, the accent (`--nb-accent-base`, overridable through
+  `theme.accentColor`) and, per preset, the surfaces in OKLCH relative colour
+  syntax inside `@supports (color: oklch(from red l c h))`. Dark mode lifts the
+  base to at least `l 0.72`; nothing stores a separate dark colour any more
+  (`darkPrimaryColor` / `darkAccentColor` are accepted but ignored).
+- **Presets** (`theme.preset`: `soft` default, `classic`, `paper`, `studio`) only
+  set surfaces, borders, radii and the sidebar/topbar tokens
+  (`--nb-sidebar-*`, `--nb-topbar-*`). Admin CSS reads those tokens and never
+  hard-codes chrome colours. `<html>` carries `data-theme-preset`,
+  `data-density` and `data-font`; `admin/dashboard.php` emits `--nb-base` and
+  optional sidebar overrides inline, `applyTheme()` in
+  `admin/dashboard/scripts/settings.php` mirrors that live.
+- **Fonts are local.** `theme.font` is `system` (default, no file), `geist` or
+  `inter`; faces are declared in `admin/fonts.css` from `admin/fonts/`. Never
+  link an external font service in the admin.
+- **Patterns**: every tab starts with `.page-list-header` (title + description
+  left, `.page-list-header-actions` right, one `.btn-primary`); the topbar shows
+  the site name and a breadcrumb via `nbSetTopbarTitle()`; cards have at most
+  two levels (fieldsets inside a settings card are groups with a divider, not a
+  second box); settings forms use label-left rows from 1100px and end in a
+  sticky `.settings-actions` bar; lists share `.page-list-table`, hover/focus
+  row actions and `nbRenderEmptyRow()`; dates go through `nbFormatDate()`.
+
 ### Select carets
 
 Load `css/nb-select.css` for admin/editor controls. Enhanced dropdowns and

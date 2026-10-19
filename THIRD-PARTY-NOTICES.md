@@ -210,3 +210,19 @@ License: Apache License 2.0
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+## Geist and Geist Mono
+
+The dashboard can use the Geist typeface, shipped locally in `admin/fonts/` (`geist-variable.woff2`, `geist-mono-variable.woff2`). No external request is made.
+
+Source: https://github.com/vercel/geist-font
+
+License: MIT License (SIL Open Font License 1.1 for releases from 1.4.0)
+
+## Inter
+
+The dashboard can use the Inter typeface, shipped locally in `admin/fonts/` (`inter-regular.woff2`). No external request is made.
+
+Source: https://github.com/rsms/inter
+
+License: SIL Open Font License 1.1
