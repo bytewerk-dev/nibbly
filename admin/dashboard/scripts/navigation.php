@@ -16,7 +16,7 @@
     }
 
     // Topbar breadcrumb: ["Einstellungen", "Design"] → Einstellungen › Design
-    window.nbSetTopbarTitle = function(parts) {
+    function nbSetTopbarTitle(parts) {
         const el = document.getElementById('topbarTitle');
         if (!el) return;
         const list = (Array.isArray(parts) ? parts : [parts]).filter(Boolean);
@@ -34,7 +34,8 @@
             span.textContent = text;
             el.appendChild(span);
         });
-    };
+    }
+    window.nbSetTopbarTitle = nbSetTopbarTitle;
     function parseDashboardHash() {
         const raw = (window.location.hash || '').replace(/^#/, '');
         if (!raw) return { tab: 'home', subtab: '' };
