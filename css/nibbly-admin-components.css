@@ -92,13 +92,14 @@
     align-items: center;
     justify-content: center;
     gap: var(--nb-space-2);
-    padding: 10px 20px;
+    height: var(--nb-control-h, 2.5rem);
+    padding: 0 var(--nb-space-5, 1.25rem);
     border: 1px solid transparent;
     border-radius: var(--editor-btn-radius, var(--nb-radius-md));
     font-family: var(--nb-font-sans);
-    font-size: 0.875rem;
+    font-size: var(--nb-text-md, 0.875rem);
     font-weight: 500;
-    line-height: 1.25;
+    line-height: 1.2;
     cursor: pointer;
     transition: background-color var(--nb-duration-fast) var(--nb-ease),
                 color var(--nb-duration-fast) var(--nb-ease),
@@ -207,16 +208,21 @@
 
 /* Icon-only button */
 .nb-btn--icon {
-    width: 36px;
-    height: 36px;
+    width: var(--nb-control-h, 2.5rem);
+    height: var(--nb-control-h, 2.5rem);
     padding: 0;
     border-radius: var(--editor-btn-radius, var(--nb-radius-md));
 }
 
 /* Sizes */
 .nb-btn--sm {
-    padding: 6px 12px;
-    font-size: 0.8125rem;
+    height: var(--nb-control-h-sm, 2rem);
+    padding: 0 var(--nb-space-3, 0.75rem);
+    font-size: var(--nb-text-sm, 0.8125rem);
+}
+
+.nb-btn--sm.nb-btn--icon {
+    width: var(--nb-control-h-sm, 2rem);
 }
 
 .nb-btn--block {
