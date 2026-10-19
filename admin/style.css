@@ -1086,7 +1086,7 @@ svg.topbar-logo {
     font-weight: 500;
     color: var(--nb-topbar-text-muted);
     padding-left: var(--nb-space-4);
-    border-left: 1px solid var(--nb-topbar-border);
+    border-left: 1px solid var(--nb-topbar-divider, var(--nb-border));
 }
 
 .topbar-selectors {
@@ -1125,7 +1125,7 @@ svg.topbar-logo {
     gap: var(--nb-space-3);
     margin-left: auto;
     padding-left: var(--nb-space-4);
-    border-left: 1px solid var(--nb-topbar-border);
+    border-left: 1px solid var(--nb-topbar-divider, var(--nb-border));
     flex-shrink: 0;
 }
 
@@ -9852,7 +9852,7 @@ input.color-hex-input,
         display: block;
     }
 
-    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group) {
+    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group):not(.access-toggle-row):not(.ai-feature-toggle-grid):not(:has(> label.toggle-label)):not(:has(> label:first-child input)) {
         display: grid;
         grid-template-columns: minmax(10rem, 15rem) minmax(0, 1fr);
         column-gap: var(--nb-space-6);
@@ -9863,13 +9863,13 @@ input.color-hex-input,
         border-bottom: 1px solid var(--nb-border-subtle);
     }
 
-    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group):last-child,
-    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group):has(+ .settings-actions),
-    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group):has(+ .settings-section) {
+    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group):not(.access-toggle-row):not(.ai-feature-toggle-grid):not(:has(> label.toggle-label)):not(:has(> label:first-child input)):last-child,
+    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group):not(.access-toggle-row):not(.ai-feature-toggle-grid):not(:has(> label.toggle-label)):not(:has(> label:first-child input)):has(+ .settings-actions),
+    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group):not(.access-toggle-row):not(.ai-feature-toggle-grid):not(:has(> label.toggle-label)):not(:has(> label:first-child input)):has(+ .settings-section) {
         border-bottom: 0;
     }
 
-    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group) > label:first-child:not(:has(input)) {
+    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group):not(.access-toggle-row):not(.ai-feature-toggle-grid):not(:has(> label.toggle-label)):not(:has(> label:first-child input)) > label:first-child:not(:has(input)) {
         grid-column: 1;
         margin: 0;
         padding-top: calc((var(--nb-control-h) - 1.45em) / 2);
@@ -9877,24 +9877,24 @@ input.color-hex-input,
         line-height: 1.45;
     }
 
-    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group) > :not(label:first-child) {
+    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group):not(.access-toggle-row):not(.ai-feature-toggle-grid):not(:has(> label.toggle-label)):not(:has(> label:first-child input)) > :not(label:first-child) {
         grid-column: 2;
         min-width: 0;
     }
 
     /* A label that wraps its own control (checkbox, toggle) spans both columns */
-    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group) > label:first-child:has(input) {
+    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group):not(.access-toggle-row):not(.ai-feature-toggle-grid):not(:has(> label.toggle-label)):not(:has(> label:first-child input)) > label:first-child:has(input) {
         grid-column: 1 / -1;
         margin: 0;
     }
 
-    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group) > label.toggle-label:first-child {
+    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group):not(.access-toggle-row):not(.ai-feature-toggle-grid):not(:has(> label.toggle-label)):not(:has(> label:first-child input)) > label.toggle-label:first-child {
         justify-content: flex-start;
         gap: var(--nb-space-4);
         max-width: 55rem;
     }
 
-    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group) > .form-hint {
+    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group):not(.access-toggle-row):not(.ai-feature-toggle-grid):not(:has(> label.toggle-label)):not(:has(> label:first-child input)) > .form-hint {
         margin-top: 0;
     }
 }
@@ -10384,4 +10384,140 @@ html[data-density="compact"] .settings-nav-group h3 {
 .dashboard-status-chip--accent .dashboard-status-chip__label {
     color: var(--nb-text);
     opacity: 0.78;
+}
+
+
+/* ============================================================
+   POLISH PASS (review of the merged redesign)
+   ============================================================ */
+
+/* Paper is the one preset that needs a line under the white topbar; the stage
+   then starts square so the corner does not sit on the line. */
+[data-theme-preset="paper"] .admin-topbar {
+    border-bottom-color: var(--nb-border);
+}
+
+[data-theme-preset="paper"] .admin-main {
+    border-radius: 0;
+}
+
+/* Toggle rows: switch first, text right next to it. Reads as one unit and the
+   state is obvious; nothing floats to the far end of a wide row. */
+label.toggle-label,
+.form-group label.toggle-label,
+.scheduled-form__toggle.toggle-label,
+.access-toggle-row .toggle-label,
+.ai-feature-toggle-grid .toggle-label {
+    display: inline-flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    gap: var(--nb-space-3);
+    width: auto;
+    max-width: 100%;
+    margin-bottom: 0;
+}
+
+label.toggle-label > .toggle-switch,
+.access-toggle-row .toggle-label > .toggle-switch {
+    order: -1;
+    margin: 0;
+}
+
+.ai-feature-toggle-grid .toggle-label {
+    min-height: 0;
+}
+
+/* The switch is sometimes a <span>: it needs a box to get its 44x24 size */
+.toggle-switch {
+    display: inline-block;
+}
+
+.form-group:has(> label.toggle-label):not(.ai-feature-toggle-grid):not(.access-toggle-row) {
+    display: block;
+}
+
+.form-group:has(> label.toggle-label) > .form-hint {
+    margin-top: var(--nb-space-1-5);
+}
+
+.form-group-label {
+    display: block;
+    margin-bottom: var(--nb-space-2);
+    font-size: var(--nb-text-md);
+    font-weight: 500;
+}
+
+/* Path fields with a browse button: the field is capped like every other
+   input, the button stays right next to it instead of at the row's end */
+.settings-panel .settings-form .logo-path-input {
+    max-width: 46rem;
+}
+
+.settings-panel .settings-form .logo-path-input .input-with-clear {
+    max-width: 40rem;
+}
+
+/* A heading directly followed by its form gets the same gap as a description would leave */
+.settings-panel > h2 + form,
+.settings-panel > h2 + .settings-form {
+    margin-top: var(--nb-space-4);
+}
+
+/* The password form was capped at 500px and cut the card's action bar short */
+.change-password-form {
+    max-width: none;
+}
+
+.change-password-form input {
+    max-width: 30rem;
+}
+
+/* Backup: retention fieldset is a group inside the card, not a boxed box */
+.scheduled-form__fieldset {
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+}
+
+.scheduled-form__fieldset legend {
+    padding: 0;
+    margin-bottom: var(--nb-space-2);
+    font-size: var(--nb-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--nb-text-muted);
+}
+
+.scheduled-form__limit > label,
+.scheduled-form__side > label {
+    font-size: var(--nb-text-md);
+    font-weight: 500;
+}
+
+/* System status: in wide panels the value sits next to its label instead of
+   at the far right edge */
+.system-status-grid .dashboard-panel {
+    container-type: inline-size;
+}
+
+@container (min-width: 44rem) {
+    .system-status-row {
+        display: grid;
+        grid-template-columns: minmax(14rem, 22rem) minmax(0, 1fr);
+        justify-content: start;
+        column-gap: var(--nb-space-6);
+    }
+
+    .system-status-row > :last-child {
+        text-align: left;
+    }
+}
+
+/* Module tiles and the three-column feature grid fill their cells */
+.access-toggle-row .toggle-label,
+.ai-feature-toggle-grid .toggle-label {
+    display: flex;
+    width: 100%;
 }
