@@ -4045,12 +4045,24 @@ select.modal-input {
 .forms-fields-table tr.forms-field-row > td {
     border: 0 !important;
     box-shadow: none;
+    /* The row card already spaces its cells with a gap; the .users-table cell
+       padding would only steal width from the inputs. */
+    padding: 0;
 }
 
 .forms-fields-table td {
     display: grid;
     grid-template-rows: 22px minmax(38px, auto);
     align-items: start;
+}
+
+/* Inputs fill their grid cell at every width; the browser default (size=20)
+   drops below 120px once the fluid root size is under 16px. */
+.forms-fields-table td input,
+.forms-fields-table td select,
+.forms-fields-table td textarea {
+    width: 100%;
+    min-width: 0;
 }
 
 .forms-fields-table td::before {
@@ -9461,7 +9473,8 @@ input.color-hex-input,
 }
 @container settings (min-width: 60rem) {
     /* Wide: type, key, label, placeholder, width and required in one line, the options below. */
-    .forms-fields-table tr.forms-field-row { grid-template-columns: 8rem minmax(7rem, 0.8fr) minmax(8rem, 1.1fr) minmax(8rem, 1.1fr) 7.5rem 5rem; }
+    /* Columns stay at least 120px wide at the fluid 14–15px root size (responsive-check) */
+    .forms-fields-table tr.forms-field-row { grid-template-columns: 8.5rem minmax(8.5rem, 0.8fr) minmax(8.5rem, 1.1fr) minmax(8.5rem, 1.1fr) 7.5rem 5rem; }
 }
 .ai-image-filename-row { flex-wrap: wrap; }
 .ai-image-filename-row input { flex: 1 1 12rem; }
