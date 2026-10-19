@@ -46,9 +46,7 @@
         const visibleMails = getFilteredMails();
 
         if (!visibleMails || visibleMails.length === 0) {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td colspan="6" style="color: var(--nb-text-muted); text-align: center; padding: var(--nb-space-6);">${escapeHtml(t('mails.no_messages'))}</td>`;
-            tbody.appendChild(tr);
+            nbRenderEmptyRow(tbody, 6, t('mails.no_messages'));
             renderAdminListFooter('mailsListFooter', 'mails', 0, getDashboardPageSize(), renderMails, 'mailsListFooterTop');
             updateMailBulkActions();
             updateMailSortIndicators();
@@ -62,8 +60,8 @@
 
         paged.items.forEach(mail => {
             const date = new Date(mail.timestamp);
-            const dateStr = date.toLocaleDateString();
-            const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const dateStr = nbFormatDate(date, 'date');
+            const timeStr = nbFormatDate(date, 'time');
             const isUnread = !mail.read;
             const isStarred = !!mail.starred;
             const formLabel = mail.formLabel || mail.formId || t('forms.contact_default');
@@ -345,8 +343,8 @@
         if (!mail) return;
 
         const date = new Date(mail.timestamp);
-        const dateStr = date.toLocaleDateString();
-        const timeStr = date.toLocaleTimeString();
+        const dateStr = nbFormatDate(date, 'date');
+        const timeStr = nbFormatDate(date, 'time');
         const formLabel = mail.formLabel || mail.formId || t('forms.contact_default');
         const fields = Array.isArray(mail.fields) ? mail.fields.filter(field => field && field.value !== '') : [];
         const fieldsHtml = fields.length ? `
@@ -390,7 +388,7 @@
             ${mail.date ? `
             <div class="mail-detail-row">
                 <label>${t('mails.preferred_date')}</label>
-                <span>${new Date(mail.date).toLocaleDateString()}</span>
+                <span>${nbFormatDate(mail.date, 'date')}</span>
             </div>
             ` : ''}
             <div class="mail-detail-row mail-detail-message">

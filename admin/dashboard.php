@@ -194,7 +194,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 $_brandName = $siteSettings['branding']['name'] ?? '';
                 echo nibblyIconOrImg($_topbarFavicon, $_brandName, ['width' => 24, 'height' => 24, 'class' => 'topbar-logo']);
             endif; ?>
-            <span class="topbar-dashboard"><?php echo t('dashboard'); ?></span>
+            <?php $_siteLabel = trim((string)($siteSettings['branding']['name'] ?? '')) ?: (defined('SITE_NAME') ? (string)SITE_NAME : ''); ?>
+            <span class="topbar-dashboard"><?php echo htmlspecialchars($_siteLabel !== '' ? $_siteLabel : t('dashboard')); ?></span>
         </div>
         <h1 class="topbar-title" id="topbarTitle"><?php echo t('pages.title'); ?></h1>
         <div class="topbar-selectors" id="topbarSelectors" style="display: none;">
@@ -383,11 +384,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <div class="page-list-header">
                 <div class="page-list-header-left">
                     <h2><?php echo t('pages.title'); ?></h2>
-                    <button class="btn btn-secondary btn-sm" onclick="showNewPageModal()"><?php echo t('pages.new_page'); ?></button>
-                    <button class="btn btn-secondary btn-sm page-list-trash-btn" onclick="showTrash()" id="trashToggle">
-                        <?php echo nbIcon('trash', 14); ?>
-                        <?php echo t('pages.trash'); ?>
-                    </button>
+                </div>
+                <div class="page-list-header-actions">
                     <label class="page-list-search" for="pageListSearch">
                         <span class="sr-only"><?php echo t('pages.search_title'); ?></span>
                         <input
@@ -399,12 +397,17 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             oninput="handlePageListSearch(this.value)"
                         >
                     </label>
+                    <select id="pageListLang" class="topbar-select" onchange="renderPageListForLang(this.value)">
+                        <?php foreach ($siteLanguages as $code => $name): ?>
+                        <option value="<?php echo htmlspecialchars($code); ?>"<?php if ($code === SITE_LANG_DEFAULT) echo ' selected'; ?>><?php echo htmlspecialchars($name); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button class="btn btn-secondary btn-sm page-list-trash-btn" onclick="showTrash()" id="trashToggle">
+                        <?php echo nbIcon('trash', 14); ?>
+                        <?php echo t('pages.trash'); ?>
+                    </button>
+                    <button class="btn btn-primary btn-sm" onclick="showNewPageModal()"><?php echo t('pages.new_page'); ?></button>
                 </div>
-                <select id="pageListLang" class="topbar-select" onchange="renderPageListForLang(this.value)">
-                    <?php foreach ($siteLanguages as $code => $name): ?>
-                    <option value="<?php echo htmlspecialchars($code); ?>"<?php if ($code === SITE_LANG_DEFAULT) echo ' selected'; ?>><?php echo htmlspecialchars($name); ?></option>
-                    <?php endforeach; ?>
-                </select>
             </div>
             <div class="admin-list-footer admin-list-footer--top" id="pageListFooterTop"></div>
             <div class="page-list-table-wrap">
@@ -429,6 +432,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <div class="page-list-header">
                 <div class="page-list-header-left">
                     <h2><?php echo t('trash.title'); ?></h2>
+                </div>
+                <div class="page-list-header-actions">
                     <button class="btn btn-secondary btn-sm" onclick="showPageList()">
                         <?php echo nbIcon('back', 14); ?>
                         <?php echo t('pages.back_to_pages'); ?>
@@ -505,13 +510,15 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <div class="page-list-header">
                 <div class="page-list-header-left">
                     <h2><?php echo t('events.title'); ?></h2>
-                    <button class="btn btn-secondary btn-sm" onclick="addNewEvent()"><?php echo t('events.new_event'); ?></button>
+                    <span class="last-modified" id="eventsLastModified"></span>
+                </div>
+                <div class="page-list-header-actions">
                     <button class="btn btn-secondary btn-sm page-list-trash-btn" onclick="showEventsTrash()">
                         <?php echo nbIcon('trash', 14); ?>
                         <?php echo t('pages.trash'); ?>
                     </button>
+                    <button class="btn btn-primary btn-sm" onclick="addNewEvent()"><?php echo t('events.new_event'); ?></button>
                 </div>
-                <span class="last-modified" id="eventsLastModified"></span>
             </div>
             <div class="admin-list-footer admin-list-footer--top" id="eventsListFooterTop"></div>
             <div class="page-list-table-wrap">
@@ -594,7 +601,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <div class="page-list-header">
                 <div class="page-list-header-left">
                     <h2><?php echo t('news.title'); ?></h2>
-                    <button class="btn btn-secondary btn-sm" onclick="addNewPost()"><?php echo t('news.new_post'); ?></button>
+                </div>
+                <div class="page-list-header-actions">
+                    <button class="btn btn-primary btn-sm" onclick="addNewPost()"><?php echo t('news.new_post'); ?></button>
                 </div>
             </div>
             <div class="admin-list-footer admin-list-footer--top" id="newsListFooterTop"></div>
@@ -1090,6 +1099,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <div class="page-list-header">
                 <div class="page-list-header-left">
                     <h2><?php echo t('icons.title'); ?></h2>
+                </div>
+                <div class="page-list-header-actions">
                     <button class="btn btn-secondary btn-sm" id="iconManagerRefreshBtn" onclick="loadIconManager()"><?php echo t('btn.refresh'); ?></button>
                     <button class="btn btn-secondary btn-sm" onclick="openIconifyImportModal()"><?php echo t('icons.import_icon'); ?></button>
                     <button class="btn btn-primary btn-sm" onclick="openIconManagerModal()"><?php echo t('icons.add_icon'); ?></button>
@@ -1339,7 +1350,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             <small class="form-hint"><?php echo t('settings.branding_hint'); ?></small>
                         </div>
                     </fieldset>
-                    <div class="branding-form-actions">
+                    <div class="settings-actions branding-form-actions">
                         <button type="button" class="btn btn-secondary" id="resetBrandingBtn">&#x21BA; <?php echo t('settings.reset_branding'); ?></button>
                         <button type="submit" class="btn btn-primary" id="saveBrandingBtn"><?php echo t('settings.save_branding'); ?></button>
                     </div>
@@ -1492,7 +1503,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             </div>
                         </div>
                     </fieldset>
-                    <div class="theme-form-actions">
+                    <div class="settings-actions theme-form-actions">
                         <button type="button" class="btn btn-secondary" id="resetThemeBtn">&#x21BA; <?php echo t('settings.reset_colors'); ?></button>
                         <button type="submit" class="btn btn-primary" id="saveThemeBtn"><?php echo t('settings.save_theme'); ?></button>
                     </div>
@@ -1521,7 +1532,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </select>
                         <small class="form-hint"><?php echo t('settings.ai_label_artwork_hint'); ?></small>
                     </div>
-                    <button type="submit" class="btn btn-primary" id="saveLanguageBtn"><?php echo t('settings.save_language'); ?></button>
+                    <div class="settings-actions">
+                        <button type="submit" class="btn btn-primary" id="saveLanguageBtn"><?php echo t('settings.save_language'); ?></button>
+                    </div>
                 </form>
             </div>
 
@@ -1610,7 +1623,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             </div>
                         </div>
                     </fieldset>
-                    <button type="submit" class="btn btn-primary" id="saveLoginBtn"><?php echo t('settings.save_login'); ?></button>
+                    <div class="settings-actions">
+                        <button type="submit" class="btn btn-primary" id="saveLoginBtn"><?php echo t('settings.save_login'); ?></button>
+                    </div>
                 </form>
             </div>
 
@@ -1715,7 +1730,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             </div>
                         </div>
                     </fieldset>
-                    <button type="submit" class="btn btn-primary" id="saveAccessBtn"><?php echo t('settings.save_access'); ?></button>
+                    <div class="settings-actions">
+                        <button type="submit" class="btn btn-primary" id="saveAccessBtn"><?php echo t('settings.save_access'); ?></button>
+                    </div>
                 </form>
             </div>
 
@@ -1748,7 +1765,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </div>
                         <div class="form-group"><label class="toggle-label"><span><?php echo t('analytics.enabled'); ?></span><span class="toggle-switch"><input type="checkbox" id="analyticsEnabled" checked><span class="toggle-slider"></span></span></label><small class="form-hint"><?php echo t('analytics.hint'); ?></small></div>
                     </fieldset>
-                    <button type="submit" class="btn btn-primary" id="savePrivacyBtn"><?php echo t('settings.save_privacy'); ?></button>
+                    <div class="settings-actions">
+                        <button type="submit" class="btn btn-primary" id="savePrivacyBtn"><?php echo t('settings.save_privacy'); ?></button>
+                    </div>
                 </form>
             </div>
 
@@ -1834,7 +1853,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </div>
                     </div>
 
-                    <div class="settings-actions-row">
+                    <div class="settings-actions settings-actions-row">
                         <button type="submit" class="btn btn-primary" id="saveEmailBtn"><?php echo t('settings.save_email'); ?></button>
                         <button type="button" class="btn btn-secondary" id="testEmailBtn">
                             <?php echo t('settings.test_email'); ?>
@@ -1922,7 +1941,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             <small class="form-hint"><?php echo t('forms.options_hint'); ?></small>
                         </fieldset>
 
-                        <div class="settings-actions-row">
+                        <div class="settings-actions settings-actions-row">
                             <button type="submit" class="btn btn-primary" id="saveFormBtn"><?php echo t('forms.save'); ?></button>
                             <div id="formsAdminResult" class="settings-test-result" style="display:none;"></div>
                         </div>
@@ -2280,7 +2299,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </div>
                     </fieldset>
 
-                    <div class="settings-actions-row settings-actions-row--sticky">
+                    <div class="settings-actions settings-actions-row">
                         <button type="submit" class="btn btn-primary" id="saveAiSettingsBtn"><?php echo t('ai.save_settings'); ?></button>
                         <button type="button" class="btn btn-secondary" id="testAiBtn"><?php echo t('ai.test_connection'); ?></button>
                     </div>
@@ -2339,7 +2358,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     <p><?php echo t('settings.menu_order_empty'); ?></p>
                 </div>
 
-                <div class="form-actions" style="margin-top: 1.5rem;">
+                <div class="settings-actions">
                     <button type="button" class="btn btn-primary" id="saveMenuOrderBtn" disabled><?php echo t('settings.save_menus'); ?></button>
                 </div>
 
@@ -2401,7 +2420,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </div>
                         <small class="form-hint"><?php echo t('settings.modules_hint'); ?></small>
                     </fieldset>
-                    <button type="submit" class="btn btn-primary" id="saveModulesBtn"><?php echo t('settings.save_modules'); ?></button>
+                    <div class="settings-actions">
+                        <button type="submit" class="btn btn-primary" id="saveModulesBtn"><?php echo t('settings.save_modules'); ?></button>
+                    </div>
                 </form>
             </div>
             <?php endif; ?>
@@ -2433,7 +2454,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             <li class="requirement" data-req="match"><?php echo t('settings.pw_match'); ?></li>
                         </ul>
                     </div>
-                    <button type="submit" class="btn btn-primary" id="changePwBtn"><?php echo t('settings.change_password'); ?></button>
+                    <div class="settings-actions">
+                        <button type="submit" class="btn btn-primary" id="changePwBtn"><?php echo t('settings.change_password'); ?></button>
+                    </div>
                 </form>
             </div>
 
@@ -2469,9 +2492,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         <div class="page-list-header">
             <div class="page-list-header-left">
                 <h2><?php echo t('settings.backup'); ?></h2>
+                <p class="page-description"><?php echo t('settings.backup_desc'); ?></p>
             </div>
         </div>
-        <p class="page-description"><?php echo t('settings.backup_desc'); ?></p>
 
         <div class="backup-manual-grid">
             <div class="backup-site-card">
@@ -2717,8 +2740,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     <?php if ($isAdminUser): ?>
     <div class="admin-container" id="systemTab" style="display: none;">
-        <div class="page-list-header"><h2><?php echo t('system.title'); ?></h2>
-            <button type="button" class="btn btn-secondary" onclick="loadSystemStatus()"><?php echo t('btn.refresh'); ?></button></div>
+        <div class="page-list-header">
+            <div class="page-list-header-left"><h2><?php echo t('system.title'); ?></h2></div>
+            <div class="page-list-header-actions"><button type="button" class="btn btn-secondary btn-sm" onclick="loadSystemStatus()"><?php echo t('btn.refresh'); ?></button></div>
+        </div>
         <div id="systemStatusBody" class="system-status-grid" aria-live="polite"></div>
     </div>
     <?php endif; ?>

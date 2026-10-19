@@ -34,6 +34,9 @@
         document.querySelectorAll('.settings-tab-btn').forEach(function(b) { b.classList.remove('active'); });
         document.querySelectorAll('.settings-panel').forEach(function(p) { p.classList.remove('active'); });
         btn.classList.add('active');
+        if (typeof window.nbSetTopbarTitle === 'function') {
+            window.nbSetTopbarTitle([t('settings.title'), btn.textContent.trim()]);
+        }
         // Looked up here: the initial route can call this before the constant above is initialized
         var mobileNav = document.getElementById('settingsMobileNav');
         if (mobileNav) { mobileNav.value = tab; window.nbSelectSync?.(mobileNav); }
@@ -1629,7 +1632,7 @@
     function formatAiImageJobTime(value) {
         if (!value) return '';
         var date = new Date(value);
-        return isNaN(date.getTime()) ? '' : date.toLocaleString();
+        return isNaN(date.getTime()) ? '' : nbFormatDate(date, 'datetime');
     }
 
     function updateAiImageJobsPanel(jobs, isChecking) {
@@ -1840,7 +1843,7 @@
         if (!value) return '';
         var date = new Date(value);
         if (Number.isNaN(date.getTime())) return value;
-        return date.toLocaleString();
+        return nbFormatDate(date, 'datetime');
     }
 
     function renderAiImageHistory(items, append, hasMore) {
