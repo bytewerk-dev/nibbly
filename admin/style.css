@@ -10357,3 +10357,31 @@ html[data-density="compact"] .settings-tabs {
 html[data-density="compact"] .settings-nav-group h3 {
     margin-bottom: var(--nb-space-1);
 }
+
+
+/* ============================================================
+   PHASE 4: DARK MODE PASS
+   ============================================================ */
+
+/* Dark text on the lifted primary: no light text-shadow */
+[data-site-theme="dark"] .btn-primary,
+[data-site-theme="dark"] .nb-btn--primary {
+    text-shadow: none;
+}
+
+/* Native checkboxes and radios pick up the base colour and stay visible on dark surfaces */
+.admin-main input[type="checkbox"],
+.admin-main input[type="radio"] {
+    accent-color: var(--nb-primary);
+}
+
+[data-site-theme="dark"] .admin-main input[type="radio"],
+[data-site-theme="dark"] .admin-main input[type="checkbox"] {
+    color-scheme: dark;
+}
+
+/* Accent status chip: label on the tinted chip uses the full text colour */
+.dashboard-status-chip--accent .dashboard-status-chip__label {
+    color: var(--nb-text);
+    opacity: 0.78;
+}

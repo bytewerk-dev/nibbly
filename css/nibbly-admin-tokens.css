@@ -247,6 +247,8 @@
         --nb-brand-dark: oklch(from var(--nb-accent-base) calc(max(l, 0.72) - 0.10) c h);
         --nb-brand-subtle: oklch(from var(--nb-accent-base) max(l, 0.72) c h / 0.18);
         --nb-text-muted: #a1a5ad;
+        /* The lifted primary is light, so text on it has to be dark to stay readable */
+        --nb-text-on-primary: #11141b;
     }
 
     /* ---------- SOFT (default): tinted sidebar, white cards, calm colour ---------- */
@@ -309,7 +311,7 @@
         --nb-text-secondary: #3c434a;
         --nb-text-muted: #646970;
         --nb-sidebar-text: #f0f0f1;
-        --nb-sidebar-text-active: #ffffff;
+        --nb-sidebar-text-active: var(--nb-text-on-primary);
         --nb-sidebar-hover-bg: rgba(255, 255, 255, 0.08);
         --nb-sidebar-active-bg: var(--nb-primary);
         --nb-sidebar-border: rgba(255, 255, 255, 0.08);

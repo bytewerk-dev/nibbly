@@ -617,6 +617,11 @@ them when adding admin UI:
 - **Fonts are local.** `theme.font` is `system` (default, no file), `geist` or
   `inter`; faces are declared in `admin/fonts.css` from `admin/fonts/`. Never
   link an external font service in the admin.
+- **Feature stylesheets** (`css/ai-copilot.css`, `css/image-manager.css`) are
+  loaded on the public site too, so they read tokens with fallbacks:
+  `var(--nb-space-3, 12px)`, `var(--nb-text, #172033)`. Keep that form there.
+  In dark mode the primary colour is light, so anything on it uses
+  `--nb-text-on-primary` (dark in dark mode), never a literal white.
 - **Patterns**: every tab starts with `.page-list-header` (title + description
   left, `.page-list-header-actions` right, one `.btn-primary`); the topbar shows
   the site name and a breadcrumb via `nbSetTopbarTitle()`; cards have at most
