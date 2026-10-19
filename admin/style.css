@@ -10257,3 +10257,65 @@ input.color-hex-input,
     border: 1px solid var(--nb-border);
     background: var(--nb-primary);
 }
+
+/* --- Design page follow-ups (review) --- */
+
+/* Radio labels inside the segmented control are not form labels: no block margin */
+.segmented label {
+    margin: 0;
+    line-height: 1;
+}
+
+/* The auto-reset button belongs next to the badge, not at the far right */
+.color-input-group .auto-reset-btn {
+    margin-left: 0;
+}
+
+/* Button preview: one row, as wide as its content, not a stretched block */
+.settings-panel .btn-style-preview {
+    display: inline-flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-self: start;
+    width: max-content;
+    max-width: 100%;
+    gap: var(--nb-space-3);
+    padding: var(--nb-space-3) var(--nb-space-4);
+}
+
+.settings-panel .range-input-group {
+    max-width: 22rem;
+}
+
+/* Headings keep a little air below them even in the compact density */
+.settings-description {
+    margin-top: max(var(--nb-space-1), 0.3rem);
+}
+
+.settings-panel .settings-section > legend {
+    margin-bottom: max(var(--nb-space-3), 0.65rem);
+}
+
+.page-list-header-left {
+    gap: max(var(--nb-space-1), 0.25rem);
+}
+
+.page-list-header {
+    margin-bottom: max(var(--nb-space-5), 1rem);
+}
+
+.dashboard-section-header h3,
+.backup-site-card__info h3 {
+    margin-bottom: max(var(--nb-space-1), 0.25rem);
+}
+
+/* Compact density: tighter sidebar items */
+html[data-density="compact"] .sidebar-nav-item {
+    padding-block: var(--nb-space-2);
+}
+
+html[data-density="compact"] .sidebar-nav,
+html[data-density="compact"] .sidebar-bottom {
+    gap: 1px;
+}

@@ -221,8 +221,8 @@ License: MIT License (SIL Open Font License 1.1 for releases from 1.4.0)
 
 ## Inter
 
-The dashboard can use the Inter typeface, shipped locally in `admin/fonts/` (`inter-regular.woff2`). No external request is made.
+The dashboard can use the Inter typeface, shipped locally in `admin/fonts/` as the variable font in the latin and latin-ext subsets (`inter-variable-latin.woff2`, `inter-variable-latin-ext.woff2`, downloaded once from Google Fonts). No external request is made at runtime.
 
-Source: https://github.com/rsms/inter
+Source: https://github.com/rsms/inter (files via https://fonts.google.com/specimen/Inter)
 
 License: SIL Open Font License 1.1
