@@ -282,7 +282,7 @@
     // Format date without seconds
     function formatDateShort(dateStr) {
         const d = new Date(dateStr);
-        return nbFormatDate(d, 'datetime');
+        return d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     }
 
     // Toast

@@ -16,58 +16,6 @@
         return response;
     };
 
-    // Shared date formatting for the whole dashboard (locale = admin language from <html lang>)
-    window.nbFormatDate = function(value, style) {
-        if (value === null || value === undefined || value === '') return '';
-        var d;
-        if (value instanceof Date) {
-            d = value;
-        } else if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-            var p = value.split('-');
-            d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
-        } else {
-            d = new Date(value);
-        }
-        if (isNaN(d.getTime())) return '';
-        var locale = document.documentElement.lang || navigator.language;
-        var options;
-        switch (style) {
-            case 'datetime': options = { dateStyle: 'medium', timeStyle: 'short' }; break;
-            case 'time': options = { timeStyle: 'short' }; break;
-            case 'short': options = { month: 'short', day: 'numeric' }; break;
-            default: options = { dateStyle: 'medium' };
-        }
-        try {
-            return new Intl.DateTimeFormat(locale, options).format(d);
-        } catch (e) {
-            return new Intl.DateTimeFormat(undefined, options).format(d);
-        }
-    };
-
-    // Shared empty state row for list tables
-    window.nbRenderEmptyRow = function(tbody, colCount, text, cta) {
-        var tr = document.createElement('tr');
-        tr.className = 'page-list-empty-row';
-        var td = document.createElement('td');
-        td.className = 'page-list-empty';
-        td.colSpan = colCount;
-        var p = document.createElement('p');
-        p.className = 'page-list-empty__text';
-        p.textContent = text;
-        td.appendChild(p);
-        if (cta && cta.label) {
-            var btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'btn btn-secondary btn-sm page-list-empty__cta';
-            btn.textContent = cta.label;
-            if (typeof cta.onClick === 'function') btn.addEventListener('click', cta.onClick);
-            td.appendChild(btn);
-        }
-        tr.appendChild(td);
-        tbody.appendChild(tr);
-        return tr;
-    };
-
     let currentPage = null;
     let currentContent = null;
     let sectionCounter = 0;
@@ -481,7 +429,7 @@
             tdDate.className = 'page-list-cell-date';
             if (viewInfo.lastModified) {
                 const d = new Date(viewInfo.lastModified);
-                tdDate.textContent = nbFormatDate(d, 'date');
+                tdDate.textContent = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
             } else {
                 tdDate.textContent = '—';
             }
@@ -535,9 +483,15 @@
         });
 
         if (visiblePages.length === 0) {
-            nbRenderEmptyRow(tbody, 2 + otherLangs.length, pageListSearchQuery
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.className = 'page-list-empty';
+            td.colSpan = 2 + otherLangs.length;
+            td.textContent = pageListSearchQuery
                 ? 'Keine Seiten mit diesem Titel gefunden.'
-                : 'Keine Seiten vorhanden.');
+                : 'Keine Seiten vorhanden.';
+            tr.appendChild(td);
+            tbody.appendChild(tr);
         }
 
         // Update sort indicators

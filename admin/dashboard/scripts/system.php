@@ -53,7 +53,7 @@
         const reason = item.reason ? t('security_check.reason_' + item.reason, { url: item.url || '', detail: item.detail || '' }) : '';
         return t('security_check.' + key, {
             paths: (item.exposed || []).join(', '), ip: item.ip || '', version: item.version || '', reason: reason,
-            until: item.until ? nbFormatDate(item.until, 'date') : ''
+            until: item.until ? new Date(item.until + 'T00:00:00').toLocaleDateString() : ''
         });
     }
 
@@ -116,7 +116,7 @@
         const actions = document.createElement('div'); actions.className = 'system-security__actions';
         if (folders.checkedAt) {
             const checked = document.createElement('span');
-            checked.textContent = t('security_check.checked_at', { date: nbFormatDate(folders.checkedAt, 'datetime') });
+            checked.textContent = t('security_check.checked_at', { date: new Date(folders.checkedAt).toLocaleString() });
             actions.append(checked);
         }
         if (folders.canRun) {
@@ -265,7 +265,7 @@
         const actions = document.createElement('div'); actions.className = 'system-security__actions';
         if (seo.checkedAt) {
             const checked = document.createElement('span');
-            checked.textContent = t('security_check.checked_at', { date: nbFormatDate(seo.checkedAt, 'datetime') });
+            checked.textContent = t('security_check.checked_at', { date: new Date(seo.checkedAt).toLocaleString() });
             actions.append(checked);
         }
         if (seo.canRun) {
@@ -349,7 +349,7 @@
             }
             const storage = group(t('system.storage'));
             for (const path of data.paths) storage.append(row(path.name, t(path.writable ? 'system.writable' : 'system.not_writable')));
-            storage.append(row(t('system.last_backup'), data.lastBackup ? nbFormatDate(data.lastBackup, 'datetime') : t('system.no_backup')));
+            storage.append(row(t('system.last_backup'), data.lastBackup ? new Date(data.lastBackup).toLocaleString() : t('system.no_backup')));
             const jobs = group(t('system.failed_jobs'));
             if (!data.failedJobs.length) jobs.append(row(t('system.state'), t('system.no_failed_jobs')));
             for (const job of data.failedJobs) {

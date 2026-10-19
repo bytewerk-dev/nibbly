@@ -338,7 +338,7 @@
         if (!value) return '—';
         var date = typeof value === 'number' ? new Date(value * 1000) : new Date(value);
         if (isNaN(date.getTime())) return '—';
-        return nbFormatDate(date, 'datetime');
+        return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     }
 
     async function openDashboardRecentEdit(item) {
@@ -515,13 +515,13 @@
             var label = series[index].label || '';
             if (!label) {
                 var date = new Date((series[index].date || '') + 'T00:00:00');
-                label = isNaN(date.getTime()) ? (series[index].date || '') : nbFormatDate(date, 'short');
+                label = isNaN(date.getTime()) ? (series[index].date || '') : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
             }
             return '<text x="' + x(index).toFixed(2) + '" y="' + (height - 8) + '" text-anchor="middle">' + escapeHtml(label) + '</text>';
         }).join('');
         var points = values.map(function(value, index) {
             var date = new Date((series[index].date || '') + 'T00:00:00');
-            var label = series[index].label || (isNaN(date.getTime()) ? (series[index].date || '') : nbFormatDate(date, 'date'));
+            var label = series[index].label || (isNaN(date.getTime()) ? (series[index].date || '') : date.toLocaleDateString());
             return '<circle cx="' + x(index).toFixed(2) + '" cy="' + y(value).toFixed(2) + '" r="3"><title>' +
                 escapeHtml(label + ': ' + value + ' ' + t('dashboard_home.views_label')) + '</title></circle>';
         }).join('');
