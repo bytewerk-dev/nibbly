@@ -6072,10 +6072,10 @@ input.color-hex-input,
 }
 .scheduled-cron p {
     margin: 0;
-    padding: var(--nb-space-3) var(--nb-space-4) 0;
+    padding: var(--nb-space-3) var(--nb-space-4) var(--nb-space-3);
     font-size: 0.8125rem;
     color: var(--nb-text-muted);
-    line-height: 1.4;
+    line-height: 1.45;
 }
 .scheduled-cron .scheduled-cron__hint {
     padding-top: var(--nb-space-2);
@@ -6086,7 +6086,7 @@ input.color-hex-input,
     grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--nb-space-2);
-    margin: 0 var(--nb-space-4) var(--nb-space-2);
+    margin: 0 var(--nb-space-4) var(--nb-space-2-5);
 }
 .scheduled-cron__line:last-child {
     margin-bottom: var(--nb-space-4);
