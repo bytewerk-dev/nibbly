@@ -400,6 +400,9 @@
     var THEME_PRESETS = ['soft', 'classic', 'paper', 'studio'];
     var THEME_DENSITIES = ['auto', 'compact', 'comfortable'];
     var THEME_FONTS = ['system', 'geist', 'inter'];
+    // Each preset brings its matching face; picking a preset switches the font
+    // select to it, and the select stays free to change afterwards.
+    var THEME_PRESET_FONTS = { soft: 'inter', classic: 'system', paper: 'system', studio: 'geist' };
     var HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
     // Display values for "auto" sidebar fields (the stylesheet derives the real
@@ -788,6 +791,11 @@
                 c.classList.toggle('selected', on);
                 c.setAttribute('aria-checked', on ? 'true' : 'false');
             });
+            var presetFont = THEME_PRESET_FONTS[card.dataset.preset];
+            var fontSelect = document.getElementById('settingsFont');
+            if (fontSelect && presetFont && THEME_FONTS.indexOf(presetFont) !== -1) {
+                fontSelect.value = presetFont;
+            }
             updateColorPreview();
         });
     });

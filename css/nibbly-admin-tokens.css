@@ -252,48 +252,61 @@
         --nb-text-on-primary: #11141b;
     }
 
-    /* ---------- SOFT (default): tinted sidebar, white cards, calm colour ---------- */
+    /* ---------- SOFT (default): shadcn/ui measures on a faintly tinted shell ----------
+       Reference: shadcn/ui "zinc" theme and its dashboard blocks. Controls h-9
+       (36px) / h-8 (32px), radius 0.5rem for cards and 6px for controls,
+       border zinc-200, muted text zinc-500, table heads 40px in muted text.
+       The shell keeps a whisper of the base colour so Soft stays Soft. */
     :root,
     [data-theme-preset="soft"] {
         /* Soft keeps the hue but caps saturation, so even a loud brand colour sits quietly */
         --nb-primary-src: oklch(from var(--nb-base) l min(c, 0.15) h);
-        --nb-sidebar-bg: oklch(from var(--nb-base) 0.945 min(c, 0.03) h);
-        --nb-bg: oklch(from var(--nb-base) 0.975 min(c, 0.012) h);
+        --nb-sidebar-bg: oklch(from var(--nb-base) 0.965 min(c, 0.012) h);   /* ~zinc-50 */
+        --nb-bg: oklch(from var(--nb-base) 0.985 min(c, 0.006) h);
         --nb-bg-elevated: #ffffff;
-        --nb-bg-sunken: oklch(from var(--nb-base) 0.93 min(c, 0.025) h);
-        --nb-bg-hover: oklch(from var(--nb-base) 0.955 min(c, 0.02) h);
-        --nb-border: oklch(from var(--nb-base) 0.875 min(c, 0.03) h);
-        --nb-border-strong: oklch(from var(--nb-base) 0.78 min(c, 0.035) h);
-        --nb-sidebar-text: #3a3f4a;
-        --nb-sidebar-text-active: var(--nb-primary);
-        --nb-sidebar-hover-bg: oklch(from var(--nb-base) 0.90 min(c, 0.04) h);
-        --nb-sidebar-active-bg: oklch(from var(--nb-base) 0.885 min(c, 0.06) h);
+        --nb-bg-sunken: oklch(from var(--nb-base) 0.955 min(c, 0.012) h);    /* ~zinc-100 */
+        --nb-bg-hover: oklch(from var(--nb-base) 0.975 min(c, 0.008) h);     /* muted/50 */
+        --nb-border: oklch(from var(--nb-base) 0.92 min(c, 0.008) h);        /* zinc-200 #e4e4e7 */
+        --nb-border-strong: oklch(from var(--nb-base) 0.87 min(c, 0.01) h);  /* zinc-300 #d4d4d8 */
+        --nb-text: #09090b;             /* zinc-950 */
+        --nb-text-secondary: #3f3f46;   /* zinc-700 */
+        --nb-text-muted: #71717a;       /* zinc-500 */
+        --nb-sidebar-text: #3f3f46;
+        --nb-sidebar-text-active: #18181b;
+        --nb-sidebar-hover-bg: oklch(from var(--nb-base) 0.94 min(c, 0.014) h);   /* sidebar-accent */
+        --nb-sidebar-active-bg: oklch(from var(--nb-base) 0.915 min(c, 0.02) h);
         --nb-topbar-bg: var(--nb-sidebar-bg);
         --nb-topbar-text: var(--nb-text);
-        --nb-topbar-text-muted: #4a4f5a;
+        --nb-topbar-text-muted: #52525b;
         --nb-topbar-border: transparent;
         --nb-radius-sm: 4px;
         --nb-radius-md: 6px;
-        --nb-radius-lg: 10px;
-        --nb-radius-xl: 16px;
+        --nb-radius-lg: 8px;
+        --nb-radius-xl: 12px;
+        --nb-control-h: calc(2rem * var(--nb-d, 1) + 0.25rem);        /* 36px, h-9 */
+        --nb-control-h-sm: calc(1.75rem * var(--nb-d, 1) + 0.25rem);  /* 32px, h-8 */
+        --nb-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
     }
 
     [data-site-theme="dark"],
     [data-theme-preset="soft"][data-site-theme="dark"] {
-        --nb-sidebar-bg: oklch(from var(--nb-base) 0.17 min(c, 0.035) h);
-        --nb-bg: oklch(from var(--nb-base) 0.215 min(c, 0.025) h);
-        --nb-bg-elevated: oklch(from var(--nb-base) 0.265 min(c, 0.025) h);
-        --nb-bg-sunken: oklch(from var(--nb-base) 0.15 min(c, 0.025) h);
-        --nb-bg-hover: oklch(from var(--nb-base) 0.31 min(c, 0.025) h);
-        --nb-border: oklch(from var(--nb-base) 0.36 min(c, 0.035) h);
-        --nb-border-strong: oklch(from var(--nb-base) 0.47 min(c, 0.04) h);
-        --nb-sidebar-text: #cfd3da;
-        --nb-sidebar-text-active: #ffffff;
-        --nb-sidebar-hover-bg: oklch(from var(--nb-base) 0.26 min(c, 0.05) h);
-        --nb-sidebar-active-bg: oklch(from var(--nb-base) 0.32 min(c, 0.08) h);
+        --nb-sidebar-bg: oklch(from var(--nb-base) 0.20 min(c, 0.012) h);    /* ~zinc-900 */
+        --nb-bg: oklch(from var(--nb-base) 0.17 min(c, 0.008) h);            /* ~zinc-950 lifted */
+        --nb-bg-elevated: oklch(from var(--nb-base) 0.215 min(c, 0.01) h);
+        --nb-bg-sunken: oklch(from var(--nb-base) 0.145 min(c, 0.008) h);
+        --nb-bg-hover: oklch(from var(--nb-base) 0.255 min(c, 0.01) h);
+        --nb-border: oklch(from var(--nb-base) 0.30 min(c, 0.012) h);        /* zinc-800 #27272a */
+        --nb-border-strong: oklch(from var(--nb-base) 0.40 min(c, 0.014) h); /* zinc-700 */
+        --nb-text: #fafafa;
+        --nb-text-secondary: #d4d4d8;   /* zinc-300 */
+        --nb-text-muted: #a1a1aa;       /* zinc-400 */
+        --nb-sidebar-text: #d4d4d8;
+        --nb-sidebar-text-active: #fafafa;
+        --nb-sidebar-hover-bg: oklch(from var(--nb-base) 0.26 min(c, 0.014) h);
+        --nb-sidebar-active-bg: oklch(from var(--nb-base) 0.30 min(c, 0.02) h);
         --nb-topbar-bg: var(--nb-sidebar-bg);
-        --nb-topbar-text: #e8eaee;
-        --nb-topbar-text-muted: #b4b9c2;
+        --nb-topbar-text: #fafafa;
+        --nb-topbar-text-muted: #a1a1aa;
         --nb-topbar-border: transparent;
     }
 
@@ -399,53 +412,94 @@
         --nb-topbar-border: #2c2c2c;
     }
 
-    /* ---------- STUDIO: sidebar in the base colour, white topbar, dense ---------- */
+    /* ---------- STUDIO: Vercel / Geist. Monochrome, hairlines, black buttons ----------
+       Reference: the Vercel dashboard and the Geist design system. Pure neutral
+       greys (#fafafa stage, #ffffff cards, #eaeaea borders), text #171717 /
+       #666666, buttons black on white (white on black in dark mode), radius
+       6px, controls 40px / 32px. The base colour is an accent only: focus
+       ring, links, active markers, success. */
     [data-theme-preset="studio"] {
         --nb-primary-src: var(--nb-base);
-        --nb-sidebar-bg: oklch(from var(--nb-base) 0.32 min(c, 0.09) h);
-        --nb-bg: #f4f5f7;
+        --nb-primary: #171717;
+        --nb-primary-hover: #383838;
+        --nb-primary-active: #000000;
+        --nb-primary-subtle: rgba(0, 0, 0, 0.05);
+        --nb-primary-muted: rgba(0, 0, 0, 0.10);
+        --nb-primary-medium: rgba(0, 0, 0, 0.20);
+        --nb-primary-btn: var(--nb-primary);
+        --nb-primary-btn-hover: var(--nb-primary-hover);
+        --nb-text-on-primary: #ffffff;
+        --nb-border-focus: oklch(from var(--nb-base) l c h);
+        --nb-focus-ring: oklch(from var(--nb-base) l c h / 0.35);
+        --nb-success: oklch(from var(--nb-accent-base) l c h);
+        --nb-sidebar-bg: #fafafa;
+        --nb-bg: #fafafa;
         --nb-bg-elevated: #ffffff;
-        --nb-bg-sunken: #eaecef;
-        --nb-bg-hover: #eceef2;
-        --nb-border: #d9dce2;
-        --nb-border-strong: #b7bcc6;
-        --nb-border-subtle: #e6e8ec;
-        --nb-text: #15171a;
-        --nb-text-secondary: #44484f;
-        --nb-text-muted: #666c76;
-        --nb-sidebar-text: oklch(from var(--nb-base) 0.90 min(c, 0.03) h);
-        --nb-sidebar-text-active: #ffffff;
-        --nb-sidebar-hover-bg: rgba(255, 255, 255, 0.10);
-        --nb-sidebar-active-bg: oklch(from var(--nb-base) 0.42 min(c, 0.12) h);
-        --nb-sidebar-border: rgba(255, 255, 255, 0.10);
+        --nb-bg-sunken: #f2f2f2;
+        --nb-bg-hover: #f5f5f5;
+        --nb-border: #eaeaea;
+        --nb-border-strong: #cfcfcf;
+        --nb-border-subtle: #f2f2f2;
+        --nb-text: #171717;
+        --nb-text-secondary: #444444;
+        --nb-text-muted: #666666;
+        --nb-sidebar-text: #666666;
+        --nb-sidebar-text-active: #171717;
+        --nb-sidebar-hover-bg: rgba(0, 0, 0, 0.04);
+        --nb-sidebar-active-bg: rgba(0, 0, 0, 0.06);
+        --nb-sidebar-border: #eaeaea;
         --nb-topbar-bg: #ffffff;
-        --nb-topbar-text: #15171a;
-        --nb-topbar-text-muted: #666c76;
-        --nb-topbar-border: transparent;
-        --nb-radius-sm: 5px;
-        --nb-radius-md: 8px;
-        --nb-radius-lg: 10px;
-        --nb-radius-xl: 14px;
-        --nb-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+        --nb-topbar-text: #171717;
+        --nb-topbar-text-muted: #666666;
+        --nb-topbar-border: #eaeaea;
+        --nb-surface-group: #fafafa;
+        --nb-radius-sm: 4px;
+        --nb-radius-md: 6px;
+        --nb-radius-lg: 8px;
+        --nb-radius-xl: 12px;
+        --nb-control-h: calc(2.25rem * var(--nb-d, 1) + 0.25rem);     /* 40px */
+        --nb-control-h-sm: calc(1.75rem * var(--nb-d, 1) + 0.25rem);  /* 32px */
+        --nb-shadow-sm: none;
+        --nb-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+        --nb-shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.12);
     }
 
     [data-theme-preset="studio"][data-site-theme="dark"] {
-        --nb-sidebar-bg: oklch(from var(--nb-base) 0.22 min(c, 0.07) h);
-        --nb-bg: #0f1114;
-        --nb-bg-elevated: #171a1f;
-        --nb-bg-sunken: #0b0d10;
-        --nb-bg-hover: #1f2329;
-        --nb-border: #2e333b;
-        --nb-border-strong: #434a55;
-        --nb-border-subtle: #252a31;
-        --nb-text: #eceef1;
-        --nb-text-secondary: #c3c7cd;
-        --nb-text-muted: #959ca6;
-        --nb-sidebar-active-bg: oklch(from var(--nb-base) 0.34 min(c, 0.11) h);
-        --nb-topbar-bg: #171a1f;
-        --nb-topbar-text: #eceef1;
-        --nb-topbar-text-muted: #959ca6;
-        --nb-topbar-border: transparent;
+        --nb-primary: #ededed;
+        --nb-primary-hover: #cccccc;
+        --nb-primary-active: #ffffff;
+        --nb-primary-subtle: rgba(255, 255, 255, 0.06);
+        --nb-primary-muted: rgba(255, 255, 255, 0.12);
+        --nb-primary-medium: rgba(255, 255, 255, 0.22);
+        --nb-primary-btn: var(--nb-primary);
+        --nb-primary-btn-hover: var(--nb-primary-hover);
+        --nb-text-on-primary: #0a0a0a;
+        --nb-border-focus: oklch(from var(--nb-base) max(l, 0.72) c h);
+        --nb-focus-ring: oklch(from var(--nb-base) max(l, 0.72) c h / 0.40);
+        --nb-success: oklch(from var(--nb-accent-base) max(l, 0.72) c h);
+        --nb-sidebar-bg: #000000;
+        --nb-bg: #000000;
+        --nb-bg-elevated: #0a0a0a;
+        --nb-bg-sunken: #000000;
+        --nb-bg-hover: #141414;
+        --nb-border: #262626;
+        --nb-border-strong: #3d3d3d;
+        --nb-border-subtle: #1a1a1a;
+        --nb-text: #ededed;
+        --nb-text-secondary: #c2c2c2;
+        --nb-text-muted: #a1a1a1;
+        --nb-sidebar-text: #a1a1a1;
+        --nb-sidebar-text-active: #ededed;
+        --nb-sidebar-hover-bg: rgba(255, 255, 255, 0.06);
+        --nb-sidebar-active-bg: rgba(255, 255, 255, 0.09);
+        --nb-sidebar-border: #262626;
+        --nb-topbar-bg: #000000;
+        --nb-topbar-text: #ededed;
+        --nb-topbar-text-muted: #a1a1a1;
+        --nb-topbar-border: #262626;
+        --nb-surface-group: #0a0a0a;
+        --nb-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+        --nb-shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.6);
     }
 }
 

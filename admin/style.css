@@ -356,8 +356,8 @@ a:hover {
 .form-group textarea:focus,
 .form-group select:focus {
     outline: none;
-    border-color: var(--nb-primary);
-    box-shadow: 0 0 0 3px var(--nb-primary-muted);
+    border-color: var(--nb-border-focus, var(--nb-primary));
+    box-shadow: 0 0 0 3px var(--nb-focus-ring, var(--nb-primary-muted));
 }
 
 .form-group textarea {
@@ -517,7 +517,7 @@ select:not([multiple]) {
 
 .btn-success {
     background: var(--nb-success);
-    color: #ffffff;
+    color: var(--nb-text-on-primary);
 }
 
 .btn-success:hover {
@@ -4687,7 +4687,7 @@ select.modal-input {
     z-index: 1;
     font-size: var(--nb-text-md);
     font-weight: 700;
-    color: #fff;
+    color: var(--nb-text-on-primary, #fff);
     font-variant-numeric: tabular-nums;
     pointer-events: none;
 }
@@ -7522,7 +7522,7 @@ input.color-hex-input,
 
 .dashboard-range-tab.active {
     background: var(--nb-primary, #3858e9);
-    color: #fff;
+    color: var(--nb-text-on-primary, #fff);
 }
 
 .dashboard-content-pills {
@@ -7909,7 +7909,7 @@ input.color-hex-input,
 
 .ai-tool-tab.active {
     background: var(--nb-primary, #3858e9);
-    color: #fff;
+    color: var(--nb-text-on-primary, #fff);
 }
 
 .ai-tool-panel {
@@ -10057,11 +10057,11 @@ input.color-hex-input,
 
 /* Miniature of the shell: sidebar strip, topbar strip, two blocks on the stage */
 .preset-card__preview {
-    --pv-sidebar: #e4ecfd;
-    --pv-topbar: #e4ecfd;
-    --pv-bg: #f3f7fe;
+    --pv-sidebar: oklch(from var(--nb-base) 0.965 min(c, 0.012) h);
+    --pv-topbar: var(--pv-sidebar);
+    --pv-bg: oklch(from var(--nb-base) 0.985 min(c, 0.006) h);
     --pv-card: #ffffff;
-    --pv-border: #ccd9ed;
+    --pv-border: oklch(from var(--nb-base) 0.92 min(c, 0.008) h);
     --pv-accent: var(--nb-primary);
     --pv-radius: 3px;
     position: relative;
@@ -10125,11 +10125,11 @@ input.color-hex-input,
 
 .preset-card[data-preset="classic"] .preset-card__preview { --pv-sidebar: #1d2327; --pv-topbar: #1d2327; --pv-bg: #f0f0f1; --pv-border: #c3c4c7; --pv-radius: 1px; }
 .preset-card[data-preset="paper"] .preset-card__preview { --pv-sidebar: #fafaf8; --pv-topbar: #ffffff; --pv-bg: #ffffff; --pv-border: #e3e3df; --pv-radius: 2px; }
-.preset-card[data-preset="studio"] .preset-card__preview { --pv-sidebar: oklch(from var(--nb-base) 0.32 min(c, 0.09) h); --pv-topbar: #ffffff; --pv-bg: #f4f5f7; --pv-border: #d9dce2; --pv-radius: 3px; }
-[data-site-theme="dark"] .preset-card__preview { --pv-sidebar: #0e1420; --pv-topbar: #0e1420; --pv-bg: #151c28; --pv-card: #1e2632; --pv-border: #344255; }
+.preset-card[data-preset="studio"] .preset-card__preview { --pv-sidebar: #fafafa; --pv-topbar: #ffffff; --pv-bg: #fafafa; --pv-border: #eaeaea; --pv-accent: #171717; --pv-radius: 2px; }
+[data-site-theme="dark"] .preset-card__preview { --pv-sidebar: oklch(from var(--nb-base) 0.20 min(c, 0.012) h); --pv-topbar: var(--pv-sidebar); --pv-bg: oklch(from var(--nb-base) 0.17 min(c, 0.008) h); --pv-card: oklch(from var(--nb-base) 0.215 min(c, 0.01) h); --pv-border: oklch(from var(--nb-base) 0.30 min(c, 0.012) h); }
 [data-site-theme="dark"] .preset-card[data-preset="classic"] .preset-card__preview { --pv-sidebar: #0e1113; --pv-topbar: #0e1113; --pv-bg: #15181b; --pv-card: #1e2327; --pv-border: #3a4248; }
 [data-site-theme="dark"] .preset-card[data-preset="paper"] .preset-card__preview { --pv-sidebar: #0d0d0d; --pv-topbar: #0d0d0d; --pv-bg: #121212; --pv-card: #181818; --pv-border: #2c2c2c; }
-[data-site-theme="dark"] .preset-card[data-preset="studio"] .preset-card__preview { --pv-sidebar: oklch(from var(--nb-base) 0.22 min(c, 0.07) h); --pv-topbar: #171a1f; --pv-bg: #0f1114; --pv-card: #171a1f; --pv-border: #2e333b; }
+[data-site-theme="dark"] .preset-card[data-preset="studio"] .preset-card__preview { --pv-sidebar: #000000; --pv-topbar: #000000; --pv-bg: #000000; --pv-card: #0a0a0a; --pv-border: #262626; --pv-accent: #ededed; }
 
 /* Segmented control (density, mode) built from radio inputs */
 .segmented {
@@ -10522,4 +10522,205 @@ label.toggle-label > .toggle-switch,
 .form-group.ai-feature-toggle-grid label.toggle-label {
     display: flex;
     width: 100%;
+}
+
+
+/* ============================================================
+   PRESET REFINEMENTS
+   ------------------------------------------------------------
+   Soft follows the shadcn/ui dashboard blocks, Studio follows the Vercel
+   dashboard / Geist. The tokens carry the colours, radii and control
+   heights; the rules here cover what tokens cannot express: table heads,
+   button surfaces, the sidebar item geometry and the topbar line.
+   ============================================================ */
+
+/* --- Soft: shadcn/ui ------------------------------------------------------ */
+
+/* Buttons px-4, small ones px-3 */
+[data-theme-preset="soft"] .btn {
+    padding-inline: var(--nb-space-4);
+}
+
+[data-theme-preset="soft"] .btn-sm {
+    padding-inline: var(--nb-space-3);
+}
+
+/* Inputs px-3 */
+[data-theme-preset="soft"] .form-group input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]),
+[data-theme-preset="soft"] .form-group select,
+[data-theme-preset="soft"] .form-group textarea {
+    padding-inline: var(--nb-space-3);
+}
+
+/* Sidebar menu buttons: h-8, px-2, 16px icons, gap-2 */
+[data-theme-preset="soft"] .sidebar-nav {
+    padding: var(--nb-space-3) var(--nb-space-2);
+    gap: var(--nb-space-0-5);
+}
+
+[data-theme-preset="soft"] .sidebar-nav-item {
+    min-height: 2rem;
+    padding: var(--nb-space-1-5) var(--nb-space-2);
+    gap: var(--nb-space-2);
+    font-weight: 500;
+}
+
+[data-theme-preset="soft"] .sidebar-nav-item svg {
+    width: 1rem;
+    height: 1rem;
+    opacity: 0.85;
+}
+
+[data-theme-preset="soft"] .sidebar-nav-item.active {
+    font-weight: 600;
+}
+
+/* Table heads h-10, medium weight, muted, no caps; cells p-2; rows hover muted/50 */
+[data-theme-preset="soft"] .page-list-table thead th,
+[data-theme-preset="soft"] .users-table th,
+[data-theme-preset="soft"] .scheduled-list__table th,
+[data-theme-preset="soft"] .ai-audit-table th {
+    height: 2.5rem;
+    padding-block: 0;
+    vertical-align: middle;
+    font-size: var(--nb-text-sm);
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--nb-text-muted);
+    background: transparent;
+}
+
+[data-theme-preset="soft"] .page-list-table td,
+[data-theme-preset="soft"] .users-table td,
+[data-theme-preset="soft"] .scheduled-list__table td,
+[data-theme-preset="soft"] .ai-audit-table td {
+    padding-block: var(--nb-space-2);
+}
+
+[data-theme-preset="soft"] .page-list-table tbody tr:hover,
+[data-theme-preset="soft"] .users-table tbody tr:hover,
+[data-theme-preset="soft"] .scheduled-list__table tbody tr:hover {
+    background: var(--nb-bg-hover);
+}
+
+/* --- Studio: Vercel / Geist ----------------------------------------------- */
+
+/* Topbar and sidebar end in a hairline; the stage starts square under it */
+[data-theme-preset="studio"] .admin-topbar {
+    border-bottom-color: var(--nb-border);
+}
+
+[data-theme-preset="studio"] .admin-sidebar {
+    border-right: 1px solid var(--nb-sidebar-border);
+}
+
+[data-theme-preset="studio"] .admin-main {
+    border-radius: 0;
+    box-shadow: none;
+}
+
+/* Sidebar items: 32px, quiet text, dark when active */
+[data-theme-preset="studio"] .sidebar-nav {
+    padding: var(--nb-space-3) var(--nb-space-2);
+    gap: var(--nb-space-0-5);
+}
+
+[data-theme-preset="studio"] .sidebar-nav-item {
+    min-height: 2rem;
+    padding: var(--nb-space-1-5) var(--nb-space-2-5);
+    gap: var(--nb-space-2);
+    font-weight: 500;
+}
+
+[data-theme-preset="studio"] .sidebar-nav-item svg {
+    width: 1rem;
+    height: 1rem;
+    opacity: 0.8;
+}
+
+[data-theme-preset="studio"] .sidebar-nav-item.active {
+    font-weight: 600;
+}
+
+/* Buttons: solid, no gradient, no glow, no text shadow. Secondary buttons
+   are white with a hairline that darkens on hover. */
+[data-theme-preset="studio"] .btn {
+    font-weight: 500;
+}
+
+[data-theme-preset="studio"] .btn-primary,
+[data-theme-preset="studio"] .btn-danger {
+    text-shadow: none;
+    box-shadow: none;
+    transition: background-color var(--nb-duration-fast) var(--nb-ease),
+                transform var(--nb-duration-fast) var(--nb-ease);
+}
+
+[data-theme-preset="studio"] .btn-primary {
+    background: var(--nb-primary);
+}
+
+[data-theme-preset="studio"] .btn-primary:hover {
+    background: var(--nb-primary-hover);
+    box-shadow: none;
+}
+
+[data-theme-preset="studio"] .btn-danger {
+    background: var(--nb-danger);
+}
+
+[data-theme-preset="studio"] .btn-danger:hover {
+    background: var(--nb-danger-hover);
+    box-shadow: none;
+}
+
+[data-theme-preset="studio"] .btn-primary::after,
+[data-theme-preset="studio"] .btn-danger::after {
+    display: none;
+}
+
+[data-theme-preset="studio"] .btn-secondary {
+    border-color: var(--nb-border);
+    box-shadow: none;
+}
+
+[data-theme-preset="studio"] .btn-secondary:hover {
+    background: var(--nb-bg);
+    border-color: var(--nb-border-strong);
+}
+
+/* Tables: grey head band, 13px muted labels, hairline rows, hover #fafafa */
+[data-theme-preset="studio"] .page-list-table thead th,
+[data-theme-preset="studio"] .users-table th,
+[data-theme-preset="studio"] .scheduled-list__table th,
+[data-theme-preset="studio"] .ai-audit-table th {
+    padding-block: var(--nb-space-2-5);
+    font-size: var(--nb-text-sm);
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--nb-text-muted);
+    background: var(--nb-bg);
+    border-bottom: 1px solid var(--nb-border);
+}
+
+[data-theme-preset="studio"] .page-list-table td,
+[data-theme-preset="studio"] .users-table td,
+[data-theme-preset="studio"] .scheduled-list__table td,
+[data-theme-preset="studio"] .ai-audit-table td {
+    padding-block: var(--nb-space-3);
+}
+
+[data-theme-preset="studio"] .page-list-table tbody tr:hover,
+[data-theme-preset="studio"] .users-table tbody tr:hover,
+[data-theme-preset="studio"] .scheduled-list__table tbody tr:hover {
+    background: var(--nb-bg);
+}
+
+/* Focus rings use the base colour so the accent still shows up somewhere */
+[data-theme-preset="studio"] .btn:focus-visible,
+[data-theme-preset="studio"] .sidebar-nav-item:focus-visible,
+[data-theme-preset="studio"] .preset-card:focus-visible {
+    outline-color: var(--nb-border-focus);
 }

@@ -607,10 +607,19 @@ them when adding admin UI:
   syntax inside `@supports (color: oklch(from red l c h))`. Dark mode lifts the
   base to at least `l 0.72`; nothing stores a separate dark colour any more
   (`darkPrimaryColor` / `darkAccentColor` are accepted but ignored).
-- **Presets** (`theme.preset`: `soft` default, `classic`, `paper`, `studio`) only
-  set surfaces, borders, radii and the sidebar/topbar tokens
+- **Presets** (`theme.preset`: `soft` default, `classic`, `paper`, `studio`)
+  set surfaces, borders, radii, control heights and the sidebar/topbar tokens
   (`--nb-sidebar-*`, `--nb-topbar-*`). Admin CSS reads those tokens and never
-  hard-codes chrome colours. `<html>` carries `data-theme-preset`,
+  hard-codes chrome colours; the few per-preset component rules (table heads,
+  button surfaces, sidebar item geometry) live in the "PRESET REFINEMENTS"
+  block at the end of `admin/style.css`. Two presets follow published
+  references: **Soft** uses the shadcn/ui measures (zinc greys, 36 px / 32 px
+  controls, 8 px cards / 6 px controls, 40 px table heads in muted text) on a
+  faintly tinted shell; **Studio** follows the Vercel dashboard / Geist (pure
+  neutral greys, `#eaeaea` hairlines, black buttons, white on black in dark
+  mode, 40 px / 32 px controls, 6 px radius). In Studio the base colour is an
+  accent only (focus ring, success, badges), so `--nb-primary` is near-black
+  there and must not be assumed to carry the brand hue. `<html>` carries `data-theme-preset`,
   `data-density` and `data-font`; `admin/dashboard.php` emits `--nb-base` and
   optional sidebar overrides inline, `applyTheme()` in
   `admin/dashboard/scripts/settings.php` mirrors that live.
