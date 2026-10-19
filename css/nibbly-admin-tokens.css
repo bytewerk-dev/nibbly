@@ -52,7 +52,8 @@
     --nb-topbar-bg: var(--nb-sidebar-bg);
     --nb-topbar-text: var(--nb-text);
     --nb-topbar-text-muted: var(--nb-text-secondary);
-    --nb-topbar-border: var(--nb-border);
+    --nb-topbar-border: transparent;
+    --nb-topbar-divider: var(--nb-border);
     --nb-surface-group: color-mix(in srgb, var(--nb-bg-elevated) 88%, var(--nb-bg));
     --nb-surface-item: var(--nb-bg);
 
@@ -270,7 +271,7 @@
         --nb-topbar-bg: var(--nb-sidebar-bg);
         --nb-topbar-text: var(--nb-text);
         --nb-topbar-text-muted: #4a4f5a;
-        --nb-topbar-border: var(--nb-border);
+        --nb-topbar-border: transparent;
         --nb-radius-sm: 4px;
         --nb-radius-md: 6px;
         --nb-radius-lg: 10px;
@@ -293,7 +294,7 @@
         --nb-topbar-bg: var(--nb-sidebar-bg);
         --nb-topbar-text: #e8eaee;
         --nb-topbar-text-muted: #b4b9c2;
-        --nb-topbar-border: var(--nb-border);
+        --nb-topbar-border: transparent;
     }
 
     /* ---------- CLASSIC: WordPress-like dark chrome, light stage, flat and square ---------- */
@@ -318,7 +319,7 @@
         --nb-topbar-bg: #1d2327;
         --nb-topbar-text: #f0f0f1;
         --nb-topbar-text-muted: #c3c4c7;
-        --nb-topbar-border: rgba(255, 255, 255, 0.12);
+        --nb-topbar-border: transparent;
         --nb-radius-sm: 3px;
         --nb-radius-md: 4px;
         --nb-radius-lg: 6px;
@@ -420,7 +421,7 @@
         --nb-topbar-bg: #ffffff;
         --nb-topbar-text: #15171a;
         --nb-topbar-text-muted: #666c76;
-        --nb-topbar-border: #d9dce2;
+        --nb-topbar-border: transparent;
         --nb-radius-sm: 5px;
         --nb-radius-md: 8px;
         --nb-radius-lg: 10px;
@@ -444,7 +445,7 @@
         --nb-topbar-bg: #171a1f;
         --nb-topbar-text: #eceef1;
         --nb-topbar-text-muted: #959ca6;
-        --nb-topbar-border: #2e333b;
+        --nb-topbar-border: transparent;
     }
 }
 
