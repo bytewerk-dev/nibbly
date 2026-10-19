@@ -75,16 +75,44 @@
     --nb-font-mono: 'Geist Mono', 'SF Mono', Menlo, Consolas, monospace;
     --nb-font-display: var(--nb-font-sans);
 
-    /* Spacing (8px base grid) */
-    --nb-space-1: 0.25rem;   /* 4px */
-    --nb-space-2: 0.5rem;    /* 8px */
-    --nb-space-3: 0.75rem;   /* 12px */
-    --nb-space-4: 1rem;      /* 16px */
-    --nb-space-5: 1.25rem;   /* 20px */
-    --nb-space-6: 1.5rem;    /* 24px */
-    --nb-space-8: 2rem;      /* 32px */
-    --nb-space-10: 2.5rem;   /* 40px */
-    --nb-space-12: 3rem;     /* 48px */
+    /* Density factor. The admin sets it from the viewport or the user's
+       "Dichte" setting (see admin/style.css); everywhere else it is 1.
+       It scales spacing and control heights, never font sizes. */
+    --nb-d: 1;
+
+    /* Spacing (4px grid, scaled by density). Values in comments are for
+       --nb-d: 1 at 16px root size. */
+    --nb-space-0-5: calc(0.125rem * var(--nb-d, 1)); /* 2px */
+    --nb-space-1: calc(0.25rem * var(--nb-d, 1));    /* 4px */
+    --nb-space-1-5: calc(0.375rem * var(--nb-d, 1)); /* 6px */
+    --nb-space-2: calc(0.5rem * var(--nb-d, 1));     /* 8px */
+    --nb-space-2-5: calc(0.625rem * var(--nb-d, 1)); /* 10px */
+    --nb-space-3: calc(0.75rem * var(--nb-d, 1));    /* 12px */
+    --nb-space-3-5: calc(0.875rem * var(--nb-d, 1)); /* 14px */
+    --nb-space-4: calc(1rem * var(--nb-d, 1));       /* 16px */
+    --nb-space-5: calc(1.25rem * var(--nb-d, 1));    /* 20px */
+    --nb-space-6: calc(1.5rem * var(--nb-d, 1));     /* 24px */
+    --nb-space-8: calc(2rem * var(--nb-d, 1));       /* 32px */
+    --nb-space-10: calc(2.5rem * var(--nb-d, 1));    /* 40px */
+    --nb-space-12: calc(3rem * var(--nb-d, 1));      /* 48px */
+
+    /* Type scale: six steps. Size separates the levels, weight is secondary. */
+    --nb-text-xs: 0.75rem;     /* table heads, group labels, meta, pills */
+    --nb-text-sm: 0.8125rem;   /* hints, descriptions */
+    --nb-text-md: 0.875rem;    /* body, labels, buttons, inputs */
+    --nb-text-lg: 1rem;        /* h3 card titles */
+    --nb-text-xl: 1.375rem;    /* h2 page titles */
+    --nb-text-2xl: 1.75rem;    /* stat numbers */
+
+    /* Controls: one height for inputs, selects and buttons, one small
+       variant for toolbars and table rows. */
+    --nb-control-h: calc(2.25rem * var(--nb-d, 1) + 0.25rem);     /* 40px */
+    --nb-control-h-sm: calc(1.75rem * var(--nb-d, 1) + 0.25rem);  /* 32px */
+
+    /* Admin shell geometry (rem so it grows with the root font size) */
+    --nb-sidebar-w: 12.5rem;    /* 200px */
+    --nb-topbar-h: 3.0625rem;   /* 49px */
+    --nb-content-max: 100rem;   /* 1600px at 16px root */
 
     /* Border radii */
     --nb-radius-sm: 4px;
