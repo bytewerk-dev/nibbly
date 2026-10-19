@@ -10516,8 +10516,10 @@ label.toggle-label > .toggle-switch,
 }
 
 /* Module tiles and the three-column feature grid fill their cells */
-.access-toggle-row .toggle-label,
-.ai-feature-toggle-grid .toggle-label {
+.access-toggle-row label.toggle-label,
+.ai-feature-toggle-grid label.toggle-label,
+.form-group.access-toggle-row label.toggle-label,
+.form-group.ai-feature-toggle-grid label.toggle-label {
     display: flex;
     width: 100%;
 }
