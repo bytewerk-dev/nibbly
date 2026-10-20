@@ -4481,6 +4481,9 @@ select.modal-input {
 .logo-path-input {
     display: flex;
     gap: var(--nb-space-2);
+    /* The field sits next to a small button, so it takes the small control
+       height too (the input rule reads --nb-control-h) */
+    --nb-control-h: var(--nb-control-h-sm);
 }
 
 .logo-path-input .input-with-clear {
@@ -10955,6 +10958,15 @@ label.toggle-label > .toggle-switch,
 
 [data-theme-preset="console"] .mail-badge {
     border-radius: var(--nb-radius-sm);
+    box-shadow: none;
+}
+
+[data-theme-preset="console"] .toggle-slider {
+    border-radius: var(--nb-radius-sm);
+}
+
+[data-theme-preset="console"] .toggle-slider::before {
+    border-radius: 0;
     box-shadow: none;
 }
 
