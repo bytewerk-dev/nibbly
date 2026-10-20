@@ -230,9 +230,14 @@ function nibblyAdjustColorForContrast(string $hex, string $background, float $mi
 function nibblySanitizeThemeContrast(array $theme): array {
     $minReadable = 3.0;
 
+    // The stylesheet picks white or dark text on the base colour by its
+    // lightness, so a base colour only needs to carry one of the two. Light
+    // colours such as orange stay as chosen instead of being darkened.
     foreach (['primaryColor', 'accentColor'] as $key) {
         if (!empty($theme[$key])) {
-            $theme[$key] = nibblyAdjustColorForContrast((string)$theme[$key], '#ffffff', $minReadable, 'darker');
+            $hex = nibblyNormalizeHexColor((string)$theme[$key]);
+            $best = max(nibblyContrastRatio($hex, '#ffffff'), nibblyContrastRatio($hex, '#111111'));
+            $theme[$key] = $best >= $minReadable ? $hex : nibblyAdjustColorForContrast($hex, '#ffffff', $minReadable, 'darker');
         }
     }
 

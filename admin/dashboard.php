@@ -71,6 +71,7 @@ if ($isAdminUser) $validDashboardTabs[] = 'system';
 function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): string {
     static $paths = [
         'hamburger' => '<path d="M3 12h18M3 6h18M3 18h18"/>',
+        'collapse'  => '<path d="M11 17l-5-5 5-5"/><path d="M18 17l-5-5 5-5"/>',
         'home'      => '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/>',
         'edit'      => '<path d="M12 20h9M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4L16.5 3.5z"/>',
         'eye'       => '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
@@ -97,9 +98,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 ?>
 <!DOCTYPE html>
 <?php
-$_themePreset = in_array($siteSettings['theme']['preset'] ?? '', ['soft', 'classic', 'paper', 'studio'], true) ? $siteSettings['theme']['preset'] : 'soft';
+$_themePreset = in_array($siteSettings['theme']['preset'] ?? '', ['soft', 'classic', 'paper', 'studio', 'console'], true) ? $siteSettings['theme']['preset'] : 'soft';
 $_themeDensity = in_array($siteSettings['theme']['density'] ?? '', ['auto', 'compact', 'comfortable'], true) ? $siteSettings['theme']['density'] : 'auto';
-$_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist', 'inter'], true) ? $siteSettings['theme']['font'] : 'system';
+$_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist', 'inter', 'geist-mono'], true) ? $siteSettings['theme']['font'] : 'system';
 ?>
 <html lang="<?php echo htmlspecialchars(_nbAdminLang()); ?>" data-site-theme="<?php echo htmlspecialchars($adminTheme === 'system' ? 'light' : $adminTheme); ?>" data-theme-preset="<?php echo $_themePreset; ?>" data-density="<?php echo $_themeDensity; ?>" data-font="<?php echo $_themeFont; ?>">
 <head>
@@ -129,6 +130,16 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
     })();
     </script>
     <?php endif; ?>
+    <script>
+    /* Sidebar collapse state before first paint, so nothing jumps */
+    (function() {
+        try {
+            if (window.localStorage.getItem('nibblySidebarCollapsed') === '1') {
+                document.documentElement.setAttribute('data-sidebar', 'collapsed');
+            }
+        } catch (e) {}
+    })();
+    </script>
     <?php
     // The saved base colour and the optional overrides reach the stylesheet as
     // custom properties on :root; css/nibbly-admin-tokens.css derives everything
@@ -299,6 +310,10 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                 <?php echo nbIcon('logout'); ?>
                 <span><?php echo t('nav.logout'); ?></span>
             </a>
+            <button type="button" class="sidebar-nav-item sidebar-collapse" id="sidebarCollapseBtn" aria-pressed="false" title="<?php echo htmlspecialchars(t('nav.collapse_sidebar'), ENT_QUOTES, 'UTF-8'); ?>">
+                <?php echo nbIcon('collapse'); ?>
+                <span><?php echo t('nav.collapse_sidebar'); ?></span>
+            </button>
             <a class="sidebar-version" href="https://nibbly.dev" target="_blank" rel="noopener noreferrer">nibbly <?php echo htmlspecialchars(nibblyVersion(), ENT_QUOTES, 'UTF-8'); ?></a>
         </div>
     </aside>
@@ -1387,7 +1402,7 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                         <div class="form-group">
                             <label id="settingsThemePresetLabel"><?php echo t('settings.theme_preset'); ?></label>
                             <div class="preset-grid" role="radiogroup" aria-labelledby="settingsThemePresetLabel">
-                                <?php foreach (['soft', 'classic', 'paper', 'studio'] as $_preset): ?>
+                                <?php foreach (['soft', 'classic', 'paper', 'studio', 'console'] as $_preset): ?>
                                 <button type="button" class="preset-card" role="radio" aria-checked="false" data-preset="<?php echo $_preset; ?>">
                                     <span class="preset-card__preview" aria-hidden="true"><span class="preset-card__stage"><span></span><span></span><span></span></span></span>
                                     <span class="preset-card__name"><?php echo t('settings.preset_' . $_preset); ?></span>
@@ -1434,6 +1449,7 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                                 <option value="system"><?php echo t('settings.font_system'); ?></option>
                                 <option value="geist"><?php echo t('settings.font_geist'); ?></option>
                                 <option value="inter"><?php echo t('settings.font_inter'); ?></option>
+                                <option value="geist-mono"><?php echo t('settings.font_geist_mono'); ?></option>
                             </select>
                             <small class="form-hint"><?php echo t('settings.font_hint'); ?></small>
                         </div>

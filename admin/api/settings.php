@@ -184,13 +184,13 @@ switch ($action) {
                     if (in_array($key, ['adminTheme', 'publicDefault'], true) && !in_array($value, ['light', 'dark', 'system'], true)) {
                         jsonResponse(false, null, 'Invalid theme value');
                     }
-                    if ($key === 'preset' && !in_array($value, ['soft', 'classic', 'paper', 'studio'], true)) {
+                    if ($key === 'preset' && !in_array($value, ['soft', 'classic', 'paper', 'studio', 'console'], true)) {
                         jsonResponse(false, null, 'Invalid theme preset');
                     }
                     if ($key === 'density' && !in_array($value, ['auto', 'compact', 'comfortable'], true)) {
                         jsonResponse(false, null, 'Invalid density value');
                     }
-                    if ($key === 'font' && !in_array($value, ['system', 'geist', 'inter'], true)) {
+                    if ($key === 'font' && !in_array($value, ['system', 'geist', 'inter', 'geist-mono'], true)) {
                         jsonResponse(false, null, 'Invalid font value');
                     }
 

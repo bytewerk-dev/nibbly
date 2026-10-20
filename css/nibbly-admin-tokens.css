@@ -133,6 +133,10 @@
     --nb-topbar-h: 3.0625rem;   /* 49px */
     --nb-content-max: 100rem;   /* 1600px at 16px root */
 
+    /* Group dividers (settings groups, sidebar foot, save bars): solid by
+       default, Console switches them to dashed */
+    --nb-divider-style: solid;
+
     /* Border radii */
     --nb-radius-sm: 4px;
     --nb-radius-md: 6px;
@@ -225,6 +229,10 @@
         --nb-primary-btn-hover: radial-gradient(ellipse at 50% 0%, oklch(from var(--nb-primary-src) calc(l + 0.18) c h) 0%, var(--nb-primary) 70%);
         --nb-border-focus: var(--nb-primary);
         --nb-focus-ring: var(--nb-primary-muted);
+        /* Text on the primary colour: near-white on dark primaries, near-black
+           on light ones (lightness above ~0.68, e.g. orange or yellow). The
+           server no longer darkens light base colours; this keeps them readable. */
+        --nb-text-on-primary: oklch(from var(--nb-primary) clamp(0.17, (0.68 - l) * 100, 0.985) 0 0);
         --nb-brand: oklch(from var(--nb-accent-base) l c h);
         --nb-brand-light: oklch(from var(--nb-accent-base) calc(l + 0.12) c h);
         --nb-brand-dark: oklch(from var(--nb-accent-base) calc(l - 0.10) c h);
@@ -501,6 +509,74 @@
         --nb-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
         --nb-shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.6);
     }
+
+    /* ---------- CONSOLE: ops-console look. Monospace, caps, hairlines, one strong accent ----------
+       Dark first: near-black surfaces, dashed group dividers, square corners,
+       the base colour at full chroma for everything that means "live" or
+       "selected". Light mode is the same drawing on grey paper. The preset
+       pairs with the Geist Mono face on the regular type scale. */
+    [data-theme-preset="console"] {
+        --nb-primary-src: var(--nb-base);
+        --nb-primary-btn: var(--nb-primary);
+        --nb-primary-btn-hover: var(--nb-primary-hover);
+        --nb-sidebar-bg: #f1f1f1;
+        --nb-bg: #f1f1f1;
+        --nb-bg-elevated: #fafafa;
+        --nb-bg-sunken: #e8e8e8;
+        --nb-bg-hover: #ececec;
+        --nb-border: #d2d2d2;
+        --nb-border-strong: #9a9a9a;
+        --nb-border-subtle: #e2e2e2;
+        --nb-text: #111111;
+        --nb-text-secondary: #3d3d3d;
+        --nb-text-muted: #5f5f5f;
+        --nb-sidebar-text: #5f5f5f;
+        --nb-sidebar-text-active: #111111;
+        --nb-sidebar-hover-bg: rgba(0, 0, 0, 0.05);
+        --nb-sidebar-active-bg: rgba(0, 0, 0, 0.07);
+        --nb-sidebar-border: #d2d2d2;
+        --nb-topbar-bg: #fafafa;
+        --nb-topbar-text: #111111;
+        --nb-topbar-text-muted: #5f5f5f;
+        --nb-topbar-border: #d2d2d2;
+        --nb-surface-group: #f1f1f1;
+        --nb-divider-style: dashed;
+        --nb-radius-sm: 0px;
+        --nb-radius-md: 2px;
+        --nb-radius-lg: 2px;
+        --nb-radius-xl: 2px;
+        --nb-control-h: calc(2rem * var(--nb-d, 1) + 0.25rem);        /* 36px */
+        --nb-control-h-sm: calc(1.625rem * var(--nb-d, 1) + 0.25rem); /* 30px */
+        --nb-shadow-sm: none;
+        --nb-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+        --nb-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.18);
+    }
+
+    [data-theme-preset="console"][data-site-theme="dark"] {
+        --nb-sidebar-bg: #0a0a0a;
+        --nb-bg: #0a0a0a;
+        --nb-bg-elevated: #121212;
+        --nb-bg-sunken: #050505;
+        --nb-bg-hover: #1a1a1a;
+        --nb-border: #2a2a2a;
+        --nb-border-strong: #4a4a4a;
+        --nb-border-subtle: #1f1f1f;
+        --nb-text: #e8e8e8;
+        --nb-text-secondary: #bdbdbd;
+        --nb-text-muted: #8c8c8c;
+        --nb-sidebar-text: #9a9a9a;
+        --nb-sidebar-text-active: #f2f2f2;
+        --nb-sidebar-hover-bg: rgba(255, 255, 255, 0.06);
+        --nb-sidebar-active-bg: rgba(255, 255, 255, 0.08);
+        --nb-sidebar-border: #2a2a2a;
+        --nb-topbar-bg: #0a0a0a;
+        --nb-topbar-text: #e8e8e8;
+        --nb-topbar-text-muted: #8c8c8c;
+        --nb-topbar-border: #2a2a2a;
+        --nb-surface-group: #0e0e0e;
+        --nb-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.6);
+        --nb-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.7);
+    }
 }
 
 
@@ -515,6 +591,11 @@
 
 [data-font="inter"] {
     --nb-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+[data-font="geist-mono"] {
+    --nb-font-sans: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    --nb-font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 }
 
 

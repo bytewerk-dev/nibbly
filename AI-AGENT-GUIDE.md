@@ -607,8 +607,8 @@ them when adding admin UI:
   syntax inside `@supports (color: oklch(from red l c h))`. Dark mode lifts the
   base to at least `l 0.72`; nothing stores a separate dark colour any more
   (`darkPrimaryColor` / `darkAccentColor` are accepted but ignored).
-- **Presets** (`theme.preset`: `soft` default, `classic`, `paper`, `studio`)
-  set surfaces, borders, radii, control heights and the sidebar/topbar tokens
+- **Presets** (`theme.preset`: `soft` default, `classic`, `paper`, `studio`,
+  `console`) set surfaces, borders, radii, control heights and the sidebar/topbar tokens
   (`--nb-sidebar-*`, `--nb-topbar-*`). Admin CSS reads those tokens and never
   hard-codes chrome colours; the few per-preset component rules (table heads,
   button surfaces, sidebar item geometry) live in the "PRESET REFINEMENTS"
@@ -619,12 +619,24 @@ them when adding admin UI:
   neutral greys, `#eaeaea` hairlines, black buttons, white on black in dark
   mode, 40 px / 32 px controls, 6 px radius). In Studio the base colour is an
   accent only (focus ring, success, badges), so `--nb-primary` is near-black
-  there and must not be assumed to carry the brand hue. `<html>` carries `data-theme-preset`,
+  there and must not be assumed to carry the brand hue. **Console** is the
+  ops-console look: Geist Mono as the UI face (`theme.font: geist-mono`), a
+  smaller type scale, caps with tracking on labels, heads, navigation and
+  buttons, square corners, dashed group dividers, and a crosshair on selected
+  elements (four corner brackets drawn by one `::after` with eight gradient
+  strokes; see `--nb-xh-*` in the Console block). The base colour keeps its
+  full chroma there. `<html>` carries `data-theme-preset`,
   `data-density` and `data-font`; `admin/dashboard.php` emits `--nb-base` and
   optional sidebar overrides inline, `applyTheme()` in
   `admin/dashboard/scripts/settings.php` mirrors that live.
-- **Fonts are local.** `theme.font` is `system` (default, no file), `geist` or
-  `inter`; faces are declared in `admin/fonts.css` from `admin/fonts/`. Never
+- **Collapsible sidebar.** `<html data-sidebar="collapsed">` shrinks the
+  sidebar to its icons (`--nb-sidebar-w` 3.5rem, labels hidden, badges in
+  the corner, tooltips from the label text). The state is a per-browser
+  preference in `localStorage` (`nibblySidebarCollapsed`), set by a head
+  script before first paint and toggled by `#sidebarCollapseBtn` at the
+  sidebar's foot; the mobile drawer below 769px ignores it.
+- **Fonts are local.** `theme.font` is `system` (default, no file), `geist`,
+  `inter` or `geist-mono`; faces are declared in `admin/fonts.css` from `admin/fonts/`. Never
   link an external font service in the admin.
 - **Feature stylesheets** (`css/ai-copilot.css`, `css/image-manager.css`) are
   loaded on the public site too, so they read tokens with fallbacks:

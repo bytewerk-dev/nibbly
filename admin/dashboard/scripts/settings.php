@@ -397,12 +397,21 @@
         defaultOgImage: ''
     };
 
-    var THEME_PRESETS = ['soft', 'classic', 'paper', 'studio'];
+    var THEME_PRESETS = ['soft', 'classic', 'paper', 'studio', 'console'];
     var THEME_DENSITIES = ['auto', 'compact', 'comfortable'];
-    var THEME_FONTS = ['system', 'geist', 'inter'];
-    // Each preset brings its matching face; picking a preset switches the font
-    // select to it, and the select stays free to change afterwards.
-    var THEME_PRESET_FONTS = { soft: 'inter', classic: 'system', paper: 'system', studio: 'geist' };
+    var THEME_FONTS = ['system', 'geist', 'inter', 'geist-mono'];
+    // Each preset brings its own defaults: the matching face, button radius
+    // and glow, and for Console the orange base colour. Picking a card applies
+    // them; every field stays free to change afterwards. The colour a user had
+    // before Console is remembered and comes back when they leave Console.
+    var THEME_PRESET_DEFAULTS = {
+        soft:    { font: 'inter',      buttonRadius: 6, buttonGlow: true },
+        classic: { font: 'system',     buttonRadius: 4, buttonGlow: false },
+        paper:   { font: 'system',     buttonRadius: 6, buttonGlow: false },
+        studio:  { font: 'geist',      buttonRadius: 6, buttonGlow: false },
+        console: { font: 'geist-mono', buttonRadius: 0, buttonGlow: false, primaryColor: '#ff8800' }
+    };
+    var presetColorBackup = null;
     var HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
     // Display values for "auto" sidebar fields (the stylesheet derives the real
@@ -462,6 +471,12 @@
         return (lighter + 0.05) / (darker + 0.05);
     }
 
+    // Contrast of a surface colour against whichever text the stylesheet
+    // will put on it (white below ~0.68 lightness, near-black above)
+    function bestTextContrast(hex) {
+        return Math.max(contrastRatio(hex, '#ffffff'), contrastRatio(hex, '#111111'));
+    }
+
     function adjustColorForContrast(hex, background, minimumRatio, direction) {
         hex = normalizeHexColor(hex);
         if (contrastRatio(hex, background) >= minimumRatio) return hex;
@@ -492,8 +507,16 @@
             }
         }
 
-        enforce('primaryColor', '#ffffff', 'darker', 'settings.base_color');
-        enforce('accentColor', '#ffffff', 'darker', 'settings.accent_color');
+        // Base and accent: the stylesheet chooses white or dark text on them,
+        // so they only need to be readable with one of the two
+        function enforceAgainstText(key, labelKey) {
+            if (!result[key] || !HEX_RE.test(result[key])) return;
+            var hex = normalizeHexColor(result[key]);
+            if (bestTextContrast(hex) >= minReadable) { result[key] = hex; return; }
+            enforce(key, '#ffffff', 'darker', labelKey);
+        }
+        enforceAgainstText('primaryColor', 'settings.base_color');
+        enforceAgainstText('accentColor', 'settings.accent_color');
         enforce('sidebarBg', '#1a1a1a', 'lighter', 'settings.sidebar_bg_light');
         enforce('darkSidebarBg', '#e5e5e5', 'darker', 'settings.sidebar_bg_dark');
 
@@ -509,8 +532,8 @@
             darkSidebarBg: document.getElementById('settingsDarkSidebarBg').value
         };
         var checks = {
-            primaryColor: {background: '#ffffff', textContrast: false},
-            accentColor: {background: '#ffffff', textContrast: false},
+            primaryColor: {background: null, textContrast: true},
+            accentColor: {background: null, textContrast: true},
             sidebarBg: {background: '#1a1a1a', textContrast: true},
             darkSidebarBg: {background: '#e5e5e5', textContrast: true}
         };
@@ -524,7 +547,7 @@
                 el.textContent = t('settings.contrast_invalid');
                 return;
             }
-            var ratio = contrastRatio(value, checks[key].background);
+            var ratio = checks[key].background ? contrastRatio(value, checks[key].background) : bestTextContrast(value);
             var state = ratio < minReadable ? 'error' : 'ok';
             var keyLabel = checks[key].textContrast
                 ? (ratio < minReadable ? 'settings.text_contrast_error' : 'settings.text_contrast_ok')
@@ -782,6 +805,44 @@
     bindColorPair('sidebarBg', true);
     bindColorPair('darkSidebarBg', true);
 
+    function applyPresetDefaults(preset) {
+        var d = THEME_PRESET_DEFAULTS[preset];
+        if (!d) return;
+        var fontSelect = document.getElementById('settingsFont');
+        if (fontSelect && d.font && THEME_FONTS.indexOf(d.font) !== -1) fontSelect.value = d.font;
+        var glow = document.getElementById('settingsButtonGlow');
+        var radius = document.getElementById('settingsButtonRadius');
+        if (glow && typeof d.buttonGlow === 'boolean') glow.checked = d.buttonGlow;
+        if (radius && typeof d.buttonRadius === 'number') {
+            radius.value = d.buttonRadius;
+            var radiusValue = document.getElementById('settingsButtonRadiusValue');
+            if (radiusValue) radiusValue.textContent = d.buttonRadius + 'px';
+        }
+        var primaryInput = document.getElementById('settingsPrimaryColor');
+        var current = primaryInput ? normalizeHexColor(primaryInput.value) : '';
+        if (d.primaryColor) {
+            if (current !== d.primaryColor) presetColorBackup = current;
+            setPrimaryColor(d.primaryColor);
+        } else if (presetColorBackup && isPresetColor(current)) {
+            setPrimaryColor(presetColorBackup);
+            presetColorBackup = null;
+        }
+        updateBtnStylePreview();
+    }
+
+    function isPresetColor(hex) {
+        return Object.keys(THEME_PRESET_DEFAULTS).some(function(k) { return THEME_PRESET_DEFAULTS[k].primaryColor === hex; });
+    }
+
+    function setPrimaryColor(hex) {
+        var input = document.getElementById('settingsPrimaryColor');
+        var picker = document.getElementById('settingsPrimaryColorPicker');
+        if (input) input.value = hex;
+        if (picker) picker.value = hex;
+        refreshAutoDisplays();
+        updateThemeContrastFeedback();
+    }
+
     // Preset cards, density and font: instant preview
     document.querySelectorAll('.preset-card[data-preset]').forEach(function(card) {
         card.addEventListener('click', function() {
@@ -791,11 +852,7 @@
                 c.classList.toggle('selected', on);
                 c.setAttribute('aria-checked', on ? 'true' : 'false');
             });
-            var presetFont = THEME_PRESET_FONTS[card.dataset.preset];
-            var fontSelect = document.getElementById('settingsFont');
-            if (fontSelect && presetFont && THEME_FONTS.indexOf(presetFont) !== -1) {
-                fontSelect.value = presetFont;
-            }
+            applyPresetDefaults(card.dataset.preset);
             updateColorPreview();
         });
     });
