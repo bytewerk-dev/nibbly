@@ -11224,3 +11224,25 @@ label.toggle-label > .toggle-switch,
         display: none;
     }
 }
+
+/* Bypass link line under the explanation: label plus the assembled address */
+.access-bypass-link {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--nb-space-2);
+    margin: 0 0 var(--nb-space-5);
+    font-size: var(--nb-text-sm);
+    color: var(--nb-text-secondary);
+}
+
+.access-bypass-link code {
+    padding: var(--nb-space-1) var(--nb-space-2);
+    border: 1px solid var(--nb-border);
+    border-radius: var(--nb-radius-sm);
+    background: var(--nb-bg-sunken);
+    color: var(--nb-text);
+    font-family: var(--nb-font-mono);
+    font-size: var(--nb-text-sm);
+    word-break: break-all;
+}

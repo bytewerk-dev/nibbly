@@ -77,6 +77,24 @@
         }
     }
 
+    // The bypass link, assembled live from the site address, the URL
+    // parameter and the key. The stored key is only ever a hash, so once
+    // saved it shows as a placeholder until a new one is typed.
+    function updateBypassLink() {
+        var out = document.getElementById('maintenanceBypassLink');
+        if (!out) return;
+        var paramEl = document.getElementById('maintenanceBypassParam');
+        var keyEl = document.getElementById('maintenanceBypassKey');
+        var param = (paramEl && paramEl.value.trim()) || 'preview';
+        var key = keyEl ? keyEl.value : '';
+        var siteRoot = window.location.origin + window.location.pathname.replace(/\/admin\/.*$/, '/');
+        out.textContent = siteRoot + '?' + encodeURIComponent(param) + '=' + (key ? encodeURIComponent(key) : t('settings.access_bypass_key_placeholder'));
+    }
+    ['maintenanceBypassParam', 'maintenanceBypassKey'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('input', updateBypassLink);
+    });
+
     function populateSettings(settings) {
         // Branding
         var faviconPath = settings.favicon || '/assets/images/favicon.svg';
@@ -210,6 +228,7 @@
         if (bypassKeyEl) bypassKeyEl.value = '';
         var bypassHintEl = document.getElementById('maintenanceBypassHint');
         if (bypassHintEl) bypassHintEl.textContent = maintenance.hasBypassKey ? t('settings.access_bypass_key_set') : t('settings.access_bypass_key_hint');
+        updateBypassLink();
         var modules = settings.modules || {};
         var moduleAiEl = document.getElementById('moduleAi');
         if (moduleAiEl) moduleAiEl.checked = modules.ai !== false;

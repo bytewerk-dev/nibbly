@@ -1798,6 +1798,8 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                     </fieldset>
                     <fieldset class="settings-section settings-section--compact">
                         <legend><?php echo t('settings.access_bypass'); ?></legend>
+                        <p class="settings-description settings-description--compact"><?php echo t('settings.access_bypass_desc'); ?></p>
+                        <p class="access-bypass-link"><span><?php echo t('settings.access_bypass_link'); ?></span> <code id="maintenanceBypassLink" aria-live="polite"></code></p>
                         <div class="form-row-inline">
                             <div class="form-group">
                                 <label for="maintenanceBypassParam"><?php echo t('settings.access_bypass_param'); ?></label>
