@@ -78,9 +78,9 @@
     }
 
     // Bypass links: one row per URL parameter / key pair, each with its
-    // assembled address. Keys are stored as entered. A key saved by an older
-    // version exists only as a hash: it gets a row with an empty key field
-    // and a note, keeps working until that row is removed or filled.
+    // assembled address. Keys are stored as entered. A key hashed by an
+    // older version is not shown; saving the form replaces it with the
+    // visible links.
     function bypassSiteRoot() {
         return window.location.origin + window.location.pathname.replace(/\/admin\/.*$/, '/');
     }
@@ -92,28 +92,18 @@
         if (out) out.textContent = bypassSiteRoot() + '?' + encodeURIComponent(param) + '=' + (key ? encodeURIComponent(key) : t('settings.access_bypass_key_placeholder'));
     }
 
-    function updateBypassHint() {
-        var hint = document.getElementById('maintenanceBypassHint');
-        if (!hint) return;
-        var legacy = document.querySelector('#bypassLinks .bypass-row[data-legacy="1"]');
-        hint.hidden = !(legacy && !legacy.querySelector('.bypass-row__key-input').value);
-    }
-
-    function addBypassRow(param, key, legacy) {
+    function addBypassRow(param, key) {
         var container = document.getElementById('bypassLinks');
         var tpl = document.getElementById('bypassRowTemplate');
         if (!container || !tpl) return null;
         var row = tpl.content.firstElementChild.cloneNode(true);
         row.querySelector('.bypass-row__param-input').value = param || '';
         row.querySelector('.bypass-row__key-input').value = key || '';
-        if (legacy) row.dataset.legacy = '1';
         row.querySelectorAll('input').forEach(function(input) {
-            input.addEventListener('input', function() { updateBypassRowLink(row); updateBypassHint(); });
+            input.addEventListener('input', function() { updateBypassRowLink(row); });
         });
         row.querySelector('.bypass-row__remove').addEventListener('click', function() {
-            if (row.dataset.legacy === '1') container.dataset.legacyRemoved = '1';
             row.remove();
-            updateBypassHint();
         });
         container.appendChild(row);
         updateBypassRowLink(row);
@@ -124,34 +114,28 @@
         var container = document.getElementById('bypassLinks');
         if (!container) return;
         container.innerHTML = '';
-        delete container.dataset.legacyRemoved;
         var links = Array.isArray(maintenance.bypassLinks) ? maintenance.bypassLinks : [];
-        links.forEach(function(link) { addBypassRow(link.param, link.key, false); });
-        if (!links.length && maintenance.hasBypassKey) addBypassRow(maintenance.bypassParam || 'preview', '', true);
-        if (!container.children.length) addBypassRow('preview', '', false);
-        updateBypassHint();
+        links.forEach(function(link) { addBypassRow(link.param, link.key); });
+        if (!container.children.length) addBypassRow(maintenance.bypassParam || 'preview', '');
     }
 
     function collectBypassLinks() {
         var container = document.getElementById('bypassLinks');
         var rows = container ? Array.prototype.slice.call(container.querySelectorAll('.bypass-row')) : [];
         var links = [];
-        var legacyKept = false;
         rows.forEach(function(row) {
             var param = row.querySelector('.bypass-row__param-input').value.trim() || 'preview';
             var key = row.querySelector('.bypass-row__key-input').value.trim();
             if (key) links.push({ param: param, key: key });
-            else if (row.dataset.legacy === '1') legacyKept = true;
         });
         return {
             links: links,
-            firstParam: rows.length ? (rows[0].querySelector('.bypass-row__param-input').value.trim() || 'preview') : 'preview',
-            clearLegacy: !legacyKept
+            firstParam: rows.length ? (rows[0].querySelector('.bypass-row__param-input').value.trim() || 'preview') : 'preview'
         };
     }
 
     document.getElementById('bypassAddBtn')?.addEventListener('click', function() {
-        var row = addBypassRow('preview', '', false);
+        var row = addBypassRow('preview', '');
         if (row) row.querySelector('.bypass-row__key-input').focus();
     });
 
@@ -2727,7 +2711,8 @@
                         : 88,
                     bypassParam: collectBypassLinks().firstParam,
                     bypassLinks: collectBypassLinks().links,
-                    clearBypassKey: collectBypassLinks().clearLegacy
+                    // the visible links are the whole truth once the form is saved
+                    clearBypassKey: true
                 };
 
                 var formData = new FormData();

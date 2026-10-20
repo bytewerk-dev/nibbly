@@ -901,7 +901,6 @@
     "settings.access_bypass_key": "Key",
     "settings.access_bypass_add": "Link hinzufügen",
     "settings.access_bypass_remove": "Link entfernen",
-    "settings.access_bypass_key_set": "Der bisher gespeicherte Key gilt weiter, kann aber nicht angezeigt werden. Zum Ersetzen hier einen neuen Key eingeben.",
     "settings.group_site": "Website",
     "settings.group_features": "Funktionen",
     "settings.group_users": "Benutzer",

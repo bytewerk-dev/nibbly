@@ -898,7 +898,6 @@
     "settings.access_bypass_key": "Clé",
     "settings.access_bypass_add": "Ajouter un lien",
     "settings.access_bypass_remove": "Supprimer le lien",
-    "settings.access_bypass_key_set": "La clé enregistrée précédemment reste valable mais ne peut pas être affichée. Saisissez ici une nouvelle clé pour la remplacer.",
     "settings.group_site": "Site",
     "settings.group_features": "Features",
     "settings.group_users": "Users",

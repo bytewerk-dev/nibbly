@@ -898,7 +898,6 @@
     "settings.access_bypass_key": "Klucz",
     "settings.access_bypass_add": "Dodaj link",
     "settings.access_bypass_remove": "Usuń link",
-    "settings.access_bypass_key_set": "Wcześniej zapisany klucz nadal działa, ale nie można go wyświetlić. Aby go zastąpić, wpisz tutaj nowy klucz.",
     "settings.group_site": "Site",
     "settings.group_features": "Features",
     "settings.group_users": "Users",

@@ -1800,7 +1800,6 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                         <legend><?php echo t('settings.access_bypass'); ?></legend>
                         <p class="settings-description settings-description--compact"><?php echo t('settings.access_bypass_desc'); ?></p>
                         <div class="bypass-links" id="bypassLinks"></div>
-                        <small class="form-hint" id="maintenanceBypassHint" hidden><?php echo t('settings.access_bypass_key_set'); ?></small>
                         <div class="bypass-links__actions">
                             <button type="button" class="btn btn-secondary btn-sm" id="bypassAddBtn">+ <?php echo t('settings.access_bypass_add'); ?></button>
                         </div>

@@ -898,7 +898,6 @@
     "settings.access_bypass_key": "Clave",
     "settings.access_bypass_add": "Añadir enlace",
     "settings.access_bypass_remove": "Eliminar enlace",
-    "settings.access_bypass_key_set": "La clave guardada anteriormente sigue siendo válida, pero no se puede mostrar. Introduce aquí una nueva clave para sustituirla.",
     "settings.group_site": "Site",
     "settings.group_features": "Features",
     "settings.group_users": "Users",

@@ -898,7 +898,6 @@
     "settings.access_bypass_key": "Klíč",
     "settings.access_bypass_add": "Přidat odkaz",
     "settings.access_bypass_remove": "Odebrat odkaz",
-    "settings.access_bypass_key_set": "Dříve uložený klíč stále platí, ale nelze jej zobrazit. Pro nahrazení zde zadejte nový klíč.",
     "settings.group_site": "Site",
     "settings.group_features": "Features",
     "settings.group_users": "Users",

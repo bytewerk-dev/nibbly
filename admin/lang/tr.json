@@ -898,7 +898,6 @@
     "settings.access_bypass_key": "Anahtar",
     "settings.access_bypass_add": "Bağlantı ekle",
     "settings.access_bypass_remove": "Bağlantıyı kaldır",
-    "settings.access_bypass_key_set": "Daha önce kaydedilen anahtar geçerliliğini korur ancak gösterilemez. Değiştirmek için buraya yeni bir anahtar girin.",
     "settings.group_site": "Site",
     "settings.group_features": "Features",
     "settings.group_users": "Users",

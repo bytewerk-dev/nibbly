@@ -775,7 +775,8 @@ settings are stored under `access.maintenance` in `content/settings.json`:
 entered so the dashboard can show and hand out the finished links; a request
 carrying one of them (`/?preview=k3Q9...`) passes the guard and the bypass
 sticks to the session. Deleting a row revokes that link. `bypassKeyHash` is
-the older single hashed key; it keeps working until it is cleared.
+the older single hashed key; it keeps working until the access form is
+saved once, which replaces it with the visible links.
 
 Valid `mode` values are `maintenance`, `offline`, and `launch`. The guard blocks
 public frontend pages with a standalone `503` response and sets `noindex` for the
