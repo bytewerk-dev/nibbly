@@ -243,7 +243,8 @@ assertContains(dashboard, 'function sanitizeThemeContrast(theme)', 'Dashboard th
 assertContains(dashboard, 'function updateThemeContrastFeedback()', 'Dashboard theme form should show live contrast feedback for color fields.');
 assertContains(dashboard, 'data-contrast-for="primaryColor"', 'Theme primary color field should expose contrast feedback.');
 assertContains(dashboard, 'data-contrast-for="darkSidebarBg"', 'Theme dark sidebar color field should expose contrast feedback.');
-assertContains(dashboard, "settings.contrast_error", 'Theme contrast feedback should label colors below the 3:1 UI minimum.');
+assertContains(dashboard, "settings.text_contrast_error", 'Theme contrast feedback should label colors below the 3:1 text minimum.');
+assertContains(dashboard, 'function bestTextContrast(hex)', 'Theme contrast should accept a base colour readable with white or dark text.');
 assertContains(dashboard, 'ratio: ratio.toFixed(1)', 'Theme contrast feedback should round ratios to one decimal place.');
 assertContains(dashboard, "hex.addEventListener('blur'", 'Theme color text inputs should refresh contrast when the field is left.');
 assertContains(dashboard, '--nb-brand-subtle:', 'Dashboard first-paint theme CSS should expose an accent subtle token.');
@@ -269,10 +270,10 @@ assertMatches(adminStyles, /\.settings-panel\s*\{[\s\S]*?box-shadow:\s*none;/, '
 assertContains(adminApi, "'primaryColor' => '#3858e9'", 'Settings API defaults should use the updated nibbly primary color.');
 assertContains(adminApi, "'accentColor' => ''", 'Settings API defaults derive the accent from the base colour.');
 assertContains(adminApi, "'preset' => 'soft'", 'Settings API defaults should start from the Soft preset.');
-assertContains(adminApi, "['soft', 'classic', 'paper', 'studio']", 'Settings API should validate the theme preset.');
-assertContains(adminApi, "['system', 'geist', 'inter']", 'Settings API should validate the admin font.');
+assertContains(adminApi, "['soft', 'classic', 'paper', 'studio', 'console']", 'Settings API should validate the theme preset.');
+assertContains(adminApi, "['system', 'geist', 'inter', 'geist-mono']", 'Settings API should validate the admin font.');
 assertContains(adminApi, 'function nibblySanitizeThemeContrast(array $theme): array', 'Settings API should enforce readable theme contrast server-side.');
-assertContains(adminApi, 'nibblyAdjustColorForContrast((string)$theme[$key], \'#ffffff\'', 'Settings API should darken overly light light-theme colors.');
+assertContains(adminApi, "max(nibblyContrastRatio($hex, '#ffffff'), nibblyContrastRatio($hex, '#111111'))", 'Settings API should accept base colours readable with white or dark text.');
 assertContains(adminApi, 'nibblyAdjustColorForContrast((string)$theme[$key], \'#0b0d12\'', 'Settings API should lighten overly dark dark-theme colors.');
 assertContains(adminApi, "nibblyContrastRatio((string)$theme['primaryColor'], '#0b0d12') < $minReadable", 'Settings API should protect dark-theme auto inheritance from too-dark primary colors.');
 assertContains(adminTokens, '--nb-primary: #3858e9;', 'Admin CSS tokens should use the updated nibbly primary color.');

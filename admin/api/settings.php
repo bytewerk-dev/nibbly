@@ -23,6 +23,9 @@ switch ($action) {
                 'font' => 'system',
                 'primaryColor' => '#3858e9',
                 'accentColor' => '',
+                'dangerColor' => '',
+                'warningColor' => '',
+                'successColor' => '',
                 'sidebarBg' => '',
                 'darkPrimaryColor' => '',
                 'darkAccentColor' => '',
@@ -135,7 +138,7 @@ switch ($action) {
         // Whitelist allowed keys
         $allowed = [
             'branding' => ['logo', 'logoDark', 'adminLogo', 'name', 'showBranding', 'logoDisplay', 'logoSize'],
-            'theme' => ['adminTheme', 'publicDefault', 'preset', 'density', 'font', 'primaryColor', 'accentColor', 'sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg', 'buttonGlow', 'buttonRadius'],
+            'theme' => ['adminTheme', 'publicDefault', 'preset', 'density', 'font', 'primaryColor', 'accentColor', 'sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg', 'dangerColor', 'warningColor', 'successColor', 'buttonGlow', 'buttonRadius'],
             'general' => ['adminLanguage', 'frontendLoginRedirect', 'aiLabelArtwork'],
             'email' => ['method', 'recipientEmail', 'bccEmail', 'fromEmail', 'fromName', 'smtpHost', 'smtpPort', 'smtpUsername', 'smtpPassword', 'smtpEncryption'],
             'seo' => ['siteUrl', 'organizationName', 'defaultOgImage', 'noindexSite']
@@ -173,7 +176,7 @@ switch ($action) {
 
                     // Validate optional color values — empty string means "auto"
                     // (accentColor derives from the base colour unless overridden)
-                    if (in_array($key, ['accentColor', 'sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg'])) {
+                    if (in_array($key, ['accentColor', 'sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg', 'dangerColor', 'warningColor', 'successColor'])) {
                         $value = (string)$value;
                         if ($value !== '' && !preg_match('/^#[0-9a-fA-F]{6}$/', $value)) {
                             jsonResponse(false, null, 'Invalid color value for ' . $key);
@@ -184,13 +187,13 @@ switch ($action) {
                     if (in_array($key, ['adminTheme', 'publicDefault'], true) && !in_array($value, ['light', 'dark', 'system'], true)) {
                         jsonResponse(false, null, 'Invalid theme value');
                     }
-                    if ($key === 'preset' && !in_array($value, ['soft', 'classic', 'paper', 'studio'], true)) {
+                    if ($key === 'preset' && !in_array($value, ['soft', 'classic', 'paper', 'studio', 'console'], true)) {
                         jsonResponse(false, null, 'Invalid theme preset');
                     }
                     if ($key === 'density' && !in_array($value, ['auto', 'compact', 'comfortable'], true)) {
                         jsonResponse(false, null, 'Invalid density value');
                     }
-                    if ($key === 'font' && !in_array($value, ['system', 'geist', 'inter'], true)) {
+                    if ($key === 'font' && !in_array($value, ['system', 'geist', 'inter', 'geist-mono'], true)) {
                         jsonResponse(false, null, 'Invalid font value');
                     }
 

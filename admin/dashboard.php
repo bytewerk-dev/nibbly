@@ -34,7 +34,7 @@ $isAdminUser = ($userRole === 'admin');
 
 // Load settings for theme
 $_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg';
-$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => ['adminTheme' => 'light', 'preset' => 'soft', 'density' => 'auto', 'font' => 'system', 'primaryColor' => '#3858e9', 'accentColor' => '', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'buttonGlow' => true, 'buttonRadius' => 6], 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'messages' => true, 'iconManager' => true], 'dashboard' => ['itemsPerPage' => 50, 'iconManagerItemsPerPage' => 50, 'mediaItemsPerPage' => 25]];
+$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => ['adminTheme' => 'light', 'preset' => 'soft', 'density' => 'auto', 'font' => 'system', 'primaryColor' => '#3858e9', 'accentColor' => '', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'dangerColor' => '', 'warningColor' => '', 'successColor' => '', 'buttonGlow' => true, 'buttonRadius' => 6], 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'messages' => true, 'iconManager' => true], 'dashboard' => ['itemsPerPage' => 50, 'iconManagerItemsPerPage' => 50, 'mediaItemsPerPage' => 25]];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     $loadedSettings = json_decode(file_get_contents(SETTINGS_PATH), true);
     if (is_array($loadedSettings)) {
@@ -71,6 +71,7 @@ if ($isAdminUser) $validDashboardTabs[] = 'system';
 function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): string {
     static $paths = [
         'hamburger' => '<path d="M3 12h18M3 6h18M3 18h18"/>',
+        'collapse'  => '<path d="M11 17l-5-5 5-5"/><path d="M18 17l-5-5 5-5"/>',
         'home'      => '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/>',
         'edit'      => '<path d="M12 20h9M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4L16.5 3.5z"/>',
         'eye'       => '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
@@ -97,9 +98,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 ?>
 <!DOCTYPE html>
 <?php
-$_themePreset = in_array($siteSettings['theme']['preset'] ?? '', ['soft', 'classic', 'paper', 'studio'], true) ? $siteSettings['theme']['preset'] : 'soft';
+$_themePreset = in_array($siteSettings['theme']['preset'] ?? '', ['soft', 'classic', 'paper', 'studio', 'console'], true) ? $siteSettings['theme']['preset'] : 'soft';
 $_themeDensity = in_array($siteSettings['theme']['density'] ?? '', ['auto', 'compact', 'comfortable'], true) ? $siteSettings['theme']['density'] : 'auto';
-$_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist', 'inter'], true) ? $siteSettings['theme']['font'] : 'system';
+$_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist', 'inter', 'geist-mono'], true) ? $siteSettings['theme']['font'] : 'system';
 ?>
 <html lang="<?php echo htmlspecialchars(_nbAdminLang()); ?>" data-site-theme="<?php echo htmlspecialchars($adminTheme === 'system' ? 'light' : $adminTheme); ?>" data-theme-preset="<?php echo $_themePreset; ?>" data-density="<?php echo $_themeDensity; ?>" data-font="<?php echo $_themeFont; ?>">
 <head>
@@ -129,6 +130,16 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
     })();
     </script>
     <?php endif; ?>
+    <script>
+    /* Sidebar collapse state before first paint, so nothing jumps */
+    (function() {
+        try {
+            if (window.localStorage.getItem('nibblySidebarCollapsed') === '1') {
+                document.documentElement.setAttribute('data-sidebar', 'collapsed');
+            }
+        } catch (e) {}
+    })();
+    </script>
     <?php
     // The saved base colour and the optional overrides reach the stylesheet as
     // custom properties on :root; css/nibbly-admin-tokens.css derives everything
@@ -143,6 +154,11 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
     $_sbDarkOverride = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($_t['darkSidebarBg'] ?? '')) ? strtolower((string)$_t['darkSidebarBg']) : '';
     $_pcDark = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($_t['darkPrimaryColor'] ?? '')) ? strtolower((string)$_t['darkPrimaryColor']) : $_pcLight;
     $_acDark = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($_t['darkAccentColor'] ?? '')) ? strtolower((string)$_t['darkAccentColor']) : $_acLight;
+    $_semantic = [];
+    foreach (['dangerColor' => '--nb-danger-base', 'warningColor' => '--nb-warning-base', 'successColor' => '--nb-success-base'] as $_semKey => $_semVar) {
+        $_semRaw = strtolower((string)($_t[$_semKey] ?? ''));
+        if (preg_match('/^#[0-9a-f]{6}$/', $_semRaw)) $_semantic[$_semVar] = $_semRaw;
+    }
     $_sbLight = $_sbLightOverride !== '' ? $_sbLightOverride : "color-mix(in srgb, {$_pcLight} 12%, white)";
     $_sbDark = $_sbDarkOverride !== '' ? $_sbDarkOverride : "color-mix(in srgb, {$_pcDark} 10%, #0b0d12)";
     ?>
@@ -150,6 +166,9 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
     :root {
         --nb-base: <?php echo $_pcLight; ?>;
         --nb-accent-base: <?php echo $_acLight; ?>;
+<?php foreach ($_semantic as $_semVar => $_semHex): ?>
+        <?php echo $_semVar; ?>: <?php echo $_semHex; ?>;
+<?php endforeach; ?>
     }
     <?php if ($_sbLightOverride !== ''): ?>
     :root, [data-site-theme="light"] { --nb-sidebar-bg: <?php echo $_sbLightOverride; ?>; --nb-topbar-bg: <?php echo $_sbLightOverride; ?>; }
@@ -299,6 +318,10 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                 <?php echo nbIcon('logout'); ?>
                 <span><?php echo t('nav.logout'); ?></span>
             </a>
+            <button type="button" class="sidebar-nav-item sidebar-collapse" id="sidebarCollapseBtn" aria-pressed="false" title="<?php echo htmlspecialchars(t('nav.collapse_sidebar'), ENT_QUOTES, 'UTF-8'); ?>">
+                <?php echo nbIcon('collapse'); ?>
+                <span><?php echo t('nav.collapse_sidebar'); ?></span>
+            </button>
             <a class="sidebar-version" href="https://nibbly.dev" target="_blank" rel="noopener noreferrer">nibbly <?php echo htmlspecialchars(nibblyVersion(), ENT_QUOTES, 'UTF-8'); ?></a>
         </div>
     </aside>
@@ -1387,7 +1410,7 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                         <div class="form-group">
                             <label id="settingsThemePresetLabel"><?php echo t('settings.theme_preset'); ?></label>
                             <div class="preset-grid" role="radiogroup" aria-labelledby="settingsThemePresetLabel">
-                                <?php foreach (['soft', 'classic', 'paper', 'studio'] as $_preset): ?>
+                                <?php foreach (['soft', 'classic', 'paper', 'studio', 'console'] as $_preset): ?>
                                 <button type="button" class="preset-card" role="radio" aria-checked="false" data-preset="<?php echo $_preset; ?>">
                                     <span class="preset-card__preview" aria-hidden="true"><span class="preset-card__stage"><span></span><span></span><span></span></span></span>
                                     <span class="preset-card__name"><?php echo t('settings.preset_' . $_preset); ?></span>
@@ -1434,6 +1457,7 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                                 <option value="system"><?php echo t('settings.font_system'); ?></option>
                                 <option value="geist"><?php echo t('settings.font_geist'); ?></option>
                                 <option value="inter"><?php echo t('settings.font_inter'); ?></option>
+                                <option value="geist-mono"><?php echo t('settings.font_geist_mono'); ?></option>
                             </select>
                             <small class="form-hint"><?php echo t('settings.font_hint'); ?></small>
                         </div>
@@ -1452,7 +1476,7 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                     <details class="settings-advanced" id="themeAdvanced">
                         <summary><?php echo t('settings.advanced'); ?></summary>
                         <div class="settings-advanced__grid">
-                        <div class="settings-advanced__col">
+                        <div class="settings-advanced__colors">
 
                         <div class="form-group">
                             <label for="settingsAccentColor"><?php echo t('settings.accent_color'); ?></label>
@@ -1489,8 +1513,22 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                             <small class="theme-contrast-feedback" data-contrast-for="darkSidebarBg"></small>
                         </div>
 
+                        <?php foreach ([['dangerColor', '#dc2626', 'danger_color'], ['warningColor', '#d97706', 'warning_color'], ['successColor', '#3858e9', 'success_color']] as [$_semField, $_semDefault, $_semLabel]): $_semId = 'settings' . ucfirst($_semField); ?>
+                        <div class="form-group">
+                            <label for="<?php echo $_semId; ?>"><?php echo t('settings.' . $_semLabel); ?></label>
+                            <div class="color-input-group" data-auto-field="<?php echo $_semField; ?>">
+                                <input type="color" id="<?php echo $_semId; ?>Picker" value="<?php echo $_semDefault; ?>" class="color-picker">
+                                <input type="text" id="<?php echo $_semId; ?>" value="<?php echo $_semDefault; ?>" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
+                                <span class="auto-badge" data-auto-for="<?php echo $_semField; ?>" hidden><?php echo t('settings.auto_badge'); ?></span>
+                                <button type="button" class="auto-reset-btn" data-auto-reset="<?php echo $_semField; ?>" title="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>" aria-label="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>">&#x21BA;</button>
+                            </div>
+                            <?php if ($_semField === 'dangerColor'): ?><small class="form-hint"><?php echo t('settings.semantic_colors_hint'); ?></small><?php endif; ?>
+                            <small class="theme-contrast-feedback" data-contrast-for="<?php echo $_semField; ?>"></small>
                         </div>
-                        <div class="settings-advanced__col">
+                        <?php endforeach; ?>
+
+                        </div>
+                        <div class="settings-advanced__buttons">
 
                         <div class="form-group">
                             <label for="settingsButtonRadius"><?php echo t('settings.button_radius'); ?></label>

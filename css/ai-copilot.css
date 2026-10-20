@@ -15,7 +15,7 @@
     width: 100%;
     min-height: 34px;
     border: 1px solid var(--nb-border-strong, #cbd5e1);
-    border-radius: 8px;
+    border-radius: var(--nb-radius-lg, 8px);
     padding: 7px 40px 7px 14px; /* fixed: the caret sits at right 14px */
     appearance: none;
     background-color: var(--nb-text-on-primary, #fff);
@@ -89,7 +89,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     width: min(380px, calc(100vw - 32px));
     height: min(560px, calc(100vh - 112px));
     border: 1px solid rgba(148, 163, 184, 0.35);
-    border-radius: 12px;
+    border-radius: var(--nb-radius-xl, 12px);
     background: var(--nb-bg-elevated, #fff);
     box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
     overflow: hidden;
@@ -140,7 +140,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     width: 32px;
     height: 32px;
     border: 1px solid var(--nb-border-strong, #cbd5e1);
-    border-radius: 10px;
+    border-radius: var(--nb-radius-lg, 8px);
     background: var(--nb-bg-elevated, #fff);
     color: var(--nb-text-secondary, #334155);
     cursor: pointer;
@@ -200,7 +200,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 .nb-copilot-status {
     margin-bottom: var(--nb-space-3, 12px);
     padding: var(--nb-space-2-5, 10px) var(--nb-space-3, 12px);
-    border-radius: 8px;
+    border-radius: var(--nb-radius-lg, 8px);
     background: var(--nb-bg-sunken, #f1f5f9);
     color: var(--nb-text-secondary, #334155);
     font-size: 12px;
@@ -234,7 +234,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 .nb-copilot-msg__bubble {
     max-width: 86%;
     padding: var(--nb-space-2-5, 10px) var(--nb-space-3, 12px);
-    border-radius: 10px;
+    border-radius: var(--nb-radius-lg, 8px);
     background: var(--nb-bg-sunken, #f1f5f9);
     color: var(--nb-text, #172033);
     font-size: 13px;
@@ -277,7 +277,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 
 .nb-copilot-proposal-summary {
     border: 1px solid color-mix(in srgb, var(--editor-primary, var(--nb-primary, #2563eb)) 30%, var(--nb-border-strong, #cbd5e1));
-    border-radius: 8px;
+    border-radius: var(--nb-radius-lg, 8px);
     background: color-mix(in srgb, var(--editor-primary, var(--nb-primary, #2563eb)) 8%, #fff);
     overflow: hidden;
 }
@@ -325,7 +325,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 .nb-copilot-image-options {
     margin: var(--nb-space-3, 12px) 0;
     border: 1px solid var(--nb-border-strong, #cbd5e1);
-    border-radius: 10px;
+    border-radius: var(--nb-radius-lg, 8px);
     background: var(--nb-bg-elevated, #fff);
     overflow: hidden;
 }
@@ -429,7 +429,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     gap: var(--nb-space-1-5, 6px);
     min-width: 0;
     border: 2px solid transparent;
-    border-radius: 8px;
+    border-radius: var(--nb-radius-lg, 8px);
     padding: var(--nb-space-1-5, 6px);
     background: var(--nb-bg, #f8fafc);
     color: var(--nb-text, #172033);
@@ -447,7 +447,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     display: block;
     width: 100%;
     aspect-ratio: 4 / 3;
-    border-radius: 6px;
+    border-radius: var(--nb-radius-md, 6px);
     background: var(--nb-border, #e2e8f0);
     object-fit: cover;
 }
@@ -507,7 +507,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     max-height: 140px;
     resize: vertical;
     border: 1px solid var(--nb-border-strong, #cbd5e1);
-    border-radius: 8px;
+    border-radius: var(--nb-radius-lg, 8px);
     padding: 9px var(--nb-space-2-5, 10px);
     background: var(--nb-bg-elevated, #fff);
     color: var(--nb-text, #172033);
@@ -559,7 +559,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 .nb-copilot-image-result img {
     width: 68px;
     height: 68px;
-    border-radius: 8px;
+    border-radius: var(--nb-radius-lg, 8px);
     object-fit: cover;
     background: var(--nb-border, #e2e8f0);
 }
@@ -609,7 +609,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     margin: var(--nb-space-3, 12px) 0;
     padding: var(--nb-space-2-5, 10px);
     border: 1px solid color-mix(in srgb, var(--editor-primary, var(--nb-primary, #2563eb)) 30%, var(--nb-border-strong, #cbd5e1));
-    border-radius: 10px;
+    border-radius: var(--nb-radius-lg, 8px);
     background: color-mix(in srgb, var(--editor-primary, var(--nb-primary, #2563eb)) 8%, #fff);
 }
 
@@ -650,7 +650,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 
 .nb-copilot-proposal {
     border: 1px solid var(--nb-border-strong, #cbd5e1);
-    border-radius: 10px;
+    border-radius: var(--nb-radius-lg, 8px);
     background: var(--nb-bg-elevated, #fff);
     overflow: hidden;
 }
@@ -738,7 +738,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     display: inline-flex;
     align-items: center;
     min-height: 24px;
-    border-radius: 7px;
+    border-radius: var(--nb-radius-md, 6px);
     padding: 0 var(--nb-space-2, 8px);
     background: var(--nb-bg-sunken, #f1f5f9);
     color: var(--nb-text-secondary, #334155);
@@ -751,7 +751,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     width: 100%;
     max-height: 190px;
     object-fit: contain;
-    border-radius: 7px;
+    border-radius: var(--nb-radius-md, 6px);
     background: var(--nb-bg, #f8fafc);
 }
 
@@ -767,7 +767,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 .nb-copilot-variant {
     aspect-ratio: 1;
     border: 2px solid transparent;
-    border-radius: 8px;
+    border-radius: var(--nb-radius-lg, 8px);
     padding: 0;
     background: var(--nb-bg-sunken, #f1f5f9);
     cursor: pointer;
@@ -802,7 +802,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 .nb-copilot-alt input {
     width: 100%;
     border: 1px solid var(--nb-border-strong, #cbd5e1);
-    border-radius: 7px;
+    border-radius: var(--nb-radius-md, 6px);
     padding: var(--nb-space-2, 8px) 9px;
     color: var(--nb-text, #172033);
     font: inherit;
@@ -912,7 +912,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     grid-template-rows: auto minmax(0, 1fr) auto;
     overflow: hidden;
     border: 1px solid var(--nb-border-strong, #cbd5e1);
-    border-radius: 8px;
+    border-radius: var(--nb-radius-lg, 8px);
     background: var(--nb-bg-elevated, #fff);
     box-shadow: 0 20px 48px rgba(15, 23, 42, 0.24);
 }
@@ -1032,7 +1032,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     gap: 3px;
     min-width: 0;
     border: 1px solid var(--nb-border-strong, #cbd5e1);
-    border-radius: 8px;
+    border-radius: var(--nb-radius-lg, 8px);
     padding: 9px var(--nb-space-2-5, 10px);
     background: var(--nb-bg-elevated, #fff);
     color: var(--nb-text, #172033);
@@ -1068,7 +1068,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     place-items: center;
     width: 34px;
     border: 1px solid var(--nb-border-strong, #cbd5e1);
-    border-radius: 8px;
+    border-radius: var(--nb-radius-lg, 8px);
     background: var(--nb-bg-elevated, #fff);
     color: #991b1b;
     cursor: pointer;
@@ -1159,7 +1159,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     gap: 5px;
     padding: var(--nb-space-2-5, 10px) var(--nb-space-3, 12px);
     border: 1px solid var(--nb-border, #dbe3ef);
-    border-radius: 8px;
+    border-radius: var(--nb-radius-lg, 8px);
     background: var(--nb-bg, #f8fafc);
     color: var(--nb-text-secondary, #475569);
 }
@@ -1191,7 +1191,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     width: 100%;
     min-height: 34px;
     border: 1px solid var(--nb-border-strong, #cbd5e1);
-    border-radius: 8px;
+    border-radius: var(--nb-radius-lg, 8px);
     padding: 7px 9px;
     background: var(--nb-bg-elevated, #fff);
     color: var(--nb-text, #172033);
@@ -1220,7 +1220,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     max-height: 120px;
     resize: vertical;
     border: 1px solid var(--nb-border-strong, #cbd5e1);
-    border-radius: 8px;
+    border-radius: var(--nb-radius-lg, 8px);
     padding: var(--nb-space-2-5, 10px) 11px;
     color: var(--nb-text, #172033);
     font: inherit;
@@ -1462,7 +1462,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     justify-content: center;
     margin: var(--nb-space-2, 8px);
     border: 2px dashed var(--editor-primary, var(--nb-primary, #2563eb));
-    border-radius: 12px;
+    border-radius: var(--nb-radius-xl, 12px);
     background: color-mix(in srgb, var(--editor-primary, var(--nb-primary, #2563eb)) 10%, rgba(255, 255, 255, 0.92));
     color: color-mix(in srgb, var(--editor-primary, var(--nb-primary, #2563eb)) 75%, var(--nb-text, #0f172a));
     font-size: 14px;
@@ -1500,7 +1500,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 .nb-agent-run,
 .nb-agent-package {
     border: 1px solid var(--nb-border-strong, #cbd5e1);
-    border-radius: 10px;
+    border-radius: var(--nb-radius-lg, 8px);
     background: var(--nb-bg-elevated, #fff);
     overflow: hidden;
 }
@@ -1673,7 +1673,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 .nb-agent-note {
     display: grid;
     gap: var(--nb-space-1-5, 6px);
-    border-radius: 8px;
+    border-radius: var(--nb-radius-lg, 8px);
     padding: 9px 11px;
     font-size: 12px;
 }
@@ -1716,7 +1716,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 
 .nb-agent-op {
     border: 1px solid var(--nb-border, #e2e8f0);
-    border-radius: 8px;
+    border-radius: var(--nb-radius-lg, 8px);
     padding: 7px 9px;
     background: var(--nb-bg-elevated, #fff);
 }
@@ -1761,7 +1761,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 .nb-agent-media {
     margin: 0;
     border: 1px solid var(--nb-border, #e2e8f0);
-    border-radius: 8px;
+    border-radius: var(--nb-radius-lg, 8px);
     background: var(--nb-bg-elevated, #fff);
     overflow: hidden;
 }
@@ -1837,7 +1837,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     margin-bottom: var(--nb-space-3, 12px);
     padding: 9px var(--nb-space-3, 12px);
     border: 1px solid #fcd34d;
-    border-radius: 8px;
+    border-radius: var(--nb-radius-lg, 8px);
     background: #fffbeb;
     color: #78350f;
     font-size: 12px;
@@ -1870,7 +1870,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     gap: var(--nb-space-2, 8px);
     padding: var(--nb-space-2-5, 10px) var(--nb-space-3, 12px);
     border: 1px solid var(--nb-border-strong, #cbd5e1);
-    border-radius: 10px;
+    border-radius: var(--nb-radius-lg, 8px);
     background: var(--nb-bg-elevated, #fff);
 }
 
@@ -1913,7 +1913,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     min-height: 32px;
     padding: 0 var(--nb-space-3, 12px);
     border: 1px solid var(--nb-border-strong, #cbd5e1);
-    border-radius: 8px;
+    border-radius: var(--nb-radius-lg, 8px);
     background: var(--nb-bg-elevated, #fff);
     color: var(--nb-text, #172033);
     font: inherit;
@@ -1988,7 +1988,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     margin: var(--nb-space-2, 8px) 0 0;
     padding: var(--nb-space-2, 8px) var(--nb-space-2-5, 10px);
     border-left: 4px solid var(--nb-brand, #b45309);
-    border-radius: 6px;
+    border-radius: var(--nb-radius-md, 6px);
     background: #fffbeb;
     color: #78350f;
     font-size: 12px;
@@ -2019,7 +2019,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     width: 100%;
     height: min(620px, 70vh);
     box-shadow: none;
-    border-radius: 8px;
+    border-radius: var(--nb-radius-lg, 8px);
 }
 
 .nb-copilot--embedded.is-maximized .nb-copilot-panel {

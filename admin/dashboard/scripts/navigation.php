@@ -16,6 +16,41 @@
     }
 
     // Topbar breadcrumb: ["Einstellungen", "Design"] → Einstellungen › Design
+    // Collapsible sidebar: icons only, remembered per browser
+    (function() {
+        var btn = document.getElementById('sidebarCollapseBtn');
+        if (!btn || !document.documentElement) return;
+        var KEY = 'nibblySidebarCollapsed';
+        var collapsed = false;
+        try { collapsed = window.localStorage.getItem(KEY) === '1'; } catch (e) {}
+
+        function applySidebarCollapsed(state) {
+            var root = document.documentElement;
+            if (state) root.setAttribute('data-sidebar', 'collapsed');
+            else root.removeAttribute('data-sidebar');
+            btn.setAttribute('aria-pressed', state ? 'true' : 'false');
+            var label = typeof t === 'function' ? t(state ? 'nav.expand_sidebar' : 'nav.collapse_sidebar') : '';
+            var labelSpan = btn.querySelector('span');
+            if (label && labelSpan) labelSpan.textContent = label;
+            if (label) btn.title = label;
+            // Icon-only items explain themselves on hover
+            document.querySelectorAll('.sidebar-nav-item').forEach(function(item) {
+                if (item === btn) return;
+                var text = item.querySelector(':scope > span:not(.mail-badge)');
+                if (!text) return;
+                if (state) item.setAttribute('title', text.textContent.trim());
+                else item.removeAttribute('title');
+            });
+        }
+
+        applySidebarCollapsed(collapsed);
+        btn.addEventListener('click', function() {
+            collapsed = !collapsed;
+            try { window.localStorage.setItem(KEY, collapsed ? '1' : '0'); } catch (e) {}
+            applySidebarCollapsed(collapsed);
+        });
+    })();
+
     function nbSetTopbarTitle(parts) {
         const el = document.getElementById('topbarTitle');
         if (!el) return;
