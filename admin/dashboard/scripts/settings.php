@@ -34,6 +34,9 @@
         document.querySelectorAll('.settings-tab-btn').forEach(function(b) { b.classList.remove('active'); });
         document.querySelectorAll('.settings-panel').forEach(function(p) { p.classList.remove('active'); });
         btn.classList.add('active');
+        if (typeof window.nbSetTopbarTitle === 'function') {
+            window.nbSetTopbarTitle([t('settings.title'), btn.textContent.trim()]);
+        }
         // Looked up here: the initial route can call this before the constant above is initialized
         var mobileNav = document.getElementById('settingsMobileNav');
         if (mobileNav) { mobileNav.value = tab; window.nbSelectSync?.(mobileNav); }
@@ -124,32 +127,7 @@
         document.getElementById('settingsSiteUrl').value = settings.seo?.siteUrl || '';
 
         // Theme
-        document.getElementById('settingsAdminTheme').value = settings.theme.adminTheme || 'light';
-        document.querySelectorAll('.theme-option').forEach(function(btn) {
-            btn.classList.toggle('selected', btn.dataset.theme === settings.theme.adminTheme);
-        });
-
-        // Colors — Light mode
-        var primary = settings.theme.primaryColor || '#3858e9';
-        var accent = settings.theme.accentColor || '#3858e9';
-        document.getElementById('settingsPrimaryColor').value = primary;
-        document.getElementById('settingsPrimaryColorPicker').value = primary;
-        document.getElementById('settingsAccentColor').value = accent;
-        document.getElementById('settingsAccentColorPicker').value = accent;
-
-        // Optional fields — empty means "auto". Show the derived value but mark it as auto.
-        var sidebarLight = settings.theme.sidebarBg || '';
-        setAutoField('sidebarBg', sidebarLight, deriveSidebarLight(primary));
-
-        // Colors — Dark mode
-        var darkPrimary = settings.theme.darkPrimaryColor || '';
-        var darkAccent = settings.theme.darkAccentColor || '';
-        var darkSidebar = settings.theme.darkSidebarBg || '';
-        setAutoField('darkPrimaryColor', darkPrimary, primary);
-        setAutoField('darkAccentColor', darkAccent, accent);
-        // Dark sidebar derives from the resolved dark primary
-        var resolvedDarkPrimary = darkPrimary || primary;
-        setAutoField('darkSidebarBg', darkSidebar, deriveSidebarDark(resolvedDarkPrimary));
+        populateThemeForm(settings.theme || {});
 
         // Button style
         var glowCheckbox = document.getElementById('settingsButtonGlow');
@@ -250,7 +228,7 @@
         var rememberThemeEl = document.getElementById('rememberPublicTheme');
         if (rememberThemeEl) rememberThemeEl.checked = !(settings.privacy && settings.privacy.rememberPublicTheme === false);
 
-        updateColorPreview(primary, accent);
+        updateColorPreview();
         updateBtnStylePreview();
 
         // Email
@@ -393,8 +371,11 @@
     // Defaults — kept in sync with server-side ($defaults in api.php load-settings)
     var THEME_DEFAULTS = {
         adminTheme: 'light',
+        preset: 'soft',
+        density: 'auto',
+        font: 'system',
         primaryColor: '#3858e9',
-        accentColor: '#3858e9',
+        accentColor: '',
         sidebarBg: '',
         darkPrimaryColor: '',
         darkAccentColor: '',
@@ -416,9 +397,18 @@
         defaultOgImage: ''
     };
 
-    // Sidebar bg derivations — match the CSS color-mix() on first paint
+    var THEME_PRESETS = ['soft', 'classic', 'paper', 'studio'];
+    var THEME_DENSITIES = ['auto', 'compact', 'comfortable'];
+    var THEME_FONTS = ['system', 'geist', 'inter'];
+    // Each preset brings its matching face; picking a preset switches the font
+    // select to it, and the select stays free to change afterwards.
+    var THEME_PRESET_FONTS = { soft: 'inter', classic: 'system', paper: 'system', studio: 'geist' };
+    var HEX_RE = /^#[0-9a-fA-F]{6}$/;
+
+    // Display values for "auto" sidebar fields (the stylesheet derives the real
+    // colour in OKLCH; this sRGB mix is only what the colour input shows)
     function deriveSidebarLight(primary) {
-        return mixColors(primary, '#ffffff', 0.12);
+        return mixColors(primary, '#ffffff', 0.10);
     }
     function deriveSidebarDark(primary) {
         return mixColors(primary, '#0b0d12', 0.10);
@@ -485,6 +475,8 @@
         return target;
     }
 
+    // Keep the base colour readable as button text background; the dark
+    // variant is lifted by the stylesheet itself (max(l, 0.72) in OKLCH).
     function sanitizeThemeContrast(theme) {
         var result = Object.assign({}, theme);
         var warnings = [];
@@ -500,23 +492,10 @@
             }
         }
 
-        enforce('primaryColor', '#ffffff', 'darker', 'settings.primary_color');
+        enforce('primaryColor', '#ffffff', 'darker', 'settings.base_color');
         enforce('accentColor', '#ffffff', 'darker', 'settings.accent_color');
-        enforce('darkPrimaryColor', '#0b0d12', 'lighter', 'settings.primary_color');
-        enforce('darkAccentColor', '#0b0d12', 'lighter', 'settings.accent_color');
-
-        if (!result.darkPrimaryColor && result.primaryColor && contrastRatio(result.primaryColor, '#0b0d12') < minReadable) {
-            result.darkPrimaryColor = adjustColorForContrast(result.primaryColor, '#0b0d12', minReadable, 'lighter');
-            warnings.push(t('settings.theme_color_adjusted', {field: t('settings.primary_color'), value: result.darkPrimaryColor}));
-        }
-
-        if (!result.darkAccentColor && result.accentColor && contrastRatio(result.accentColor, '#0b0d12') < minReadable) {
-            result.darkAccentColor = adjustColorForContrast(result.accentColor, '#0b0d12', minReadable, 'lighter');
-            warnings.push(t('settings.theme_color_adjusted', {field: t('settings.accent_color'), value: result.darkAccentColor}));
-        }
-
-        enforce('sidebarBg', '#1a1a1a', 'lighter', 'settings.sidebar_bg');
-        enforce('darkSidebarBg', '#e5e5e5', 'darker', 'settings.sidebar_bg');
+        enforce('sidebarBg', '#1a1a1a', 'lighter', 'settings.sidebar_bg_light');
+        enforce('darkSidebarBg', '#e5e5e5', 'darker', 'settings.sidebar_bg_dark');
 
         return { theme: result, warnings: warnings };
     }
@@ -527,25 +506,20 @@
             primaryColor: document.getElementById('settingsPrimaryColor').value,
             accentColor: document.getElementById('settingsAccentColor').value,
             sidebarBg: document.getElementById('settingsSidebarBg').value,
-            darkPrimaryColor: document.getElementById('settingsDarkPrimaryColor').value,
-            darkAccentColor: document.getElementById('settingsDarkAccentColor').value,
             darkSidebarBg: document.getElementById('settingsDarkSidebarBg').value
         };
         var checks = {
             primaryColor: {background: '#ffffff', textContrast: false},
             accentColor: {background: '#ffffff', textContrast: false},
             sidebarBg: {background: '#1a1a1a', textContrast: true},
-            darkPrimaryColor: {background: '#0b0d12', textContrast: false},
-            darkAccentColor: {background: '#0b0d12', textContrast: false},
             darkSidebarBg: {background: '#e5e5e5', textContrast: true}
         };
-        var hex = /^#[0-9a-fA-F]{6}$/;
 
         Object.keys(checks).forEach(function(key) {
             var el = document.querySelector('.theme-contrast-feedback[data-contrast-for="' + key + '"]');
             if (!el) return;
             var value = values[key];
-            if (!hex.test(value)) {
+            if (!HEX_RE.test(value)) {
                 el.dataset.state = 'error';
                 el.textContent = t('settings.contrast_invalid');
                 return;
@@ -562,15 +536,13 @@
         });
     }
 
-    // Track which optional fields are in "auto" mode (empty in JSON, derived for display)
+    // Optional colour fields: empty in JSON means "auto" (derived, badge shown)
     var AUTO_STATE = {
+        accentColor: true,
         sidebarBg: true,
-        darkPrimaryColor: true,
-        darkAccentColor: true,
         darkSidebarBg: true
     };
 
-    // Set an optional field's value: empty stored value = auto (show derived, badge on)
     function setAutoField(name, storedValue, derivedValue) {
         var hex = document.getElementById('settings' + capitalize(name));
         var picker = document.getElementById('settings' + capitalize(name) + 'Picker');
@@ -587,15 +559,62 @@
         return s.charAt(0).toUpperCase() + s.slice(1);
     }
 
+    function pickOne(value, allowed, fallback) {
+        return allowed.indexOf(value) !== -1 ? value : fallback;
+    }
+
+    // Fill the Design form from settings.theme
+    function populateThemeForm(theme) {
+        var mode = pickOne(theme.adminTheme, ['light', 'dark', 'system'], 'light');
+        document.getElementById('settingsAdminTheme').value = mode;
+        document.querySelectorAll('.theme-option').forEach(function(btn) {
+            btn.classList.toggle('selected', btn.dataset.theme === mode);
+        });
+
+        var preset = pickOne(theme.preset, THEME_PRESETS, 'soft');
+        document.getElementById('settingsThemePreset').value = preset;
+        document.querySelectorAll('.preset-card').forEach(function(card) {
+            var on = card.dataset.preset === preset;
+            card.classList.toggle('selected', on);
+            card.setAttribute('aria-checked', on ? 'true' : 'false');
+        });
+
+        var primary = HEX_RE.test(theme.primaryColor || '') ? normalizeHexColor(theme.primaryColor) : THEME_DEFAULTS.primaryColor;
+        document.getElementById('settingsPrimaryColor').value = primary;
+        document.getElementById('settingsPrimaryColorPicker').value = primary;
+
+        // An accent equal to the base colour is the old default, not a deliberate override
+        var accent = HEX_RE.test(theme.accentColor || '') ? normalizeHexColor(theme.accentColor) : '';
+        if (accent === primary) accent = '';
+        setAutoField('accentColor', accent, primary);
+        setAutoField('sidebarBg', theme.sidebarBg || '', deriveSidebarLight(primary));
+        setAutoField('darkSidebarBg', theme.darkSidebarBg || '', deriveSidebarDark(primary));
+
+        var fontSelect = document.getElementById('settingsFont');
+        if (fontSelect) {
+            fontSelect.value = pickOne(theme.font, THEME_FONTS, 'system');
+            window.nbSelectSync?.(fontSelect);
+        }
+        var density = pickOne(theme.density, THEME_DENSITIES, 'auto');
+        var densityRadio = document.querySelector('input[name="settingsDensity"][value="' + density + '"]');
+        if (densityRadio) densityRadio.checked = true;
+
+        updateThemeContrastFeedback();
+    }
+
     // Read current theme state from the form (returns the same shape as settings.theme)
     function readThemeFormState() {
+        var densityRadio = document.querySelector('input[name="settingsDensity"]:checked');
         return {
             adminTheme: document.getElementById('settingsAdminTheme').value,
+            preset: pickOne(document.getElementById('settingsThemePreset').value, THEME_PRESETS, 'soft'),
+            density: pickOne(densityRadio ? densityRadio.value : 'auto', THEME_DENSITIES, 'auto'),
+            font: pickOne(document.getElementById('settingsFont')?.value, THEME_FONTS, 'system'),
             primaryColor: normalizeHexColor(document.getElementById('settingsPrimaryColor').value),
-            accentColor: normalizeHexColor(document.getElementById('settingsAccentColor').value),
+            accentColor: AUTO_STATE.accentColor ? '' : normalizeHexColor(document.getElementById('settingsAccentColor').value),
             sidebarBg: AUTO_STATE.sidebarBg ? '' : normalizeHexColor(document.getElementById('settingsSidebarBg').value),
-            darkPrimaryColor: AUTO_STATE.darkPrimaryColor ? '' : normalizeHexColor(document.getElementById('settingsDarkPrimaryColor').value),
-            darkAccentColor: AUTO_STATE.darkAccentColor ? '' : normalizeHexColor(document.getElementById('settingsDarkAccentColor').value),
+            darkPrimaryColor: '',
+            darkAccentColor: '',
             darkSidebarBg: AUTO_STATE.darkSidebarBg ? '' : normalizeHexColor(document.getElementById('settingsDarkSidebarBg').value),
             buttonGlow: document.getElementById('settingsButtonGlow').checked,
             buttonRadius: parseInt(document.getElementById('settingsButtonRadius').value, 10)
@@ -611,45 +630,33 @@
         }
 
         setPair('settingsPrimaryColor', theme.primaryColor);
-        setPair('settingsAccentColor', theme.accentColor);
+        if (!AUTO_STATE.accentColor) setPair('settingsAccentColor', theme.accentColor);
         if (!AUTO_STATE.sidebarBg) setPair('settingsSidebarBg', theme.sidebarBg);
-        if (!AUTO_STATE.darkPrimaryColor) setPair('settingsDarkPrimaryColor', theme.darkPrimaryColor);
-        if (!AUTO_STATE.darkAccentColor) setPair('settingsDarkAccentColor', theme.darkAccentColor);
         if (!AUTO_STATE.darkSidebarBg) setPair('settingsDarkSidebarBg', theme.darkSidebarBg);
         refreshAutoDisplays();
     }
 
-    // Re-derive auto-fields when their source colors change (cascading display)
+    // Re-derive the displayed value of auto fields when the base colour changes
     function refreshAutoDisplays() {
         var primary = document.getElementById('settingsPrimaryColor').value;
-        var accent = document.getElementById('settingsAccentColor').value;
-        var hex = /^#[0-9a-fA-F]{6}$/;
-
-        if (AUTO_STATE.sidebarBg && hex.test(primary)) {
+        if (!HEX_RE.test(primary)) return;
+        if (AUTO_STATE.accentColor) {
+            document.getElementById('settingsAccentColor').value = primary;
+            document.getElementById('settingsAccentColorPicker').value = primary;
+        }
+        if (AUTO_STATE.sidebarBg) {
             var v = deriveSidebarLight(primary);
             document.getElementById('settingsSidebarBg').value = v;
             document.getElementById('settingsSidebarBgPicker').value = v;
         }
-        if (AUTO_STATE.darkPrimaryColor && hex.test(primary)) {
-            document.getElementById('settingsDarkPrimaryColor').value = primary;
-            document.getElementById('settingsDarkPrimaryColorPicker').value = primary;
-        }
-        if (AUTO_STATE.darkAccentColor && hex.test(accent)) {
-            document.getElementById('settingsDarkAccentColor').value = accent;
-            document.getElementById('settingsDarkAccentColorPicker').value = accent;
-        }
-        // Dark sidebar derives from resolved dark primary (which may itself be auto)
-        var darkPrimary = AUTO_STATE.darkPrimaryColor
-            ? primary
-            : document.getElementById('settingsDarkPrimaryColor').value;
-        if (AUTO_STATE.darkSidebarBg && hex.test(darkPrimary)) {
-            var sd = deriveSidebarDark(darkPrimary);
+        if (AUTO_STATE.darkSidebarBg) {
+            var sd = deriveSidebarDark(primary);
             document.getElementById('settingsDarkSidebarBg').value = sd;
             document.getElementById('settingsDarkSidebarBgPicker').value = sd;
         }
     }
 
-    // Live-update CSS variables on the <html> element (for both themes)
+    // Live preview of everything in the form
     function updateColorPreview() {
         refreshAutoDisplays();
         var theme = readThemeFormState();
@@ -657,32 +664,19 @@
         updateThemeContrastFeedback();
     }
 
-    // Combined button preview — uses primary color of the currently active theme
+    // Button preview follows the live tokens, only radius and glow are set here
     function updateBtnStylePreview() {
         var glow = document.getElementById('settingsButtonGlow').checked;
         var radius = parseInt(document.getElementById('settingsButtonRadius').value, 10);
-        var activeTheme = document.documentElement.getAttribute('data-site-theme') || 'light';
-        var primary;
-        if (activeTheme === 'dark') {
-            primary = AUTO_STATE.darkPrimaryColor
-                ? document.getElementById('settingsPrimaryColor').value
-                : document.getElementById('settingsDarkPrimaryColor').value;
-        } else {
-            primary = document.getElementById('settingsPrimaryColor').value;
-        }
+        var primary = document.getElementById('settingsPrimaryColor').value;
         var btnPrimary = document.getElementById('previewBtnPrimary');
         var btnSecondary = document.getElementById('previewBtnSecondary');
         if (btnPrimary) {
-            var primaryGlow = adjustColor(primary, 30);
-            btnPrimary.style.background = glow
-                ? 'radial-gradient(ellipse at 50% 0%, ' + primaryGlow + ' 0%, ' + primary + ' 70%)'
-                : primary;
+            btnPrimary.style.background = glow ? 'var(--nb-primary-btn)' : 'var(--nb-primary)';
             btnPrimary.style.borderRadius = radius + 'px';
-            if (glow) {
-                btnPrimary.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15), 0 4px 20px ' + hexToRgba(primary, 0.35);
-            } else {
-                btnPrimary.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
-            }
+            btnPrimary.style.boxShadow = glow && HEX_RE.test(primary)
+                ? '0 2px 8px rgba(0,0,0,0.15), 0 4px 20px ' + hexToRgba(primary, 0.35)
+                : '0 2px 8px rgba(0,0,0,0.15)';
         }
         if (btnSecondary) {
             btnSecondary.style.borderRadius = radius + 'px';
@@ -784,11 +778,31 @@
     }
 
     bindColorPair('primaryColor', false);
-    bindColorPair('accentColor', false);
+    bindColorPair('accentColor', true);
     bindColorPair('sidebarBg', true);
-    bindColorPair('darkPrimaryColor', true);
-    bindColorPair('darkAccentColor', true);
     bindColorPair('darkSidebarBg', true);
+
+    // Preset cards, density and font: instant preview
+    document.querySelectorAll('.preset-card[data-preset]').forEach(function(card) {
+        card.addEventListener('click', function() {
+            document.getElementById('settingsThemePreset').value = card.dataset.preset;
+            document.querySelectorAll('.preset-card').forEach(function(c) {
+                var on = c === card;
+                c.classList.toggle('selected', on);
+                c.setAttribute('aria-checked', on ? 'true' : 'false');
+            });
+            var presetFont = THEME_PRESET_FONTS[card.dataset.preset];
+            var fontSelect = document.getElementById('settingsFont');
+            if (fontSelect && presetFont && THEME_FONTS.indexOf(presetFont) !== -1) {
+                fontSelect.value = presetFont;
+            }
+            updateColorPreview();
+        });
+    });
+    document.querySelectorAll('input[name="settingsDensity"]').forEach(function(radio) {
+        radio.addEventListener('change', updateColorPreview);
+    });
+    document.getElementById('settingsFont')?.addEventListener('change', updateColorPreview);
 
     function setLoginColorPair(id, value) {
         var normalized = /^#[0-9a-fA-F]{6}$/.test(value || '') ? normalizeHexColor(value) : '';
@@ -835,15 +849,12 @@
 
     // Reset all colors button — restores defaults (without saving)
     document.getElementById('resetThemeBtn').addEventListener('click', function() {
-        document.getElementById('settingsPrimaryColor').value = THEME_DEFAULTS.primaryColor;
-        document.getElementById('settingsPrimaryColorPicker').value = THEME_DEFAULTS.primaryColor;
-        document.getElementById('settingsAccentColor').value = THEME_DEFAULTS.accentColor;
-        document.getElementById('settingsAccentColorPicker').value = THEME_DEFAULTS.accentColor;
-        // All optional fields back to auto
-        setAutoField('sidebarBg', '', deriveSidebarLight(THEME_DEFAULTS.primaryColor));
-        setAutoField('darkPrimaryColor', '', THEME_DEFAULTS.primaryColor);
-        setAutoField('darkAccentColor', '', THEME_DEFAULTS.accentColor);
-        setAutoField('darkSidebarBg', '', deriveSidebarDark(THEME_DEFAULTS.primaryColor));
+        populateThemeForm(Object.assign({}, THEME_DEFAULTS, {
+            adminTheme: document.getElementById('settingsAdminTheme').value
+        }));
+        document.getElementById('settingsButtonGlow').checked = THEME_DEFAULTS.buttonGlow;
+        document.getElementById('settingsButtonRadius').value = THEME_DEFAULTS.buttonRadius;
+        document.getElementById('settingsButtonRadiusValue').textContent = THEME_DEFAULTS.buttonRadius + 'px';
         updateColorPreview();
     });
 
@@ -1070,9 +1081,9 @@
         btn.textContent = t('btn.saving');
 
         var primaryColor = document.getElementById('settingsPrimaryColor').value;
-        var accentColor = document.getElementById('settingsAccentColor').value;
+        var accentColor = AUTO_STATE.accentColor ? primaryColor : document.getElementById('settingsAccentColor').value;
 
-        if (!/^#[0-9a-fA-F]{6}$/.test(primaryColor) || !/^#[0-9a-fA-F]{6}$/.test(accentColor)) {
+        if (!HEX_RE.test(primaryColor) || !HEX_RE.test(accentColor)) {
             showToast(t('settings.invalid_color'), 'error');
             btn.disabled = false;
             btn.textContent = t('settings.save_theme');
@@ -1133,101 +1144,53 @@
         }
     });
 
-    // Resolve theme into light + dark color sets (dark falls back to light when empty)
-    function resolveThemeColors(theme) {
-        var light = {
-            primary: theme.primaryColor || THEME_DEFAULTS.primaryColor,
-            accent: theme.accentColor || THEME_DEFAULTS.accentColor,
-            sidebar: theme.sidebarBg || ''
-        };
-        var dark = {
-            primary: theme.darkPrimaryColor || light.primary,
-            accent: theme.darkAccentColor || light.accent,
-            sidebar: theme.darkSidebarBg || ''
-        };
-        if (!light.sidebar) light.sidebar = deriveSidebarLight(light.primary);
-        if (!dark.sidebar) dark.sidebar = deriveSidebarDark(dark.primary);
-        return { light: light, dark: dark };
-    }
-
-    // Inject a per-theme stylesheet; replaces the one we ship server-side on save/preview
-    function injectThemeStyles(colors, glow) {
-        var existing = document.getElementById('nb-theme-runtime');
-        if (existing) existing.remove();
-        var style = document.createElement('style');
-        style.id = 'nb-theme-runtime';
-
-        function block(selector, c) {
-            var pcLight = adjustColor(c.primary, 30);
-            var btnGradient = glow === false
-                ? c.primary
-                : 'radial-gradient(ellipse at 50% 0%, ' + pcLight + ' 0%, ' + c.primary + ' 70%)';
-            var btnHover = glow === false
-                ? adjustColor(c.primary, -15)
-                : 'radial-gradient(ellipse at 50% 0%, ' + adjustColor(pcLight, 20) + ' 0%, ' + c.primary + ' 70%)';
-            // Subtle/muted/medium tints derived from primary so hover/active
-            // states pick up the user's branding instead of the static blue
-            // defaults in nibbly-admin-tokens.css.
-            var isDark = selector.indexOf('dark') !== -1;
-            var subtleAlpha = isDark ? 0.12 : 0.08;
-            var mutedAlpha = isDark ? 0.22 : 0.15;
-            var mediumAlpha = isDark ? 0.38 : 0.30;
-            var bg = isDark ? adjustColor(c.sidebar, 8) : adjustColor(c.sidebar, 8);
-            var bgElevated = isDark ? adjustColor(c.sidebar, 18) : adjustColor(c.sidebar, 18);
-            var bgSunken = isDark ? adjustColor(c.sidebar, -2) : adjustColor(c.sidebar, -6);
-            var bgHover = isDark ? adjustColor(c.sidebar, 28) : adjustColor(c.sidebar, 4);
-            var border = isDark ? adjustColor(c.sidebar, 42) : adjustColor(c.sidebar, -20);
-            var borderStrong = isDark ? adjustColor(c.sidebar, 58) : adjustColor(c.sidebar, -34);
-            return selector + ' {' +
-                '--nb-primary: ' + c.primary + ';' +
-                '--nb-primary-hover: ' + adjustColor(c.primary, -15) + ';' +
-                '--nb-primary-active: ' + adjustColor(c.primary, -25) + ';' +
-                '--nb-primary-subtle: ' + hexToRgba(c.primary, subtleAlpha) + ';' +
-                '--nb-primary-muted: ' + hexToRgba(c.primary, mutedAlpha) + ';' +
-                '--nb-primary-medium: ' + hexToRgba(c.primary, mediumAlpha) + ';' +
-                '--nb-primary-btn: ' + btnGradient + ';' +
-                '--nb-primary-btn-hover: ' + btnHover + ';' +
-                '--nb-brand: ' + c.accent + ';' +
-                '--nb-brand-light: ' + adjustColor(c.accent, 20) + ';' +
-                '--nb-brand-dark: ' + adjustColor(c.accent, -20) + ';' +
-                '--nb-brand-subtle: ' + hexToRgba(c.accent, isDark ? 0.18 : 0.12) + ';' +
-                '--nb-sidebar-bg: ' + c.sidebar + ';' +
-                '--nb-bg: ' + bg + ';' +
-                '--nb-bg-elevated: ' + bgElevated + ';' +
-                '--nb-bg-sunken: ' + bgSunken + ';' +
-                '--nb-bg-hover: ' + bgHover + ';' +
-                '--nb-border: ' + border + ';' +
-                '--nb-border-strong: ' + borderStrong + ';' +
-            '}';
-        }
-
-        style.textContent =
-            block(':root, [data-site-theme="light"]', colors.light) +
-            block('[data-site-theme="dark"]', colors.dark);
-        document.head.appendChild(style);
-    }
-
-    // Apply theme live
+    // Apply theme live: the stylesheet derives every colour from --nb-base per
+    // preset, so the runtime only sets attributes, the base colour and the
+    // optional sidebar overrides.
     function applyTheme(theme) {
+        var root = document.documentElement;
         var themeValue = theme.adminTheme || 'light';
         if (themeValue === 'system') {
             themeValue = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         }
-        document.documentElement.setAttribute('data-site-theme', themeValue);
+        root.setAttribute('data-site-theme', themeValue);
         localStorage.setItem('site-admin-theme', theme.adminTheme);
+        root.setAttribute('data-theme-preset', pickOne(theme.preset, THEME_PRESETS, 'soft'));
+        root.setAttribute('data-density', pickOne(theme.density, THEME_DENSITIES, 'auto'));
+        root.setAttribute('data-font', pickOne(theme.font, THEME_FONTS, 'system'));
 
-        var colors = resolveThemeColors(theme);
-        injectThemeStyles(colors, theme.buttonGlow);
+        var base = HEX_RE.test(theme.primaryColor || '') ? normalizeHexColor(theme.primaryColor) : THEME_DEFAULTS.primaryColor;
+        var accent = HEX_RE.test(theme.accentColor || '') ? normalizeHexColor(theme.accentColor) : base;
+        root.style.setProperty('--nb-base', base);
+        root.style.setProperty('--nb-accent-base', accent);
+
+        var css = '';
+        if (HEX_RE.test(theme.sidebarBg || '')) {
+            css += ':root, [data-site-theme="light"] { --nb-sidebar-bg: ' + theme.sidebarBg + '; --nb-topbar-bg: ' + theme.sidebarBg + '; }';
+        }
+        if (HEX_RE.test(theme.darkSidebarBg || '')) {
+            css += '[data-site-theme="dark"] { --nb-sidebar-bg: ' + theme.darkSidebarBg + '; --nb-topbar-bg: ' + theme.darkSidebarBg + '; }';
+        }
+        var serverStyle = document.getElementById('nb-theme-server');
+        if (serverStyle) serverStyle.disabled = true;
+        var runtime = document.getElementById('nb-theme-runtime');
+        if (!runtime) {
+            runtime = document.createElement('style');
+            runtime.id = 'nb-theme-runtime';
+            document.head.appendChild(runtime);
+        }
+        runtime.textContent = css;
 
         // Button radius — affects both admin and frontend editor buttons
         if (theme.buttonRadius != null) {
-            document.documentElement.style.setProperty('--editor-btn-radius', theme.buttonRadius + 'px');
+            root.style.setProperty('--editor-btn-radius', theme.buttonRadius + 'px');
         }
 
         // Flat button classes (glow disabled)
-        document.documentElement.classList.toggle('editor-flat', theme.buttonGlow === false);
-        document.documentElement.classList.toggle('nb-flat-buttons', theme.buttonGlow === false);
+        root.classList.toggle('editor-flat', theme.buttonGlow === false);
+        root.classList.toggle('nb-flat-buttons', theme.buttonGlow === false);
 
+        updateAdminBrowserFavicon(themeValue);
         updateBtnStylePreview();
     }
 
@@ -1629,7 +1592,7 @@
     function formatAiImageJobTime(value) {
         if (!value) return '';
         var date = new Date(value);
-        return isNaN(date.getTime()) ? '' : date.toLocaleString();
+        return isNaN(date.getTime()) ? '' : nbFormatDate(date, 'datetime');
     }
 
     function updateAiImageJobsPanel(jobs, isChecking) {
@@ -1840,7 +1803,7 @@
         if (!value) return '';
         var date = new Date(value);
         if (Number.isNaN(date.getTime())) return value;
-        return date.toLocaleString();
+        return nbFormatDate(date, 'datetime');
     }
 
     function renderAiImageHistory(items, append, hasMore) {
@@ -2874,6 +2837,11 @@
                 if (!field) throw new Error(t('copilot.dash_failed'));
                 field.value = value;
                 if (picker) picker.value = value;
+                if (key === 'accentColor') {
+                    AUTO_STATE.accentColor = false;
+                    var accentBadge = document.querySelector('.auto-badge[data-auto-for="accentColor"]');
+                    if (accentBadge) accentBadge.hidden = true;
+                }
             } else {
                 throw new Error(t('copilot.dash_failed'));
             }

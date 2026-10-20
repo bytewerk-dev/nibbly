@@ -34,7 +34,7 @@ $isAdminUser = ($userRole === 'admin');
 
 // Load settings for theme
 $_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg';
-$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => ['adminTheme' => 'light', 'primaryColor' => '#3858e9', 'accentColor' => '#3858e9', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'buttonGlow' => true, 'buttonRadius' => 6], 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'messages' => true, 'iconManager' => true], 'dashboard' => ['itemsPerPage' => 50, 'iconManagerItemsPerPage' => 50, 'mediaItemsPerPage' => 25]];
+$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => ['adminTheme' => 'light', 'preset' => 'soft', 'density' => 'auto', 'font' => 'system', 'primaryColor' => '#3858e9', 'accentColor' => '', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'buttonGlow' => true, 'buttonRadius' => 6], 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'messages' => true, 'iconManager' => true], 'dashboard' => ['itemsPerPage' => 50, 'iconManagerItemsPerPage' => 50, 'mediaItemsPerPage' => 25]];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     $loadedSettings = json_decode(file_get_contents(SETTINGS_PATH), true);
     if (is_array($loadedSettings)) {
@@ -96,7 +96,12 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 }
 ?>
 <!DOCTYPE html>
-<html lang="<?php echo htmlspecialchars(_nbAdminLang()); ?>" data-site-theme="<?php echo htmlspecialchars($adminTheme === 'system' ? 'light' : $adminTheme); ?>">
+<?php
+$_themePreset = in_array($siteSettings['theme']['preset'] ?? '', ['soft', 'classic', 'paper', 'studio'], true) ? $siteSettings['theme']['preset'] : 'soft';
+$_themeDensity = in_array($siteSettings['theme']['density'] ?? '', ['auto', 'compact', 'comfortable'], true) ? $siteSettings['theme']['density'] : 'auto';
+$_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist', 'inter'], true) ? $siteSettings['theme']['font'] : 'system';
+?>
+<html lang="<?php echo htmlspecialchars(_nbAdminLang()); ?>" data-site-theme="<?php echo htmlspecialchars($adminTheme === 'system' ? 'light' : $adminTheme); ?>" data-theme-preset="<?php echo $_themePreset; ?>" data-density="<?php echo $_themeDensity; ?>" data-font="<?php echo $_themeFont; ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -108,6 +113,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     ?>
     <link rel="icon" href="<?php echo htmlspecialchars($_dashFavicon); ?>" type="<?php echo $_dashFaviconType; ?>">
     <meta name="csrf-token" content="<?php echo htmlspecialchars($csrfToken); ?>">
+    <link rel="stylesheet" href="fonts.css?v=<?php echo @filemtime(__DIR__ . '/fonts.css') ?: time(); ?>">
     <link rel="stylesheet" href="style.css?v=<?php echo @filemtime(__DIR__ . '/style.css') ?: time(); ?>">
     <link rel="stylesheet" href="../css/image-manager.css?v=<?php echo @filemtime(__DIR__ . '/../css/image-manager.css') ?: time(); ?>">
     <link rel="stylesheet" href="../css/nb-select.css?v=<?php echo @filemtime(__DIR__ . '/../css/nb-select.css') ?: time(); ?>">
@@ -124,22 +130,34 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     </script>
     <?php endif; ?>
     <?php
-    // Emit a CSS block that mirrors what applyTheme() does in JS, so styles are
-    // correct on first paint (no flash). Light values fall back to Dark when the
-    // dark-* override is empty.
+    // The saved base colour and the optional overrides reach the stylesheet as
+    // custom properties on :root; css/nibbly-admin-tokens.css derives everything
+    // else per preset. Browsers without relative colour syntax get the older
+    // color-mix() derivation inside @supports not (...).
     $_t = $siteSettings['theme'];
-    $_pcLight = htmlspecialchars($_t['primaryColor']);
-    $_acLight = htmlspecialchars($_t['accentColor']);
-    $_sbLight = !empty($_t['sidebarBg'])
-        ? htmlspecialchars($_t['sidebarBg'])
-        : "color-mix(in srgb, {$_pcLight} 12%, white)";
-    $_pcDark = !empty($_t['darkPrimaryColor']) ? htmlspecialchars($_t['darkPrimaryColor']) : $_pcLight;
-    $_acDark = !empty($_t['darkAccentColor']) ? htmlspecialchars($_t['darkAccentColor']) : $_acLight;
-    $_sbDark = !empty($_t['darkSidebarBg'])
-        ? htmlspecialchars($_t['darkSidebarBg'])
-        : "color-mix(in srgb, {$_pcDark} 10%, #0b0d12)";
+    $_pcLight = preg_match('/^#[0-9a-fA-F]{6}$/', (string)$_t['primaryColor']) ? strtolower((string)$_t['primaryColor']) : '#3858e9';
+    $_acRaw = strtolower((string)($_t['accentColor'] ?? ''));
+    // An accent equal to the base colour is the old default, not a deliberate override
+    $_acLight = (preg_match('/^#[0-9a-fA-F]{6}$/', $_acRaw) && $_acRaw !== $_pcLight) ? $_acRaw : $_pcLight;
+    $_sbLightOverride = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($_t['sidebarBg'] ?? '')) ? strtolower((string)$_t['sidebarBg']) : '';
+    $_sbDarkOverride = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($_t['darkSidebarBg'] ?? '')) ? strtolower((string)$_t['darkSidebarBg']) : '';
+    $_pcDark = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($_t['darkPrimaryColor'] ?? '')) ? strtolower((string)$_t['darkPrimaryColor']) : $_pcLight;
+    $_acDark = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($_t['darkAccentColor'] ?? '')) ? strtolower((string)$_t['darkAccentColor']) : $_acLight;
+    $_sbLight = $_sbLightOverride !== '' ? $_sbLightOverride : "color-mix(in srgb, {$_pcLight} 12%, white)";
+    $_sbDark = $_sbDarkOverride !== '' ? $_sbDarkOverride : "color-mix(in srgb, {$_pcDark} 10%, #0b0d12)";
     ?>
-    <style>
+    <style id="nb-theme-server">
+    :root {
+        --nb-base: <?php echo $_pcLight; ?>;
+        --nb-accent-base: <?php echo $_acLight; ?>;
+    }
+    <?php if ($_sbLightOverride !== ''): ?>
+    :root, [data-site-theme="light"] { --nb-sidebar-bg: <?php echo $_sbLightOverride; ?>; --nb-topbar-bg: <?php echo $_sbLightOverride; ?>; }
+    <?php endif; ?>
+    <?php if ($_sbDarkOverride !== ''): ?>
+    [data-site-theme="dark"] { --nb-sidebar-bg: <?php echo $_sbDarkOverride; ?>; --nb-topbar-bg: <?php echo $_sbDarkOverride; ?>; }
+    <?php endif; ?>
+    @supports not (color: oklch(from red l c h)) {
     :root,
     [data-site-theme="light"] {
         --nb-primary: <?php echo $_pcLight; ?>;
@@ -179,6 +197,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         --nb-border: color-mix(in srgb, <?php echo $_sbDark; ?> 55%, #5a6472);
         --nb-border-strong: color-mix(in srgb, <?php echo $_sbDark; ?> 44%, #717b88);
     }
+    }
     </style>
 </head>
 <body>
@@ -194,7 +213,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 $_brandName = $siteSettings['branding']['name'] ?? '';
                 echo nibblyIconOrImg($_topbarFavicon, $_brandName, ['width' => 24, 'height' => 24, 'class' => 'topbar-logo']);
             endif; ?>
-            <span class="topbar-dashboard"><?php echo t('dashboard'); ?></span>
+            <?php $_siteLabel = trim((string)($siteSettings['branding']['name'] ?? '')) ?: (defined('SITE_NAME') ? (string)SITE_NAME : ''); ?>
+            <span class="topbar-dashboard"><?php echo htmlspecialchars($_siteLabel !== '' ? $_siteLabel : t('dashboard')); ?></span>
         </div>
         <h1 class="topbar-title" id="topbarTitle"><?php echo t('pages.title'); ?></h1>
         <div class="topbar-selectors" id="topbarSelectors" style="display: none;">
@@ -383,11 +403,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <div class="page-list-header">
                 <div class="page-list-header-left">
                     <h2><?php echo t('pages.title'); ?></h2>
-                    <button class="btn btn-secondary btn-sm" onclick="showNewPageModal()"><?php echo t('pages.new_page'); ?></button>
-                    <button class="btn btn-secondary btn-sm page-list-trash-btn" onclick="showTrash()" id="trashToggle">
-                        <?php echo nbIcon('trash', 14); ?>
-                        <?php echo t('pages.trash'); ?>
-                    </button>
+                </div>
+                <div class="page-list-header-actions">
                     <label class="page-list-search" for="pageListSearch">
                         <span class="sr-only"><?php echo t('pages.search_title'); ?></span>
                         <input
@@ -399,12 +416,17 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             oninput="handlePageListSearch(this.value)"
                         >
                     </label>
+                    <select id="pageListLang" class="topbar-select" onchange="renderPageListForLang(this.value)">
+                        <?php foreach ($siteLanguages as $code => $name): ?>
+                        <option value="<?php echo htmlspecialchars($code); ?>"<?php if ($code === SITE_LANG_DEFAULT) echo ' selected'; ?>><?php echo htmlspecialchars($name); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button class="btn btn-secondary btn-sm page-list-trash-btn" onclick="showTrash()" id="trashToggle">
+                        <?php echo nbIcon('trash', 14); ?>
+                        <?php echo t('pages.trash'); ?>
+                    </button>
+                    <button class="btn btn-primary btn-sm" onclick="showNewPageModal()"><?php echo t('pages.new_page'); ?></button>
                 </div>
-                <select id="pageListLang" class="topbar-select" onchange="renderPageListForLang(this.value)">
-                    <?php foreach ($siteLanguages as $code => $name): ?>
-                    <option value="<?php echo htmlspecialchars($code); ?>"<?php if ($code === SITE_LANG_DEFAULT) echo ' selected'; ?>><?php echo htmlspecialchars($name); ?></option>
-                    <?php endforeach; ?>
-                </select>
             </div>
             <div class="admin-list-footer admin-list-footer--top" id="pageListFooterTop"></div>
             <div class="page-list-table-wrap">
@@ -429,6 +451,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <div class="page-list-header">
                 <div class="page-list-header-left">
                     <h2><?php echo t('trash.title'); ?></h2>
+                </div>
+                <div class="page-list-header-actions">
                     <button class="btn btn-secondary btn-sm" onclick="showPageList()">
                         <?php echo nbIcon('back', 14); ?>
                         <?php echo t('pages.back_to_pages'); ?>
@@ -505,13 +529,15 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <div class="page-list-header">
                 <div class="page-list-header-left">
                     <h2><?php echo t('events.title'); ?></h2>
-                    <button class="btn btn-secondary btn-sm" onclick="addNewEvent()"><?php echo t('events.new_event'); ?></button>
+                    <span class="last-modified" id="eventsLastModified"></span>
+                </div>
+                <div class="page-list-header-actions">
                     <button class="btn btn-secondary btn-sm page-list-trash-btn" onclick="showEventsTrash()">
                         <?php echo nbIcon('trash', 14); ?>
                         <?php echo t('pages.trash'); ?>
                     </button>
+                    <button class="btn btn-primary btn-sm" onclick="addNewEvent()"><?php echo t('events.new_event'); ?></button>
                 </div>
-                <span class="last-modified" id="eventsLastModified"></span>
             </div>
             <div class="admin-list-footer admin-list-footer--top" id="eventsListFooterTop"></div>
             <div class="page-list-table-wrap">
@@ -594,7 +620,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <div class="page-list-header">
                 <div class="page-list-header-left">
                     <h2><?php echo t('news.title'); ?></h2>
-                    <button class="btn btn-secondary btn-sm" onclick="addNewPost()"><?php echo t('news.new_post'); ?></button>
+                </div>
+                <div class="page-list-header-actions">
+                    <button class="btn btn-primary btn-sm" onclick="addNewPost()"><?php echo t('news.new_post'); ?></button>
                 </div>
             </div>
             <div class="admin-list-footer admin-list-footer--top" id="newsListFooterTop"></div>
@@ -1090,6 +1118,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
             <div class="page-list-header">
                 <div class="page-list-header-left">
                     <h2><?php echo t('icons.title'); ?></h2>
+                </div>
+                <div class="page-list-header-actions">
                     <button class="btn btn-secondary btn-sm" id="iconManagerRefreshBtn" onclick="loadIconManager()"><?php echo t('btn.refresh'); ?></button>
                     <button class="btn btn-secondary btn-sm" onclick="openIconifyImportModal()"><?php echo t('icons.import_icon'); ?></button>
                     <button class="btn btn-primary btn-sm" onclick="openIconManagerModal()"><?php echo t('icons.add_icon'); ?></button>
@@ -1339,7 +1369,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             <small class="form-hint"><?php echo t('settings.branding_hint'); ?></small>
                         </div>
                     </fieldset>
-                    <div class="branding-form-actions">
+                    <div class="settings-actions branding-form-actions">
                         <button type="button" class="btn btn-secondary" id="resetBrandingBtn">&#x21BA; <?php echo t('settings.reset_branding'); ?></button>
                         <button type="submit" class="btn btn-primary" id="saveBrandingBtn"><?php echo t('settings.save_branding'); ?></button>
                     </div>
@@ -1351,126 +1381,149 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                 <h2><?php echo t('settings.theme'); ?></h2>
                 <p class="settings-description"><?php echo t('settings.theme_desc'); ?></p>
                 <form id="themeForm" class="settings-form">
-                    <div class="form-group">
-                        <label><?php echo t('settings.admin_theme'); ?></label>
-                        <div class="theme-selector">
-                            <button type="button" class="theme-option selected" data-theme="light">
-                                <span class="theme-swatch theme-swatch--light"></span>
-                                <span><?php echo t('settings.theme_light'); ?></span>
-                            </button>
-                            <button type="button" class="theme-option" data-theme="dark">
-                                <span class="theme-swatch theme-swatch--dark"></span>
-                                <span><?php echo t('settings.theme_dark'); ?></span>
-                            </button>
-                            <button type="button" class="theme-option" data-theme="system">
-                                <span class="theme-swatch theme-swatch--system"></span>
-                                <span><?php echo t('settings.theme_system'); ?></span>
-                            </button>
-                        </div>
-                        <input type="hidden" id="settingsAdminTheme" value="light">
-                    </div>
-                    <div class="theme-color-grid">
-                    <div class="theme-color-preview" data-mode="light">
-                    <fieldset class="theme-color-section">
-                        <legend><?php echo t('settings.theme_section_light'); ?></legend>
+                    <fieldset class="settings-section">
+                        <legend><?php echo t('settings.appearance'); ?></legend>
+
                         <div class="form-group">
-                            <label for="settingsPrimaryColor"><?php echo t('settings.primary_color'); ?></label>
+                            <label id="settingsThemePresetLabel"><?php echo t('settings.theme_preset'); ?></label>
+                            <div class="preset-grid" role="radiogroup" aria-labelledby="settingsThemePresetLabel">
+                                <?php foreach (['soft', 'classic', 'paper', 'studio'] as $_preset): ?>
+                                <button type="button" class="preset-card" role="radio" aria-checked="false" data-preset="<?php echo $_preset; ?>">
+                                    <span class="preset-card__preview" aria-hidden="true"><span class="preset-card__stage"><span></span><span></span><span></span></span></span>
+                                    <span class="preset-card__name"><?php echo t('settings.preset_' . $_preset); ?></span>
+                                    <span class="preset-card__desc"><?php echo t('settings.preset_' . $_preset . '_desc'); ?></span>
+                                </button>
+                                <?php endforeach; ?>
+                            </div>
+                            <input type="hidden" id="settingsThemePreset" value="soft">
+                            <small class="form-hint"><?php echo t('settings.theme_preset_hint'); ?></small>
+                        </div>
+
+                        <div class="form-group">
+                            <label id="settingsAdminThemeLabel"><?php echo t('settings.theme_mode'); ?></label>
+                            <div class="theme-selector" role="radiogroup" aria-labelledby="settingsAdminThemeLabel">
+                                <button type="button" class="theme-option selected" data-theme="light">
+                                    <span class="theme-swatch theme-swatch--light"></span>
+                                    <span><?php echo t('settings.theme_light'); ?></span>
+                                </button>
+                                <button type="button" class="theme-option" data-theme="dark">
+                                    <span class="theme-swatch theme-swatch--dark"></span>
+                                    <span><?php echo t('settings.theme_dark'); ?></span>
+                                </button>
+                                <button type="button" class="theme-option" data-theme="system">
+                                    <span class="theme-swatch theme-swatch--system"></span>
+                                    <span><?php echo t('settings.theme_system'); ?></span>
+                                </button>
+                            </div>
+                            <input type="hidden" id="settingsAdminTheme" value="light">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="settingsPrimaryColor"><?php echo t('settings.base_color'); ?></label>
                             <div class="color-input-group">
                                 <input type="color" id="settingsPrimaryColorPicker" value="#3858e9" class="color-picker">
                                 <input type="text" id="settingsPrimaryColor" value="#3858e9" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
                             </div>
-                            <small class="form-hint"><?php echo t('settings.primary_color_hint'); ?></small>
+                            <small class="form-hint"><?php echo t('settings.base_color_hint'); ?></small>
                             <small class="theme-contrast-feedback" data-contrast-for="primaryColor"></small>
                         </div>
+
+                        <div class="form-group">
+                            <label for="settingsFont"><?php echo t('settings.font'); ?></label>
+                            <select id="settingsFont" class="access-select">
+                                <option value="system"><?php echo t('settings.font_system'); ?></option>
+                                <option value="geist"><?php echo t('settings.font_geist'); ?></option>
+                                <option value="inter"><?php echo t('settings.font_inter'); ?></option>
+                            </select>
+                            <small class="form-hint"><?php echo t('settings.font_hint'); ?></small>
+                        </div>
+
+                        <div class="form-group">
+                            <label id="settingsDensityLabel"><?php echo t('settings.density'); ?></label>
+                            <div class="segmented" role="radiogroup" aria-labelledby="settingsDensityLabel">
+                                <label><input type="radio" name="settingsDensity" value="auto" checked><span><?php echo t('settings.density_auto'); ?></span></label>
+                                <label><input type="radio" name="settingsDensity" value="compact"><span><?php echo t('settings.density_compact'); ?></span></label>
+                                <label><input type="radio" name="settingsDensity" value="comfortable"><span><?php echo t('settings.density_comfortable'); ?></span></label>
+                            </div>
+                            <small class="form-hint"><?php echo t('settings.density_hint'); ?></small>
+                        </div>
+                    </fieldset>
+
+                    <details class="settings-advanced" id="themeAdvanced">
+                        <summary><?php echo t('settings.advanced'); ?></summary>
+                        <div class="settings-advanced__grid">
+                        <div class="settings-advanced__col">
+
                         <div class="form-group">
                             <label for="settingsAccentColor"><?php echo t('settings.accent_color'); ?></label>
-                            <div class="color-input-group">
+                            <div class="color-input-group" data-auto-field="accentColor">
                                 <input type="color" id="settingsAccentColorPicker" value="#3858e9" class="color-picker">
                                 <input type="text" id="settingsAccentColor" value="#3858e9" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
+                                <span class="auto-badge" data-auto-for="accentColor" hidden><?php echo t('settings.auto_badge'); ?></span>
+                                <button type="button" class="auto-reset-btn" data-auto-reset="accentColor" title="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>" aria-label="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>">&#x21BA;</button>
                             </div>
                             <small class="form-hint"><?php echo t('settings.accent_color_hint'); ?></small>
                             <small class="theme-contrast-feedback" data-contrast-for="accentColor"></small>
                         </div>
+
                         <div class="form-group">
-                            <label for="settingsSidebarBg"><?php echo t('settings.sidebar_bg'); ?></label>
+                            <label for="settingsSidebarBg"><?php echo t('settings.sidebar_bg_light'); ?></label>
                             <div class="color-input-group" data-auto-field="sidebarBg">
-                                <input type="color" id="settingsSidebarBgPicker" value="#eff6ff" class="color-picker">
-                                <input type="text" id="settingsSidebarBg" value="#eff6ff" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
+                                <input type="color" id="settingsSidebarBgPicker" value="#e4ecfd" class="color-picker">
+                                <input type="text" id="settingsSidebarBg" value="#e4ecfd" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
                                 <span class="auto-badge" data-auto-for="sidebarBg" hidden><?php echo t('settings.auto_badge'); ?></span>
                                 <button type="button" class="auto-reset-btn" data-auto-reset="sidebarBg" title="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>" aria-label="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>">&#x21BA;</button>
                             </div>
                             <small class="form-hint"><?php echo t('settings.sidebar_bg_hint'); ?></small>
                             <small class="theme-contrast-feedback" data-contrast-for="sidebarBg"></small>
                         </div>
-                    </fieldset>
-                    </div>
 
-                    <div class="theme-color-preview" data-mode="dark">
-                    <fieldset class="theme-color-section">
-                        <legend><?php echo t('settings.theme_section_dark'); ?></legend>
                         <div class="form-group">
-                            <label for="settingsDarkPrimaryColor"><?php echo t('settings.primary_color'); ?></label>
-                            <div class="color-input-group" data-auto-field="darkPrimaryColor">
-                                <input type="color" id="settingsDarkPrimaryColorPicker" value="#3858e9" class="color-picker">
-                                <input type="text" id="settingsDarkPrimaryColor" value="#3858e9" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
-                                <span class="auto-badge" data-auto-for="darkPrimaryColor" hidden><?php echo t('settings.auto_badge'); ?></span>
-                                <button type="button" class="auto-reset-btn" data-auto-reset="darkPrimaryColor" title="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>" aria-label="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>">&#x21BA;</button>
-                            </div>
-                            <small class="theme-contrast-feedback" data-contrast-for="darkPrimaryColor"></small>
-                        </div>
-                        <div class="form-group">
-                            <label for="settingsDarkAccentColor"><?php echo t('settings.accent_color'); ?></label>
-                            <div class="color-input-group" data-auto-field="darkAccentColor">
-                                <input type="color" id="settingsDarkAccentColorPicker" value="#3858e9" class="color-picker">
-                                <input type="text" id="settingsDarkAccentColor" value="#3858e9" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
-                                <span class="auto-badge" data-auto-for="darkAccentColor" hidden><?php echo t('settings.auto_badge'); ?></span>
-                                <button type="button" class="auto-reset-btn" data-auto-reset="darkAccentColor" title="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>" aria-label="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>">&#x21BA;</button>
-                            </div>
-                            <small class="theme-contrast-feedback" data-contrast-for="darkAccentColor"></small>
-                        </div>
-                        <div class="form-group">
-                            <label for="settingsDarkSidebarBg"><?php echo t('settings.sidebar_bg'); ?></label>
+                            <label for="settingsDarkSidebarBg"><?php echo t('settings.sidebar_bg_dark'); ?></label>
                             <div class="color-input-group" data-auto-field="darkSidebarBg">
-                                <input type="color" id="settingsDarkSidebarBgPicker" value="#0a0a0a" class="color-picker">
-                                <input type="text" id="settingsDarkSidebarBg" value="#0a0a0a" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
+                                <input type="color" id="settingsDarkSidebarBgPicker" value="#0e1420" class="color-picker">
+                                <input type="text" id="settingsDarkSidebarBg" value="#0e1420" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
                                 <span class="auto-badge" data-auto-for="darkSidebarBg" hidden><?php echo t('settings.auto_badge'); ?></span>
                                 <button type="button" class="auto-reset-btn" data-auto-reset="darkSidebarBg" title="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>" aria-label="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>">&#x21BA;</button>
                             </div>
                             <small class="theme-contrast-feedback" data-contrast-for="darkSidebarBg"></small>
                         </div>
-                        <small class="form-hint"><?php echo t('settings.dark_section_hint'); ?></small>
-                    </fieldset>
-                    </div>
-                    </div>
 
-                    <fieldset class="settings-section settings-section--compact settings-section--button-style">
-                        <legend><?php echo t('settings.button_style'); ?></legend>
-                        <div class="btn-style-row">
-                            <div class="btn-style-controls">
-                                <div class="range-field btn-style-radius-field">
-                                    <label for="settingsButtonRadius"><?php echo t('settings.button_radius'); ?></label>
-                                    <div class="range-input-group">
-                                        <input type="range" id="settingsButtonRadius" min="0" max="24" value="6" class="range-input">
-                                        <span class="range-value" id="settingsButtonRadiusValue">6px</span>
-                                    </div>
-                                </div>
-                                <div class="btn-style-glow-field">
-                                    <label class="toggle-label">
-                                        <span><?php echo t('settings.button_glow'); ?></span>
-                                        <div class="toggle-switch">
-                                            <input type="checkbox" id="settingsButtonGlow" checked>
-                                            <span class="toggle-slider"></span>
-                                        </div>
-                                    </label>
-                                    <small class="form-hint"><?php echo t('settings.button_glow_hint'); ?></small>
-                                </div>
+                        </div>
+                        <div class="settings-advanced__col">
+
+                        <div class="form-group">
+                            <label for="settingsButtonRadius"><?php echo t('settings.button_radius'); ?></label>
+                            <div class="range-input-group">
+                                <input type="range" id="settingsButtonRadius" min="0" max="24" value="6" class="range-input">
+                                <span class="range-value" id="settingsButtonRadiusValue">6px</span>
                             </div>
+                            <small class="form-hint"><?php echo t('settings.button_radius_hint'); ?></small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="toggle-label">
+                                <span><?php echo t('settings.button_glow'); ?></span>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="settingsButtonGlow" checked>
+                                    <span class="toggle-slider"></span>
+                                </div>
+                            </label>
+                            <small class="form-hint"><?php echo t('settings.button_glow_hint'); ?></small>
+                        </div>
+
+                        <div class="form-group">
+                            <label><?php echo t('settings.button_style'); ?></label>
                             <div class="btn-style-preview" id="btnStylePreview">
                                 <button type="button" class="btn-preview-primary" id="previewBtnPrimary"><?php echo t('settings.preview_primary'); ?></button>
                                 <button type="button" class="btn-preview-secondary" id="previewBtnSecondary"><?php echo t('settings.preview_secondary'); ?></button>
                             </div>
                         </div>
-                    </fieldset>
+
+                        </div>
+                        </div>
+                    </details>
+
                     <fieldset class="settings-section settings-section--compact">
                         <legend><?php echo t('settings.list_pagination'); ?></legend>
                         <p class="settings-description settings-description--compact"><?php echo t('settings.list_pagination_desc'); ?></p>
@@ -1492,7 +1545,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             </div>
                         </div>
                     </fieldset>
-                    <div class="theme-form-actions">
+                    <div class="settings-actions theme-form-actions">
                         <button type="button" class="btn btn-secondary" id="resetThemeBtn">&#x21BA; <?php echo t('settings.reset_colors'); ?></button>
                         <button type="submit" class="btn btn-primary" id="saveThemeBtn"><?php echo t('settings.save_theme'); ?></button>
                     </div>
@@ -1521,7 +1574,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </select>
                         <small class="form-hint"><?php echo t('settings.ai_label_artwork_hint'); ?></small>
                     </div>
-                    <button type="submit" class="btn btn-primary" id="saveLanguageBtn"><?php echo t('settings.save_language'); ?></button>
+                    <div class="settings-actions">
+                        <button type="submit" class="btn btn-primary" id="saveLanguageBtn"><?php echo t('settings.save_language'); ?></button>
+                    </div>
                 </form>
             </div>
 
@@ -1610,7 +1665,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             </div>
                         </div>
                     </fieldset>
-                    <button type="submit" class="btn btn-primary" id="saveLoginBtn"><?php echo t('settings.save_login'); ?></button>
+                    <div class="settings-actions">
+                        <button type="submit" class="btn btn-primary" id="saveLoginBtn"><?php echo t('settings.save_login'); ?></button>
+                    </div>
                 </form>
             </div>
 
@@ -1715,7 +1772,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             </div>
                         </div>
                     </fieldset>
-                    <button type="submit" class="btn btn-primary" id="saveAccessBtn"><?php echo t('settings.save_access'); ?></button>
+                    <div class="settings-actions">
+                        <button type="submit" class="btn btn-primary" id="saveAccessBtn"><?php echo t('settings.save_access'); ?></button>
+                    </div>
                 </form>
             </div>
 
@@ -1748,7 +1807,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </div>
                         <div class="form-group"><label class="toggle-label"><span><?php echo t('analytics.enabled'); ?></span><span class="toggle-switch"><input type="checkbox" id="analyticsEnabled" checked><span class="toggle-slider"></span></span></label><small class="form-hint"><?php echo t('analytics.hint'); ?></small></div>
                     </fieldset>
-                    <button type="submit" class="btn btn-primary" id="savePrivacyBtn"><?php echo t('settings.save_privacy'); ?></button>
+                    <div class="settings-actions">
+                        <button type="submit" class="btn btn-primary" id="savePrivacyBtn"><?php echo t('settings.save_privacy'); ?></button>
+                    </div>
                 </form>
             </div>
 
@@ -1834,7 +1895,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </div>
                     </div>
 
-                    <div class="settings-actions-row">
+                    <div class="settings-actions settings-actions-row">
                         <button type="submit" class="btn btn-primary" id="saveEmailBtn"><?php echo t('settings.save_email'); ?></button>
                         <button type="button" class="btn btn-secondary" id="testEmailBtn">
                             <?php echo t('settings.test_email'); ?>
@@ -1922,7 +1983,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             <small class="form-hint"><?php echo t('forms.options_hint'); ?></small>
                         </fieldset>
 
-                        <div class="settings-actions-row">
+                        <div class="settings-actions settings-actions-row">
                             <button type="submit" class="btn btn-primary" id="saveFormBtn"><?php echo t('forms.save'); ?></button>
                             <div id="formsAdminResult" class="settings-test-result" style="display:none;"></div>
                         </div>
@@ -2280,7 +2341,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </div>
                     </fieldset>
 
-                    <div class="settings-actions-row settings-actions-row--sticky">
+                    <div class="settings-actions settings-actions-row">
                         <button type="submit" class="btn btn-primary" id="saveAiSettingsBtn"><?php echo t('ai.save_settings'); ?></button>
                         <button type="button" class="btn btn-secondary" id="testAiBtn"><?php echo t('ai.test_connection'); ?></button>
                     </div>
@@ -2339,7 +2400,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                     <p><?php echo t('settings.menu_order_empty'); ?></p>
                 </div>
 
-                <div class="form-actions" style="margin-top: 1.5rem;">
+                <div class="settings-actions">
                     <button type="button" class="btn btn-primary" id="saveMenuOrderBtn" disabled><?php echo t('settings.save_menus'); ?></button>
                 </div>
 
@@ -2401,7 +2462,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                         </div>
                         <small class="form-hint"><?php echo t('settings.modules_hint'); ?></small>
                     </fieldset>
-                    <button type="submit" class="btn btn-primary" id="saveModulesBtn"><?php echo t('settings.save_modules'); ?></button>
+                    <div class="settings-actions">
+                        <button type="submit" class="btn btn-primary" id="saveModulesBtn"><?php echo t('settings.save_modules'); ?></button>
+                    </div>
                 </form>
             </div>
             <?php endif; ?>
@@ -2433,7 +2496,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
                             <li class="requirement" data-req="match"><?php echo t('settings.pw_match'); ?></li>
                         </ul>
                     </div>
-                    <button type="submit" class="btn btn-primary" id="changePwBtn"><?php echo t('settings.change_password'); ?></button>
+                    <div class="settings-actions">
+                        <button type="submit" class="btn btn-primary" id="changePwBtn"><?php echo t('settings.change_password'); ?></button>
+                    </div>
                 </form>
             </div>
 
@@ -2469,9 +2534,9 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         <div class="page-list-header">
             <div class="page-list-header-left">
                 <h2><?php echo t('settings.backup'); ?></h2>
+                <p class="page-description"><?php echo t('settings.backup_desc'); ?></p>
             </div>
         </div>
-        <p class="page-description"><?php echo t('settings.backup_desc'); ?></p>
 
         <div class="backup-manual-grid">
             <div class="backup-site-card">
@@ -2717,8 +2782,10 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 
     <?php if ($isAdminUser): ?>
     <div class="admin-container" id="systemTab" style="display: none;">
-        <div class="page-list-header"><h2><?php echo t('system.title'); ?></h2>
-            <button type="button" class="btn btn-secondary" onclick="loadSystemStatus()"><?php echo t('btn.refresh'); ?></button></div>
+        <div class="page-list-header">
+            <div class="page-list-header-left"><h2><?php echo t('system.title'); ?></h2></div>
+            <div class="page-list-header-actions"><button type="button" class="btn btn-secondary btn-sm" onclick="loadSystemStatus()"><?php echo t('btn.refresh'); ?></button></div>
+        </div>
         <div id="systemStatusBody" class="system-status-grid" aria-live="polite"></div>
     </div>
     <?php endif; ?>

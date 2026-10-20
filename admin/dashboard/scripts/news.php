@@ -31,7 +31,8 @@
         const colCount = 2 + otherLangs.length;
 
         if (newsData.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align:center;padding:2rem;">${t('news.no_posts')}</td></tr>`;
+            tbody.innerHTML = '';
+            nbRenderEmptyRow(tbody, colCount, t('news.no_posts'), { label: t('news.new_post'), onClick: addNewPost });
             renderAdminListFooter('newsListFooter', 'news', 0, getDashboardPageSize(), renderNewsList, 'newsListFooterTop');
             return;
         }
@@ -147,8 +148,7 @@
             const tdDate = document.createElement('td');
             tdDate.className = 'page-list-cell-date';
             if (post.date) {
-                const d = new Date(post.date + 'T00:00:00');
-                tdDate.textContent = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+                tdDate.textContent = nbFormatDate(post.date, 'date');
             } else {
                 tdDate.textContent = '—';
             }
