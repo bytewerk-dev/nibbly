@@ -471,7 +471,7 @@
         classic: { font: 'system',     buttonRadius: 4, buttonGlow: false },
         paper:   { font: 'system',     buttonRadius: 6, buttonGlow: false },
         studio:  { font: 'geist',      buttonRadius: 6, buttonGlow: false },
-        console: { font: 'geist-mono', buttonRadius: 0, buttonGlow: false, colors: { primaryColor: '#ff8800', dangerColor: '#ff6a00', warningColor: '#ffc400', successColor: '#2ecc71' } }
+        console: { font: 'geist-mono', buttonRadius: 0, buttonGlow: false, colors: { primaryColor: '#ff9214', dangerColor: '#fa7000', warningColor: '#ffc400', successColor: '#2ecc71' } }
     };
     var presetColorBackup = {};
     var PRESET_COLOR_KEYS = ['primaryColor', 'dangerColor', 'warningColor', 'successColor'];
@@ -795,7 +795,7 @@
             btnPrimary.style.borderRadius = radius + 'px';
             btnPrimary.style.boxShadow = glow && HEX_RE.test(primary)
                 ? '0 2px 8px rgba(0,0,0,0.15), 0 4px 20px ' + hexToRgba(primary, 0.35)
-                : '0 2px 8px rgba(0,0,0,0.15)';
+                : 'none';
         }
         if (btnSecondary) {
             btnSecondary.style.borderRadius = radius + 'px';

@@ -2727,6 +2727,14 @@ svg.topbar-logo {
     white-space: nowrap;
 }
 
+/* The path field sits beside a small button and takes its height */
+.ce-image-input-row .editor-input,
+.ce-image-input-row .ce-input {
+    height: var(--nb-control-h-sm);
+    min-height: var(--nb-control-h-sm);
+    padding-block: 0;
+}
+
 /* Array items */
 .ce-array-list {
     margin-bottom: var(--nb-space-2);
@@ -4871,9 +4879,13 @@ select.modal-input {
     font-family: inherit;
     font-weight: 500;
     cursor: default;
-    color: white;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    color: var(--nb-text-on-primary, #fff);
     transition: box-shadow 0.3s, border-radius 0.3s;
+}
+
+/* With the glow the real button has a faint text shadow; flat buttons do not */
+html:not(.nb-flat-buttons) .btn-preview-primary {
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.25), 0 -1px 1px rgba(0, 0, 0, 0.15);
 }
 
 .btn-preview-secondary {
@@ -6150,7 +6162,7 @@ input.color-hex-input,
     padding: var(--nb-space-4);
     border: 1px solid var(--nb-border);
     border-radius: var(--nb-radius-lg);
-    background: var(--nb-bg);
+    background: var(--nb-surface-group, var(--nb-bg));
 }
 
 .scheduled-list__header {
@@ -6799,6 +6811,33 @@ input.color-hex-input,
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: var(--nb-space-3);
+}
+
+/* Several fields in one row: the label sits above its field, so a date
+   or time input keeps its full width instead of hiding behind a 140px label */
+.ce-field-row > .ce-field {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--nb-space-1);
+}
+
+.ce-field-row > .ce-field > .ce-field-label {
+    flex: 0 0 auto;
+    padding-top: 0;
+    text-align: left;
+}
+
+.ce-field-row > .ce-field > .ce-input {
+    width: 100%;
+}
+
+.ce-input[type="date"],
+.ce-input[type="datetime-local"] {
+    min-width: 9rem;
+}
+
+.ce-input[type="time"] {
+    min-width: 6.5rem;
 }
 
 .ce-lang-section {
@@ -11121,6 +11160,64 @@ label.toggle-label > .toggle-switch,
     box-shadow: none;
 }
 
+/* Content counters on the dashboard: no pills in Console. Square readouts
+   like the status tiles: caps label, tabular number, hairline box. */
+[data-theme-preset="console"] .dashboard-content-pills {
+    gap: var(--nb-space-2-5);
+}
+
+[data-theme-preset="console"] .dashboard-content-pills span {
+    min-height: var(--nb-control-h-sm);
+    gap: var(--nb-space-2);
+    padding: 0 var(--nb-space-3);
+    border-radius: var(--nb-radius-sm);
+    background: var(--nb-bg-sunken);
+    font-size: var(--nb-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--nb-text-muted);
+}
+
+[data-theme-preset="console"] .dashboard-content-pills strong {
+    font-size: var(--nb-text-md);
+    letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+/* No pills anywhere in Console: badges, chips, tags, status labels,
+   collapsible summaries, the topbar select and the chat chips all take the
+   small square radius. Dots, spinners and slider thumbs stay round. */
+[data-theme-preset="console"] :is(
+    .topbar-select, .events-status, .news-status, .seo-health-badge,
+    .section-index-label, .section-type, .section-issue-badge,
+    .ce-section-nav__item em, .auto-badge, .restore-mode-indicator,
+    .dashboard-details summary, .settings-advanced[open] > summary,
+    .ai-image-history-card__top time, .ai-image-history-status, .ai-audit-badge,
+    .ai-usage-budget__value, .ai-usage-budget__bar, .ai-usage-budget__fill,
+    .ai-card__badge, .mail-flag-btn,
+    .nb-copilot-toggle, .nb-copilot-image-modes, .nb-copilot-image-mode,
+    .nb-copilot-bool, .nb-agent-chip, .nb-agent-tag, .nb-imgmgr-ai-badge, .nb-imgmgr-check
+) {
+    border-radius: var(--nb-radius-sm);
+}
+
+/* The button preview shows Console's real buttons: caps, tracked, flat,
+   secondary as a hairline outline */
+[data-theme-preset="console"] .btn-preview-primary,
+[data-theme-preset="console"] .btn-preview-secondary {
+    font-size: var(--nb-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-shadow: none;
+}
+
+[data-theme-preset="console"] .btn-preview-secondary {
+    border-width: 1px;
+    color: var(--nb-text);
+}
+
 /* A dashed hairline between neighbouring options, centred in the gap */
 [data-theme-preset="console"] .segmented label,
 [data-theme-preset="console"] .ai-tool-tab,
@@ -11437,4 +11534,40 @@ label.toggle-label > .toggle-switch,
     min-width: var(--nb-control-h);
     flex-basis: var(--nb-control-h);
     height: var(--nb-control-h);
+}
+
+/* AI settings: the budget bar and the image service select take half the
+   width, like one column of a two-column split; the fourth limit field
+   takes one third like its three neighbours instead of the whole row */
+.ai-usage-budget {
+    max-width: calc(50% - var(--nb-space-3) / 2);
+}
+
+#aiImageServiceSection .ai-settings-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-row-inline:has(> .form-group > #aiDailyImageRequests) > .form-group {
+    flex: 0 1 calc((100% - 2 * var(--nb-space-4)) / 3);
+}
+
+@container settings (max-width: 40rem) {
+    .ai-usage-budget {
+        max-width: none;
+    }
+
+    #aiImageServiceSection .ai-settings-compact {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .form-row-inline:has(> .form-group > #aiDailyImageRequests) > .form-group {
+        flex: 1 1 15rem;
+    }
+}
+
+/* System status: its panels sit directly on the stage, not inside a card,
+   so they take the card surface like the settings panels */
+#systemTab .dashboard-panel,
+#iconsTab .icon-manager-card {
+    background: var(--nb-surface-panel, var(--nb-bg-elevated));
 }

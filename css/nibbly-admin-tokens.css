@@ -567,7 +567,8 @@
         --nb-topbar-text: #111111;
         --nb-topbar-text-muted: #5f5f5f;
         --nb-topbar-border: #d2d2d2;
-        --nb-surface-group: #f1f1f1;
+        /* Cards on the stage (backup, forms) sit on the card surface, one step above the stage */
+        --nb-surface-group: #fafafa;
         --nb-divider-style: dashed;
         --nb-radius-sm: 0px;
         --nb-radius-md: 2px;
@@ -601,7 +602,7 @@
         --nb-topbar-text: #e8e8e8;
         --nb-topbar-text-muted: #8c8c8c;
         --nb-topbar-border: #2a2a2a;
-        --nb-surface-group: #0e0e0e;
+        --nb-surface-group: #121212;
         --nb-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.6);
         --nb-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.7);
     }
