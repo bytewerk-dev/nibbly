@@ -6984,7 +6984,6 @@ input.color-hex-input,
 .icon-manager-card--highlight {
     border-color: var(--nb-primary, #10b3a3);
     background: color-mix(in srgb, var(--nb-primary) 8%, var(--nb-surface-item, var(--nb-bg)));
-    box-shadow: inset 3px 0 0 var(--nb-primary);
 }
 
 .icon-manager-card__preview {
@@ -7347,7 +7346,6 @@ input.color-hex-input,
 
 .dashboard-status-chip--accent {
     background: var(--nb-brand-subtle, rgba(96, 165, 250, 0.12));
-    box-shadow: inset 3px 0 0 var(--nb-brand, #60a5fa);
 }
 
 .dashboard-status-chip__label {
@@ -9809,9 +9807,13 @@ input.color-hex-input,
     padding: 0;
 }
 
-.dashboard-section--ai .ai-grid > .ai-card + .ai-card {
+/* The tools card is placed first by the grid although the assistant comes
+   first in the DOM, so the divider follows the visual order: the assistant
+   gets a top line whenever the tools card is shown above it. */
+.dashboard-section--ai .ai-grid:has(> .ai-card--tools:not([hidden])) > .ai-card--assistant {
     border-top: 1px solid var(--nb-border);
-    padding-top: var(--nb-space-4);
+    padding-top: var(--nb-space-5);
+    margin-top: var(--nb-space-2);
 }
 
 .ai-card h3 {
