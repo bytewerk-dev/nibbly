@@ -1899,23 +1899,23 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                         <input type="text" id="settingsFromName" placeholder="My Website">
                     </div>
 
-                    <div id="smtpFields">
+                    <div id="smtpFields" class="smtp-grid">
                         <hr class="settings-divider">
                         <h3 class="settings-subheading"><?php echo t('settings.smtp_settings'); ?></h3>
 
-                        <div class="form-group">
+                        <div class="form-group smtp-grid__host">
                             <label for="settingsSmtpHost"><?php echo t('settings.smtp_host'); ?></label>
                             <input type="text" id="settingsSmtpHost" placeholder="mail.example.com">
                         </div>
 
-                        <div class="form-row-inline">
+                        <div class="form-row-inline smtp-grid__port-row">
                             <div class="form-group">
                                 <label for="settingsSmtpPort"><?php echo t('settings.smtp_port'); ?></label>
-                                <input type="number" id="settingsSmtpPort" value="587" min="1" max="65535" style="width: 100px;">
+                                <input type="number" id="settingsSmtpPort" value="587" min="1" max="65535">
                             </div>
                             <div class="form-group">
                                 <label for="settingsSmtpEncryption"><?php echo t('settings.smtp_encryption'); ?></label>
-                                <select id="settingsSmtpEncryption" class="topbar-select" style="width: auto; min-width: 120px;">
+                                <select id="settingsSmtpEncryption" class="topbar-select">
                                     <option value="tls">STARTTLS (587)</option>
                                     <option value="ssl">SSL/TLS (465)</option>
                                     <option value="none"><?php echo t('settings.smtp_encryption_none'); ?></option>
@@ -1923,12 +1923,12 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                             </div>
                         </div>
 
-                        <div class="form-group">
+                        <div class="form-group smtp-grid__user">
                             <label for="settingsSmtpUsername"><?php echo t('settings.smtp_username'); ?></label>
                             <input type="text" id="settingsSmtpUsername" placeholder="user@example.com" autocomplete="off">
                         </div>
 
-                        <div class="form-group">
+                        <div class="form-group smtp-grid__pass">
                             <label for="settingsSmtpPassword"><?php echo t('settings.smtp_password'); ?></label>
                             <input type="password" id="settingsSmtpPassword" placeholder="<?php echo t('settings.smtp_password_placeholder'); ?>" autocomplete="new-password">
                             <small class="form-hint"><?php echo t('settings.smtp_password_hint'); ?></small>

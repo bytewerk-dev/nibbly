@@ -10912,6 +10912,17 @@ label.toggle-label > .toggle-switch,
     text-transform: uppercase;
 }
 
+/* Three steps of hierarchy in caps: main menu, sub-navigation, group headings */
+[data-theme-preset="console"] .sidebar-nav-item {
+    font-size: var(--nb-text-sm);
+}
+
+[data-theme-preset="console"] .settings-nav-group h3 {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+}
+
 [data-theme-preset="console"] .sidebar-nav-item {
     min-height: 2rem;
     padding: var(--nb-space-1-5) var(--nb-space-2-5);
@@ -11245,4 +11256,73 @@ label.toggle-label > .toggle-switch,
     font-family: var(--nb-font-mono);
     font-size: var(--nb-text-sm);
     word-break: break-all;
+}
+
+/* SMTP block of the e-mail settings: two columns on a wide panel. Left:
+   host, then port beside encryption; right: username, password. */
+.smtp-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--nb-space-4) var(--nb-space-6);
+    align-items: start;
+}
+
+.smtp-grid > .settings-divider,
+.smtp-grid > .settings-subheading {
+    grid-column: 1 / -1;
+}
+
+.smtp-grid > .settings-divider {
+    margin-bottom: 0;
+}
+
+.smtp-grid > .settings-subheading {
+    margin-bottom: 0;
+}
+
+.smtp-grid > .form-group,
+.smtp-grid > .form-row-inline {
+    margin: 0;
+    min-width: 0;
+}
+
+.smtp-grid__host { grid-column: 1; grid-row: 3; }
+.smtp-grid__port-row { grid-column: 1; grid-row: 4; }
+.smtp-grid__user { grid-column: 2; grid-row: 3; }
+.smtp-grid__pass { grid-column: 2; grid-row: 4; }
+
+/* Port stays short, encryption takes the rest so its right edge lines up */
+.smtp-grid__port-row > .form-group:first-child {
+    flex: 0 0 auto;
+}
+
+.smtp-grid__port-row > .form-group:last-child {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Fields fill their column; the grid already bounds them (the :not() chain
+   matches the 40rem cap of the settings form) */
+.settings-panel .settings-form .smtp-grid input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+.settings-panel .settings-form .smtp-grid select {
+    max-width: none;
+}
+
+.settings-panel .settings-form .smtp-grid #settingsSmtpPort {
+    width: 7rem;
+    max-width: 7rem;
+}
+
+@container settings (max-width: 52rem) {
+    .smtp-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .smtp-grid__host,
+    .smtp-grid__port-row,
+    .smtp-grid__user,
+    .smtp-grid__pass {
+        grid-column: auto;
+        grid-row: auto;
+    }
 }
