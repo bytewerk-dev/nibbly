@@ -3,6 +3,34 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.3.2 to 2.4.0
+
+Version 2.4.0 is a compatible release: the dashboard got five themes, one base colour with
+derived tints, density and font settings, a collapsible sidebar, editable semantic colours and
+several bypass links for maintenance mode. The documented admin API is unchanged. No manual
+step is needed; saved settings keep working.
+
+1. Deploy the complete core. New core files: `admin/fonts.css`, `admin/fonts/*.woff2` (Geist,
+   Geist Mono, Inter; see `THIRD-PARTY-NOTICES.md`), `css/nibbly-admin-tokens.css` (rewritten),
+   `css/nb-select.css` (reads the control tokens). `admin/lang/*.json` gets new texts.
+2. Theme settings. `theme.primaryColor` is the base colour; `theme.accentColor`, `theme.sidebarBg`
+   and `theme.darkSidebarBg` are optional overrides (empty = derived), `theme.darkPrimaryColor` and
+   `theme.darkAccentColor` are accepted but ignored (dark mode lifts the base colour itself). New
+   keys: `theme.preset` (`soft`, `classic`, `paper`, `studio`, `console`), `theme.density`,
+   `theme.font` (`system`, `geist`, `inter`, `geist-mono`), `theme.dangerColor`,
+   `theme.warningColor`, `theme.successColor`. An installation without them gets Soft, auto density,
+   the system font and the default semantic colours. A light base colour that an earlier version
+   darkened on save keeps its stored value; set it again to get the chosen colour back.
+3. Maintenance bypass. Links now live in `access.maintenance.bypassLinks` (`param` and `key`,
+   stored as entered so the dashboard can show them). A key hashed by an earlier version
+   (`bypassKeyHash`) keeps working until the Access page is saved once; that save replaces it with
+   the visible links, so enter the keys you hand out before saving. The guard accepts any stored
+   link; the bypass still sticks to the session.
+4. Site CSS that styled admin elements through fixed pixel values or the old `--nb-*` colours
+   should move to the tokens: radii (`--nb-radius-sm/md/lg/xl`), spacing (`--nb-space-*`), control
+   heights (`--nb-control-h`, `--nb-control-h-sm`) and `--nb-text-on-primary` for text on the
+   primary colour, which is dark on light primaries.
+
 ## Upgrading from 2.3.1 to 2.3.2
 
 Version 2.3.2 is a compatible release: the AI agent can chat in the dashboard, the image models of

@@ -9,6 +9,60 @@ Git milestones and the gaps in publication records.
 
 ## Unreleased
 
+## [2.4.0] — 2026-10-20
+
+### Added
+
+- **Five dashboard themes instead of one look.** Settings → Design offers Soft (the
+  default, measured after the shadcn/ui dashboard blocks), Classic (WordPress-like
+  chrome), Paper (white with hairlines), Studio (monochrome after the Vercel dashboard
+  and Geist: black buttons, the base colour as accent only) and the new **Console**
+  (ops-console look: Geist Mono, caps with tracking, square corners, dashed group
+  dividers, a crosshair on selected elements). Every theme has a light and a dark
+  variant. Picking a theme card also sets its font, button radius and glow, and
+  Console its palette; every field stays free to change afterwards
+  (`theme.preset`, `theme.font` now also `geist-mono`).
+- **One base colour.** Primary colour, tints, hover states and the shell derive from
+  `theme.primaryColor` in OKLCH; "Erweitert" holds the accent, the sidebar colours and
+  now the **danger, notice and success colours** (`theme.dangerColor`,
+  `theme.warningColor`, `theme.successColor`, empty = default; success follows the base
+  colour). Light base colours such as orange are no longer darkened on save: the
+  stylesheet puts dark text on light primaries instead.
+- **Density and fonts.** "Dichte" (`theme.density`: auto, compact, comfortable) scales
+  spacing and control heights; the root font size follows the viewport. Fonts are local:
+  System, Geist, Inter and Geist Mono from `admin/fonts/`, no external request.
+- **Collapsible sidebar.** A button at the sidebar's foot shrinks it to its icons
+  (tooltips from the labels, badges in the corner); the choice is remembered per browser.
+- **Several bypass links for maintenance mode.** Settings → Access holds any number of
+  URL parameter / key pairs (`access.maintenance.bypassLinks`), shows each finished link,
+  and removes a link with its bin; hand different links to different people and revoke
+  them one by one.
+- Breadcrumb in the topbar instead of a repeated page title; settings forms as
+  label-left tables on wide panels; a sticky save bar at the foot of every settings form;
+  shared date formatting and empty-row rendering in the lists.
+
+### Changed
+
+- Admin, Copilot and image manager stylesheets read one token set
+  (`css/nibbly-admin-tokens.css`): spacing, type scale, control heights, radii and the
+  divider style (`--nb-divider-style`, dashed in Console). Custom selects (`css/nb-select.css`)
+  take the same control height and type as the text inputs beside them; icon buttons,
+  path fields and dropdowns in one row share one height.
+- The AI settings, access, e-mail (SMTP in two columns), backup, system status, icon
+  manager and forms pages were laid out on consistent grids: the enable switch sits level
+  with its row, the four limit fields take equal columns, the budget bar and the image
+  service select take half the width, the maintenance fields sit on a four-column grid.
+- The contrast feedback under a colour field reports the contrast to the text the
+  stylesheet will use (white or dark), not only to white.
+
+### Fixed
+
+- Direct loads of `#news` and `#events` no longer show empty lists (initial route deferred
+  past the script's declarations).
+- Status chips and highlighted cards lost their left accent line; the assistant card on
+  the home tab gets its divider in visual order; hints sit 8px below their field in every
+  layout; date and time fields in the event editor keep their full width.
+
 ## [2.3.2] — 2026-10-17
 
 ### Added
