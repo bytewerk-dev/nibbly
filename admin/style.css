@@ -8857,8 +8857,27 @@ input.color-hex-input,
     min-width: 0;
 }
 
+/* The toggle at the row start sits level with the controls beside it: the
+   neighbours stack label + control, so it starts one label height lower */
+.ai-settings-compact .form-group > label:not(.toggle-label) {
+    display: block;
+    line-height: 1.45;
+}
+
+.ai-settings-compact {
+    --nb-label-offset: calc(0.875rem * 1.45 + var(--nb-space-2));
+}
+
+[data-theme-preset="console"] .ai-settings-compact {
+    --nb-label-offset: calc(var(--nb-text-xs) * 1.45 + var(--nb-space-2));
+}
+
 .ai-enable-row {
-    align-self: center;
+    align-self: start;
+    display: flex;
+    align-items: center;
+    min-height: var(--nb-control-h);
+    margin-top: var(--nb-label-offset);
 }
 
 .ai-local-toggle,
@@ -9765,7 +9784,8 @@ input.color-hex-input,
     float: none;
     display: block;
     width: auto;
-    padding: 0;
+    /* The fieldset line resumes right after the legend box; keep it off the letters */
+    padding: 0 var(--nb-space-3) 0 0;
     margin: 0 0 var(--nb-space-3);
     font-size: var(--nb-text-xs);
     font-weight: 600;
