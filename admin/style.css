@@ -4018,7 +4018,7 @@ select.modal-input {
     gap: var(--nb-space-3);
     align-items: end;
     /* Room on the right for the delete button, which sits in the corner of the card, level with the first input. */
-    padding: var(--nb-space-3) calc(36px + var(--nb-space-3) * 2) var(--nb-space-3) var(--nb-space-3);
+    padding: var(--nb-space-3) calc(var(--nb-control-h) + var(--nb-space-3) * 2) var(--nb-space-3) var(--nb-space-3);
     border: 1px solid var(--nb-border);
     border-radius: var(--nb-radius-md);
     background: var(--nb-surface-item, var(--nb-bg));
@@ -4030,9 +4030,10 @@ select.modal-input {
 
 .forms-fields-table tr.forms-field-row td.users-table__actions {
     position: absolute;
-    top: calc(var(--nb-space-3) + 28px);
+    /* card padding + the label line (16px box + its gap) puts the button level with the inputs */
+    top: calc(var(--nb-space-3) + 16px + var(--nb-space-1-5));
     right: var(--nb-space-3);
-    width: 36px;
+    width: var(--nb-control-h);
 }
 
 .forms-fields-table td,
@@ -11325,4 +11326,92 @@ label.toggle-label > .toggle-switch,
         grid-column: auto;
         grid-row: auto;
     }
+}
+
+/* Bypass links: one row per parameter / key pair, labels on the first row
+   only, the bin at the row's end, the assembled address underneath */
+.bypass-links {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nb-space-4);
+    margin-bottom: var(--nb-space-3);
+}
+
+.bypass-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
+    gap: var(--nb-space-2) var(--nb-space-4);
+    align-items: end;
+}
+
+.bypass-row > .form-group {
+    margin: 0;
+    min-width: 0;
+}
+
+.bypass-row + .bypass-row > .form-group > label {
+    display: none;
+}
+
+.bypass-row__remove {
+    height: var(--nb-control-h);
+    width: var(--nb-control-h);
+    color: var(--nb-text-muted);
+}
+
+.bypass-row__remove:hover {
+    color: var(--nb-danger);
+    border-color: var(--nb-danger);
+}
+
+.bypass-row__link {
+    grid-column: 1 / -1;
+    margin: 0;
+}
+
+.settings-panel .settings-form .bypass-row input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]) {
+    max-width: none;
+}
+
+.bypass-links__actions {
+    margin-top: var(--nb-space-3);
+}
+
+@container settings (max-width: 40rem) {
+    .bypass-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .bypass-row > .bypass-row__param {
+        grid-column: 1 / -1;
+    }
+
+    .bypass-row + .bypass-row > .form-group > label {
+        display: block;
+    }
+}
+
+/* Forms admin: the "new" button matches the select beside it; field rows
+   give inputs, selects and the delete button one control height */
+.forms-admin-list__head .btn {
+    height: var(--nb-control-h);
+    padding-inline: var(--nb-space-4);
+}
+
+.forms-fields-table td {
+    grid-template-rows: auto minmax(var(--nb-control-h), auto);
+}
+
+.forms-fields-table td input:not([type="checkbox"]):not([type="radio"]),
+.forms-fields-table td select {
+    height: var(--nb-control-h);
+    min-height: var(--nb-control-h);
+    padding-block: 0;
+}
+
+.forms-fields-table .users-table__actions .btn-icon {
+    width: var(--nb-control-h);
+    min-width: var(--nb-control-h);
+    flex-basis: var(--nb-control-h);
+    height: var(--nb-control-h);
 }

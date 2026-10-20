@@ -1799,18 +1799,25 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                     <fieldset class="settings-section settings-section--compact">
                         <legend><?php echo t('settings.access_bypass'); ?></legend>
                         <p class="settings-description settings-description--compact"><?php echo t('settings.access_bypass_desc'); ?></p>
-                        <p class="access-bypass-link"><span><?php echo t('settings.access_bypass_link'); ?></span> <code id="maintenanceBypassLink" aria-live="polite"></code></p>
-                        <div class="form-row-inline">
-                            <div class="form-group">
-                                <label for="maintenanceBypassParam"><?php echo t('settings.access_bypass_param'); ?></label>
-                                <input type="text" id="maintenanceBypassParam" placeholder="preview" maxlength="40">
-                            </div>
-                            <div class="form-group">
-                                <label for="maintenanceBypassKey"><?php echo t('settings.access_bypass_key'); ?></label>
-                                <input type="password" id="maintenanceBypassKey" autocomplete="new-password">
-                                <small class="form-hint" id="maintenanceBypassHint"></small>
-                            </div>
+                        <div class="bypass-links" id="bypassLinks"></div>
+                        <small class="form-hint" id="maintenanceBypassHint" hidden><?php echo t('settings.access_bypass_key_set'); ?></small>
+                        <div class="bypass-links__actions">
+                            <button type="button" class="btn btn-secondary btn-sm" id="bypassAddBtn">+ <?php echo t('settings.access_bypass_add'); ?></button>
                         </div>
+                        <template id="bypassRowTemplate">
+                            <div class="bypass-row">
+                                <div class="form-group bypass-row__param">
+                                    <label><?php echo t('settings.access_bypass_param'); ?></label>
+                                    <input type="text" class="bypass-row__param-input" placeholder="preview" maxlength="40" autocomplete="off" spellcheck="false">
+                                </div>
+                                <div class="form-group bypass-row__key">
+                                    <label><?php echo t('settings.access_bypass_key'); ?></label>
+                                    <input type="text" class="bypass-row__key-input" maxlength="120" autocomplete="off" spellcheck="false">
+                                </div>
+                                <button type="button" class="btn-icon bypass-row__remove" title="<?php echo htmlspecialchars(t('settings.access_bypass_remove'), ENT_QUOTES, 'UTF-8'); ?>" aria-label="<?php echo htmlspecialchars(t('settings.access_bypass_remove'), ENT_QUOTES, 'UTF-8'); ?>"><?php echo nbIcon('trash', 16); ?></button>
+                                <p class="access-bypass-link bypass-row__link"><span><?php echo t('settings.access_bypass_link'); ?></span> <code aria-live="polite"></code></p>
+                            </div>
+                        </template>
                     </fieldset>
                     <div class="settings-actions">
                         <button type="submit" class="btn btn-primary" id="saveAccessBtn"><?php echo t('settings.save_access'); ?></button>

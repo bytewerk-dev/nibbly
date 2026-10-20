@@ -76,7 +76,8 @@ switch ($action) {
                     'overlayColor' => '',
                     'overlayOpacity' => 88,
                     'bypassParam' => 'preview',
-                    'bypassKeyHash' => ''
+                    'bypassKeyHash' => '',
+                    'bypassLinks' => []
                 ]
             ],
             'login' => [
@@ -360,6 +361,10 @@ switch ($action) {
             $existing = json_decode(file_get_contents(SETTINGS_PATH), true) ?: [];
         }
         $accessInput = isset($settings['access']) ? ['access' => array_replace_recursive($existing['access'] ?? [], $settings['access'])] : [];
+        // Lists replace as a whole: a recursive merge would keep rows by index
+        if (isset($settings['access']['maintenance']) && is_array($settings['access']['maintenance']) && array_key_exists('bypassLinks', $settings['access']['maintenance'])) {
+            $accessInput['access']['maintenance']['bypassLinks'] = $settings['access']['maintenance']['bypassLinks'];
+        }
         $accessPatch = sanitizeAccessSettings($accessInput, $existing);
         if ($accessPatch) {
             $sanitized['access'] = $accessPatch;
@@ -382,6 +387,9 @@ switch ($action) {
             $sanitized['dashboard'] = $dashboardPatch;
         }
         $merged = array_replace_recursive($existing, $sanitized);
+        if (isset($sanitized['access']['maintenance']['bypassLinks'])) {
+            $merged['access']['maintenance']['bypassLinks'] = $sanitized['access']['maintenance']['bypassLinks'];
+        }
 
         $result = nibblyJsonAtomicWrite(SETTINGS_PATH, $merged);
 
