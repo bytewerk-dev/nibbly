@@ -4018,7 +4018,7 @@ select.modal-input {
     gap: var(--nb-space-3);
     align-items: end;
     /* Room on the right for the delete button, which sits in the corner of the card, level with the first input. */
-    padding: var(--nb-space-3) calc(36px + var(--nb-space-3) * 2) var(--nb-space-3) var(--nb-space-3);
+    padding: var(--nb-space-3) calc(var(--nb-control-h) + var(--nb-space-3) * 2) var(--nb-space-3) var(--nb-space-3);
     border: 1px solid var(--nb-border);
     border-radius: var(--nb-radius-md);
     background: var(--nb-surface-item, var(--nb-bg));
@@ -4030,9 +4030,10 @@ select.modal-input {
 
 .forms-fields-table tr.forms-field-row td.users-table__actions {
     position: absolute;
-    top: calc(var(--nb-space-3) + 28px);
+    /* card padding + the label line (16px box + its gap) puts the button level with the inputs */
+    top: calc(var(--nb-space-3) + 16px + var(--nb-space-1-5));
     right: var(--nb-space-3);
-    width: 36px;
+    width: var(--nb-control-h);
 }
 
 .forms-fields-table td,
@@ -4148,8 +4149,49 @@ select.modal-input {
 .access-maintenance-grid {
     clear: left;
     display: grid;
-    grid-template-columns: minmax(220px, 0.42fr) minmax(260px, 0.5fr) minmax(0, 1fr);
-    gap: var(--nb-space-3) var(--nb-space-4);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--nb-space-4) var(--nb-space-5);
+    align-items: start;
+}
+
+.access-maintenance-grid > .form-group {
+    margin: 0;
+    min-width: 0;
+}
+
+.access-maintenance-grid > .form-group > label:not(.toggle-label) {
+    display: block;
+    line-height: 1.45;
+}
+
+/* Toggles share a row with labelled fields: start one label height down */
+.access-maintenance-grid > .access-toggle-row {
+    display: flex;
+    align-items: center;
+    min-height: var(--nb-control-h);
+    margin-top: var(--nb-label-offset);
+}
+
+.access-maintenance-grid > .access-toggle-row .toggle-label {
+    white-space: nowrap;
+}
+
+/* The enable switch has the longer label and takes two columns */
+.access-maintenance-grid > .access-toggle-row:first-child {
+    grid-column: span 2;
+}
+
+/* Full-width rows stretch their field across the whole grid (the :not()
+   chain matches the specificity of the 40rem cap in the settings form) */
+.settings-panel .settings-form .access-maintenance-grid > .access-wide input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+.settings-panel .settings-form .access-maintenance-grid > .access-wide textarea,
+.settings-panel .settings-form .access-maintenance-grid > .access-wide .logo-path-input,
+.settings-panel .settings-form .access-maintenance-grid > .access-wide .logo-path-input .input-with-clear {
+    max-width: none;
+}
+
+.access-maintenance-grid #maintenanceUntil {
+    width: 100%;
 }
 
 .access-wide {
@@ -4184,28 +4226,9 @@ select.modal-input {
     max-width: 260px;
 }
 
-.access-maintenance-grid > .form-group:nth-child(2) {
-    grid-column: 2;
-}
-
-.access-maintenance-grid > .form-group:nth-child(5) {
-    grid-column: 1;
-}
-
-.access-maintenance-grid > .form-group:nth-child(6) {
-    grid-column: 2;
-}
-
-.access-maintenance-grid > .form-group:nth-child(7) {
-    grid-column: 1;
-}
-
-.access-maintenance-grid > .form-group:nth-child(8) {
-    grid-column: 2;
-}
-
-.access-maintenance-grid > .form-group:nth-child(9) {
-    grid-column: 3;
+/* Overlay colour (shown for some layouts) takes two columns */
+.access-maintenance-grid > .visual-overlay-color-group {
+    grid-column: span 2;
 }
 
 #maintenanceUntil {
@@ -8864,10 +8887,14 @@ input.color-hex-input,
     line-height: 1.45;
 }
 
+/* Height of a field label plus its gap: a toggle that shares a row with
+   labelled fields starts this far down to sit level with their controls */
+.settings-panel,
 .ai-settings-compact {
     --nb-label-offset: calc(0.875rem * 1.45 + var(--nb-space-2));
 }
 
+[data-theme-preset="console"] .settings-panel,
 [data-theme-preset="console"] .ai-settings-compact {
     --nb-label-offset: calc(var(--nb-text-xs) * 1.45 + var(--nb-space-2));
 }
@@ -9468,9 +9495,18 @@ input.color-hex-input,
 .forms-fields-table { display: block; }
 .forms-fields-table td { grid-template-rows: auto minmax(38px, auto); }
 .forms-fields-table td input, .forms-fields-table td textarea { width: 100%; min-width: 0; }
-.access-maintenance-grid, .settings-visual-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); }
-.access-maintenance-grid > .form-group:nth-child(n) { grid-column: auto; }
+.settings-visual-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); }
 .access-maintenance-grid > .access-wide { grid-column: 1 / -1; }
+@container settings (max-width: 52rem) {
+    .access-maintenance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container settings (max-width: 28rem) {
+    .access-maintenance-grid { grid-template-columns: minmax(0, 1fr); }
+    .access-maintenance-grid > .access-toggle-row:first-child { grid-column: auto; }
+    .access-maintenance-grid > .access-toggle-row .toggle-label { white-space: normal; }
+    .access-maintenance-grid > .visual-overlay-color-group { grid-column: auto; }
+    .access-maintenance-grid > .access-toggle-row { margin-top: 0; min-height: 0; }
+}
 @container dashboard (max-width: 65rem) {
     .settings-layout { grid-template-columns: minmax(0, 1fr); }
     .settings-tabs { position: static; display: none; }
@@ -10877,6 +10913,17 @@ label.toggle-label > .toggle-switch,
     text-transform: uppercase;
 }
 
+/* Three steps of hierarchy in caps: main menu, sub-navigation, group headings */
+[data-theme-preset="console"] .sidebar-nav-item {
+    font-size: var(--nb-text-sm);
+}
+
+[data-theme-preset="console"] .settings-nav-group h3 {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+}
+
 [data-theme-preset="console"] .sidebar-nav-item {
     min-height: 2rem;
     padding: var(--nb-space-1-5) var(--nb-space-2-5);
@@ -11188,4 +11235,206 @@ label.toggle-label > .toggle-switch,
     .sidebar-collapse {
         display: none;
     }
+}
+
+/* Bypass link line under the explanation: label plus the assembled address */
+.access-bypass-link {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--nb-space-2);
+    margin: 0 0 var(--nb-space-5);
+    font-size: var(--nb-text-sm);
+    color: var(--nb-text-secondary);
+}
+
+.access-bypass-link code {
+    padding: var(--nb-space-1) var(--nb-space-2);
+    border: 1px solid var(--nb-border);
+    border-radius: var(--nb-radius-sm);
+    background: var(--nb-bg-sunken);
+    color: var(--nb-text);
+    font-family: var(--nb-font-mono);
+    font-size: var(--nb-text-sm);
+    word-break: break-all;
+}
+
+/* SMTP block of the e-mail settings: two columns on a wide panel. Left:
+   host, then port beside encryption; right: username, password. */
+.smtp-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--nb-space-4) var(--nb-space-6);
+    align-items: start;
+}
+
+.smtp-grid > .settings-divider,
+.smtp-grid > .settings-subheading {
+    grid-column: 1 / -1;
+}
+
+.smtp-grid > .settings-divider {
+    margin-bottom: 0;
+}
+
+.smtp-grid > .settings-subheading {
+    margin-bottom: 0;
+}
+
+.smtp-grid > .form-group,
+.smtp-grid > .form-row-inline {
+    margin: 0;
+    min-width: 0;
+}
+
+.smtp-grid__host { grid-column: 1; grid-row: 3; }
+.smtp-grid__port-row { grid-column: 1; grid-row: 4; }
+.smtp-grid__user { grid-column: 2; grid-row: 3; }
+.smtp-grid__pass { grid-column: 2; grid-row: 4; }
+
+/* Port stays short, encryption takes the rest so its right edge lines up */
+.smtp-grid__port-row > .form-group:first-child {
+    flex: 0 0 auto;
+}
+
+.smtp-grid__port-row > .form-group:last-child {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Fields fill their column; the grid already bounds them (the :not() chain
+   matches the 40rem cap of the settings form) */
+.settings-panel .settings-form .smtp-grid input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+.settings-panel .settings-form .smtp-grid select {
+    max-width: none;
+}
+
+.settings-panel .settings-form .smtp-grid #settingsSmtpPort {
+    width: 7rem;
+    max-width: 7rem;
+}
+
+@container settings (max-width: 52rem) {
+    .smtp-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .smtp-grid__host,
+    .smtp-grid__port-row,
+    .smtp-grid__user,
+    .smtp-grid__pass {
+        grid-column: auto;
+        grid-row: auto;
+    }
+}
+
+/* Bypass links: one row per parameter / key pair, labels on the first row
+   only, the bin at the row's end, the assembled address underneath */
+.bypass-links {
+    display: flex;
+    flex-direction: column;
+    gap: var(--nb-space-4);
+    margin-bottom: var(--nb-space-3);
+}
+
+.bypass-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
+    gap: var(--nb-space-2) var(--nb-space-4);
+    align-items: end;
+}
+
+.bypass-row > .form-group {
+    margin: 0;
+    min-width: 0;
+}
+
+.bypass-row + .bypass-row > .form-group > label {
+    display: none;
+}
+
+.bypass-row__remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--nb-control-h);
+    width: var(--nb-control-h);
+    padding: 0;
+    border: 1px solid var(--nb-border);
+    border-radius: var(--nb-radius-md);
+    background: var(--nb-bg-elevated);
+    color: var(--nb-text-muted);
+    cursor: pointer;
+    transition: background-color var(--nb-duration-fast) var(--nb-ease),
+                color var(--nb-duration-fast) var(--nb-ease),
+                border-color var(--nb-duration-fast) var(--nb-ease);
+}
+
+.bypass-row__remove:hover {
+    background: var(--nb-danger-subtle);
+    color: var(--nb-danger);
+    border-color: var(--nb-danger);
+}
+
+.bypass-row__remove:focus-visible {
+    outline: 2px solid var(--nb-border-focus);
+    outline-offset: 2px;
+}
+
+.bypass-row__remove svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.bypass-row__link {
+    grid-column: 1 / -1;
+    margin: 0;
+}
+
+.settings-panel .settings-form .bypass-row input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]) {
+    max-width: none;
+}
+
+.bypass-links__actions {
+    margin-top: var(--nb-space-3);
+}
+
+@container settings (max-width: 40rem) {
+    .bypass-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .bypass-row > .bypass-row__param {
+        grid-column: 1 / -1;
+    }
+
+    .bypass-row + .bypass-row > .form-group > label {
+        display: block;
+    }
+}
+
+/* Forms admin: the "new" button matches the select beside it; field rows
+   give inputs, selects and the delete button one control height */
+.forms-admin-list__head .btn {
+    height: var(--nb-control-h);
+    padding-inline: var(--nb-space-4);
+}
+
+.forms-fields-table td {
+    grid-template-rows: auto minmax(var(--nb-control-h), auto);
+}
+
+.forms-fields-table td input:not([type="checkbox"]):not([type="radio"]),
+.forms-fields-table td select {
+    height: var(--nb-control-h);
+    min-height: var(--nb-control-h);
+    padding-block: 0;
+}
+
+.forms-fields-table .users-table__actions .btn-icon {
+    width: var(--nb-control-h);
+    min-width: var(--nb-control-h);
+    flex-basis: var(--nb-control-h);
+    height: var(--nb-control-h);
 }

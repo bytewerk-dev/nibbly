@@ -761,11 +761,22 @@ settings are stored under `access.maintenance` in `content/settings.json`:
       "overlayColor": "#ffffff",
       "overlayOpacity": 88,
       "bypassParam": "preview",
-      "bypassKeyHash": "$2y$..."
+      "bypassKeyHash": "$2y$...",
+      "bypassLinks": [
+        { "param": "preview", "key": "k3Q9..." },
+        { "param": "preview", "key": "agency-2026" }
+      ]
     }
   }
 }
 ```
+
+`bypassLinks` holds any number of URL parameter / key pairs, stored as
+entered so the dashboard can show and hand out the finished links; a request
+carrying one of them (`/?preview=k3Q9...`) passes the guard and the bypass
+sticks to the session. Deleting a row revokes that link. `bypassKeyHash` is
+the older single hashed key; it keeps working until the access form is
+saved once, which replaces it with the visible links.
 
 Valid `mode` values are `maintenance`, `offline`, and `launch`. The guard blocks
 public frontend pages with a standalone `503` response and sets `noindex` for the

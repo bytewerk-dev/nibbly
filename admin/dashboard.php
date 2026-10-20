@@ -1798,17 +1798,25 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                     </fieldset>
                     <fieldset class="settings-section settings-section--compact">
                         <legend><?php echo t('settings.access_bypass'); ?></legend>
-                        <div class="form-row-inline">
-                            <div class="form-group">
-                                <label for="maintenanceBypassParam"><?php echo t('settings.access_bypass_param'); ?></label>
-                                <input type="text" id="maintenanceBypassParam" placeholder="preview" maxlength="40">
-                            </div>
-                            <div class="form-group">
-                                <label for="maintenanceBypassKey"><?php echo t('settings.access_bypass_key'); ?></label>
-                                <input type="password" id="maintenanceBypassKey" autocomplete="new-password">
-                                <small class="form-hint" id="maintenanceBypassHint"></small>
-                            </div>
+                        <p class="settings-description settings-description--compact"><?php echo t('settings.access_bypass_desc'); ?></p>
+                        <div class="bypass-links" id="bypassLinks"></div>
+                        <div class="bypass-links__actions">
+                            <button type="button" class="btn btn-secondary btn-sm" id="bypassAddBtn">+ <?php echo t('settings.access_bypass_add'); ?></button>
                         </div>
+                        <template id="bypassRowTemplate">
+                            <div class="bypass-row">
+                                <div class="form-group bypass-row__param">
+                                    <label><?php echo t('settings.access_bypass_param'); ?></label>
+                                    <input type="text" class="bypass-row__param-input" placeholder="preview" maxlength="40" autocomplete="off" spellcheck="false">
+                                </div>
+                                <div class="form-group bypass-row__key">
+                                    <label><?php echo t('settings.access_bypass_key'); ?></label>
+                                    <input type="text" class="bypass-row__key-input" maxlength="120" autocomplete="off" spellcheck="false">
+                                </div>
+                                <button type="button" class="btn-icon bypass-row__remove" title="<?php echo htmlspecialchars(t('settings.access_bypass_remove'), ENT_QUOTES, 'UTF-8'); ?>" aria-label="<?php echo htmlspecialchars(t('settings.access_bypass_remove'), ENT_QUOTES, 'UTF-8'); ?>"><?php echo nbIcon('trash', 16); ?></button>
+                                <p class="access-bypass-link bypass-row__link"><span><?php echo t('settings.access_bypass_link'); ?></span> <code aria-live="polite"></code></p>
+                            </div>
+                        </template>
                     </fieldset>
                     <div class="settings-actions">
                         <button type="submit" class="btn btn-primary" id="saveAccessBtn"><?php echo t('settings.save_access'); ?></button>
@@ -1897,23 +1905,23 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                         <input type="text" id="settingsFromName" placeholder="My Website">
                     </div>
 
-                    <div id="smtpFields">
+                    <div id="smtpFields" class="smtp-grid">
                         <hr class="settings-divider">
                         <h3 class="settings-subheading"><?php echo t('settings.smtp_settings'); ?></h3>
 
-                        <div class="form-group">
+                        <div class="form-group smtp-grid__host">
                             <label for="settingsSmtpHost"><?php echo t('settings.smtp_host'); ?></label>
                             <input type="text" id="settingsSmtpHost" placeholder="mail.example.com">
                         </div>
 
-                        <div class="form-row-inline">
+                        <div class="form-row-inline smtp-grid__port-row">
                             <div class="form-group">
                                 <label for="settingsSmtpPort"><?php echo t('settings.smtp_port'); ?></label>
-                                <input type="number" id="settingsSmtpPort" value="587" min="1" max="65535" style="width: 100px;">
+                                <input type="number" id="settingsSmtpPort" value="587" min="1" max="65535">
                             </div>
                             <div class="form-group">
                                 <label for="settingsSmtpEncryption"><?php echo t('settings.smtp_encryption'); ?></label>
-                                <select id="settingsSmtpEncryption" class="topbar-select" style="width: auto; min-width: 120px;">
+                                <select id="settingsSmtpEncryption" class="topbar-select">
                                     <option value="tls">STARTTLS (587)</option>
                                     <option value="ssl">SSL/TLS (465)</option>
                                     <option value="none"><?php echo t('settings.smtp_encryption_none'); ?></option>
@@ -1921,12 +1929,12 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                             </div>
                         </div>
 
-                        <div class="form-group">
+                        <div class="form-group smtp-grid__user">
                             <label for="settingsSmtpUsername"><?php echo t('settings.smtp_username'); ?></label>
                             <input type="text" id="settingsSmtpUsername" placeholder="user@example.com" autocomplete="off">
                         </div>
 
-                        <div class="form-group">
+                        <div class="form-group smtp-grid__pass">
                             <label for="settingsSmtpPassword"><?php echo t('settings.smtp_password'); ?></label>
                             <input type="password" id="settingsSmtpPassword" placeholder="<?php echo t('settings.smtp_password_placeholder'); ?>" autocomplete="new-password">
                             <small class="form-hint"><?php echo t('settings.smtp_password_hint'); ?></small>

@@ -77,6 +77,68 @@
         }
     }
 
+    // Bypass links: one row per URL parameter / key pair, each with its
+    // assembled address. Keys are stored as entered. A key hashed by an
+    // older version is not shown; saving the form replaces it with the
+    // visible links.
+    function bypassSiteRoot() {
+        return window.location.origin + window.location.pathname.replace(/\/admin\/.*$/, '/');
+    }
+
+    function updateBypassRowLink(row) {
+        var out = row.querySelector('.bypass-row__link code');
+        var param = (row.querySelector('.bypass-row__param-input').value || '').trim() || 'preview';
+        var key = row.querySelector('.bypass-row__key-input').value || '';
+        if (out) out.textContent = bypassSiteRoot() + '?' + encodeURIComponent(param) + '=' + (key ? encodeURIComponent(key) : t('settings.access_bypass_key_placeholder'));
+    }
+
+    function addBypassRow(param, key) {
+        var container = document.getElementById('bypassLinks');
+        var tpl = document.getElementById('bypassRowTemplate');
+        if (!container || !tpl) return null;
+        var row = tpl.content.firstElementChild.cloneNode(true);
+        row.querySelector('.bypass-row__param-input').value = param || '';
+        row.querySelector('.bypass-row__key-input').value = key || '';
+        row.querySelectorAll('input').forEach(function(input) {
+            input.addEventListener('input', function() { updateBypassRowLink(row); });
+        });
+        row.querySelector('.bypass-row__remove').addEventListener('click', function() {
+            row.remove();
+        });
+        container.appendChild(row);
+        updateBypassRowLink(row);
+        return row;
+    }
+
+    function renderBypassLinks(maintenance) {
+        var container = document.getElementById('bypassLinks');
+        if (!container) return;
+        container.innerHTML = '';
+        var links = Array.isArray(maintenance.bypassLinks) ? maintenance.bypassLinks : [];
+        links.forEach(function(link) { addBypassRow(link.param, link.key); });
+        if (!container.children.length) addBypassRow(maintenance.bypassParam || 'preview', '');
+    }
+
+    function collectBypassLinks() {
+        var container = document.getElementById('bypassLinks');
+        var rows = container ? Array.prototype.slice.call(container.querySelectorAll('.bypass-row')) : [];
+        var links = [];
+        rows.forEach(function(row) {
+            var param = row.querySelector('.bypass-row__param-input').value.trim() || 'preview';
+            var key = row.querySelector('.bypass-row__key-input').value.trim();
+            if (key) links.push({ param: param, key: key });
+        });
+        return {
+            links: links,
+            firstParam: rows.length ? (rows[0].querySelector('.bypass-row__param-input').value.trim() || 'preview') : 'preview'
+        };
+    }
+
+    document.getElementById('bypassAddBtn')?.addEventListener('click', function() {
+        var row = addBypassRow('preview', '');
+        if (row) row.querySelector('.bypass-row__key-input').focus();
+    });
+
     function populateSettings(settings) {
         // Branding
         var faviconPath = settings.favicon || '/assets/images/favicon.svg';
@@ -204,12 +266,7 @@
             maintImageEl.value = maintenance.image || '';
             updateClearButton(maintImageEl);
         }
-        var bypassParamEl = document.getElementById('maintenanceBypassParam');
-        if (bypassParamEl) bypassParamEl.value = maintenance.bypassParam || 'preview';
-        var bypassKeyEl = document.getElementById('maintenanceBypassKey');
-        if (bypassKeyEl) bypassKeyEl.value = '';
-        var bypassHintEl = document.getElementById('maintenanceBypassHint');
-        if (bypassHintEl) bypassHintEl.textContent = maintenance.hasBypassKey ? t('settings.access_bypass_key_set') : t('settings.access_bypass_key_hint');
+        renderBypassLinks(maintenance);
         var modules = settings.modules || {};
         var moduleAiEl = document.getElementById('moduleAi');
         if (moduleAiEl) moduleAiEl.checked = modules.ai !== false;
@@ -2652,8 +2709,10 @@
                     overlayOpacity: document.getElementById('maintenanceImageLayout').value === 'background'
                         ? parseInt(document.getElementById('maintenanceOverlayOpacity').value, 10)
                         : 88,
-                    bypassParam: document.getElementById('maintenanceBypassParam').value.trim() || 'preview',
-                    bypassKey: document.getElementById('maintenanceBypassKey').value
+                    bypassParam: collectBypassLinks().firstParam,
+                    bypassLinks: collectBypassLinks().links,
+                    // the visible links are the whole truth once the form is saved
+                    clearBypassKey: true
                 };
 
                 var formData = new FormData();

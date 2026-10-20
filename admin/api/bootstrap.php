@@ -1073,6 +1073,21 @@ function sanitizeAccessSettings(array $settings, array $existing): array {
         $param = 'preview';
     }
 
+    // Bypass links: several URL parameter / key pairs, stored as entered so
+    // the dashboard can show and hand them out. Rows without a key are
+    // dropped. The older single hashed key keeps working until it is
+    // cleared or replaced by a visible link.
+    $links = [];
+    foreach ((array)($maintenance['bypassLinks'] ?? []) as $link) {
+        if (!is_array($link)) continue;
+        $linkParam = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)($link['param'] ?? ''));
+        $linkKey = trim((string)($link['key'] ?? ''));
+        if ($linkParam === '') $linkParam = 'preview';
+        if ($linkKey === '' || preg_match('/[\x00-\x1f&=#\s]/', $linkKey)) continue;
+        $links[] = ['param' => substr($linkParam, 0, 40), 'key' => substr($linkKey, 0, 120)];
+        if (count($links) >= 20) break;
+    }
+
     $existingHash = (string)($existing['access']['maintenance']['bypassKeyHash'] ?? '');
     $newKey = trim((string)($maintenance['bypassKey'] ?? ''));
     $hash = $existingHash;
@@ -1120,6 +1135,7 @@ function sanitizeAccessSettings(array $settings, array $existing): array {
             'overlayOpacity' => $overlayOpacity,
             'bypassParam' => substr($param, 0, 40),
             'bypassKeyHash' => $hash,
+            'bypassLinks' => $links,
         ],
     ];
 }

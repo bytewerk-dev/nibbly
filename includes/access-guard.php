@@ -69,9 +69,24 @@ function nibblyAccessVerifySecret(string $secret, string $hash): bool {
     return hash_equals($hash, hash('sha256', $secret));
 }
 
+function nibblyAccessMatchBypassLink(array $maintenance): bool {
+    foreach ((array)($maintenance['bypassLinks'] ?? []) as $link) {
+        if (!is_array($link)) continue;
+        $linkParam = trim((string)($link['param'] ?? ''));
+        $linkKey = (string)($link['key'] ?? '');
+        if ($linkParam === '' || $linkKey === '' || !array_key_exists($linkParam, $_GET)) continue;
+        if (hash_equals($linkKey, (string)$_GET[$linkParam])) return true;
+    }
+    return false;
+}
+
 function nibblyAccessCheckMaintenanceBypass(array $maintenance): bool {
     $param = trim((string)($maintenance['bypassParam'] ?? ''));
     $hasParam = $param !== '' && array_key_exists($param, $_GET);
+    foreach ((array)($maintenance['bypassLinks'] ?? []) as $link) {
+        $linkParam = is_array($link) ? trim((string)($link['param'] ?? '')) : '';
+        if ($linkParam !== '' && array_key_exists($linkParam, $_GET)) $hasParam = true;
+    }
 
     if (!$hasParam && !nibblyAccessStartExistingSession()) {
         return false;
@@ -89,9 +104,11 @@ function nibblyAccessCheckMaintenanceBypass(array $maintenance): bool {
         return false;
     }
 
-    $candidate = (string)$_GET[$param];
-    if (!nibblyAccessVerifySecret($candidate, $hash)) {
-        return false;
+    if (!nibblyAccessMatchBypassLink($maintenance)) {
+        $candidate = ($param !== '' && array_key_exists($param, $_GET)) ? (string)$_GET[$param] : '';
+        if (!nibblyAccessVerifySecret($candidate, $hash)) {
+            return false;
+        }
     }
 
     $_SESSION['nibbly_maintenance_bypass'] = true;
