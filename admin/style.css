@@ -4148,8 +4148,49 @@ select.modal-input {
 .access-maintenance-grid {
     clear: left;
     display: grid;
-    grid-template-columns: minmax(220px, 0.42fr) minmax(260px, 0.5fr) minmax(0, 1fr);
-    gap: var(--nb-space-3) var(--nb-space-4);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--nb-space-4) var(--nb-space-5);
+    align-items: start;
+}
+
+.access-maintenance-grid > .form-group {
+    margin: 0;
+    min-width: 0;
+}
+
+.access-maintenance-grid > .form-group > label:not(.toggle-label) {
+    display: block;
+    line-height: 1.45;
+}
+
+/* Toggles share a row with labelled fields: start one label height down */
+.access-maintenance-grid > .access-toggle-row {
+    display: flex;
+    align-items: center;
+    min-height: var(--nb-control-h);
+    margin-top: var(--nb-label-offset);
+}
+
+.access-maintenance-grid > .access-toggle-row .toggle-label {
+    white-space: nowrap;
+}
+
+/* The enable switch has the longer label and takes two columns */
+.access-maintenance-grid > .access-toggle-row:first-child {
+    grid-column: span 2;
+}
+
+/* Full-width rows stretch their field across the whole grid (the :not()
+   chain matches the specificity of the 40rem cap in the settings form) */
+.settings-panel .settings-form .access-maintenance-grid > .access-wide input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+.settings-panel .settings-form .access-maintenance-grid > .access-wide textarea,
+.settings-panel .settings-form .access-maintenance-grid > .access-wide .logo-path-input,
+.settings-panel .settings-form .access-maintenance-grid > .access-wide .logo-path-input .input-with-clear {
+    max-width: none;
+}
+
+.access-maintenance-grid #maintenanceUntil {
+    width: 100%;
 }
 
 .access-wide {
@@ -4184,28 +4225,9 @@ select.modal-input {
     max-width: 260px;
 }
 
-.access-maintenance-grid > .form-group:nth-child(2) {
-    grid-column: 2;
-}
-
-.access-maintenance-grid > .form-group:nth-child(5) {
-    grid-column: 1;
-}
-
-.access-maintenance-grid > .form-group:nth-child(6) {
-    grid-column: 2;
-}
-
-.access-maintenance-grid > .form-group:nth-child(7) {
-    grid-column: 1;
-}
-
-.access-maintenance-grid > .form-group:nth-child(8) {
-    grid-column: 2;
-}
-
-.access-maintenance-grid > .form-group:nth-child(9) {
-    grid-column: 3;
+/* Overlay colour (shown for some layouts) takes two columns */
+.access-maintenance-grid > .visual-overlay-color-group {
+    grid-column: span 2;
 }
 
 #maintenanceUntil {
@@ -8864,10 +8886,14 @@ input.color-hex-input,
     line-height: 1.45;
 }
 
+/* Height of a field label plus its gap: a toggle that shares a row with
+   labelled fields starts this far down to sit level with their controls */
+.settings-panel,
 .ai-settings-compact {
     --nb-label-offset: calc(0.875rem * 1.45 + var(--nb-space-2));
 }
 
+[data-theme-preset="console"] .settings-panel,
 [data-theme-preset="console"] .ai-settings-compact {
     --nb-label-offset: calc(var(--nb-text-xs) * 1.45 + var(--nb-space-2));
 }
@@ -9468,9 +9494,18 @@ input.color-hex-input,
 .forms-fields-table { display: block; }
 .forms-fields-table td { grid-template-rows: auto minmax(38px, auto); }
 .forms-fields-table td input, .forms-fields-table td textarea { width: 100%; min-width: 0; }
-.access-maintenance-grid, .settings-visual-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); }
-.access-maintenance-grid > .form-group:nth-child(n) { grid-column: auto; }
+.settings-visual-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); }
 .access-maintenance-grid > .access-wide { grid-column: 1 / -1; }
+@container settings (max-width: 52rem) {
+    .access-maintenance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container settings (max-width: 28rem) {
+    .access-maintenance-grid { grid-template-columns: minmax(0, 1fr); }
+    .access-maintenance-grid > .access-toggle-row:first-child { grid-column: auto; }
+    .access-maintenance-grid > .access-toggle-row .toggle-label { white-space: normal; }
+    .access-maintenance-grid > .visual-overlay-color-group { grid-column: auto; }
+    .access-maintenance-grid > .access-toggle-row { margin-top: 0; min-height: 0; }
+}
 @container dashboard (max-width: 65rem) {
     .settings-layout { grid-template-columns: minmax(0, 1fr); }
     .settings-tabs { position: static; display: none; }
