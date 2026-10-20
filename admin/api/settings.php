@@ -23,6 +23,9 @@ switch ($action) {
                 'font' => 'system',
                 'primaryColor' => '#3858e9',
                 'accentColor' => '',
+                'dangerColor' => '',
+                'warningColor' => '',
+                'successColor' => '',
                 'sidebarBg' => '',
                 'darkPrimaryColor' => '',
                 'darkAccentColor' => '',
@@ -135,7 +138,7 @@ switch ($action) {
         // Whitelist allowed keys
         $allowed = [
             'branding' => ['logo', 'logoDark', 'adminLogo', 'name', 'showBranding', 'logoDisplay', 'logoSize'],
-            'theme' => ['adminTheme', 'publicDefault', 'preset', 'density', 'font', 'primaryColor', 'accentColor', 'sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg', 'buttonGlow', 'buttonRadius'],
+            'theme' => ['adminTheme', 'publicDefault', 'preset', 'density', 'font', 'primaryColor', 'accentColor', 'sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg', 'dangerColor', 'warningColor', 'successColor', 'buttonGlow', 'buttonRadius'],
             'general' => ['adminLanguage', 'frontendLoginRedirect', 'aiLabelArtwork'],
             'email' => ['method', 'recipientEmail', 'bccEmail', 'fromEmail', 'fromName', 'smtpHost', 'smtpPort', 'smtpUsername', 'smtpPassword', 'smtpEncryption'],
             'seo' => ['siteUrl', 'organizationName', 'defaultOgImage', 'noindexSite']
@@ -173,7 +176,7 @@ switch ($action) {
 
                     // Validate optional color values — empty string means "auto"
                     // (accentColor derives from the base colour unless overridden)
-                    if (in_array($key, ['accentColor', 'sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg'])) {
+                    if (in_array($key, ['accentColor', 'sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg', 'dangerColor', 'warningColor', 'successColor'])) {
                         $value = (string)$value;
                         if ($value !== '' && !preg_match('/^#[0-9a-fA-F]{6}$/', $value)) {
                             jsonResponse(false, null, 'Invalid color value for ' . $key);

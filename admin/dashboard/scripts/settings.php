@@ -380,9 +380,14 @@
         darkPrimaryColor: '',
         darkAccentColor: '',
         darkSidebarBg: '',
+        dangerColor: '',
+        warningColor: '',
+        successColor: '',
         buttonGlow: true,
         buttonRadius: 6
     };
+    // Default semantic colours (match css/nibbly-admin-tokens.css); success follows the base colour
+    var SEMANTIC_DEFAULTS = { dangerColor: '#dc2626', warningColor: '#d97706' };
 
     var BRANDING_DEFAULTS = {
         favicon: <?php echo json_encode($_defaultFavicon); ?>,
@@ -409,9 +414,10 @@
         classic: { font: 'system',     buttonRadius: 4, buttonGlow: false },
         paper:   { font: 'system',     buttonRadius: 6, buttonGlow: false },
         studio:  { font: 'geist',      buttonRadius: 6, buttonGlow: false },
-        console: { font: 'geist-mono', buttonRadius: 0, buttonGlow: false, primaryColor: '#ff8800' }
+        console: { font: 'geist-mono', buttonRadius: 0, buttonGlow: false, colors: { primaryColor: '#ff8800', dangerColor: '#ff6a00', warningColor: '#ffc400', successColor: '#2ecc71' } }
     };
-    var presetColorBackup = null;
+    var presetColorBackup = {};
+    var PRESET_COLOR_KEYS = ['primaryColor', 'dangerColor', 'warningColor', 'successColor'];
     var HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
     // Display values for "auto" sidebar fields (the stylesheet derives the real
@@ -517,6 +523,9 @@
         }
         enforceAgainstText('primaryColor', 'settings.base_color');
         enforceAgainstText('accentColor', 'settings.accent_color');
+        enforceAgainstText('dangerColor', 'settings.danger_color');
+        enforceAgainstText('warningColor', 'settings.warning_color');
+        enforceAgainstText('successColor', 'settings.success_color');
         enforce('sidebarBg', '#1a1a1a', 'lighter', 'settings.sidebar_bg_light');
         enforce('darkSidebarBg', '#e5e5e5', 'darker', 'settings.sidebar_bg_dark');
 
@@ -529,13 +538,19 @@
             primaryColor: document.getElementById('settingsPrimaryColor').value,
             accentColor: document.getElementById('settingsAccentColor').value,
             sidebarBg: document.getElementById('settingsSidebarBg').value,
-            darkSidebarBg: document.getElementById('settingsDarkSidebarBg').value
+            darkSidebarBg: document.getElementById('settingsDarkSidebarBg').value,
+            dangerColor: document.getElementById('settingsDangerColor').value,
+            warningColor: document.getElementById('settingsWarningColor').value,
+            successColor: document.getElementById('settingsSuccessColor').value
         };
         var checks = {
             primaryColor: {background: null, textContrast: true},
             accentColor: {background: null, textContrast: true},
             sidebarBg: {background: '#1a1a1a', textContrast: true},
-            darkSidebarBg: {background: '#e5e5e5', textContrast: true}
+            darkSidebarBg: {background: '#e5e5e5', textContrast: true},
+            dangerColor: {background: null, textContrast: true},
+            warningColor: {background: null, textContrast: true},
+            successColor: {background: null, textContrast: true}
         };
 
         Object.keys(checks).forEach(function(key) {
@@ -563,7 +578,10 @@
     var AUTO_STATE = {
         accentColor: true,
         sidebarBg: true,
-        darkSidebarBg: true
+        darkSidebarBg: true,
+        dangerColor: true,
+        warningColor: true,
+        successColor: true
     };
 
     function setAutoField(name, storedValue, derivedValue) {
@@ -612,6 +630,9 @@
         setAutoField('accentColor', accent, primary);
         setAutoField('sidebarBg', theme.sidebarBg || '', deriveSidebarLight(primary));
         setAutoField('darkSidebarBg', theme.darkSidebarBg || '', deriveSidebarDark(primary));
+        setAutoField('dangerColor', theme.dangerColor || '', SEMANTIC_DEFAULTS.dangerColor);
+        setAutoField('warningColor', theme.warningColor || '', SEMANTIC_DEFAULTS.warningColor);
+        setAutoField('successColor', theme.successColor || '', primary);
 
         var fontSelect = document.getElementById('settingsFont');
         if (fontSelect) {
@@ -639,6 +660,9 @@
             darkPrimaryColor: '',
             darkAccentColor: '',
             darkSidebarBg: AUTO_STATE.darkSidebarBg ? '' : normalizeHexColor(document.getElementById('settingsDarkSidebarBg').value),
+            dangerColor: AUTO_STATE.dangerColor ? '' : normalizeHexColor(document.getElementById('settingsDangerColor').value),
+            warningColor: AUTO_STATE.warningColor ? '' : normalizeHexColor(document.getElementById('settingsWarningColor').value),
+            successColor: AUTO_STATE.successColor ? '' : normalizeHexColor(document.getElementById('settingsSuccessColor').value),
             buttonGlow: document.getElementById('settingsButtonGlow').checked,
             buttonRadius: parseInt(document.getElementById('settingsButtonRadius').value, 10)
         };
@@ -656,6 +680,9 @@
         if (!AUTO_STATE.accentColor) setPair('settingsAccentColor', theme.accentColor);
         if (!AUTO_STATE.sidebarBg) setPair('settingsSidebarBg', theme.sidebarBg);
         if (!AUTO_STATE.darkSidebarBg) setPair('settingsDarkSidebarBg', theme.darkSidebarBg);
+        if (!AUTO_STATE.dangerColor) setPair('settingsDangerColor', theme.dangerColor);
+        if (!AUTO_STATE.warningColor) setPair('settingsWarningColor', theme.warningColor);
+        if (!AUTO_STATE.successColor) setPair('settingsSuccessColor', theme.successColor);
         refreshAutoDisplays();
     }
 
@@ -676,6 +703,18 @@
             var sd = deriveSidebarDark(primary);
             document.getElementById('settingsDarkSidebarBg').value = sd;
             document.getElementById('settingsDarkSidebarBgPicker').value = sd;
+        }
+        if (AUTO_STATE.dangerColor) {
+            document.getElementById('settingsDangerColor').value = SEMANTIC_DEFAULTS.dangerColor;
+            document.getElementById('settingsDangerColorPicker').value = SEMANTIC_DEFAULTS.dangerColor;
+        }
+        if (AUTO_STATE.warningColor) {
+            document.getElementById('settingsWarningColor').value = SEMANTIC_DEFAULTS.warningColor;
+            document.getElementById('settingsWarningColorPicker').value = SEMANTIC_DEFAULTS.warningColor;
+        }
+        if (AUTO_STATE.successColor) {
+            document.getElementById('settingsSuccessColor').value = primary;
+            document.getElementById('settingsSuccessColorPicker').value = primary;
         }
     }
 
@@ -804,6 +843,9 @@
     bindColorPair('accentColor', true);
     bindColorPair('sidebarBg', true);
     bindColorPair('darkSidebarBg', true);
+    bindColorPair('dangerColor', true);
+    bindColorPair('warningColor', true);
+    bindColorPair('successColor', true);
 
     function applyPresetDefaults(preset) {
         var d = THEME_PRESET_DEFAULTS[preset];
@@ -818,29 +860,46 @@
             var radiusValue = document.getElementById('settingsButtonRadiusValue');
             if (radiusValue) radiusValue.textContent = d.buttonRadius + 'px';
         }
-        var primaryInput = document.getElementById('settingsPrimaryColor');
-        var current = primaryInput ? normalizeHexColor(primaryInput.value) : '';
-        if (d.primaryColor) {
-            if (current !== d.primaryColor) presetColorBackup = current;
-            setPrimaryColor(d.primaryColor);
-        } else if (presetColorBackup && isPresetColor(current)) {
-            setPrimaryColor(presetColorBackup);
-            presetColorBackup = null;
-        }
+        // Colours: a preset with its own palette sets them and remembers what
+        // they replaced; a preset without one hands those values back as long
+        // as the user has not changed them in between
+        PRESET_COLOR_KEYS.forEach(function(key) {
+            var wanted = d.colors ? d.colors[key] : null;
+            var current = readColorField(key);
+            if (wanted) {
+                if (current.value !== wanted && !(key in presetColorBackup)) {
+                    presetColorBackup[key] = current;
+                }
+                writeColorField(key, wanted, false);
+            } else if (key in presetColorBackup && isPresetColor(key, current.value)) {
+                writeColorField(key, presetColorBackup[key].value, presetColorBackup[key].auto);
+                delete presetColorBackup[key];
+            }
+        });
+        refreshAutoDisplays();
+        updateThemeContrastFeedback();
         updateBtnStylePreview();
     }
 
-    function isPresetColor(hex) {
-        return Object.keys(THEME_PRESET_DEFAULTS).some(function(k) { return THEME_PRESET_DEFAULTS[k].primaryColor === hex; });
+    function isPresetColor(key, hex) {
+        return Object.keys(THEME_PRESET_DEFAULTS).some(function(k) { var c = THEME_PRESET_DEFAULTS[k].colors; return c && c[key] === hex; });
     }
 
-    function setPrimaryColor(hex) {
-        var input = document.getElementById('settingsPrimaryColor');
-        var picker = document.getElementById('settingsPrimaryColorPicker');
+    function readColorField(key) {
+        var input = document.getElementById('settings' + capitalize(key));
+        return { value: input ? normalizeHexColor(input.value) : '', auto: key in AUTO_STATE ? AUTO_STATE[key] : false };
+    }
+
+    function writeColorField(key, hex, auto) {
+        var input = document.getElementById('settings' + capitalize(key));
+        var picker = document.getElementById('settings' + capitalize(key) + 'Picker');
         if (input) input.value = hex;
         if (picker) picker.value = hex;
-        refreshAutoDisplays();
-        updateThemeContrastFeedback();
+        if (key in AUTO_STATE) {
+            AUTO_STATE[key] = !!auto;
+            var badge = document.querySelector('.auto-badge[data-auto-for="' + key + '"]');
+            if (badge) badge.hidden = !auto;
+        }
     }
 
     // Preset cards, density and font: instant preview
@@ -1220,6 +1279,10 @@
         var accent = HEX_RE.test(theme.accentColor || '') ? normalizeHexColor(theme.accentColor) : base;
         root.style.setProperty('--nb-base', base);
         root.style.setProperty('--nb-accent-base', accent);
+        [['dangerColor', '--nb-danger-base'], ['warningColor', '--nb-warning-base'], ['successColor', '--nb-success-base']].forEach(function(pair) {
+            if (HEX_RE.test(theme[pair[0]] || '')) root.style.setProperty(pair[1], normalizeHexColor(theme[pair[0]]));
+            else root.style.removeProperty(pair[1]);
+        });
 
         var css = '';
         if (HEX_RE.test(theme.sidebarBg || '')) {

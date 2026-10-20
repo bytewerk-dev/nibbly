@@ -607,6 +607,12 @@ them when adding admin UI:
   syntax inside `@supports (color: oklch(from red l c h))`. Dark mode lifts the
   base to at least `l 0.72`; nothing stores a separate dark colour any more
   (`darkPrimaryColor` / `darkAccentColor` are accepted but ignored).
+- **Semantic colours.** `theme.dangerColor`, `theme.warningColor` and
+  `theme.successColor` (empty = auto) reach the stylesheet as
+  `--nb-danger-base`, `--nb-warning-base`, `--nb-success-base`; the tokens
+  file derives hover, subtle and text shades from them in OKLCH, light and
+  dark. Success follows the primary colour unless set. Console's preset
+  defaults set all three (orange, yellow, green) along with the base colour.
 - **Presets** (`theme.preset`: `soft` default, `classic`, `paper`, `studio`,
   `console`) set surfaces, borders, radii, control heights and the sidebar/topbar tokens
   (`--nb-sidebar-*`, `--nb-topbar-*`). Admin CSS reads those tokens and never

@@ -34,7 +34,7 @@ $isAdminUser = ($userRole === 'admin');
 
 // Load settings for theme
 $_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg';
-$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => ['adminTheme' => 'light', 'preset' => 'soft', 'density' => 'auto', 'font' => 'system', 'primaryColor' => '#3858e9', 'accentColor' => '', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'buttonGlow' => true, 'buttonRadius' => 6], 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'messages' => true, 'iconManager' => true], 'dashboard' => ['itemsPerPage' => 50, 'iconManagerItemsPerPage' => 50, 'mediaItemsPerPage' => 25]];
+$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => ['adminTheme' => 'light', 'preset' => 'soft', 'density' => 'auto', 'font' => 'system', 'primaryColor' => '#3858e9', 'accentColor' => '', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'dangerColor' => '', 'warningColor' => '', 'successColor' => '', 'buttonGlow' => true, 'buttonRadius' => 6], 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'messages' => true, 'iconManager' => true], 'dashboard' => ['itemsPerPage' => 50, 'iconManagerItemsPerPage' => 50, 'mediaItemsPerPage' => 25]];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     $loadedSettings = json_decode(file_get_contents(SETTINGS_PATH), true);
     if (is_array($loadedSettings)) {
@@ -154,6 +154,11 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
     $_sbDarkOverride = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($_t['darkSidebarBg'] ?? '')) ? strtolower((string)$_t['darkSidebarBg']) : '';
     $_pcDark = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($_t['darkPrimaryColor'] ?? '')) ? strtolower((string)$_t['darkPrimaryColor']) : $_pcLight;
     $_acDark = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($_t['darkAccentColor'] ?? '')) ? strtolower((string)$_t['darkAccentColor']) : $_acLight;
+    $_semantic = [];
+    foreach (['dangerColor' => '--nb-danger-base', 'warningColor' => '--nb-warning-base', 'successColor' => '--nb-success-base'] as $_semKey => $_semVar) {
+        $_semRaw = strtolower((string)($_t[$_semKey] ?? ''));
+        if (preg_match('/^#[0-9a-f]{6}$/', $_semRaw)) $_semantic[$_semVar] = $_semRaw;
+    }
     $_sbLight = $_sbLightOverride !== '' ? $_sbLightOverride : "color-mix(in srgb, {$_pcLight} 12%, white)";
     $_sbDark = $_sbDarkOverride !== '' ? $_sbDarkOverride : "color-mix(in srgb, {$_pcDark} 10%, #0b0d12)";
     ?>
@@ -161,6 +166,9 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
     :root {
         --nb-base: <?php echo $_pcLight; ?>;
         --nb-accent-base: <?php echo $_acLight; ?>;
+<?php foreach ($_semantic as $_semVar => $_semHex): ?>
+        <?php echo $_semVar; ?>: <?php echo $_semHex; ?>;
+<?php endforeach; ?>
     }
     <?php if ($_sbLightOverride !== ''): ?>
     :root, [data-site-theme="light"] { --nb-sidebar-bg: <?php echo $_sbLightOverride; ?>; --nb-topbar-bg: <?php echo $_sbLightOverride; ?>; }
@@ -1504,6 +1512,20 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                             </div>
                             <small class="theme-contrast-feedback" data-contrast-for="darkSidebarBg"></small>
                         </div>
+
+                        <?php foreach ([['dangerColor', '#dc2626', 'danger_color'], ['warningColor', '#d97706', 'warning_color'], ['successColor', '#3858e9', 'success_color']] as [$_semField, $_semDefault, $_semLabel]): $_semId = 'settings' . ucfirst($_semField); ?>
+                        <div class="form-group">
+                            <label for="<?php echo $_semId; ?>"><?php echo t('settings.' . $_semLabel); ?></label>
+                            <div class="color-input-group" data-auto-field="<?php echo $_semField; ?>">
+                                <input type="color" id="<?php echo $_semId; ?>Picker" value="<?php echo $_semDefault; ?>" class="color-picker">
+                                <input type="text" id="<?php echo $_semId; ?>" value="<?php echo $_semDefault; ?>" pattern="^#[0-9a-fA-F]{6}$" maxlength="7" class="color-hex-input">
+                                <span class="auto-badge" data-auto-for="<?php echo $_semField; ?>" hidden><?php echo t('settings.auto_badge'); ?></span>
+                                <button type="button" class="auto-reset-btn" data-auto-reset="<?php echo $_semField; ?>" title="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>" aria-label="<?php echo htmlspecialchars(t('settings.reset_to_auto')); ?>">&#x21BA;</button>
+                            </div>
+                            <?php if ($_semField === 'dangerColor'): ?><small class="form-hint"><?php echo t('settings.semantic_colors_hint'); ?></small><?php endif; ?>
+                            <small class="theme-contrast-feedback" data-contrast-for="<?php echo $_semField; ?>"></small>
+                        </div>
+                        <?php endforeach; ?>
 
                         </div>
                         <div class="settings-advanced__col">

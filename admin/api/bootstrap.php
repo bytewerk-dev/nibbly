@@ -233,7 +233,7 @@ function nibblySanitizeThemeContrast(array $theme): array {
     // The stylesheet picks white or dark text on the base colour by its
     // lightness, so a base colour only needs to carry one of the two. Light
     // colours such as orange stay as chosen instead of being darkened.
-    foreach (['primaryColor', 'accentColor'] as $key) {
+    foreach (['primaryColor', 'accentColor', 'dangerColor', 'warningColor', 'successColor'] as $key) {
         if (!empty($theme[$key])) {
             $hex = nibblyNormalizeHexColor((string)$theme[$key]);
             $best = max(nibblyContrastRatio($hex, '#ffffff'), nibblyContrastRatio($hex, '#111111'));

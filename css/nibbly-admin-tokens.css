@@ -36,6 +36,14 @@
     --nb-sidebar-bg: #e4ecfd;
     --nb-surface-panel: var(--nb-bg-elevated);
 
+    /* Semantic base colours: red for danger, yellow for warnings, green
+       for success. "Erweitert" may override each; success follows the
+       primary colour unless a site picks its own. The derived shades live
+       in the @supports block below. */
+    --nb-danger-base: #dc2626;
+    --nb-warning-base: #d97706;
+    --nb-success-base: var(--nb-primary);
+
     /* Base colour: the one colour a site picks. Everything interactive and
        every tinted surface derives from it (see THEME PRESETS below). The
        accent base defaults to the base colour; "Erweitert" may override it. */
@@ -238,7 +246,17 @@
         --nb-brand-dark: oklch(from var(--nb-accent-base) calc(l - 0.10) c h);
         --nb-brand-darker: oklch(from var(--nb-accent-base) calc(l - 0.18) c h);
         --nb-brand-subtle: oklch(from var(--nb-accent-base) l c h / 0.12);
-        --nb-success: var(--nb-primary);
+        --nb-danger: oklch(from var(--nb-danger-base) l c h);
+        --nb-danger-hover: oklch(from var(--nb-danger-base) calc(l - 0.08) c h);
+        --nb-danger-subtle: oklch(from var(--nb-danger-base) l c h / 0.10);
+        --nb-danger-btn: radial-gradient(ellipse at 50% 0%, oklch(from var(--nb-danger-base) calc(l + 0.10) c h) 0%, var(--nb-danger) 70%);
+        --nb-danger-btn-hover: radial-gradient(ellipse at 50% 0%, oklch(from var(--nb-danger-base) calc(l + 0.16) c h) 0%, var(--nb-danger) 70%);
+        --nb-warning: oklch(from var(--nb-warning-base) l c h);
+        --nb-warning-subtle: oklch(from var(--nb-warning-base) l c h / 0.12);
+        --nb-warning-text: oklch(from var(--nb-warning-base) min(calc(l - 0.18), 0.48) calc(c * 0.9) h);
+        --nb-warning-text-strong: oklch(from var(--nb-warning-base) min(calc(l - 0.28), 0.40) calc(c * 0.9) h);
+        --nb-success: oklch(from var(--nb-success-base) l c h);
+        --nb-success-subtle: oklch(from var(--nb-success-base) l c h / 0.10);
     }
 
     /* --- Interactive colour, every preset, dark: never darker than l 0.72 --- */
@@ -258,6 +276,17 @@
         --nb-text-muted: #a1a5ad;
         /* The lifted primary is light, so text on it has to be dark to stay readable */
         --nb-text-on-primary: #11141b;
+        --nb-danger: oklch(from var(--nb-danger-base) max(l, 0.68) c h);
+        --nb-danger-hover: oklch(from var(--nb-danger-base) calc(max(l, 0.68) + 0.06) c h);
+        --nb-danger-subtle: oklch(from var(--nb-danger-base) max(l, 0.68) c h / 0.16);
+        --nb-danger-btn: radial-gradient(ellipse at 50% 0%, oklch(from var(--nb-danger-base) calc(max(l, 0.68) + 0.10) c h) 0%, var(--nb-danger) 70%);
+        --nb-danger-btn-hover: radial-gradient(ellipse at 50% 0%, oklch(from var(--nb-danger-base) calc(max(l, 0.68) + 0.16) c h) 0%, var(--nb-danger) 70%);
+        --nb-warning: oklch(from var(--nb-warning-base) max(l, 0.72) c h);
+        --nb-warning-subtle: oklch(from var(--nb-warning-base) max(l, 0.72) c h / 0.14);
+        --nb-warning-text: oklch(from var(--nb-warning-base) max(l, 0.80) c h);
+        --nb-warning-text-strong: oklch(from var(--nb-warning-base) max(l, 0.87) calc(c * 0.8) h);
+        --nb-success: oklch(from var(--nb-success-base) max(l, 0.72) c h);
+        --nb-success-subtle: oklch(from var(--nb-success-base) max(l, 0.72) c h / 0.16);
     }
 
     /* ---------- SOFT (default): shadcn/ui measures on a faintly tinted shell ----------
@@ -439,7 +468,7 @@
         --nb-text-on-primary: #ffffff;
         --nb-border-focus: oklch(from var(--nb-base) l c h);
         --nb-focus-ring: oklch(from var(--nb-base) l c h / 0.35);
-        --nb-success: oklch(from var(--nb-accent-base) l c h);
+        --nb-success-base: var(--nb-accent-base);
         --nb-sidebar-bg: #fafafa;
         --nb-bg: #fafafa;
         --nb-bg-elevated: #ffffff;
@@ -484,7 +513,6 @@
         --nb-text-on-primary: #0a0a0a;
         --nb-border-focus: oklch(from var(--nb-base) max(l, 0.72) c h);
         --nb-focus-ring: oklch(from var(--nb-base) max(l, 0.72) c h / 0.40);
-        --nb-success: oklch(from var(--nb-accent-base) max(l, 0.72) c h);
         --nb-sidebar-bg: #000000;
         --nb-bg: #000000;
         --nb-bg-elevated: #0a0a0a;
