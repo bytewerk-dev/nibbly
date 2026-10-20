@@ -11354,14 +11354,37 @@ label.toggle-label > .toggle-switch,
 }
 
 .bypass-row__remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     height: var(--nb-control-h);
     width: var(--nb-control-h);
+    padding: 0;
+    border: 1px solid var(--nb-border);
+    border-radius: var(--nb-radius-md);
+    background: var(--nb-bg-elevated);
     color: var(--nb-text-muted);
+    cursor: pointer;
+    transition: background-color var(--nb-duration-fast) var(--nb-ease),
+                color var(--nb-duration-fast) var(--nb-ease),
+                border-color var(--nb-duration-fast) var(--nb-ease);
 }
 
 .bypass-row__remove:hover {
+    background: var(--nb-danger-subtle);
     color: var(--nb-danger);
     border-color: var(--nb-danger);
+}
+
+.bypass-row__remove:focus-visible {
+    outline: 2px solid var(--nb-border-focus);
+    outline-offset: 2px;
+}
+
+.bypass-row__remove svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
 }
 
 .bypass-row__link {
