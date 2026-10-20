@@ -10353,25 +10353,71 @@ html[data-density="compact"] .sidebar-bottom {
 .settings-advanced__grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: 0 var(--nb-space-8);
+    gap: var(--nb-space-6) 0;
 }
 
-@media (min-width: 1100px) {
-    .settings-advanced__grid {
+/* Colours: six across, three across in a narrower panel, then two, then one.
+   The button settings follow below in a row of three. */
+.settings-advanced__colors {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: var(--nb-space-4) var(--nb-space-5);
+    align-items: start;
+}
+
+.settings-advanced__buttons {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--nb-space-4) var(--nb-space-6);
+    align-items: start;
+    padding-top: var(--nb-space-5);
+    border-top: 1px var(--nb-divider-style, solid) var(--nb-border);
+}
+
+.settings-advanced__colors > .form-group,
+.settings-advanced__buttons > .form-group {
+    margin: 0;
+    min-width: 0;
+}
+
+/* The hex field never shrinks below seven mono characters; badge and reset
+   wrap to a second line in a tight column instead */
+.settings-advanced__colors .color-input-group {
+    flex-wrap: wrap;
+}
+
+.settings-advanced__colors input.color-hex-input {
+    flex: 1 1 5.5rem;
+    min-width: 5.5rem;
+    width: auto;
+}
+
+.settings-advanced__buttons .range-input-group {
+    max-width: none;
+}
+
+@container settings (max-width: 64rem) {
+    .settings-advanced__colors {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@container settings (max-width: 48rem) {
+    .settings-advanced__buttons {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@container settings (max-width: 40rem) {
+    .settings-advanced__colors {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
-.settings-advanced__col > .form-group {
-    margin-bottom: var(--nb-space-4);
-}
-
-.settings-advanced__col > .form-group:last-child {
-    margin-bottom: 0;
-}
-
-.settings-advanced__col .range-input-group {
-    max-width: none;
+@container settings (max-width: 26rem) {
+    .settings-advanced__colors {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 /* Compact density: tighter settings sub-navigation */

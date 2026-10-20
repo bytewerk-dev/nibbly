@@ -1476,7 +1476,7 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                     <details class="settings-advanced" id="themeAdvanced">
                         <summary><?php echo t('settings.advanced'); ?></summary>
                         <div class="settings-advanced__grid">
-                        <div class="settings-advanced__col">
+                        <div class="settings-advanced__colors">
 
                         <div class="form-group">
                             <label for="settingsAccentColor"><?php echo t('settings.accent_color'); ?></label>
@@ -1528,7 +1528,7 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                         <?php endforeach; ?>
 
                         </div>
-                        <div class="settings-advanced__col">
+                        <div class="settings-advanced__buttons">
 
                         <div class="form-group">
                             <label for="settingsButtonRadius"><?php echo t('settings.button_radius'); ?></label>
