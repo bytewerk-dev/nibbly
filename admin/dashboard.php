@@ -71,7 +71,7 @@ if ($isAdminUser) $validDashboardTabs[] = 'system';
 function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): string {
     static $paths = [
         'hamburger' => '<path d="M3 12h18M3 6h18M3 18h18"/>',
-        'collapse'  => '<path d="M11 17l-5-5 5-5"/><path d="M18 17l-5-5 5-5"/>',
+        'collapse'  => '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>',
         'home'      => '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/>',
         'edit'      => '<path d="M12 20h9M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4L16.5 3.5z"/>',
         'eye'       => '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
