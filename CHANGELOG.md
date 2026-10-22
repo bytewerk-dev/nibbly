@@ -9,6 +9,20 @@ Git milestones and the gaps in publication records.
 
 ## Unreleased
 
+### Fixed
+
+- Clicking an image in the visual editor opens the media library with that image selected
+  (also the image field of the group dialog and the news cover), on the page that holds it and
+  scrolled into view. Before, the library opened without a selection.
+- Editable links keep their own display in the visual editor. The editor set every editable
+  field to `display: inline`, so button links lost their width and top margin and slid over
+  the text above them.
+- The sidebar's collapse button shows the panel symbol that has become the convention for
+  toggling navigation bars, without rotating when collapsed, and sits apart from the
+  navigation under a divider in the sidebar's line style.
+- The agent status in the AI settings no longer disappears for a moment when the dashboard
+  overview fills the form before the full AI settings arrive.
+
 ## [2.4.0] — 2026-10-20
 
 ### Added

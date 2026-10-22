@@ -60,8 +60,11 @@ switch ($action) {
         $response['analytics']['state'] = ($response['analytics']['state'] ?? '') === 'error' ? 'error'
             : (!nibblyAnalyticsEnabled() ? 'disabled' : (empty($response['analytics']['periodViews']) ? 'empty' : 'ready'));
         if (dashboardAiModuleEnabled()) {
+            $aiSettings = nibblyAiLoadSettings(true);
+            // Same shape as load-ai-settings, so the form rendered from the overview is complete
+            if (isAdmin() && function_exists('nibblyAgentStatusForAdmin')) $aiSettings['agentStatus'] = nibblyAgentStatusForAdmin();
             $response['ai'] = [
-                'settings' => nibblyAiLoadSettings(true),
+                'settings' => $aiSettings,
                 'usage' => nibblyAiUsageSummary()
             ];
         }
