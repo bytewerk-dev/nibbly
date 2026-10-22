@@ -11263,8 +11263,20 @@ label.toggle-label > .toggle-switch,
    The mobile drawer below 769px ignores it and always shows labels.
    ============================================================ */
 
-.sidebar-collapse svg {
-    transition: transform var(--nb-duration-normal) var(--nb-ease);
+/* The collapse button sits apart from the navigation under its own line */
+.sidebar-collapse {
+    position: relative;
+    margin-top: var(--nb-space-3);
+}
+
+.sidebar-collapse::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(-1 * var(--nb-space-2));
+    border-top: 1px var(--nb-divider-style, solid) var(--nb-sidebar-border);
+    pointer-events: none;
 }
 
 @media (min-width: 769px) {
@@ -11316,10 +11328,6 @@ label.toggle-label > .toggle-switch,
 
     html[data-sidebar="collapsed"] .sidebar-version {
         display: none;
-    }
-
-    html[data-sidebar="collapsed"] .sidebar-collapse svg {
-        transform: rotate(180deg);
     }
 
     /* Paper marks the active item with a bar at the edge; keep that readable */
