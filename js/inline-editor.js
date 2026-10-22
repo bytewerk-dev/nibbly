@@ -2492,11 +2492,12 @@
         body.querySelectorAll('[data-group-image-pick]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const index = parseInt(btn.dataset.groupImagePick, 10);
+                const currentSrcInput = document.getElementById(groupFieldIds(index, 'src').id);
                 openImageManager((imagePath) => {
                     const srcInput = document.getElementById(groupFieldIds(index, 'src').id);
                     if (srcInput) srcInput.value = imagePath;
                     updateGroupImagePreview(index, imagePath);
-                });
+                }, null, currentSrcInput ? currentSrcInput.value : null);
             });
         });
 
@@ -5255,7 +5256,25 @@
                     saveImageField(page, fieldKey, imagePath, newAlt, imgElement);
                 });
             }
-        });
+        }, null, imageFieldPath(imgElement));
+    }
+
+    // Stored path of an editable image (the library preselects it); falls back to the rendered src
+    function imageFieldPath(imgElement) {
+        const page = imgElement.dataset.page;
+        const fieldKey = imgElement.dataset.field;
+        let stored = page === '__news_post__'
+            ? (EditorConfig.newsPostData ? EditorConfig.newsPostData[fieldKey] : undefined)
+            : (EditorConfig.contentData[page] ? getNestedValue(EditorConfig.contentData[page], fieldKey) : undefined);
+        if (stored && typeof stored === 'object') stored = stored.src;
+        return typeof stored === 'string' && stored ? stored : imageElementPath(imgElement);
+    }
+
+    // Site path of a rendered image: without origin, query and hash
+    function imageElementPath(img) {
+        const src = img ? (img.getAttribute('src') || '') : '';
+        if (!src || src.indexOf('data:') === 0) return null;
+        return src.replace(/^https?:\/\/[^/]+/i, '').split(/[?#]/)[0] || null;
     }
 
     function saveImageField(page, fieldKey, newSrc, newAlt, element) {
@@ -6319,7 +6338,7 @@
         }
     }
 
-    function openImageManager(callback, targetInputId) {
+    function openImageManager(callback, targetInputId, currentPath) {
         ensureImageManagerInit();
         // Default callback: update a specific editor image input by ID
         const cb = callback || function(imagePath) {
@@ -6330,7 +6349,9 @@
             }
         };
         const currentInput = targetInputId ? document.getElementById(targetInputId) : null;
-        NbImageManager.open(cb, currentInput ? currentInput.value : null, { types: ['image'], type: 'image' });
+        // The library preselects the current image
+        const current = currentPath || (currentInput ? currentInput.value : null);
+        NbImageManager.open(cb, current, { types: ['image'], type: 'image' });
     }
 
     function closeImageManager() { NbImageManager.close(); }
@@ -6730,7 +6751,7 @@
                     EditorConfig.newsPostData.image = imagePath;
                     markNewsPostDirty();
                     closeImageManager();
-                });
+                }, null, EditorConfig.newsPostData.image || imageElementPath(heroEl));
             };
             heroEl.addEventListener('click', heroEl._newsClickHandler);
         }

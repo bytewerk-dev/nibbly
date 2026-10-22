@@ -1917,6 +1917,11 @@ body.edit-mode-active .editable-footer-active:hover::after {
 
 .editable-field-active {
     position: relative;
+}
+
+/* Editable links keep the display of the site's styles (button links are inline-flex or block);
+   :where() keeps the specificity of the former rule for all other fields */
+.editable-field-active:not(:where([data-editable-link])) {
     display: inline;
 }
 
