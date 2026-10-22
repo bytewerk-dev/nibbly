@@ -367,6 +367,8 @@ async function mainFlow(browser, user) {
         await page.locator('#aiAgentSection').scrollIntoViewIfNeeded();
         const saveBox = await page.locator('#saveAiSettingsBtn').boundingBox();
         assert(saveBox && saveBox.y + saveBox.height <= 900 + 1, 'the save button is on screen without scrolling to the end of the form: ' + JSON.stringify(saveBox));
+        // The status arrives with the AI settings; the overview may have filled the form a moment earlier
+        await page.waitForFunction(() => /ready/.test(document.getElementById('aiAgentStatus').textContent), null, { timeout: 15000 });
         assert((await page.locator('#aiAgentStatus').textContent()).includes('ready'), 'the status says the agent is ready: ' + await page.locator('#aiAgentStatus').textContent());
         assert(await page.locator('#aiBraveApiKeyHint').textContent().then(text => /No API key stored/.test(text)), 'no research key yet');
         await page.fill('#aiBraveApiKey', 'BSA-browser-brave-key-1234');

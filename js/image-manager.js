@@ -33,6 +33,7 @@
         filtered: [],
         selectedPath: null,
         selectedPaths: [],
+        revealSelection: false,
         multiplePicker: false,
         callback: null,
         isPicker: false,
@@ -593,6 +594,7 @@
             ? currentPath.map(normalizeImagePath).filter(Boolean)
             : [];
         state.selectedPath = state.multiplePicker ? null : normalizeImagePath(currentPath);
+        state.revealSelection = !!(state.selectedPath || state.selectedPaths.length);
         state.search = '';
         state.mode = 'library';
         state.folderFilter = 'all';
@@ -845,6 +847,7 @@
                     updateSortHeaderClasses();
                     applySortOrder();
                     filterAndRender();
+                    if (state.revealSelection) revealSelection();
                 } else {
                     state.data = [];
                     state.filtered = [];
@@ -899,6 +902,22 @@
         var pages = Math.max(1, Math.ceil(state.filtered.length / pageSize));
         state.page = Math.max(1, Math.min(state.page || 1, pages));
         render();
+    }
+
+    // Picker opened with the current file: show the page that holds it and scroll it into view (once per open)
+    function revealSelection() {
+        state.revealSelection = false;
+        var path = state.multiplePicker ? state.selectedPaths[0] : state.selectedPath;
+        var index = path ? state.filtered.findIndex(function (entry) { return entry.path === path; }) : -1;
+        if (index === -1) return;
+        var page = Math.floor(index / getItemsPerPage()) + 1;
+        if (page !== state.page) {
+            state.page = page;
+            render();
+        }
+        var modal = document.getElementById('nb-imgmgr-modal');
+        var selected = modal && modal.querySelector('.nb-imgmgr-item.selected, .nb-imgmgr-row.selected');
+        if (selected) selected.scrollIntoView({ block: 'nearest' });
     }
 
     function render() {

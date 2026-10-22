@@ -2048,7 +2048,9 @@
         if (!box) return;
         var status = settings.agentStatus;
         if (!status) {
-            box.hidden = true;
+            // The dashboard overview carries the settings without the status; keep what
+            // the full AI settings showed instead of blanking the box until they return
+            if (!box.textContent) box.hidden = true;
             return;
         }
         var messages = [];
