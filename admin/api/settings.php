@@ -63,6 +63,7 @@ switch ($action) {
                 'iconManagerItemsPerPage' => 50,
                 'mediaItemsPerPage' => 25
             ],
+            'media' => nibblyMediaSettingsDefaults(),
             'access' => [
                 'maintenance' => [
                     'enabled' => false,
@@ -392,6 +393,10 @@ switch ($action) {
         $dashboardPatch = sanitizeDashboardSettings($settings);
         if ($dashboardPatch) {
             $sanitized['dashboard'] = $dashboardPatch;
+        }
+        $mediaPatch = sanitizeMediaSettings($settings);
+        if ($mediaPatch) {
+            $sanitized['media'] = $mediaPatch;
         }
         $merged = array_replace_recursive($existing, $sanitized);
         if (isset($sanitized['access']['maintenance']['bypassLinks'])) {

@@ -278,6 +278,15 @@
         if (moduleMessagesEl) moduleMessagesEl.checked = modules.messages !== false;
         var moduleIconManagerEl = document.getElementById('moduleIconManager');
         if (moduleIconManagerEl) moduleIconManagerEl.checked = modules.iconManager !== false;
+        var media = settings.media || {};
+        var mediaMaxUploadEl = document.getElementById('settingsMediaMaxUpload');
+        if (mediaMaxUploadEl) mediaMaxUploadEl.value = media.maxUploadMb || 20;
+        var mediaWebMaxSideEl = document.getElementById('settingsMediaWebMaxSide');
+        if (mediaWebMaxSideEl) mediaWebMaxSideEl.value = media.webMaxSide || 2000;
+        var mediaWebQualityEl = document.getElementById('settingsMediaWebQuality');
+        if (mediaWebQualityEl) mediaWebQualityEl.value = media.webQuality || 82;
+        var mediaWebVersionEl = document.getElementById('settingsMediaWebVersion');
+        if (mediaWebVersionEl) mediaWebVersionEl.checked = media.webVersion !== false;
         const analyticsEnabled = document.getElementById('analyticsEnabled');
         if (analyticsEnabled) analyticsEnabled.checked = settings.privacy?.analyticsEnabled !== false;
         var obfuscationEl = document.getElementById('emailObfuscation');
@@ -2771,6 +2780,17 @@
                 settings.modules.events = document.getElementById('moduleEvents').checked;
                 settings.modules.messages = document.getElementById('moduleMessages').checked;
                 settings.modules.iconManager = document.getElementById('moduleIconManager').checked;
+                var clampInt = function(id, min, max, fallback) {
+                    var el = document.getElementById(id);
+                    var value = el ? parseInt(el.value, 10) : NaN;
+                    return isNaN(value) ? fallback : Math.max(min, Math.min(max, value));
+                };
+                settings.media = Object.assign({}, settings.media || {}, {
+                    maxUploadMb: clampInt('settingsMediaMaxUpload', 1, 200, 20),
+                    webMaxSide: clampInt('settingsMediaWebMaxSide', 800, 6000, 2000),
+                    webQuality: clampInt('settingsMediaWebQuality', 50, 95, 82),
+                    webVersion: !!(document.getElementById('settingsMediaWebVersion') || {}).checked
+                });
 
                 var formData = new FormData();
                 formData.append('action', 'save-settings');

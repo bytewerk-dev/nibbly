@@ -56,6 +56,8 @@
     var pendingRename = null;
     var aiLabelTarget = null;
     var previousFocus = null;
+    // Upload limits from the server (list-media): what PHP lets through and what Nibbly allows
+    var uploadLimits = null;
     var mediaTypes = {
         image: {
             labelKey: 'media.type_images',
@@ -228,7 +230,26 @@
 
     function mediaDownloadActionHtml(item) {
         if (!isImage(item)) return '';
+        // With a stored original the download hands out the original, not the web version
+        if (item.original && item.original.path) {
+            var label = t('media.download_original', { size: item.original.size || '' });
+            return '<a class="nb-imgmgr-action-btn nb-imgmgr-action-btn--on" data-action="download" href="' + escapeHtml(mediaDownloadUrl(item.original)) + '" download="' + escapeHtml(item.original.name ? item.original.name.split('/').pop() : mediaDisplayName(item)) + '" title="' + escapeHtml(label) + '" aria-label="' + escapeHtml(label) + '">' + Icons.download + '</a>';
+        }
         return '<a class="nb-imgmgr-action-btn" data-action="download" href="' + escapeHtml(mediaDownloadUrl(item)) + '" download="' + escapeHtml(mediaDisplayName(item)) + '" title="' + escapeHtml(t('media.download_file')) + '" aria-label="' + escapeHtml(t('media.download_file')) + '">' + Icons.download + '</a>';
+    }
+
+    // "Original" when a web version replaced the upload, "large" for a file that is big for a page
+    function sizeBadgeHtml(item) {
+        if (!item || !isImage(item)) return '';
+        if (item.original) {
+            // A button: it opens the original's details (view, download, copy path)
+            var title = t('media.original_title', { size: item.original.size || '', width: item.original.width || '?', height: item.original.height || '?' });
+            return '<button type="button" class="nb-imgmgr-size-badge nb-imgmgr-size-badge--original" data-action="original" title="' + escapeHtml(title) + '" aria-label="' + escapeHtml(title) + '">' + escapeHtml(t('media.original_badge')) + '</button>';
+        }
+        if (item.large) {
+            return '<span class="nb-imgmgr-size-badge nb-imgmgr-size-badge--large" title="' + escapeHtml(t('media.large_title', { size: item.size || '' })) + '">' + escapeHtml(t('media.large_badge')) + '</span>';
+        }
+        return '';
     }
 
     function canOpenImageGenerator() {
@@ -244,7 +265,7 @@
     function mediaNameHtml(item, className) {
         var folder = item.folder || '';
         return '<div class="' + className + '" title="' + escapeHtml(item.name || item.path || '') + '">' +
-            '<span class="nb-imgmgr-file-name">' + escapeHtml(mediaDisplayName(item)) + '</span>' +
+            '<span class="nb-imgmgr-file-name">' + escapeHtml(mediaDisplayName(item)) + '</span>' + sizeBadgeHtml(item) +
             (folder ? '<span class="nb-imgmgr-folder-name">' + escapeHtml(folder) + '</span>' : '') +
         '</div>';
     }
@@ -750,10 +771,41 @@
             confirmBtn.textContent = t(uploadTypeValue === 'image' ? 'image.select' : (uploadTypeValue === 'audio' ? 'audio.select' : 'media.select_file'));
         }
         formats.textContent = t(typeConfig.formatsKey);
+        updateLimitHint();
         var title = modal.querySelector('.nb-imgmgr-header h3');
         if (title) title.textContent = t(isImageOnlyPicker() ? 'image_manager' : 'media_manager');
         updateGeneratorButton();
         updateFolderUI();
+    }
+
+    function megabytes(bytes) {
+        var mb = bytes / 1048576;
+        return mb >= 1 && Math.abs(mb - Math.round(mb)) < 0.05 ? String(Math.round(mb)) : String(Math.round(mb * 10) / 10);
+    }
+
+    // "37 KB" below a megabyte, "1.4 MB" above
+    function fileSize(bytes) {
+        return bytes < 1048576 ? Math.max(1, Math.round(bytes / 1024)) + ' KB' : megabytes(bytes) + ' MB';
+    }
+
+    // The limit that applies to the chosen type: Nibbly's, or the server's when that is lower
+    function effectiveLimit(type) {
+        var typeConfig = mediaTypes[type] || mediaTypes.image;
+        var serverMax = uploadLimits && uploadLimits.serverMaxBytes ? uploadLimits.serverMaxBytes : null;
+        return { max: typeConfig.maxSize, serverMax: serverMax, serverBound: serverMax !== null && serverMax < typeConfig.maxSize };
+    }
+
+    function updateLimitHint() {
+        var modal = document.getElementById('nb-imgmgr-modal');
+        if (!modal) return;
+        var formats = modal.querySelector('.nb-imgmgr-formats');
+        if (!formats) return;
+        var type = getActiveUploadType();
+        var limit = effectiveLimit(type);
+        var text = t((mediaTypes[type] || mediaTypes.image).formatsKey) + ' · ' + t('media.upload_limit', { max: megabytes(limit.serverBound ? limit.serverMax : limit.max) });
+        if (limit.serverBound) text += ' (' + t('media.server_limit', { max: megabytes(limit.serverMax) }) + ')';
+        formats.textContent = text;
+        formats.classList.toggle('nb-imgmgr-formats--server-bound', limit.serverBound);
     }
 
     function updateGeneratorButton() {
@@ -834,6 +886,16 @@
                     ? (Array.isArray(result.data) ? result.data : (result.data.items || []))
                     : [];
                 state.folders = result.success && result.data && Array.isArray(result.data.folders) ? result.data.folders : [];
+                if (result.success && result.data && result.data.limits) {
+                    uploadLimits = result.data.limits;
+                    if (uploadLimits.imageMaxBytes) mediaTypes.image.maxSize = uploadLimits.imageMaxBytes;
+                }
+                if (result.success && result.data && Array.isArray(result.data.types)) {
+                    result.data.types.forEach(function (typeInfo) {
+                        if (mediaTypes[typeInfo.type] && typeInfo.maxSize) mediaTypes[typeInfo.type].maxSize = typeInfo.maxSize;
+                    });
+                }
+                updateLimitHint();
                 if (items.length > 0) {
                     state.data = items.map(function (img) {
                         return Object.assign({}, img, {
@@ -1116,6 +1178,7 @@
                 else if (action === 'move') openMoveDialog(image);
                 else if (action === 'rename') openRenameDialog(image);
                 else if (action === 'ai-label') openAiLabelDialog(image);
+                else if (action === 'original') openOriginalDialog(image);
                 else if (action === 'replace') openReplaceDialog(image.name, image.path);
                 else if (action === 'delete') deleteMedia(image);
                 else if (action === 'restore') restoreMedia(image);
@@ -1588,8 +1651,13 @@
             config.showToast(t(type === 'image' ? 'image.format_error' : 'media.format_error'), 'error');
             return Promise.resolve(false);
         }
+        var limit = effectiveLimit(type);
+        if (limit.serverMax !== null && file.size > limit.serverMax && limit.serverBound) {
+            config.showToast(t('media.server_limit_error', { name: file.name, max: megabytes(limit.serverMax) }), 'error');
+            return Promise.resolve(false);
+        }
         if (file.size > typeConfig.maxSize) {
-            config.showToast(t(type === 'image' ? 'image.size_error' : 'media.size_error'), 'error');
+            config.showToast(t('media.size_limit_error', { name: file.name, max: megabytes(typeConfig.maxSize) }), 'error');
             return Promise.resolve(false);
         }
 
@@ -1612,6 +1680,10 @@
                 if (result.success) {
                     if (!options.quietSuccess) {
                         config.showToast(t('image.uploaded'), 'success');
+                    }
+                    if (result.data && result.data.webVersion) {
+                        var wv = result.data.webVersion;
+                        config.showToast(t('media.web_version_created', { width: wv.width, height: wv.height, size: fileSize(wv.bytes) }), 'info');
                     }
                     if (result.data && result.data.aiLabel) {
                         config.showToast(t('media.ai_detected'), 'info');
@@ -1869,8 +1941,8 @@
             config.showToast(t('image.format_error'), 'error');
             return;
         }
-        if (file.size > 5 * 1024 * 1024) {
-            config.showToast(t('image.size_error'), 'error');
+        if (file.size > mediaTypes.image.maxSize) {
+            config.showToast(t('media.size_limit_error', { name: file.name, max: megabytes(mediaTypes.image.maxSize) }), 'error');
             return;
         }
 
@@ -1971,6 +2043,72 @@
         var dialog = document.getElementById('nb-imgmgr-move');
         if (dialog) dialog.classList.remove('active');
         moveTarget = null;
+    }
+
+    // ============================================================
+    // ORIGINAL DIALOG: where the uploaded file went, and what to do with it
+    // ============================================================
+    var originalTarget = null;
+
+    function createOriginalDialog() {
+        if (document.getElementById('nb-imgmgr-original')) return;
+        var dialog = document.createElement('div');
+        dialog.id = 'nb-imgmgr-original';
+        dialog.className = 'nb-imgmgr-move';
+        dialog.innerHTML =
+            '<div class="nb-imgmgr-move-backdrop"></div>' +
+            '<div class="nb-imgmgr-move-dialog nb-imgmgr-original-dialog" role="dialog" aria-modal="true" aria-labelledby="nb-imgmgr-original-title">' +
+                '<div class="nb-imgmgr-move-header">' +
+                    '<h3 id="nb-imgmgr-original-title">' + escapeHtml(t('media.original_dialog_title')) + '</h3>' +
+                    '<button type="button" class="nb-imgmgr-close" aria-label="Close">&times;</button>' +
+                '</div>' +
+                '<div class="nb-imgmgr-move-body">' +
+                    '<p class="nb-imgmgr-move-filename"></p>' +
+                    '<p class="nb-imgmgr-original-info"></p>' +
+                    '<p class="nb-imgmgr-original-path"><code></code></p>' +
+                    '<p class="nb-imgmgr-original-hint">' + escapeHtml(t('media.original_hint')) + '</p>' +
+                '</div>' +
+                '<div class="nb-imgmgr-move-footer nb-imgmgr-original-footer">' +
+                    '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--secondary" data-action="view">' + escapeHtml(t('media.original_view')) + '</button>' +
+                    '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--secondary" data-action="copy">' + escapeHtml(t('media.original_copy_path')) + '</button>' +
+                    '<a class="nb-imgmgr-btn nb-imgmgr-btn--primary" data-action="download" href="#" download>' + escapeHtml(t('media.download_file')) + '</a>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(dialog);
+        dialog.querySelector('.nb-imgmgr-move-backdrop').addEventListener('click', closeOriginalDialog);
+        dialog.querySelector('.nb-imgmgr-close').addEventListener('click', closeOriginalDialog);
+        dialog.querySelector('[data-action="view"]').addEventListener('click', function () {
+            if (!originalTarget) return;
+            var original = originalTarget.original;
+            closeOriginalDialog();
+            openLightbox(mediaDownloadUrl(original), original.name ? original.name.split('/').pop() : mediaDisplayName(originalTarget));
+        });
+        dialog.querySelector('[data-action="copy"]').addEventListener('click', function () {
+            if (originalTarget) copyPath(String(originalTarget.original.path || '').replace(/^\.\.\//, '/'));
+        });
+    }
+
+    function openOriginalDialog(item) {
+        if (!item || !item.original) return;
+        originalTarget = item;
+        var dialog = document.getElementById('nb-imgmgr-original');
+        if (!dialog) { createOriginalDialog(); dialog = document.getElementById('nb-imgmgr-original'); }
+        var original = item.original;
+        var originalName = original.name ? original.name.split('/').pop() : mediaDisplayName(item);
+        dialog.querySelector('.nb-imgmgr-move-filename').textContent = originalName;
+        dialog.querySelector('.nb-imgmgr-original-info').textContent = t('media.original_info', { size: original.size || '', width: original.width || '?', height: original.height || '?', web: item.size || '' });
+        dialog.querySelector('.nb-imgmgr-original-path code').textContent = String(original.path || '').replace(/^\.\.\//, '/');
+        var link = dialog.querySelector('[data-action="download"]');
+        link.href = mediaDownloadUrl(original);
+        link.setAttribute('download', originalName);
+        dialog.classList.add('active');
+        dialog.querySelector('[data-action="download"]').focus();
+    }
+
+    function closeOriginalDialog() {
+        var dialog = document.getElementById('nb-imgmgr-original');
+        if (dialog) dialog.classList.remove('active');
+        originalTarget = null;
     }
 
     // ============================================================

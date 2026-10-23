@@ -34,6 +34,9 @@ switch ($action) {
         jsonResponse(true, [
             'items' => $items,
             'folders' => $folders,
+            // What the server lets through and what Nibbly allows, so the library
+            // can check before sending and say which limit applies
+            'limits' => nibblyMediaUploadLimits(),
             'types' => array_values(array_map(function($config) {
                 return [
                     'type' => $config['type'],
@@ -58,11 +61,19 @@ switch ($action) {
 
         $field = $config['field'];
         if (!isset($_FILES[$field]) || $_FILES[$field]['error'] !== UPLOAD_ERR_OK) {
-            $field = 'file';
+            $field = isset($_FILES['file']) ? 'file' : $field;
         }
 
         if (!isset($_FILES[$field]) || $_FILES[$field]['error'] !== UPLOAD_ERR_OK) {
-            jsonResponse(false, null, 'Upload error');
+            // A request above post_max_size reaches PHP with an empty $_FILES, so an
+            // empty upload with a Content-Length counts as "too large" as well
+            $code = $_FILES[$field]['error'] ?? null;
+            $contentLength = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+            if ($code === UPLOAD_ERR_INI_SIZE || $code === UPLOAD_ERR_FORM_SIZE || (empty($_FILES) && $contentLength > nibblyUploadServerLimit())) {
+                $serverMb = nibblyMegabytes(nibblyUploadServerLimit());
+                jsonResponse(false, ['serverLimitBytes' => nibblyUploadServerLimit()], sprintf('File too large: the server accepts uploads up to %s MB (upload_max_filesize / post_max_size)', $serverMb));
+            }
+            jsonResponse(false, null, $code === UPLOAD_ERR_PARTIAL ? 'Upload error: the file arrived only partially' : 'Upload error');
         }
 
         $file = $_FILES[$field];
@@ -79,7 +90,7 @@ switch ($action) {
         }
 
         if ($file['size'] > $config['maxSize']) {
-            jsonResponse(false, null, 'File too large');
+            jsonResponse(false, null, sprintf('File too large: the limit for %s is %s MB', $config['type'], nibblyMegabytes((int)$config['maxSize'])));
         }
 
         $originalName = pathinfo($file['name'], PATHINFO_FILENAME);
@@ -97,11 +108,37 @@ switch ($action) {
         $targetBase = $config['path'] . ($folder !== '' ? $folder . '/' : '');
         $targetPublicBase = $config['publicPath'] . ($folder !== '' ? $folder . '/' : '');
 
-        $filename = uniqueMediaFilename($targetBase, $safeName . '.' . $extension);
         if (!is_dir($targetBase)) {
             mkdir($targetBase, 0755, true);
         }
 
+        if ($type === 'image' && in_array($mimeType, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+            // Provenance sits in metadata that re-encoding drops: read it from the upload
+            $aiLabel = nibblyDetectAiLabel($file['tmp_name']);
+            // The web version and the original share a stem; it must be free in both places
+            $stem = pathinfo(uniqueMediaFilename($targetBase, $safeName . '.' . $extension), PATHINFO_FILENAME);
+            while (file_exists($targetBase . $stem . '.webp') || nibblyMediaOriginalFor(($folder !== '' ? $folder . '/' : '') . $stem . '.webp') !== null) {
+                $stem = pathinfo(uniqueMediaFilename($targetBase, $stem . '-1.' . $extension), PATHINFO_FILENAME);
+            }
+            $stored = nibblyMediaStoreImage($file['tmp_name'], $targetBase, $stem, $extension, $mimeType, 'move_uploaded_file');
+            if ($stored === null) {
+                jsonResponse(false, null, 'Error saving');
+            }
+            $relativeName = ($folder !== '' ? $folder . '/' : '') . $stored['name'];
+            if ($aiLabel !== '') {
+                nibblySetMediaAiLabel($type, $relativeName, $aiLabel);
+            }
+            jsonResponse(true, [
+                'type' => $type,
+                'name' => $relativeName,
+                'path' => $targetPublicBase . $stored['name'],
+                'aiLabel' => $aiLabel,
+                'webVersion' => $stored['webVersion'],
+                'original' => nibblyMediaOriginalFor($relativeName),
+            ], 'Media uploaded');
+        }
+
+        $filename = uniqueMediaFilename($targetBase, $safeName . '.' . $extension);
         if (move_uploaded_file($file['tmp_name'], $targetBase . $filename)) {
             if (strtolower($extension) === 'svg' && !nibblySanitizeSvgFile($targetBase . $filename)) {
                 @unlink($targetBase . $filename);
@@ -117,6 +154,7 @@ switch ($action) {
                 'name' => $relativeName,
                 'path' => $targetPublicBase . $filename,
                 'aiLabel' => $aiLabel,
+                'webVersion' => null,
             ], 'Media uploaded');
         }
 
@@ -221,6 +259,7 @@ switch ($action) {
         $targetRelative = uniqueMediaRelativePath($config['path'], $targetRelative);
         if (rename($sourcePath, $config['path'] . $targetRelative)) {
             nibblyMoveMediaMeta($type, $filename, $type, $targetRelative);
+            if ($type === 'image') nibblyMediaOriginalRelocate($filename, false, $targetRelative, false);
             jsonResponse(true, [
                 'type' => $type,
                 'name' => $targetRelative,
@@ -306,6 +345,7 @@ switch ($action) {
 
         if (rename($sourcePath, $targetPath)) {
             nibblyMoveMediaMeta($type, $filename, $type, $targetRelative);
+            if ($type === 'image') nibblyMediaOriginalRelocate($filename, false, $targetRelative, false);
             jsonResponse(true, [
                 'type' => $type,
                 'name' => $targetRelative,
@@ -371,6 +411,7 @@ switch ($action) {
         }
         if (rename($sourcePath, $config['trashPath'] . $targetFilename)) {
             nibblyMoveMediaMeta($type, $filename, $type . '-trash', $targetFilename);
+            if ($type === 'image') nibblyMediaOriginalRelocate($filename, false, $targetFilename, true);
             jsonResponse(true, null, 'Media moved to trash');
         }
 
@@ -401,6 +442,7 @@ switch ($action) {
         }
         if (rename($sourcePath, $config['path'] . $targetFilename)) {
             nibblyMoveMediaMeta($type . '-trash', $filename, $type, $targetFilename);
+            if ($type === 'image') nibblyMediaOriginalRelocate($filename, true, $targetFilename, false);
             jsonResponse(true, [
                 'type' => $type,
                 'name' => $targetFilename,
@@ -430,6 +472,7 @@ switch ($action) {
 
         if (unlink($path)) {
             nibblyForgetMediaMeta($type . '-trash', $filename);
+            if ($type === 'image') nibblyMediaOriginalForget($filename, true);
             jsonResponse(true, null, 'Media permanently deleted');
         }
 
@@ -452,6 +495,7 @@ switch ($action) {
                 $path = $config['trashPath'] . $media['name'];
                 if (is_file($path) && unlink($path)) {
                     nibblyForgetMediaMeta($type . '-trash', $media['name']);
+                    if ($type === 'image') nibblyMediaOriginalForget($media['name'], true);
                     $deleted++;
                 }
             }
@@ -522,12 +566,14 @@ switch ($action) {
                 switch ($_FILES['image']['error']) {
                     case UPLOAD_ERR_INI_SIZE:
                     case UPLOAD_ERR_FORM_SIZE:
-                        $errorMsg = 'File too large';
+                        $errorMsg = sprintf('File too large: the server accepts uploads up to %s MB (upload_max_filesize / post_max_size)', nibblyMegabytes(nibblyUploadServerLimit()));
                         break;
                     case UPLOAD_ERR_NO_FILE:
                         $errorMsg = 'No file selected';
                         break;
                 }
+            } elseif (empty($_FILES) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > nibblyUploadServerLimit()) {
+                $errorMsg = sprintf('File too large: the server accepts uploads up to %s MB (upload_max_filesize / post_max_size)', nibblyMegabytes(nibblyUploadServerLimit()));
             }
             jsonResponse(false, null, $errorMsg);
         }
@@ -543,8 +589,8 @@ switch ($action) {
             jsonResponse(false, null, 'Only JPG, PNG, WebP and SVG allowed');
         }
 
-        if ($file['size'] > 5 * 1024 * 1024) {
-            jsonResponse(false, null, 'Maximum file size: 5 MB');
+        if ($file['size'] > nibblyMediaImageMaxBytes()) {
+            jsonResponse(false, null, sprintf('Maximum file size: %s MB', nibblyMegabytes(nibblyMediaImageMaxBytes())));
         }
 
         $explicitFilename = $_POST['filename'] ?? '';

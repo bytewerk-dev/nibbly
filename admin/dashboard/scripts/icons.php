@@ -229,7 +229,8 @@
         }
 
         grid.innerHTML = '';
-        if (path) path.textContent = t('icons.path', {path: iconManagerPath || 'content/settings/iconset.json'});
+        // The site-relative path only: a server path says nothing an editor needs and reveals the install location
+        if (path) path.textContent = t('icons.path', {path: (iconManagerPath || 'content/settings/iconset.json').replace(/^.*?(?=content\/)/, '')});
 
         const icons = getFilteredIconManagerIcons();
         if (!icons.length) {
