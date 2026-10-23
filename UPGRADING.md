@@ -3,6 +3,25 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.4.1 to 2.4.2
+
+Version 2.4.2 is a compatible release: a sixth dashboard theme (Pop), three local fonts, a
+text-size setting and two small admin fixes. No manual step is needed.
+
+1. Deploy the complete core, including `admin/fonts/`. Three font files are new
+   (`ibm-plex-sans-variable-*.woff2`, `atkinson-hyperlegible-next-variable-*.woff2`,
+   `public-sans-variable-*.woff2`) and `admin/fonts/geist-variable.woff2` is gone; delete it on
+   the server if your deployment does not remove files. `THIRD-PARTY-NOTICES.md` lists the
+   licences (SIL Open Font License).
+2. Theme settings. `theme.preset` accepts `pop` in addition to `soft`, `classic`, `paper`,
+   `studio` and `console`; `theme.font` accepts `plex`, `atkinson` and `public` and no longer
+   `geist` (a stored `geist` reads as `plex` until the settings are saved again); the new key
+   `theme.fontSize` (`small`, `default`, `large`, default `default`) scales the dashboard's type
+   steps through `--nb-font-scale`. An installation without the key keeps the default size.
+3. Site CSS that targets admin chrome. The topbar breadcrumb now uses `--nb-topbar-text-muted`;
+   the Pop theme paints the sidebar with `--nb-sidebar-gradient` (built from `--nb-sidebar-bg`,
+   so a custom sidebar colour keeps the gradient). Nothing changes for the other themes.
+
 ## Upgrading from 2.4.0 to 2.4.1
 
 Version 2.4.1 is a compatible release of fixes: visit counting no longer depends on a site's
