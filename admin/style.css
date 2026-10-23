@@ -10343,6 +10343,21 @@ input.color-hex-input,
     white-space: nowrap;
 }
 
+/* Unchosen options brighten monochrome on hover, like the menus */
+.segmented label:not(:has(input:checked)):hover {
+    --nb-hover-from: transparent;
+    --nb-hover-peak: color-mix(in srgb, var(--nb-text) 9%, var(--nb-bg-elevated));
+    --nb-hover-to: color-mix(in srgb, var(--nb-bg-elevated) 55%, var(--nb-bg-sunken));
+    background-color: color-mix(in srgb, var(--nb-bg-elevated) 55%, var(--nb-bg-sunken));
+    color: var(--nb-text);
+    animation: nb-hover-fill var(--nb-duration-hover-in) linear both;
+}
+
+.segmented label {
+    transition: background-color var(--nb-duration-hover-out) ease-out,
+                color var(--nb-duration-fast) var(--nb-ease);
+}
+
 .segmented label:has(input:checked) {
     background: var(--nb-bg-elevated);
     color: var(--nb-text);
