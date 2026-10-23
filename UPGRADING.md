@@ -3,6 +3,27 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.4.0 to 2.4.1
+
+Version 2.4.1 is a compatible release of fixes: visit counting no longer depends on a site's
+`includes/header.php`, the media library preselects the clicked image, editable button links
+keep their layout, the sidebar's collapse button got its panel icon, and the agent status in the
+AI settings stays visible. No manual step is needed.
+
+1. Deploy the complete core. `route.php`, `index.php`, `router.php` and
+   `includes/analytics-helper.php` changed: the router schedules the visit count as a fallback at
+   the end of the request, so a site whose header file lacks `nibblyAnalyticsTrack()` counts
+   visits from now on. Nothing is counted twice; error pages (404) are no longer counted.
+2. Sites that ship their own `includes/header.php` should still rebase it on the core file when
+   convenient: the header also renders the SEO tags, the theme attributes and the admin bar.
+3. Buttons. Primary buttons now carry their hover in the fill colour (a brief lift, then a settle)
+   and the glow is a sheen over that colour, so "Glow" off removes sheen, shadows and text shadow
+   from real buttons and the preview alike. Site CSS that set `background` on `.btn-primary` or
+   `.nb-btn--primary` should set `background-color` instead and leave `background-image` to the
+   sheen token (`--nb-primary-sheen`, `none` in Studio and Console). The hover colours and timing are
+   tokens (`--nb-hover-lift`, `--nb-hover-settle`, `--nb-hover-tint`, `--nb-duration-hover-in`,
+   `--nb-duration-hover-out`, `--nb-ease-overshoot`).
+
 ## Upgrading from 2.3.2 to 2.4.0
 
 Version 2.4.0 is a compatible release: the dashboard got five themes, one base colour with

@@ -24,6 +24,15 @@
     --nb-primary-active: #2038b8;
     --nb-primary-btn: radial-gradient(ellipse at 50% 0%, #6b7ff0 0%, #3858e9 70%);
     --nb-primary-btn-hover: radial-gradient(ellipse at 50% 0%, #8496f3 0%, #3858e9 70%);
+    /* Glow: a white sheen painted over the button colour (so the colour below can animate) */
+    --nb-primary-sheen: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 70%);
+    /* Hover: the fill brightens briefly (lift), then settles a little above the rest colour.
+       Fallbacks mix with white; the @supports block below derives them in OKLCH. */
+    --nb-hover-lift: color-mix(in srgb, var(--nb-primary) 90%, white);
+    --nb-hover-settle: color-mix(in srgb, var(--nb-primary) 95%, white);
+    /* Tinted hover for outlined and quiet controls, derived from the surface they sit on */
+    --nb-hover-tint: color-mix(in srgb, var(--nb-primary) 16%, var(--nb-bg-elevated));
+    --nb-hover-tint-settle: color-mix(in srgb, var(--nb-primary) 9%, var(--nb-bg-elevated));
     --nb-primary-subtle: rgba(56, 88, 233, 0.08);
     --nb-primary-muted: rgba(56, 88, 233, 0.15);
     --nb-primary-medium: rgba(56, 88, 233, 0.30);
@@ -54,6 +63,8 @@
        stylesheet only ever reads them. */
     --nb-sidebar-text: var(--nb-text-secondary);
     --nb-sidebar-text-active: var(--nb-primary);
+    /* Hover text in the sidebar; presets whose active item sits on the primary colour set their own */
+    --nb-sidebar-text-hover: var(--nb-sidebar-text-active);
     --nb-sidebar-hover-bg: var(--nb-primary-subtle);
     --nb-sidebar-active-bg: var(--nb-primary-subtle);
     --nb-sidebar-border: rgba(0, 0, 0, 0.06);
@@ -156,6 +167,12 @@
     --nb-ease: cubic-bezier(0.22, 1, 0.36, 1);
     --nb-duration-fast: 150ms;
     --nb-duration-normal: 200ms;
+    /* Hover motion: rise to the peak, hold it, then settle; leave calmly, press at once.
+       The in-duration covers the whole rise-hold-settle run of @keyframes nb-hover-fill. */
+    --nb-ease-overshoot: cubic-bezier(0.16, 2.3, 0.4, 1);
+    --nb-duration-hover-in: 1400ms;
+    --nb-duration-hover-out: 320ms;
+    --nb-duration-press: 100ms;
 
     /* Z-index layers */
     --nb-z-dropdown: 100;
@@ -235,6 +252,12 @@
         --nb-primary-medium: oklch(from var(--nb-primary-src) l c h / 0.30);
         --nb-primary-btn: radial-gradient(ellipse at 50% 0%, oklch(from var(--nb-primary-src) calc(l + 0.12) c h) 0%, var(--nb-primary) 70%);
         --nb-primary-btn-hover: radial-gradient(ellipse at 50% 0%, oklch(from var(--nb-primary-src) calc(l + 0.18) c h) 0%, var(--nb-primary) 70%);
+        /* Hover colours from the effective primary (light or dark mode): lighter and a touch
+           more saturated, with an extra step for very dark primaries so the change stays visible */
+        --nb-hover-lift: oklch(from var(--nb-primary) min(calc(l + 0.045 + max(0, 0.3 - l) * 0.25), 0.95) calc(c * 1.16) h);
+        --nb-hover-settle: oklch(from var(--nb-primary) min(calc(l + 0.03 + max(0, 0.3 - l) * 0.15), 0.93) calc(c * 1.08) h);
+        --nb-hover-tint: color-mix(in oklab, var(--nb-primary) 16%, var(--nb-bg-elevated));
+        --nb-hover-tint-settle: color-mix(in oklab, var(--nb-primary) 9%, var(--nb-bg-elevated));
         --nb-border-focus: var(--nb-primary);
         --nb-focus-ring: var(--nb-primary-muted);
         /* Text on the primary colour: near-white on dark primaries, near-black
@@ -363,6 +386,7 @@
         --nb-text-muted: #646970;
         --nb-sidebar-text: #f0f0f1;
         --nb-sidebar-text-active: var(--nb-text-on-primary);
+        --nb-sidebar-text-hover: #ffffff;
         --nb-sidebar-hover-bg: rgba(255, 255, 255, 0.08);
         --nb-sidebar-active-bg: var(--nb-primary);
         --nb-sidebar-border: rgba(255, 255, 255, 0.08);
@@ -465,6 +489,7 @@
         --nb-primary-medium: rgba(0, 0, 0, 0.20);
         --nb-primary-btn: var(--nb-primary);
         --nb-primary-btn-hover: var(--nb-primary-hover);
+        --nb-primary-sheen: none;
         --nb-text-on-primary: #ffffff;
         --nb-border-focus: oklch(from var(--nb-base) l c h);
         --nb-focus-ring: oklch(from var(--nb-base) l c h / 0.35);
@@ -510,6 +535,7 @@
         --nb-primary-medium: rgba(255, 255, 255, 0.22);
         --nb-primary-btn: var(--nb-primary);
         --nb-primary-btn-hover: var(--nb-primary-hover);
+        --nb-primary-sheen: none;
         --nb-text-on-primary: #0a0a0a;
         --nb-border-focus: oklch(from var(--nb-base) max(l, 0.72) c h);
         --nb-focus-ring: oklch(from var(--nb-base) max(l, 0.72) c h / 0.40);
@@ -547,6 +573,7 @@
         --nb-primary-src: var(--nb-base);
         --nb-primary-btn: var(--nb-primary);
         --nb-primary-btn-hover: var(--nb-primary-hover);
+        --nb-primary-sheen: none;
         --nb-sidebar-bg: #f1f1f1;
         --nb-bg: #f1f1f1;
         --nb-bg-elevated: #fafafa;

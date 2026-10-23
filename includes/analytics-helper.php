@@ -137,10 +137,39 @@ function nibblyAnalyticsIsBot(string $ua): bool {
     return preg_match($pattern, $ua) === 1;
 }
 
+/**
+ * One visit per request. The router schedules a fallback at shutdown so a
+ * site whose header.php does not call nibblyAnalyticsTrack() still counts;
+ * whichever call comes first counts, the other is a no-op.
+ */
+function nibblyAnalyticsTracked(?bool $set = null): bool {
+    static $tracked = false;
+    if ($set !== null) $tracked = $set;
+    return $tracked;
+}
+
+function nibblyAnalyticsScheduleTrack(?string $contentPage = null, ?string $currentLang = null, ?string $currentPage = null): void {
+    static $scheduled = false;
+    if ($scheduled) return;
+    $scheduled = true;
+    register_shutdown_function(static function () use ($contentPage, $currentLang, $currentPage): void {
+        if (nibblyAnalyticsTracked()) return;
+        $status = http_response_code();
+        if (is_int($status) && $status >= 300) return; // redirects, 404 and errors are not visits
+        nibblyAnalyticsTrack($contentPage, $currentLang, $currentPage);
+    });
+}
+
 function nibblyAnalyticsTrack(?string $contentPage = null, ?string $currentLang = null, ?string $currentPage = null): void {
-    if (!nibblyAnalyticsShouldTrack()) {
+    if (nibblyAnalyticsTracked() || !nibblyAnalyticsShouldTrack()) {
         return;
     }
+    // Error pages (the router sets 404 before including 404.php) are not visits
+    $status = http_response_code();
+    if (is_int($status) && $status >= 400) {
+        return;
+    }
+    nibblyAnalyticsTracked(true);
 
     try { nibblyAnalyticsMigrate(); } catch (Throwable $error) { error_log($error->getMessage()); return; }
     nibblyJsonUpdate(nibblyAnalyticsDirectory() . '/days/' . date('Y-m-d') . '.json', function (array &$data) use ($contentPage, $currentLang, $currentPage): void {

@@ -1389,8 +1389,12 @@ textarea.editor-html {
                 0 4px 20px color-mix(in srgb, var(--editor-primary, #2563eb) 35%, transparent);
 }
 
-.editor-flat .editor-btn-primary:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+/* Glow off: no shadow in any state; the hover still brightens the fill */
+.editor-flat .editor-btn-primary,
+.editor-flat .editor-btn-primary:hover,
+.editor-flat .editor-btn-primary:active {
+    box-shadow: none;
+    text-shadow: none;
 }
 
 .editor-btn-secondary {

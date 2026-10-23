@@ -11,6 +11,7 @@ if (!file_exists(__DIR__ . '/admin/config.php')) {
 
 require_once __DIR__ . '/admin/config.php';
 require_once __DIR__ . '/includes/access-guard.php';
+require_once __DIR__ . '/includes/analytics-helper.php';
 nibblyAccessEnforceMaintenance();
 $defaultLang = SITE_LANG_DEFAULT;
 $basePath = '';
@@ -21,10 +22,12 @@ $jsonHome = __DIR__ . '/content/pages/' . $defaultLang . '_home.json';
 
 if (file_exists($langHome)) {
     nibblyAccessEnforceCurrentTemplatePage($defaultLang . '_home');
+    nibblyAnalyticsScheduleTrack($defaultLang . '_home', $defaultLang, 'home');
     include $langHome;
 } elseif (file_exists($jsonHome)) {
     $lang = $defaultLang;
     $slug = 'home';
+    nibblyAnalyticsScheduleTrack($defaultLang . '_home', $defaultLang, 'home');
     include __DIR__ . '/includes/page.php';
 } else {
     echo '<p>No homepage found. Run the <a href="admin/setup.php">setup wizard</a> to get started.</p>';

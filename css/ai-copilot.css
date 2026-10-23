@@ -63,9 +63,29 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     cursor: pointer;
 }
 
-.nb-copilot-toggle:hover,
+.nb-copilot-toggle {
+    --nb-hover-from: var(--editor-primary, var(--nb-primary, #2563eb));
+    --nb-hover-peak: var(--nb-hover-lift, var(--editor-primary-hover, var(--nb-primary-hover, #1d4ed8)));
+    --nb-hover-to: var(--nb-hover-settle, var(--editor-primary-hover, var(--nb-primary-hover, #1d4ed8)));
+    transition: background-color var(--nb-duration-hover-out, 320ms) ease-out;
+}
+
+.nb-copilot-toggle:hover {
+    background: var(--nb-hover-settle, var(--editor-primary-hover, var(--nb-primary-hover, #1d4ed8)));
+    animation: nb-hover-fill var(--nb-duration-hover-in, 1400ms) linear both;
+}
+
 .nb-copilot-toggle:focus-visible {
-    background: var(--editor-primary-hover, var(--nb-primary-hover, #1d4ed8));
+    background: var(--nb-hover-settle, var(--editor-primary-hover, var(--nb-primary-hover, #1d4ed8)));
+    outline: 2px solid var(--nb-border-focus, var(--nb-primary, #2563eb));
+    outline-offset: 3px;
+}
+
+@keyframes nb-hover-fill {
+    0% { background-color: var(--nb-hover-from); }
+    36% { background-color: var(--nb-hover-peak); }
+    62% { background-color: var(--nb-hover-peak); }
+    100% { background-color: var(--nb-hover-to); }
 }
 
 .nb-copilot-toggle svg {

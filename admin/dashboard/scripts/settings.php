@@ -791,18 +791,22 @@
         var btnPrimary = document.getElementById('previewBtnPrimary');
         var btnSecondary = document.getElementById('previewBtnSecondary');
         if (btnPrimary) {
-            btnPrimary.style.background = glow ? 'var(--nb-primary-btn)' : 'var(--nb-primary)';
+            // Same layering as the real .btn-primary: colour below, sheen and shadow only with the glow
+            btnPrimary.style.backgroundColor = '';
+            btnPrimary.style.backgroundImage = glow ? 'var(--nb-primary-sheen)' : 'none';
             btnPrimary.style.borderRadius = radius + 'px';
             btnPrimary.style.boxShadow = glow && HEX_RE.test(primary)
                 ? '0 2px 8px rgba(0,0,0,0.15), 0 4px 20px ' + hexToRgba(primary, 0.35)
                 : 'none';
+            btnPrimary.style.textShadow = glow ? '' : 'none';
         }
         if (btnSecondary) {
             btnSecondary.style.borderRadius = radius + 'px';
         }
     }
 
-    document.getElementById('settingsButtonGlow').addEventListener('change', updateBtnStylePreview);
+    // The glow switch applies live to the real buttons too (nb-flat-buttons on <html>), not only to the preview
+    document.getElementById('settingsButtonGlow').addEventListener('change', updateColorPreview);
     document.getElementById('settingsButtonRadius').addEventListener('input', function() {
         document.getElementById('settingsButtonRadiusValue').textContent = this.value + 'px';
         updateBtnStylePreview();

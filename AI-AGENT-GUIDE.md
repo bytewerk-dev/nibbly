@@ -1902,6 +1902,10 @@ Not `($lang, $basePath)`. Use `renderNewsList(0, $currentLang)` for all posts.
 - **Page-specific styles belong in `css/page-{slug}.css`**, not in `style.css` or `components.css`. Use `$pageStylesheet` in the template (or let the HTML converter generate it). Selectors like `.page-foo .card` in the base stylesheets leak page logic into the CMS core.
 - **Every `<img>` needs `alt`**, every interactive element needs `:focus-visible`
 - **Set `$contentPage`** before including `header.php` so the admin bar works
+- **Visits count once per request.** `includes/header.php` calls `nibblyAnalyticsTrack()`;
+  `route.php` and `index.php` also schedule `nibblyAnalyticsScheduleTrack()` as a shutdown
+  fallback, so a site with a customised header that lacks the call still counts. Whichever runs
+  first counts; responses with status 300 or above, admins and bots are not visits.
 
 
 ## Concurrent editing and modular core
