@@ -35,6 +35,9 @@ if (isset($_GET['nb_agent_preview']) && is_file(__DIR__ . '/includes/ai/agent/pr
 }
 $nibblyPreviewHas = static fn(string $key): bool => function_exists('nibblyContentOverlayFor') && nibblyContentOverlayFor($key) !== null;
 require_once __DIR__ . '/includes/seo-helper.php';
+// Visits are counted in includes/header.php; the router schedules a fallback
+// for templates whose header does not call the tracker (see analytics-helper.php).
+require_once __DIR__ . '/includes/analytics-helper.php';
 
 // Apply migration redirects before any other routing — a redirected URL
 // must never accidentally match a real page slug downstream.
@@ -62,10 +65,12 @@ if (preg_match('/^[a-z]{2}$/D', $cleanUri) && isset($SITE_LANGUAGES[$cleanUri]))
     $langHome = __DIR__ . '/' . $lang . '/index.php';
     if (is_file($langHome)) {
         nibblyAccessEnforceCurrentTemplatePage($lang . '_home');
+        nibblyAnalyticsScheduleTrack($lang . '_home', $lang, 'home');
         include $langHome;
         exit;
     }
     if (is_file(nibblyPageJsonPath(__DIR__, $lang, $slug)) || $nibblyPreviewHas(nibblyPageContentKey($lang, $slug))) {
+        nibblyAnalyticsScheduleTrack(nibblyPageContentKey($lang, $slug), $lang, $slug);
         include __DIR__ . '/includes/page.php';
         exit;
     }
@@ -79,10 +84,12 @@ if ($cleanUri === '') {
 
     if (is_file($langHome)) {
         nibblyAccessEnforceCurrentTemplatePage($primaryLang . '_home');
+        nibblyAnalyticsScheduleTrack($primaryLang . '_home', $primaryLang, 'home');
         include $langHome;
     } elseif (is_file($jsonHome)) {
         $lang = $primaryLang;
         $slug = 'home';
+        nibblyAnalyticsScheduleTrack($primaryLang . '_home', $primaryLang, 'home');
         include __DIR__ . '/includes/page.php';
     } else {
         echo '<p>No homepage found. Run the <a href="admin/setup.php">setup wizard</a> to get started.</p>';
@@ -97,6 +104,7 @@ if (preg_match('#^([a-z]{2})/news/([a-z0-9-]+)$#', $cleanUri, $m)) {
     $currentLang = $m[1];
     $_GET['slug'] = $m[2];
     $basePath = nibblyPageBasePath('news/' . $m[2], true);
+    nibblyAnalyticsScheduleTrack(null, $currentLang, 'news');
     include __DIR__ . '/includes/news-post.php';
     exit;
 }
@@ -104,6 +112,7 @@ if (preg_match('#^news/([a-z0-9-]+)$#', $cleanUri, $m)) {
     $currentLang = $primaryLang;
     $_GET['slug'] = $m[1];
     $basePath = nibblyPageBasePath('news/' . $m[1], false);
+    nibblyAnalyticsScheduleTrack(null, $currentLang, 'news');
     include __DIR__ . '/includes/news-post.php';
     exit;
 }
@@ -121,6 +130,7 @@ if (preg_match('#^([a-z]{2})/(' . nibblyPagePathPattern() . ')$#', $cleanUri, $m
     if (is_file($phpFile)) {
         $basePath = nibblyPageBasePath($slug, true);
         nibblyAccessEnforceCurrentTemplatePage($contentPage);
+        nibblyAnalyticsScheduleTrack($contentPage, $lang, $slug);
         include $phpFile;
         exit;
     }
@@ -129,6 +139,7 @@ if (preg_match('#^([a-z]{2})/(' . nibblyPagePathPattern() . ')$#', $cleanUri, $m
     $jsonFile = nibblyPageJsonPath(__DIR__, $lang, $slug);
     if (is_file($jsonFile) || $nibblyPreviewHas($contentPage)) {
         $basePath = nibblyPageBasePath($slug, true);
+        nibblyAnalyticsScheduleTrack($contentPage, $lang, $slug);
         include __DIR__ . '/includes/page.php';
         exit;
     }
@@ -147,6 +158,7 @@ if (preg_match('#^' . nibblyPagePathPattern() . '$#', $cleanUri)) {
     if (is_file($phpFile)) {
         $basePath = nibblyPageBasePath($slug, false);
         nibblyAccessEnforceCurrentTemplatePage($contentPage);
+        nibblyAnalyticsScheduleTrack($contentPage, $lang, $slug);
         include $phpFile;
         exit;
     }
@@ -155,6 +167,7 @@ if (preg_match('#^' . nibblyPagePathPattern() . '$#', $cleanUri)) {
     $jsonFile = nibblyPageJsonPath(__DIR__, $lang, $slug);
     if (is_file($jsonFile) || $nibblyPreviewHas($contentPage)) {
         $basePath = nibblyPageBasePath($slug, false);
+        nibblyAnalyticsScheduleTrack($contentPage, $lang, $slug);
         include __DIR__ . '/includes/page.php';
         exit;
     }

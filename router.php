@@ -145,6 +145,8 @@ if (is_dir($filePath)) {
     if (is_file($index)) {
         $_SERVER['SCRIPT_FILENAME'] = $index;
         $_SERVER['SCRIPT_NAME'] = $_SERVER['PHP_SELF'] = rtrim($uri, '/') . '/index.php';
+        require_once $root . '/includes/analytics-helper.php';
+        nibblyAnalyticsScheduleTrack(null, null, basename(rtrim($uri, '/')) ?: 'home');
         include $index;
         return true;
     }
@@ -156,6 +158,8 @@ if (is_dir($filePath)) {
 // Clean URLs: try appending .php
 $phpFile = $filePath . '.php';
 if (is_file($phpFile)) {
+    require_once $root . '/includes/analytics-helper.php';
+    nibblyAnalyticsScheduleTrack(null, null, basename($filePath));
     include $phpFile;
     return true;
 }
