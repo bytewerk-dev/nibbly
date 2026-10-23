@@ -506,8 +506,10 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     }
 }
 $adminTheme = $siteSettings['theme']['adminTheme'] ?? 'light';
-$_themePreset = in_array($siteSettings['theme']['preset'] ?? '', ['soft', 'classic', 'paper', 'studio', 'console'], true) ? $siteSettings['theme']['preset'] : 'soft';
-$_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist', 'inter', 'geist-mono'], true) ? $siteSettings['theme']['font'] : 'system';
+$_themePreset = in_array($siteSettings['theme']['preset'] ?? '', ['soft', 'classic', 'paper', 'studio', 'console', 'pop'], true) ? $siteSettings['theme']['preset'] : 'soft';
+$_themeFontRaw = $siteSettings['theme']['font'] ?? '';
+if ($_themeFontRaw === 'geist') $_themeFontRaw = 'plex';
+$_themeFont = in_array($_themeFontRaw, ['system', 'inter', 'plex', 'atkinson', 'public', 'geist-mono'], true) ? $_themeFontRaw : 'system';
 $_loginBase = preg_match('/^#[0-9a-fA-F]{6}$/', (string)$siteSettings['theme']['primaryColor']) ? strtolower((string)$siteSettings['theme']['primaryColor']) : '#3858e9';
 $_loginAccentRaw = strtolower((string)($siteSettings['theme']['accentColor'] ?? ''));
 $_loginAccent = (preg_match('/^#[0-9a-fA-F]{6}$/', $_loginAccentRaw) && $_loginAccentRaw !== $_loginBase) ? $_loginAccentRaw : $_loginBase;

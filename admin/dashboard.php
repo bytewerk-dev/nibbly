@@ -34,7 +34,7 @@ $isAdminUser = ($userRole === 'admin');
 
 // Load settings for theme
 $_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg';
-$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => ['adminTheme' => 'light', 'preset' => 'soft', 'density' => 'auto', 'font' => 'system', 'primaryColor' => '#3858e9', 'accentColor' => '', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'dangerColor' => '', 'warningColor' => '', 'successColor' => '', 'buttonGlow' => true, 'buttonRadius' => 6], 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'messages' => true, 'iconManager' => true], 'dashboard' => ['itemsPerPage' => 50, 'iconManagerItemsPerPage' => 50, 'mediaItemsPerPage' => 25]];
+$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => ['adminTheme' => 'light', 'preset' => 'soft', 'density' => 'auto', 'font' => 'system', 'fontSize' => 'default', 'primaryColor' => '#3858e9', 'accentColor' => '', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'dangerColor' => '', 'warningColor' => '', 'successColor' => '', 'buttonGlow' => true, 'buttonRadius' => 6], 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'messages' => true, 'iconManager' => true], 'dashboard' => ['itemsPerPage' => 50, 'iconManagerItemsPerPage' => 50, 'mediaItemsPerPage' => 25]];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     $loadedSettings = json_decode(file_get_contents(SETTINGS_PATH), true);
     if (is_array($loadedSettings)) {
@@ -98,11 +98,14 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 ?>
 <!DOCTYPE html>
 <?php
-$_themePreset = in_array($siteSettings['theme']['preset'] ?? '', ['soft', 'classic', 'paper', 'studio', 'console'], true) ? $siteSettings['theme']['preset'] : 'soft';
+$_themePreset = in_array($siteSettings['theme']['preset'] ?? '', ['soft', 'classic', 'paper', 'studio', 'console', 'pop'], true) ? $siteSettings['theme']['preset'] : 'soft';
 $_themeDensity = in_array($siteSettings['theme']['density'] ?? '', ['auto', 'compact', 'comfortable'], true) ? $siteSettings['theme']['density'] : 'auto';
-$_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist', 'inter', 'geist-mono'], true) ? $siteSettings['theme']['font'] : 'system';
+$_themeFontRaw = $siteSettings['theme']['font'] ?? '';
+if ($_themeFontRaw === 'geist') $_themeFontRaw = 'plex'; // Geist Sans was retired in 2.4.2; Plex is its closest successor
+$_themeFont = in_array($_themeFontRaw, ['system', 'inter', 'plex', 'atkinson', 'public', 'geist-mono'], true) ? $_themeFontRaw : 'system';
+$_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', 'default', 'large'], true) ? $siteSettings['theme']['fontSize'] : 'default';
 ?>
-<html lang="<?php echo htmlspecialchars(_nbAdminLang()); ?>" data-site-theme="<?php echo htmlspecialchars($adminTheme === 'system' ? 'light' : $adminTheme); ?>" data-theme-preset="<?php echo $_themePreset; ?>" data-density="<?php echo $_themeDensity; ?>" data-font="<?php echo $_themeFont; ?>">
+<html lang="<?php echo htmlspecialchars(_nbAdminLang()); ?>" data-site-theme="<?php echo htmlspecialchars($adminTheme === 'system' ? 'light' : $adminTheme); ?>" data-theme-preset="<?php echo $_themePreset; ?>" data-density="<?php echo $_themeDensity; ?>" data-font="<?php echo $_themeFont; ?>" data-font-size="<?php echo $_themeFontSize; ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -1410,7 +1413,7 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                         <div class="form-group">
                             <label id="settingsThemePresetLabel"><?php echo t('settings.theme_preset'); ?></label>
                             <div class="preset-grid" role="radiogroup" aria-labelledby="settingsThemePresetLabel">
-                                <?php foreach (['soft', 'classic', 'paper', 'studio', 'console'] as $_preset): ?>
+                                <?php foreach (['soft', 'classic', 'paper', 'studio', 'console', 'pop'] as $_preset): ?>
                                 <button type="button" class="preset-card" role="radio" aria-checked="false" data-preset="<?php echo $_preset; ?>">
                                     <span class="preset-card__preview" aria-hidden="true"><span class="preset-card__stage"><span></span><span></span><span></span></span></span>
                                     <span class="preset-card__name"><?php echo t('settings.preset_' . $_preset); ?></span>
@@ -1455,8 +1458,10 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                             <label for="settingsFont"><?php echo t('settings.font'); ?></label>
                             <select id="settingsFont" class="access-select">
                                 <option value="system"><?php echo t('settings.font_system'); ?></option>
-                                <option value="geist"><?php echo t('settings.font_geist'); ?></option>
                                 <option value="inter"><?php echo t('settings.font_inter'); ?></option>
+                                <option value="plex"><?php echo t('settings.font_plex'); ?></option>
+                                <option value="atkinson"><?php echo t('settings.font_atkinson'); ?></option>
+                                <option value="public"><?php echo t('settings.font_public'); ?></option>
                                 <option value="geist-mono"><?php echo t('settings.font_geist_mono'); ?></option>
                             </select>
                             <small class="form-hint"><?php echo t('settings.font_hint'); ?></small>
@@ -1470,6 +1475,16 @@ $_themeFont = in_array($siteSettings['theme']['font'] ?? '', ['system', 'geist',
                                 <label><input type="radio" name="settingsDensity" value="comfortable"><span><?php echo t('settings.density_comfortable'); ?></span></label>
                             </div>
                             <small class="form-hint"><?php echo t('settings.density_hint'); ?></small>
+                        </div>
+
+                        <div class="form-group">
+                            <label id="settingsFontSizeLabel"><?php echo t('settings.font_size'); ?></label>
+                            <div class="segmented" role="radiogroup" aria-labelledby="settingsFontSizeLabel">
+                                <label><input type="radio" name="settingsFontSize" value="small"><span><?php echo t('settings.font_size_small'); ?></span></label>
+                                <label><input type="radio" name="settingsFontSize" value="default" checked><span><?php echo t('settings.font_size_default'); ?></span></label>
+                                <label><input type="radio" name="settingsFontSize" value="large"><span><?php echo t('settings.font_size_large'); ?></span></label>
+                            </div>
+                            <small class="form-hint"><?php echo t('settings.font_size_hint'); ?></small>
                         </div>
                     </fieldset>
 

@@ -611,10 +611,12 @@ them when adding admin UI:
   `theme.successColor` (empty = auto) reach the stylesheet as
   `--nb-danger-base`, `--nb-warning-base`, `--nb-success-base`; the tokens
   file derives hover, subtle and text shades from them in OKLCH, light and
-  dark. Success follows the primary colour unless set. Console's preset
-  defaults set all three (orange, yellow, green) along with the base colour.
+  dark. Success follows the primary colour unless set. Console's and Pop's preset
+  defaults set all three along with the base colour.
 - **Presets** (`theme.preset`: `soft` default, `classic`, `paper`, `studio`,
-  `console`) set surfaces, borders, radii, control heights and the sidebar/topbar tokens
+  `console`, `pop`) set surfaces, borders, radii, control heights and the sidebar/topbar tokens
+  and bring a font (Soft Inter, Classic Public Sans, Paper Atkinson Hyperlegible, Studio IBM
+  Plex Sans, Console Geist Mono, Pop Atkinson Hyperlegible)
   (`--nb-sidebar-*`, `--nb-topbar-*`). Admin CSS reads those tokens and never
   hard-codes chrome colours; the few per-preset component rules (table heads,
   button surfaces, sidebar item geometry) live in the "PRESET REFINEMENTS"
@@ -631,7 +633,16 @@ them when adding admin UI:
   buttons, square corners, dashed group dividers, and a crosshair on selected
   elements (four corner brackets drawn by one `::after` with eight gradient
   strokes; see `--nb-xh-*` in the Console block). The base colour keeps its
-  full chroma there. `<html>` carries `data-theme-preset`,
+  full chroma there. **Pop** is the playful one: sidebar and topbar in a deep
+  slate derived from the base hue (`--nb-sidebar-bg`), the sidebar running the
+  gradient token `--nb-sidebar-gradient` (built from `--nb-sidebar-bg`, so a
+  custom sidebar colour keeps the gradient); a light stage with white cards
+  and soft shadows; legends, panel titles, stat and status labels as pills
+  (`--nb-pop-pill` for the colour, `--nb-pop-pill-text` for the text on it,
+  stat tiles cycling base/danger/warning/success/accent through `nth-child`);
+  second-level labels as tinted pills; round navigation and swatches. Its
+  preset defaults set the four palette colours like Console does.
+  `<html>` carries `data-theme-preset`,
   `data-density` and `data-font`; `admin/dashboard.php` emits `--nb-base` and
   optional sidebar overrides inline, `applyTheme()` in
   `admin/dashboard/scripts/settings.php` mirrors that live.
@@ -641,8 +652,11 @@ them when adding admin UI:
   preference in `localStorage` (`nibblySidebarCollapsed`), set by a head
   script before first paint and toggled by `#sidebarCollapseBtn` at the
   sidebar's foot; the mobile drawer below 769px ignores it.
-- **Fonts are local.** `theme.font` is `system` (default, no file), `geist`,
-  `inter` or `geist-mono`; faces are declared in `admin/fonts.css` from `admin/fonts/`. Never
+- **Fonts are local.** `theme.font` is `system` (default, no file), `inter`, `plex`
+  (IBM Plex Sans), `atkinson` (Atkinson Hyperlegible Next), `public` (Public Sans) or
+  `geist-mono`; a stored `geist` reads as `plex`. `theme.fontSize` (`small`, `default`,
+  `large`, `data-font-size` on `<html>`) scales the type steps only (`--nb-font-scale`),
+  never spacing or control heights; faces are declared in `admin/fonts.css` from `admin/fonts/`. Never
   link an external font service in the admin.
 - **Feature stylesheets** (`css/ai-copilot.css`, `css/image-manager.css`) are
   loaded on the public site too, so they read tokens with fallbacks:

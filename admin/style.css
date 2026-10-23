@@ -937,7 +937,7 @@ select:not([multiple]) {
     background: transparent;
     color: var(--nb-sidebar-text);
     font-family: var(--nb-font-sans);
-    font-size: 0.875rem;
+    font-size: var(--nb-text-md);
     font-weight: 500;
     cursor: pointer;
     transition: background-color var(--nb-duration-fast) var(--nb-ease),
@@ -1021,7 +1021,7 @@ select:not([multiple]) {
 .sidebar-version {
     display: block;
     padding: var(--nb-space-3) var(--nb-space-4);
-    font-size: 0.6875rem;
+    font-size: calc(0.6875rem * var(--nb-font-scale));
     color: var(--nb-sidebar-text);
     opacity: 0.55;
     text-decoration: none;
@@ -1122,7 +1122,7 @@ svg.topbar-logo {
 
 .topbar-dashboard {
     font-family: var(--nb-font-display);
-    font-size: 1rem;
+    font-size: var(--nb-text-lg);
     font-weight: 600;
     color: var(--nb-topbar-text);
     letter-spacing: -0.02em;
@@ -1131,7 +1131,7 @@ svg.topbar-logo {
 .topbar-title {
     margin: 0;
     font-family: var(--nb-font-sans);
-    font-size: 0.9375rem;
+    font-size: calc(0.9375rem * var(--nb-font-scale));
     font-weight: 500;
     color: var(--nb-topbar-text-muted);
     padding-left: var(--nb-space-4);
@@ -1183,7 +1183,7 @@ svg.topbar-logo {
     align-items: center;
     gap: var(--nb-space-2);
     color: var(--nb-topbar-text-muted);
-    font-size: 0.8125rem;
+    font-size: var(--nb-text-sm);
     font-weight: 500;
     text-decoration: none;
     transition: color var(--nb-duration-fast) var(--nb-ease);
@@ -1765,6 +1765,8 @@ svg.topbar-logo {
 .page-list-sortable {
     cursor: pointer;
     user-select: none;
+    transition: color var(--nb-duration-hover-out) ease-out,
+                background-color var(--nb-duration-hover-out) ease-out;
 }
 
 .page-list-sortable:hover {
@@ -3856,7 +3858,7 @@ select.modal-input {
 .settings-nav-group h3 {
     margin: 0 0 var(--nb-space-2);
     color: var(--nb-text-muted);
-    font-size: 0.72rem;
+    font-size: calc(0.72rem * var(--nb-font-scale));
     font-weight: 700;
     letter-spacing: 0.06em;
     line-height: 1.2;
@@ -3866,7 +3868,7 @@ select.modal-input {
 .settings-tab-btn {
     width: 100%;
     padding: 7px var(--nb-space-2-5);
-    font-size: 0.875rem;
+    font-size: var(--nb-text-md);
     font-weight: 500;
     line-height: 1.3;
     text-align: left;
@@ -9683,6 +9685,12 @@ input.color-hex-input,
     border: 1px solid var(--nb-border);
     border-radius: var(--nb-radius-lg);
     background: var(--nb-bg);
+    /* The summary's hover surface follows the rounded frame */
+    overflow: hidden;
+}
+
+.ai-agent-details[open] {
+    padding-bottom: var(--nb-space-3);
 }
 
 .ai-agent-details > summary {
@@ -9693,6 +9701,8 @@ input.color-hex-input,
     font-weight: 600;
     line-height: 1.4;
     color: var(--nb-text);
+    /* The hover surface fades in and out instead of snapping */
+    transition: background-color var(--nb-duration-hover-out) ease-out;
 }
 
 .ai-agent-details > summary::-webkit-details-marker {
@@ -9727,7 +9737,7 @@ input.color-hex-input,
 }
 
 .ai-agent-details > :last-child {
-    margin-bottom: var(--nb-space-3);
+    margin-bottom: 0;
 }
 
 /* A stored key is never shown: the field stays empty (placeholder as a mask) and a small x removes the key. */
@@ -10161,12 +10171,13 @@ input.color-hex-input,
     text-overflow: ellipsis;
 }
 
+/* Breadcrumb in the topbar colour, not the stage colour: the topbar is dark in Classic and Pop */
 .topbar-title .topbar-crumb {
-    color: var(--nb-text-muted);
+    color: var(--nb-topbar-text-muted);
 }
 
 .topbar-title .topbar-crumb-sep {
-    color: var(--nb-text-muted);
+    color: var(--nb-topbar-text-muted);
     opacity: 0.6;
 }
 
@@ -10203,9 +10214,10 @@ input.color-hex-input,
 .preset-grid {
     justify-self: stretch;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+    /* Six cards: three per row where the panel allows it, two below ~34rem */
+    grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
     gap: var(--nb-space-5);
-    max-width: 60rem;
+    max-width: 48rem;
 }
 
 .preset-card {
@@ -10309,11 +10321,16 @@ input.color-hex-input,
 .preset-card[data-preset="paper"] .preset-card__preview { --pv-sidebar: #fafaf8; --pv-topbar: #ffffff; --pv-bg: #ffffff; --pv-border: #e3e3df; --pv-radius: 2px; }
 .preset-card[data-preset="console"] .preset-card__preview { --pv-sidebar: #f1f1f1; --pv-topbar: #fafafa; --pv-bg: #f1f1f1; --pv-card: #fafafa; --pv-border: #c4c4c4; --pv-radius: 0; }
 .preset-card[data-preset="console"] .preset-card__preview::after { border-bottom-style: dashed; }
+.preset-card[data-preset="pop"] .preset-card__preview { --pv-sidebar: #2c3b53; --pv-topbar: #2c3b53; --pv-bg: #eef2f8; --pv-card: #ffffff; --pv-border: #dbe2ec; --pv-radius: 4px; }
+.preset-card[data-preset="pop"] .preset-card__preview::before { background: linear-gradient(180deg, #2c3b53, #3f5474); }
+.preset-card[data-preset="pop"] .preset-card__stage span:first-child { border-top-width: 0; box-shadow: inset 0 3px 0 var(--pv-accent); border-radius: 4px; }
 .preset-card[data-preset="studio"] .preset-card__preview { --pv-sidebar: #fafafa; --pv-topbar: #ffffff; --pv-bg: #fafafa; --pv-border: #eaeaea; --pv-accent: #171717; --pv-radius: 2px; }
 [data-site-theme="dark"] .preset-card__preview { --pv-sidebar: oklch(from var(--nb-base) 0.20 min(c, 0.012) h); --pv-topbar: var(--pv-sidebar); --pv-bg: oklch(from var(--nb-base) 0.17 min(c, 0.008) h); --pv-card: oklch(from var(--nb-base) 0.215 min(c, 0.01) h); --pv-border: oklch(from var(--nb-base) 0.30 min(c, 0.012) h); }
 [data-site-theme="dark"] .preset-card[data-preset="classic"] .preset-card__preview { --pv-sidebar: #0e1113; --pv-topbar: #0e1113; --pv-bg: #15181b; --pv-card: #1e2327; --pv-border: #3a4248; }
 [data-site-theme="dark"] .preset-card[data-preset="paper"] .preset-card__preview { --pv-sidebar: #0d0d0d; --pv-topbar: #0d0d0d; --pv-bg: #121212; --pv-card: #181818; --pv-border: #2c2c2c; }
 [data-site-theme="dark"] .preset-card[data-preset="console"] .preset-card__preview { --pv-sidebar: #0a0a0a; --pv-topbar: #0a0a0a; --pv-bg: #0a0a0a; --pv-card: #121212; --pv-border: #2a2a2a; }
+[data-site-theme="dark"] .preset-card[data-preset="pop"] .preset-card__preview { --pv-sidebar: #151d2a; --pv-topbar: #151d2a; --pv-bg: #1c2533; --pv-card: #26303f; --pv-border: #35415a; }
+[data-site-theme="dark"] .preset-card[data-preset="pop"] .preset-card__preview::before { background: linear-gradient(180deg, #151d2a, #23304a); }
 [data-site-theme="dark"] .preset-card[data-preset="studio"] .preset-card__preview { --pv-sidebar: #000000; --pv-topbar: #000000; --pv-bg: #000000; --pv-card: #0a0a0a; --pv-border: #262626; --pv-accent: #ededed; }
 
 /* Segmented control (density, mode) built from radio inputs */
@@ -11052,7 +11069,7 @@ label.toggle-label > .toggle-switch,
 }
 
 [data-theme-preset="console"] .settings-nav-group h3 {
-    font-size: 0.6875rem;
+    font-size: calc(0.6875rem * var(--nb-font-scale));
     font-weight: 600;
     letter-spacing: 0.1em;
 }
@@ -11344,6 +11361,362 @@ label.toggle-label > .toggle-switch,
     outline-offset: 2px;
 }
 
+/* --- Pop: playful dashboard --------------------------------------------------
+   Dark gradient chrome, a light sheet for the stage with a dog-eared corner,
+   labels and titles in coloured pills, round navigation. Colours and radii
+   come from the tokens; the rules here draw the gradient, the ear and the
+   pills and round off what the tokens cannot reach. */
+
+/* Chrome: the sidebar runs the gradient, the topbar keeps its top colour so
+   both read as one board; a hairline of light separates sidebar and stage */
+[data-theme-preset="pop"] .admin-sidebar {
+    background: var(--nb-sidebar-gradient, var(--nb-sidebar-bg));
+}
+
+[data-theme-preset="pop"] .admin-topbar {
+    border-bottom: 0;
+}
+
+/* Cards: white sheets with a soft shadow instead of a hard frame */
+[data-theme-preset="pop"] .dashboard-stat-card,
+[data-theme-preset="pop"] .dashboard-panel,
+[data-theme-preset="pop"] .settings-panel {
+    border-color: var(--nb-border-subtle);
+    box-shadow: var(--nb-shadow-sm);
+}
+
+/* Pills: legends, panel titles, stat labels and status labels sit in a
+   coloured chip. --nb-pop-pill carries the colour, --nb-pop-pill-text the
+   text on it (white on the saturated light-mode colours, dark on the lifted
+   dark-mode ones, see below). */
+[data-theme-preset="pop"] .settings-section > legend,
+[data-theme-preset="pop"] .dashboard-panel h3,
+[data-theme-preset="pop"] .dashboard-section-title,
+[data-theme-preset="pop"] .dashboard-section-header h3,
+[data-theme-preset="pop"] .ai-card > h3,
+[data-theme-preset="pop"] .backup-site-card__info h3,
+[data-theme-preset="pop"] .scheduled-list__header h4,
+[data-theme-preset="pop"] .backup-remote__header h4,
+[data-theme-preset="pop"] .dashboard-stat-card span,
+[data-theme-preset="pop"] .dashboard-status-chip__label,
+html[data-theme-preset="pop"] .settings-panel h3.settings-subheading,
+[data-theme-preset="pop"] .frontend-logos-block__title,
+[data-theme-preset="pop"] .scheduled-form__fieldset legend,
+[data-theme-preset="pop"] .ai-image-jobs-panel__copy h4,
+[data-theme-preset="pop"] .ai-image-history__header h4 {
+    display: inline-block;
+    width: auto;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 0 var(--nb-space-3);
+    border-radius: var(--nb-radius-full, 999px);
+    background: var(--nb-pop-pill, var(--nb-primary));
+    color: var(--nb-pop-pill-text, var(--nb-text-on-primary));
+    font-size: var(--nb-text-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    /* Centred by line height so a long label can still truncate */
+    line-height: calc(1.5rem * var(--nb-font-scale));
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+}
+
+/* Stat and status labels may run long: they wrap inside a rounded box
+   instead of truncating */
+[data-theme-preset="pop"] .dashboard-stat-card span,
+[data-theme-preset="pop"] .dashboard-status-chip__label {
+    white-space: normal;
+    line-height: 1.3;
+    padding-block: calc(0.1rem * var(--nb-font-scale) + 2px);
+    border-radius: 12px;
+}
+
+[data-theme-preset="pop"] .dashboard-stat-card span {
+    align-self: flex-start;
+    margin-bottom: var(--nb-space-2);
+}
+
+/* Second level inside a card (sub-blocks, retention, image jobs): the same
+   pill, tinted instead of filled */
+html[data-theme-preset="pop"] .settings-panel h3.settings-subheading,
+[data-theme-preset="pop"] .frontend-logos-block__title,
+[data-theme-preset="pop"] .scheduled-form__fieldset legend,
+[data-theme-preset="pop"] .ai-image-jobs-panel__copy h4,
+[data-theme-preset="pop"] .ai-image-history__header h4 {
+    --nb-pop-pill: var(--nb-primary-subtle);
+    --nb-pop-pill-text: var(--nb-primary);
+    margin-bottom: var(--nb-space-2);
+}
+
+[data-theme-preset="pop"] .dashboard-section-header h3,
+[data-theme-preset="pop"] .backup-site-card__info h3,
+[data-theme-preset="pop"] .scheduled-list__header h4,
+[data-theme-preset="pop"] .backup-remote__header h4 {
+    margin-bottom: var(--nb-space-2);
+}
+
+/* The assistant card is a flex column: the title keeps its own width, and
+   the mode badge inside it turns into a white outline */
+[data-theme-preset="pop"] .ai-card > h3 {
+    align-self: flex-start;
+}
+
+[data-theme-preset="pop"] .ai-card > h3 .ai-card__badge {
+    border-color: color-mix(in srgb, currentColor 55%, transparent);
+    color: inherit;
+    font-size: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    /* Caps have no descenders: a touch more room below keeps them centred */
+    line-height: 1;
+    padding: 3px var(--nb-space-2) 4px;
+    vertical-align: 1px;
+}
+
+[data-theme-preset="pop"] .dashboard-panel h3,
+[data-theme-preset="pop"] .dashboard-section-title {
+    margin-bottom: var(--nb-space-3);
+}
+
+[data-theme-preset="pop"] .dashboard-panel-header h3 {
+    margin-bottom: 0;
+}
+
+/* Stat tiles take turns through the palette: base, danger, warning, success,
+   accent; the number wears the tile colour */
+[data-theme-preset="pop"] .dashboard-stat-card:nth-child(5n + 2) { --nb-pop-pill: var(--nb-danger); }
+[data-theme-preset="pop"] .dashboard-stat-card:nth-child(5n + 3) { --nb-pop-pill: var(--nb-warning); }
+[data-theme-preset="pop"] .dashboard-stat-card:nth-child(5n + 4) { --nb-pop-pill: var(--nb-success); }
+[data-theme-preset="pop"] .dashboard-stat-card:nth-child(5n + 5) { --nb-pop-pill: var(--nb-brand); }
+
+[data-theme-preset="pop"] .dashboard-stat-card strong {
+    color: var(--nb-pop-pill, var(--nb-primary));
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+/* Status strip: the label pill keeps the base colour, the value stays text */
+[data-theme-preset="pop"] .dashboard-status-chip {
+    min-width: 0;
+    border-radius: var(--nb-radius-md);
+}
+
+[data-theme-preset="pop"] .dashboard-status-chip__label {
+    margin-bottom: var(--nb-space-1-5);
+}
+
+/* Light-mode pills are saturated, so white text; in dark mode the colours are
+   lifted (tokens) and the text turns dark like on the primary button */
+[data-theme-preset="pop"] .dashboard-stat-card,
+[data-theme-preset="pop"] .dashboard-status-chip {
+    --nb-pop-pill-text: #ffffff;
+}
+
+[data-theme-preset="pop"][data-site-theme="dark"] .dashboard-stat-card,
+[data-theme-preset="pop"][data-site-theme="dark"] .dashboard-status-chip {
+    --nb-pop-pill-text: #11141b;
+}
+
+/* Settings sub-navigation: group heads as tinted pills, one step quieter */
+[data-theme-preset="pop"] .settings-nav-group h3 {
+    display: inline-block;
+    line-height: calc(1.375rem * var(--nb-font-scale));
+    padding: 0 var(--nb-space-2-5);
+    margin: 0 0 var(--nb-space-2) var(--nb-space-1);
+    border-radius: var(--nb-radius-full, 999px);
+    background: var(--nb-primary-subtle);
+    color: var(--nb-primary);
+    font-size: calc(0.6875rem * var(--nb-font-scale));
+    letter-spacing: 0.08em;
+}
+
+[data-theme-preset="pop"] .settings-tab-btn {
+    border-radius: var(--nb-radius-full, 999px);
+}
+
+/* Navigation: round items, the active one a filled pill with a coloured glow */
+[data-theme-preset="pop"] .sidebar-nav {
+    padding-inline: var(--nb-space-3);
+}
+
+[data-theme-preset="pop"] .sidebar-nav-item {
+    border-radius: var(--nb-radius-full, 999px);
+    padding-inline: var(--nb-space-4);
+}
+
+[data-theme-preset="pop"] .sidebar-nav-item.active {
+    box-shadow: 0 6px 16px -4px oklch(from var(--nb-primary) l c h / 0.6);
+}
+
+[data-theme-preset="pop"] .sidebar-nav-item.active:hover {
+    filter: none;
+}
+
+/* Collapsed sidebar: the active pill shrinks to a circle around the icon */
+html[data-sidebar="collapsed"][data-theme-preset="pop"] .sidebar-nav-item {
+    padding-inline: 0;
+}
+
+/* Option groups and chips: round tray, round options */
+[data-theme-preset="pop"] .segmented {
+    border-radius: var(--nb-radius-full, 999px);
+    padding: 3px;
+}
+
+[data-theme-preset="pop"] .segmented label {
+    border-radius: var(--nb-radius-full, 999px);
+}
+
+[data-theme-preset="pop"] .segmented label:has(input:checked) {
+    box-shadow: var(--nb-shadow-sm);
+}
+
+/* Colour swatches are round */
+[data-theme-preset="pop"] input.color-picker,
+[data-theme-preset="pop"] .color-picker {
+    border-radius: 50%;
+}
+
+[data-theme-preset="pop"] input.color-picker::-webkit-color-swatch-wrapper,
+[data-theme-preset="pop"] input.color-picker::-webkit-color-swatch {
+    border-radius: 50%;
+}
+
+[data-theme-preset="pop"] input.color-picker::-moz-color-swatch {
+    border-radius: 50%;
+}
+
+/* Table heads: tinted, rounded ends on the first and last column */
+[data-theme-preset="pop"] .page-list-table thead th,
+[data-theme-preset="pop"] .users-table th,
+[data-theme-preset="pop"] .scheduled-list__table th,
+[data-theme-preset="pop"] .ai-audit-table th {
+    background: color-mix(in srgb, var(--nb-primary) 15%, var(--nb-bg-elevated));
+    color: var(--nb-primary);
+    border-bottom-color: transparent;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+}
+
+[data-theme-preset="pop"] .page-list-table thead th:first-child,
+[data-theme-preset="pop"] .users-table th:first-child,
+[data-theme-preset="pop"] .scheduled-list__table th:first-child,
+[data-theme-preset="pop"] .ai-audit-table th:first-child {
+    border-top-left-radius: var(--nb-radius-full, 999px);
+    border-bottom-left-radius: var(--nb-radius-full, 999px);
+}
+
+[data-theme-preset="pop"] .page-list-table thead th:last-child,
+[data-theme-preset="pop"] .users-table th:last-child,
+[data-theme-preset="pop"] .scheduled-list__table th:last-child,
+[data-theme-preset="pop"] .ai-audit-table th:last-child {
+    border-top-right-radius: var(--nb-radius-full, 999px);
+    border-bottom-right-radius: var(--nb-radius-full, 999px);
+}
+
+/* Status strip: a tray with room around the five tiles, so its background
+   reads as a surface; the label pills sit on one baseline at the bottom */
+[data-theme-preset="pop"] .dashboard-status-strip {
+    gap: var(--nb-space-2);
+    padding: var(--nb-space-2);
+    border-color: var(--nb-border-subtle);
+    background: var(--nb-bg-sunken);
+    border-radius: var(--nb-radius-lg);
+}
+
+[data-theme-preset="pop"] .dashboard-status-chip {
+    justify-content: flex-end;
+    border-radius: var(--nb-radius-md);
+    box-shadow: var(--nb-shadow-sm);
+}
+
+[data-theme-preset="pop"] .dashboard-status-chip__label {
+    margin-top: auto;
+}
+
+/* Table wrappers: a little air so the tinted head stands off the card edge */
+[data-theme-preset="pop"] .page-list-table-wrap {
+    padding: var(--nb-space-2);
+}
+
+/* A little white between the head and the first row: a spacer row, so the
+   head pill keeps its full rounding (a transparent border would flatten it) */
+[data-theme-preset="pop"] .page-list-table thead th {
+    border-bottom: 0;
+}
+
+[data-theme-preset="pop"] .page-list-table tbody::before {
+    content: "";
+    display: table-row;
+    height: 6px;
+}
+
+/* Row hover: a rounded surface inset from the separator lines, drawn by a
+   pseudo-element per cell (so the corners can round) and faded in */
+[data-theme-preset="pop"] .page-list-table tbody tr:hover {
+    background: transparent;
+}
+
+[data-theme-preset="pop"] .page-list-table tbody td {
+    position: relative;
+    z-index: 0;
+    /* A pixel more above and below, so the hover surface clears the separator lines */
+    padding-top: calc(var(--nb-space-2-5) + 1px);
+    padding-bottom: calc(var(--nb-space-2-5) + 1px);
+}
+
+[data-theme-preset="pop"] .page-list-table tbody td::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 3px;
+    bottom: 4px;
+    z-index: -1;
+    background: var(--nb-bg-hover);
+    opacity: 0;
+    transition: opacity var(--nb-duration-hover-out) ease-out;
+    pointer-events: none;
+}
+
+[data-theme-preset="pop"] .page-list-table tbody tr:hover td::before,
+[data-theme-preset="pop"] .page-list-table tbody tr:focus-within td::before {
+    opacity: 1;
+}
+
+/* First and last row: the hover keeps the same 8px to the card edge as at the sides */
+[data-theme-preset="pop"] .page-list-table tbody tr:first-child td::before {
+    top: 2px;
+}
+
+[data-theme-preset="pop"] .page-list-table tbody tr:last-child td::before {
+    bottom: 0;
+}
+
+[data-theme-preset="pop"] .page-list-table tbody td:first-child::before {
+    border-radius: var(--nb-radius-md) 0 0 var(--nb-radius-md);
+}
+
+[data-theme-preset="pop"] .page-list-table tbody td:last-child::before {
+    border-radius: 0 var(--nb-radius-md) var(--nb-radius-md) 0;
+}
+
+/* Sortable heads answer the pointer: deeper text, a shade more tint */
+[data-theme-preset="pop"] .page-list-table thead th.page-list-sortable:hover {
+    color: var(--nb-primary-hover);
+    background-color: color-mix(in srgb, var(--nb-primary) 24%, var(--nb-bg-elevated));
+}
+
+/* Focus rings follow the round shapes */
+[data-theme-preset="pop"] .sidebar-nav-item:focus-visible,
+[data-theme-preset="pop"] .settings-tab-btn:focus-visible {
+    outline-offset: 3px;
+    border-radius: var(--nb-radius-full, 999px);
+}
+
 
 
 /* ============================================================
@@ -11414,7 +11787,7 @@ label.toggle-label > .toggle-switch,
         min-width: 0.875rem;
         height: 0.875rem;
         padding: 0 0.1875rem;
-        font-size: 0.5625rem;
+        font-size: calc(0.5625rem * var(--nb-font-scale));
         box-shadow: none;
     }
 
