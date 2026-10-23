@@ -5,6 +5,14 @@ require_once __DIR__ . '/api/bootstrap.php';
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
+// A POST above post_max_size reaches PHP with empty $_POST and $_FILES, so the
+// action is lost too. Name the server limit instead of "Unknown action".
+if ($action === '' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && empty($_POST) && empty($_FILES)
+    && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > nibblyUploadServerLimit()) {
+    http_response_code(413);
+    jsonResponse(false, ['serverLimitBytes' => nibblyUploadServerLimit()], sprintf('File too large: the server accepts uploads up to %s MB (upload_max_filesize / post_max_size)', nibblyMegabytes(nibblyUploadServerLimit())));
+}
+
 // Inbox mutations share the same transaction lock as public submissions.
 if (in_array($action, ['mark-mail-read', 'update-mail-flags', 'mark-all-mails-read', 'delete-mail', 'delete-read-mails'], true)) {
     $mailLock = nibblyJsonLock(dirname(__DIR__) . '/content/mails.json');

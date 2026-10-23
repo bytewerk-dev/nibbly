@@ -161,29 +161,41 @@
     display: flex;
     align-items: center;
     gap: var(--nb-space-3, 12px);
-    padding: var(--nb-space-3, 12px) var(--nb-space-5, 20px);
+    /* The same distance on every side, so the toggles sit as close to the
+       edge as the row is to the top */
+    padding: var(--nb-space-3, 12px);
     border-bottom: 1px solid var(--nb-border, #d2d2d2);
     flex-wrap: wrap;
     flex-shrink: 0;
 }
 
+/* Upload: a primary button like .btn-primary, so the design settings (button
+   radius, glow, hover colours) reach it; same height as the type select */
 .nb-imgmgr-upload-btn {
     display: inline-flex;
     align-items: center;
     gap: var(--nb-space-2, 8px);
-    padding: var(--nb-space-2, 8px) var(--nb-space-3-5, 14px);
-    background: var(--nb-imgmgr-accent);
+    height: var(--nb-control-h, 36px);
+    padding: 0 var(--nb-space-4, 16px);
+    background-color: var(--nb-imgmgr-accent);
+    background-image: var(--nb-primary-sheen, none);
     color: var(--nb-text-on-primary, #fff);
     border: none;
-    border-radius: var(--nb-radius-md, 6px);
-    font-size: 13px;
+    border-radius: var(--editor-btn-radius, var(--nb-radius-md, 6px));
+    font-size: var(--nb-text-md, 0.875rem);
     font-weight: 500;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: background-color var(--nb-duration-hover-out, 320ms) ease-out;
 }
 
 .nb-imgmgr-upload-btn:hover {
-    background: var(--nb-imgmgr-accent-hover);
+    background-color: var(--nb-hover-settle, var(--nb-imgmgr-accent-hover));
+}
+
+.nb-flat-buttons .nb-imgmgr-upload-btn {
+    background-image: none;
+    box-shadow: none;
+    text-shadow: none;
 }
 
 .nb-imgmgr-upload-btn svg {
@@ -203,16 +215,20 @@
     color: var(--nb-text-muted, #6e6e6e);
 }
 
+/* Type, library/trash and view toggles follow the dashboard's segmented
+   control (the density selector): a sunken tray with a hairline, the chosen
+   option as a raised light box, on the control height of the search field beside them */
 .nb-imgmgr-mode-toggle,
 .nb-imgmgr-type-toggle,
 .nb-imgmgr-folder-tools {
     order: 1;
     display: flex;
     align-items: center;
-    gap: var(--nb-space-0-5, 2px);
-    background: var(--nb-bg-hover, #f5f5f5);
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--nb-border, #d2d2d2);
     border-radius: var(--nb-radius-md, 6px);
-    padding: var(--nb-space-0-5, 2px);
+    background: var(--nb-bg-sunken, #f5f5f5);
 }
 
 .nb-imgmgr-folder-tools[hidden] {
@@ -244,29 +260,37 @@
 
 .nb-imgmgr-mode-btn,
 .nb-imgmgr-type-btn {
-    min-height: 28px;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    height: calc(var(--nb-control-h, 36px) - 6px);
     padding: 0 var(--nb-space-2-5, 10px);
     border: none;
-    border-radius: var(--nb-radius-sm, 4px);
+    border-radius: calc(var(--nb-radius-md, 6px) - 2px);
     background: transparent;
-    color: var(--nb-text-muted, #6e6e6e);
+    color: var(--nb-text-secondary, #454545);
     cursor: pointer;
     font-family: inherit;
-    font-size: 12px;
-    font-weight: 600;
-    transition: background 0.15s, color 0.15s;
+    font-size: var(--nb-text-sm, 0.8125rem);
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background-color var(--nb-duration-hover-out, 320ms) ease-out,
+                color var(--nb-duration-fast, 150ms) ease;
 }
 
-.nb-imgmgr-mode-btn:hover,
-.nb-imgmgr-type-btn:hover {
+/* Unchosen options brighten monochrome on hover, like the segmented control */
+.nb-imgmgr-mode-btn:not(.nb-imgmgr-mode-btn--active):hover,
+.nb-imgmgr-type-btn:not(.nb-imgmgr-type-btn--active):hover,
+.nb-imgmgr-view-btn:not(.nb-imgmgr-view-btn--active):hover {
+    background-color: color-mix(in srgb, var(--nb-bg-elevated, #fff) 55%, var(--nb-bg-sunken, #f5f5f5));
     color: var(--nb-text, #1a1a1a);
 }
 
 .nb-imgmgr-mode-btn--active,
 .nb-imgmgr-type-btn--active {
     background: var(--nb-bg-elevated, #fff);
-    color: var(--nb-imgmgr-accent);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    color: var(--nb-text, #1a1a1a);
+    box-shadow: var(--nb-shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
 .nb-imgmgr-upload-type {
@@ -325,24 +349,27 @@
 .nb-imgmgr-view-toggle {
     order: 1;
     display: flex;
-    gap: var(--nb-space-0-5, 2px);
-    background: var(--nb-bg-hover, #f5f5f5);
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--nb-border, #d2d2d2);
     border-radius: var(--nb-radius-md, 6px);
-    padding: var(--nb-space-0-5, 2px);
+    background: var(--nb-bg-sunken, #f5f5f5);
 }
 
 .nb-imgmgr-view-btn {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     width: 32px;
-    height: 28px;
+    height: calc(var(--nb-control-h, 36px) - 6px);
     border: none;
     background: transparent;
-    color: var(--nb-text-muted, #6e6e6e);
+    color: var(--nb-text-secondary, #454545);
     cursor: pointer;
-    border-radius: var(--nb-radius-sm, 4px);
-    transition: all 0.15s;
+    border-radius: calc(var(--nb-radius-md, 6px) - 2px);
+    transition: background-color var(--nb-duration-hover-out, 320ms) ease-out,
+                color var(--nb-duration-fast, 150ms) ease;
 }
 
 .nb-imgmgr-view-btn svg {
@@ -351,14 +378,10 @@
     fill: currentColor;
 }
 
-.nb-imgmgr-view-btn:hover {
-    color: var(--nb-text, #1a1a1a);
-}
-
 .nb-imgmgr-view-btn--active {
     background: var(--nb-bg-elevated, #fff);
-    color: var(--nb-imgmgr-accent);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    color: var(--nb-text, #1a1a1a);
+    box-shadow: var(--nb-shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
 /* Body — scrollable content area */
@@ -603,7 +626,7 @@
     justify-content: center;
     gap: var(--nb-space-3, 12px);
     height: 90px;
-    margin: var(--nb-space-3, 12px) var(--nb-space-5, 20px);
+    margin: var(--nb-space-3, 12px);
     padding: 0 var(--nb-space-5, 20px);
     border: 2px dashed var(--nb-border-strong, #cccccc);
     border-radius: var(--nb-radius-lg, 8px);
@@ -629,29 +652,31 @@
     justify-content: center;
 }
 
+/* Image generator: a secondary button on the same height and radius */
 .nb-imgmgr-ai-generator-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: var(--nb-space-2, 8px);
-    min-height: 38px;
-    padding: 0 var(--nb-space-3-5, 14px);
+    height: var(--nb-control-h, 36px);
+    padding: 0 var(--nb-space-4, 16px);
     border: 1px solid var(--nb-border, #d2d2d2);
-    border-radius: var(--nb-radius-md, 6px);
+    border-radius: var(--editor-btn-radius, var(--nb-radius-md, 6px));
     background: var(--nb-bg-elevated, #fff);
     color: var(--nb-text, #1a1a1a);
     font: inherit;
-    font-size: 13px;
-    font-weight: 600;
+    font-size: var(--nb-text-md, 0.875rem);
+    font-weight: 500;
     cursor: pointer;
     white-space: nowrap;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    transition: background-color var(--nb-duration-hover-out, 320ms) ease-out,
+                border-color var(--nb-duration-fast, 150ms) ease,
+                color var(--nb-duration-fast, 150ms) ease;
 }
 
 .nb-imgmgr-ai-generator-btn:hover {
-    border-color: var(--nb-imgmgr-accent);
-    color: var(--nb-imgmgr-accent);
-    background: var(--nb-imgmgr-accent-subtle);
+    border-color: var(--nb-border-strong, var(--nb-imgmgr-accent));
+    background-color: var(--nb-hover-tint-settle, var(--nb-imgmgr-accent-subtle));
 }
 
 .nb-imgmgr-ai-generator-btn svg {
@@ -710,7 +735,7 @@
 
 .nb-imgmgr-btn {
     padding: var(--nb-space-2, 8px) var(--nb-space-4, 16px);
-    border-radius: var(--nb-radius-md, 6px);
+    border-radius: var(--editor-btn-radius, var(--nb-radius-md, 6px));
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
@@ -746,9 +771,10 @@
    GRID VIEW
    ============================================================ */
 
+/* Same rhythm as the icon manager's grid: 220px columns that fill the row */
 .nb-imgmgr-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: var(--nb-space-3-5, 14px);
 }
 
@@ -758,16 +784,16 @@
 
 .nb-imgmgr-item {
     position: relative;
-    background: var(--nb-bg-elevated, #fff);
-    border: 2px solid var(--nb-border, #d2d2d2);
-    border-radius: var(--nb-radius-lg, 8px);
+    background: var(--nb-surface-item, var(--nb-bg-elevated, #fff));
+    border: 1px solid var(--nb-border, #d2d2d2);
+    border-radius: var(--nb-radius-md, 8px);
     overflow: hidden;
     cursor: pointer;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    transition: border-color var(--nb-duration-hover-out, 320ms) ease-out, box-shadow 0.15s;
 }
 
 .nb-imgmgr-item:hover {
-    border-color: var(--nb-text-muted, #6e6e6e);
+    border-color: var(--nb-border-strong, #6e6e6e);
 }
 
 .nb-imgmgr-item.selected {
@@ -776,7 +802,7 @@
 }
 
 .nb-imgmgr-thumb {
-    height: 110px;
+    height: 140px;
     background-color: var(--nb-bg-sunken, #f0f0f0);
     background-image: none;
     background-position: 0 0, 0 8px, 8px -8px, -8px 0;
@@ -845,11 +871,24 @@
 }
 
 .nb-imgmgr-name {
+    /* Name and size badge on one line, the folder name below: every tile keeps the same height */
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: var(--nb-space-1-5, 6px);
     padding: var(--nb-space-2, 8px) var(--nb-space-2-5, 10px) var(--nb-space-1-5, 6px);
     font-size: 12px;
     color: var(--nb-text, #1a1a1a);
     overflow: hidden;
     background: var(--nb-bg-elevated, #fff);
+}
+
+.nb-imgmgr-name .nb-imgmgr-folder-name {
+    grid-column: 1 / -1;
+}
+
+.nb-imgmgr-name .nb-imgmgr-size-badge {
+    margin-left: 0;
 }
 
 .nb-imgmgr-file-name,
@@ -964,7 +1003,7 @@
 .nb-imgmgr-list-header,
 .nb-imgmgr-row {
     display: grid;
-    grid-template-columns: 36px 60px 1fr 90px 130px 108px;
+    grid-template-columns: 36px 60px 1fr 90px 130px 124px;
     gap: var(--nb-space-2-5, 10px);
     padding: var(--nb-space-2, 8px) var(--nb-space-3, 12px);
     align-items: center;
@@ -1127,13 +1166,19 @@
 }
 
 .nb-imgmgr-list-thumb {
-    width: 54px;
-    height: 40px;
+    width: 60px;
+    height: auto;
+    min-height: 44px;
+    align-self: stretch;
     background-color: var(--nb-bg-sunken, #f0f0f0);
     background-image: none;
     background-position: 0 0, 0 8px, 8px -8px, -8px 0;
     background-size: 16px 16px;
     border-radius: var(--nb-radius-sm, 4px);
+}
+
+.nb-imgmgr-list-thumb .nb-imgmgr-thumb-surface {
+    padding: var(--nb-space-1, 4px);
 }
 
 .nb-imgmgr-list-name {
@@ -1148,11 +1193,11 @@
     color: var(--nb-text-muted, #6e6e6e);
 }
 
-/* Fixed 3-column grid so list-row actions always read as tidy 2x3 blocks
-   (6 actions in library mode, 3 in trash) instead of an uneven 5+1 wrap. */
+/* Fixed 4-column grid so list-row actions read as two rows of four
+   (8 actions in library mode, 3 in trash) and keep the row low. */
 .nb-imgmgr-list-actions {
     display: grid;
-    grid-template-columns: repeat(3, 28px);
+    grid-template-columns: repeat(4, 28px);
     gap: var(--nb-space-1, 4px);
     justify-content: end;
     justify-items: center;
@@ -1420,6 +1465,81 @@
     letter-spacing: 0.06em;
     line-height: 1.6;
     pointer-events: none;
+}
+
+/* Size badges: "Original" when the upload got a web version, "large" for big files */
+.nb-imgmgr-size-badge {
+    position: relative;
+    z-index: 1;
+    display: inline-block;
+    flex-shrink: 0;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    line-height: 1.5;
+    vertical-align: middle;
+    margin-left: var(--nb-space-1, 4px);
+}
+
+.nb-imgmgr-size-badge--original {
+    background: var(--nb-success-subtle, #ecfdf5);
+    color: var(--nb-success, #15803d);
+    border: 0;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.nb-imgmgr-size-badge--original:hover,
+.nb-imgmgr-size-badge--original:focus-visible {
+    outline: 2px solid var(--nb-success, #15803d);
+    outline-offset: 1px;
+}
+
+.nb-imgmgr-original-dialog .nb-imgmgr-original-info {
+    margin: 0 0 var(--nb-space-2, 8px);
+    color: var(--nb-text-secondary, #454545);
+    font-size: 13px;
+}
+
+.nb-imgmgr-original-dialog .nb-imgmgr-original-path {
+    margin: 0 0 var(--nb-space-3, 12px);
+    font-size: 12px;
+    word-break: break-all;
+}
+
+.nb-imgmgr-original-dialog .nb-imgmgr-original-path code {
+    padding: 2px 6px;
+    border-radius: var(--nb-radius-sm, 4px);
+    background: var(--nb-bg-sunken, #f0f0f0);
+}
+
+.nb-imgmgr-original-dialog .nb-imgmgr-original-hint {
+    margin: 0;
+    color: var(--nb-text-muted, #6e6e6e);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.nb-imgmgr-original-footer {
+    flex-wrap: wrap;
+}
+
+.nb-imgmgr-original-footer .nb-imgmgr-btn {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+}
+
+.nb-imgmgr-size-badge--large {
+    background: var(--nb-warning-subtle, #fffbeb);
+    color: var(--nb-warning-text, #92400e);
+}
+
+.nb-imgmgr-formats--server-bound {
+    color: var(--nb-warning-text, #92400e);
 }
 
 .nb-imgmgr-list-thumb .nb-imgmgr-ai-badge {

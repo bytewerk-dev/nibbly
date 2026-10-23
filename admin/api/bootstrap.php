@@ -17,6 +17,7 @@ require_once NIBBLY_ADMIN_DIR . '/../includes/ai/copilot-context.php';
 require_once NIBBLY_ADMIN_DIR . '/../includes/ai/image-job-runner.php';
 require_once NIBBLY_ADMIN_DIR . '/../includes/analytics-helper.php';
 require_once NIBBLY_ADMIN_DIR . '/../includes/forms.php';
+require_once NIBBLY_ADMIN_DIR . '/../includes/media-web-version.php';
 ensureUsersFile();
 
 // Prevent PHP HTML error output from corrupting JSON responses. The security
@@ -807,7 +808,9 @@ function getMediaConfig(?string $type = null): array {
             'publicPath' => '../assets/images/',
             'extensions' => ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'],
             'mimeTypes' => ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'],
-            'maxSize' => 5 * 1024 * 1024,
+            // The image limit is a setting (Settings → Modules → Media library); large
+            // uploads get a web version, see includes/media-web-version.php
+            'maxSize' => nibblyMediaImageMaxBytes(),
             'fallbackName' => 'image',
         ],
         'audio' => [
@@ -1211,6 +1214,13 @@ function sanitizeModuleSettings(array $settings): array {
     ], $modules);
 }
 
+function sanitizeMediaSettings(array $settings): array {
+    if (!isset($settings['media']) || !is_array($settings['media'])) {
+        return [];
+    }
+    return array_intersect_key(nibblySanitizeMediaSettings($settings['media']), $settings['media']);
+}
+
 function sanitizeDashboardSettings(array $settings): array {
     if (!isset($settings['dashboard']) || !is_array($settings['dashboard'])) {
         return [];
@@ -1397,6 +1407,15 @@ function listMediaFiles(string $type, bool $trash = false): array {
             'extension' => strtolower(pathinfo($relativePath, PATHINFO_EXTENSION)),
             'aiLabel' => nibblyMediaAiLabelFor($trash ? $type . '-trash' : $type, $relativePath),
         ];
+        if ($type === 'image') {
+            $entry = &$media[count($media) - 1];
+            // The uploaded original, when a web version replaced it; and a flag for
+            // files that are large for a page (the library shows both)
+            $original = $trash ? null : nibblyMediaOriginalFor($relativePath, false);
+            if ($original !== null) $entry['original'] = $original;
+            $entry['large'] = $sizeBytes > NIBBLY_MEDIA_LARGE_BYTES && in_array($entry['extension'], ['jpg', 'jpeg', 'png', 'webp'], true);
+            unset($entry);
+        }
     }
 
     usort($media, function($a, $b) {

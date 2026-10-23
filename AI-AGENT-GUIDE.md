@@ -53,6 +53,12 @@ This is the canonical, tool-neutral guide for AI coding agents. `AGENTS.md` and 
 php -S localhost:3000 router.php
 ```
 
+For large image uploads raise the CLI limits (the default `upload_max_filesize` is often 2M):
+
+```bash
+php -d upload_max_filesize=20M -d post_max_size=25M -S localhost:3000 router.php
+```
+
 The `router.php` handles clean URLs, language routing, and news post URLs without requiring Apache.
 
 For routing changes, login destinations, new handler directories and uploads,
@@ -1193,6 +1199,24 @@ nibblyAiLabelHtml($src, $lang = null)
 // is not labelled. editableImage(), editableImageSplit() and the core blocks add it
 // automatically; call it yourself only next to plain <img> output.
 ```
+
+### Image Uploads and Web Versions
+
+The media library accepts images up to `media.maxUploadMb` (20 MB by default; Settings →
+Modules → Media library). PHP's own `upload_max_filesize` / `post_max_size` cap every upload
+first: `list-media` returns both in `limits`, the library shows the lower one and checks
+before sending, and the API answers an oversized request with the server limit
+(`admin/api.php` handles the case where PHP dropped the whole POST). A JPEG, PNG or WebP that
+is larger than 400 KB or wider than `media.webMaxSide` (2000 px) is re-encoded on upload by
+`includes/media-web-version.php`: scaled to that side, saved as `<name>.webp` with
+`media.webQuality`, and the upload moves to `assets/images-originals/<same relative name with
+its own extension>`. `listMediaFiles()` attaches it as `original` (name, public path, size,
+dimensions) and flags files above 2 MB as `large`; the library shows badges, and the download
+action hands out the original. `nibblyMediaOriginalRelocate()` / `nibblyMediaOriginalForget()`
+keep originals in step with rename, move, trash, restore and permanent deletion
+(`assets/images-originals-trash/`). GIF and SVG are never converted; `media.webVersion: false`
+stores every upload as it is. The system status lists the PHP limits, `memory_limit` and the
+web-version state; re-encoding raises `memory_limit` for the request when the server allows it.
 
 ### AI Disclosure Labels
 

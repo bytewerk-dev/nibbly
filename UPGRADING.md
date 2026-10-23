@@ -3,6 +3,34 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.4.2 to 2.4.3
+
+Version 2.4.3 is a compatible release: large image uploads get a web version, the image upload
+limit is a setting, and the PHP upload limit is shown and named. No manual step is needed.
+
+1. Deploy the complete core. New: `includes/media-web-version.php`; changed: `admin/api.php`,
+   `admin/api/media.php`, `admin/api/bootstrap.php`, `admin/api/settings.php`,
+   `js/image-manager.js`, `css/image-manager.css`, `includes/system-status.php`, the dashboard,
+   `.htaccess` (a commented upload-limit example only) and `admin/lang/*.json`.
+2. A new folder `assets/images-originals/` (and `assets/images-originals-trash/`) appears next
+   to `assets/images/` when the first large image is uploaded; the web server must be able to
+   create it (same rights as `assets/images/`). Include it in deployments and backups like the
+   images folder; the `-trash` rule in `.htaccess` already keeps the trash folder private.
+3. Uploads of JPEG, PNG or WebP files that are larger than 400 KB or wider than the configured
+   longest side are stored as `<name>.webp`; the API's `upload-media` response and the library
+   return that name, so code that assumed the uploaded extension must use the returned `name`
+   and `path`. Files already in the library are not touched. Set `media.webVersion` to `false`
+   to store uploads as they are.
+4. The image limit defaults to 20 MB (was 5 MB). PHP still caps uploads through
+   `upload_max_filesize` and `post_max_size` (often 2M/8M); the system status shows both, the
+   library shows the lower one, and `.htaccess` has a commented `php_value` example for Apache
+   module hosts (PHP-FPM hosts use `.user.ini` or the hosting panel). Re-encoding a 15 MB photo
+   needs memory: Nibbly raises `memory_limit` for the request when the server allows it and
+   otherwise stores the upload unchanged.
+5. The development server: `php -S` uses the CLI `php.ini`; start it with
+   `php -d upload_max_filesize=20M -d post_max_size=25M -S localhost:3000 router.php` to test
+   large uploads.
+
 ## Upgrading from 2.4.1 to 2.4.2
 
 Version 2.4.2 is a compatible release: a sixth dashboard theme (Pop), three local fonts, a

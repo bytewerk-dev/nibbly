@@ -29,6 +29,18 @@ RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F,L,NC]
 RewriteRule ^([a-z]{2}/)?news/[a-z0-9-]+/?$ /route.php [END,QSA]
 
 # ============================================
+# Upload limits (optional)
+# ============================================
+# PHP caps every upload with upload_max_filesize and post_max_size; the media
+# library's image limit (Settings → Modules → Media library) cannot exceed them.
+# On hosts that run PHP as an Apache module, uncomment to raise them here; on
+# PHP-FPM hosts use .user.ini or the hosting panel instead (the system status
+# in the dashboard shows the values in effect).
+# php_value upload_max_filesize 20M
+# php_value post_max_size 25M
+# php_value memory_limit 256M
+
+# ============================================
 # Static files & directories
 # ============================================
 

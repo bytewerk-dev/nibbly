@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Visits count exactly once per request, also when header.php lacks the tracking call; 404 and admins are not visits."""
-import datetime
 import json
 import tempfile
 from support import Site, Client, write_json
@@ -10,10 +9,13 @@ BROWSER = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chr
 
 
 def views(site, key=None):
-    path = site.root / "content/analytics/days" / (str(datetime.date.today()) + ".json")
-    if not path.is_file():
+    # The server names the day in its own timezone (often UTC), which differs from the
+    # local date around midnight: read the newest day file instead of today's date.
+    days = sorted((site.root / "content/analytics/days").glob("????-??-??.json"))
+    if not days:
         return 0
-    bucket = json.loads(path.read_text())["days"][str(datetime.date.today())]
+    path = days[-1]
+    bucket = json.loads(path.read_text())["days"][path.stem]
     if key is None:
         return bucket.get("views", 0)
     return (bucket.get("pages", {}).get(key) or {}).get("views", 0)

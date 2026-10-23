@@ -37,8 +37,20 @@ function nibblySystemStatus(string $scheme = ''): array {
         // Created on first use under content/, which the security check below proves is not public.
         'storageWritable' => is_dir($agentDir) ? is_writable($agentDir) : is_writable(dirname($agentDir)),
     ];
+    // Uploads: the PHP limits cap every upload before Nibbly sees it
+    require_once __DIR__ . '/media-web-version.php';
+    $serverLimit = nibblyUploadServerLimit();
+    $uploads = [
+        'uploadMaxFilesize' => (string)ini_get('upload_max_filesize'),
+        'postMaxSize' => (string)ini_get('post_max_size'),
+        'memoryLimit' => (string)ini_get('memory_limit'),
+        'serverMaxBytes' => $serverLimit === PHP_INT_MAX ? null : $serverLimit,
+        'imageMaxBytes' => nibblyMediaImageMaxBytes(),
+        'webVersion' => nibblyMediaSettings()['webVersion'],
+        'webp' => nibblyMediaCanEncodeWebp(),
+    ];
     return [
-        'php' => PHP_VERSION, 'extensions' => $extensions, 'paths' => $paths, 'agent' => $agent,
+        'php' => PHP_VERSION, 'extensions' => $extensions, 'paths' => $paths, 'agent' => $agent, 'uploads' => $uploads,
         'lastBackup' => isset($backups[0]['mtime']) ? date('c', $backups[0]['mtime']) : null,
         'failedJobs' => $jobs, 'requests' => $requests,
         // Cached network probe only; POST action security-check refreshes it.

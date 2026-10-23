@@ -9,6 +9,41 @@ Git milestones and the gaps in publication records.
 
 ## Unreleased
 
+## [2.4.3] — 2026-10-24
+
+### Added
+
+- **Web versions for large images.** An uploaded JPEG, PNG or WebP that is bigger than a page
+  needs is re-encoded once on upload: scaled to the configured longest side (2000 px by default)
+  and saved as WebP under the chosen name; pages embed that version. The file as uploaded moves to
+  `assets/images-originals/` and shows in the media library as an "Original" badge; the badge opens
+  a dialog with size, dimensions and path, a preview, "copy path" and the download, the download
+  action hands out the original too, and it follows rename, move, trash, restore and permanent
+  deletion. Small
+  files stay as they are; GIF and SVG are never converted. Library images above 2 MB without an
+  original carry a "large" badge.
+- **Media settings** (Settings → Modules → Media library, `media` in `content/settings.json`):
+  upload limit for images (`maxUploadMb`, default 20 instead of the former fixed 5 MB), web
+  versions on or off (`webVersion`), longest side (`webMaxSide`) and WebP quality (`webQuality`).
+- **The server's upload limit is visible.** The media library shows the limit that applies
+  (Nibbly's, or PHP's `upload_max_filesize` / `post_max_size` when lower) next to the formats
+  hint, checks files before sending and names the server limit when a file is above it; the API
+  answers oversized requests with that limit instead of "Upload error" or "Unknown action". The
+  system status lists the PHP limits, the image limit, the web-version state and `memory_limit`;
+  `.htaccess` carries a commented example for raising the PHP limits.
+
+### Changed
+
+- **Media library grid** uses the icon manager's rhythm: 220 px columns that fill the row,
+  one-pixel card frames, 140 px thumbnails, name and badge on one line.
+- **Icon manager** shows the icon set's site-relative path (`content/settings/iconset.json`)
+  instead of the server's absolute path.
+- **Media library controls follow the design settings.** The type, library/trash and view
+  toggles are drawn like the dashboard's segmented control (sunken tray, raised chosen option,
+  round in Pop, crosshair in Console) on the toolbar's control height; the Upload and Image
+  generator buttons take the button radius, glow and hover colours and share one height with the
+  upload-type select.
+
 ## [2.4.2] — 2026-10-23
 
 ### Added

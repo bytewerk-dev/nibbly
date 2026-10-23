@@ -4,6 +4,10 @@
  * Replicates .htaccess rewrite rules for local development.
  *
  * Usage: php -S localhost:3000 router.php
+ *
+ * The built-in server uses the CLI php.ini, whose upload_max_filesize is often
+ * 2M; to test large image uploads start it with higher limits:
+ *   php -d upload_max_filesize=20M -d post_max_size=25M -S localhost:3000 router.php
  */
 
 $uri = rawurldecode((string)parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH));

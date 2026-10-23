@@ -333,6 +333,7 @@
                     runSeoCheck(false).catch(() => { if (seoStatus) applySeoStatus(seoStatus); });
                 }
             }
+            const nbMegabytes = bytes => { const mb = bytes / 1048576; return mb >= 1 && Math.abs(mb - Math.round(mb)) < 0.05 ? String(Math.round(mb)) : String(Math.round(mb * 10) / 10); };
             const runtime = group(t('system.runtime'));
             runtime.append(row('PHP', data.php));
             for (const ext of data.extensions) runtime.append(row(ext.name, t(ext.available ? 'system.available' : 'system.missing')));
@@ -346,6 +347,15 @@
                 agent.append(row(t('system.agent_stock'), t(data.agent.stock ? 'system.configured' : 'system.not_configured')));
                 agent.append(row('content/ai-agent/', t(data.agent.storageWritable ? 'system.writable' : 'system.not_writable')));
                 const note = document.createElement('p'); note.textContent = t('system.agent_storage_note'); agent.append(note);
+            }
+            if (data.uploads) {
+                const up = data.uploads;
+                const uploads = group(t('system.uploads'));
+                uploads.append(row(t('system.upload_server_limit'), up.serverMaxBytes ? nbMegabytes(up.serverMaxBytes) + ' MB (upload_max_filesize ' + up.uploadMaxFilesize + ', post_max_size ' + up.postMaxSize + ')' : t('system.upload_unlimited')));
+                uploads.append(row(t('system.upload_image_limit'), nbMegabytes(up.imageMaxBytes) + ' MB' + (up.serverMaxBytes && up.serverMaxBytes < up.imageMaxBytes ? ' · ' + t('system.upload_server_bound', { max: nbMegabytes(up.serverMaxBytes) }) : '')));
+                uploads.append(row(t('system.upload_web_version'), t(!up.webVersion ? 'system.upload_off' : (up.webp ? 'system.upload_on' : 'system.upload_no_webp'))));
+                uploads.append(row(t('system.upload_memory'), up.memoryLimit));
+                const uploadNote = document.createElement('p'); uploadNote.textContent = t('system.upload_note'); uploads.append(uploadNote);
             }
             const storage = group(t('system.storage'));
             for (const path of data.paths) storage.append(row(path.name, t(path.writable ? 'system.writable' : 'system.not_writable')));

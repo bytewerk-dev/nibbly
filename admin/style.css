@@ -11092,11 +11092,30 @@ label.toggle-label > .toggle-switch,
 }
 
 /* Buttons: flat, caps, tracked; secondary ones are outlined */
-[data-theme-preset="console"] .btn {
+[data-theme-preset="console"] .btn,
+[data-theme-preset="console"] .nb-imgmgr-upload-btn,
+[data-theme-preset="console"] .nb-imgmgr-ai-generator-btn {
     font-size: var(--nb-text-xs);
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+}
+
+[data-theme-preset="console"] .nb-imgmgr-upload-btn {
+    background-image: none;
+}
+
+/* Console's option trays carry 6px padding for the crosshair; in the media
+   toolbar the options shrink so the tray stays on the search field's height */
+[data-theme-preset="console"] .nb-imgmgr-type-btn,
+[data-theme-preset="console"] .nb-imgmgr-mode-btn,
+[data-theme-preset="console"] .nb-imgmgr-view-btn {
+    height: calc(var(--nb-control-h) - 14px);
+}
+
+[data-theme-preset="console"] .nb-imgmgr-ai-generator-btn {
+    background: transparent;
+    border-color: var(--nb-border-strong);
 }
 
 [data-theme-preset="console"] .btn-primary,
@@ -11147,7 +11166,10 @@ label.toggle-label > .toggle-switch,
 [data-theme-preset="console"] .settings-tab-btn.active,
 [data-theme-preset="console"] .sidebar-nav-item.active,
 [data-theme-preset="console"] .ai-tool-tab.active,
-[data-theme-preset="console"] .dashboard-range-tab.active {
+[data-theme-preset="console"] .dashboard-range-tab.active,
+[data-theme-preset="console"] .nb-imgmgr-type-btn--active,
+[data-theme-preset="console"] .nb-imgmgr-mode-btn--active,
+[data-theme-preset="console"] .nb-imgmgr-view-btn--active {
     position: relative;
     box-shadow: none;
 }
@@ -11169,7 +11191,10 @@ label.toggle-label > .toggle-switch,
 [data-theme-preset="console"] .settings-tab-btn.active,
 [data-theme-preset="console"] .sidebar-nav-item.active,
 [data-theme-preset="console"] .ai-tool-tab.active,
-[data-theme-preset="console"] .dashboard-range-tab.active {
+[data-theme-preset="console"] .dashboard-range-tab.active,
+[data-theme-preset="console"] .nb-imgmgr-type-btn--active,
+[data-theme-preset="console"] .nb-imgmgr-mode-btn--active,
+[data-theme-preset="console"] .nb-imgmgr-view-btn--active {
     --nb-xh-off: 3px;
     --nb-xh-len: 7px;
 }
@@ -11180,7 +11205,10 @@ label.toggle-label > .toggle-switch,
 [data-theme-preset="console"] .settings-tab-btn.active::after,
 [data-theme-preset="console"] .sidebar-nav-item.active::after,
 [data-theme-preset="console"] .ai-tool-tab.active::after,
-[data-theme-preset="console"] .dashboard-range-tab.active::after {
+[data-theme-preset="console"] .dashboard-range-tab.active::after,
+[data-theme-preset="console"] .nb-imgmgr-type-btn--active::after,
+[data-theme-preset="console"] .nb-imgmgr-mode-btn--active::after,
+[data-theme-preset="console"] .nb-imgmgr-view-btn--active::after {
     content: "";
     position: absolute;
     inset: calc(-1 * var(--nb-xh-off, 6px));
@@ -11242,7 +11270,10 @@ label.toggle-label > .toggle-switch,
    the chosen option is a raised box instead of a filled pill */
 [data-theme-preset="console"] .segmented,
 [data-theme-preset="console"] .ai-tool-tabs,
-[data-theme-preset="console"] .dashboard-range-tabs {
+[data-theme-preset="console"] .dashboard-range-tabs,
+[data-theme-preset="console"] .nb-imgmgr-type-toggle,
+[data-theme-preset="console"] .nb-imgmgr-mode-toggle,
+[data-theme-preset="console"] .nb-imgmgr-view-toggle {
     gap: var(--nb-space-2-5);
     padding: var(--nb-space-1-5);
     border-radius: var(--nb-radius-md);
@@ -11252,7 +11283,10 @@ label.toggle-label > .toggle-switch,
 
 [data-theme-preset="console"] .segmented label,
 [data-theme-preset="console"] .ai-tool-tab,
-[data-theme-preset="console"] .dashboard-range-tab {
+[data-theme-preset="console"] .dashboard-range-tab,
+[data-theme-preset="console"] .nb-imgmgr-type-btn,
+[data-theme-preset="console"] .nb-imgmgr-mode-btn,
+[data-theme-preset="console"] .nb-imgmgr-view-btn {
     border-radius: var(--nb-radius-sm);
     font-size: var(--nb-text-xs);
     font-weight: 600;
@@ -11263,7 +11297,10 @@ label.toggle-label > .toggle-switch,
 
 [data-theme-preset="console"] .segmented label:has(input:checked),
 [data-theme-preset="console"] .ai-tool-tab.active,
-[data-theme-preset="console"] .dashboard-range-tab.active {
+[data-theme-preset="console"] .dashboard-range-tab.active,
+[data-theme-preset="console"] .nb-imgmgr-type-btn--active,
+[data-theme-preset="console"] .nb-imgmgr-mode-btn--active,
+[data-theme-preset="console"] .nb-imgmgr-view-btn--active {
     background: var(--nb-bg-elevated);
     color: var(--nb-text);
     box-shadow: none;
@@ -11336,7 +11373,10 @@ label.toggle-label > .toggle-switch,
 
 [data-theme-preset="console"] .segmented label + label::before,
 [data-theme-preset="console"] .ai-tool-tab + .ai-tool-tab::before,
-[data-theme-preset="console"] .dashboard-range-tab + .dashboard-range-tab::before {
+[data-theme-preset="console"] .dashboard-range-tab + .dashboard-range-tab::before,
+[data-theme-preset="console"] .nb-imgmgr-type-btn + .nb-imgmgr-type-btn::before,
+[data-theme-preset="console"] .nb-imgmgr-mode-btn + .nb-imgmgr-mode-btn::before,
+[data-theme-preset="console"] .nb-imgmgr-view-btn + .nb-imgmgr-view-btn::before {
     content: "";
     position: absolute;
     left: calc(var(--nb-space-2-5) / -2);
@@ -11470,10 +11510,9 @@ html[data-theme-preset="pop"] .settings-panel h3.settings-subheading,
     font-size: inherit;
     letter-spacing: inherit;
     text-transform: inherit;
-    /* Caps have no descenders: a touch more room below keeps them centred */
     line-height: 1;
-    padding: 3px var(--nb-space-2) 4px;
-    vertical-align: 1px;
+    padding: 3px var(--nb-space-2) 2px;
+    vertical-align: 0px;
 }
 
 [data-theme-preset="pop"] .dashboard-panel h3,
@@ -11561,17 +11600,32 @@ html[data-sidebar="collapsed"][data-theme-preset="pop"] .sidebar-nav-item {
 }
 
 /* Option groups and chips: round tray, round options */
-[data-theme-preset="pop"] .segmented {
+[data-theme-preset="pop"] .segmented,
+[data-theme-preset="pop"] .nb-imgmgr-type-toggle,
+[data-theme-preset="pop"] .nb-imgmgr-mode-toggle,
+[data-theme-preset="pop"] .nb-imgmgr-view-toggle {
     border-radius: var(--nb-radius-full, 999px);
     padding: 3px;
 }
 
-[data-theme-preset="pop"] .segmented label {
+[data-theme-preset="pop"] .segmented label,
+[data-theme-preset="pop"] .nb-imgmgr-type-btn,
+[data-theme-preset="pop"] .nb-imgmgr-mode-btn,
+[data-theme-preset="pop"] .nb-imgmgr-view-btn {
     border-radius: var(--nb-radius-full, 999px);
 }
 
-[data-theme-preset="pop"] .segmented label:has(input:checked) {
+[data-theme-preset="pop"] .segmented label:has(input:checked),
+[data-theme-preset="pop"] .nb-imgmgr-type-btn--active,
+[data-theme-preset="pop"] .nb-imgmgr-mode-btn--active,
+[data-theme-preset="pop"] .nb-imgmgr-view-btn--active {
     box-shadow: var(--nb-shadow-sm);
+}
+
+[data-theme-preset="pop"] .nb-imgmgr-type-btn,
+[data-theme-preset="pop"] .nb-imgmgr-mode-btn,
+[data-theme-preset="pop"] .nb-imgmgr-view-btn {
+    height: calc(var(--nb-control-h) - 8px);
 }
 
 /* Colour swatches are round */
@@ -11702,6 +11756,71 @@ html[data-sidebar="collapsed"][data-theme-preset="pop"] .sidebar-nav-item {
 
 [data-theme-preset="pop"] .page-list-table tbody td:last-child::before {
     border-radius: 0 var(--nb-radius-md) var(--nb-radius-md) 0;
+}
+
+/* Media library: grid items keep the normal card rounding, not the 30px */
+[data-theme-preset="pop"] .nb-imgmgr-item {
+    border-radius: var(--nb-radius-md);
+}
+
+/* Media library list view: a light card like the page list, the pill head
+   inside it, rows with the inset hover */
+[data-theme-preset="pop"] .nb-imgmgr-list.active {
+    padding: var(--nb-space-2);
+    border: 1px solid var(--nb-border-subtle);
+    border-radius: var(--nb-radius-lg);
+    background: var(--nb-bg-elevated);
+    box-shadow: var(--nb-shadow-sm);
+}
+
+[data-theme-preset="pop"] .nb-imgmgr-list-header {
+    margin-bottom: 6px;
+    border: 0;
+    border-radius: var(--nb-radius-full, 999px);
+    background: color-mix(in srgb, var(--nb-primary) 15%, var(--nb-bg-elevated));
+    color: var(--nb-primary);
+    font-size: var(--nb-text-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+}
+
+[data-theme-preset="pop"] .nb-imgmgr-list-header-col:hover {
+    color: var(--nb-primary-hover);
+}
+
+[data-theme-preset="pop"] .nb-imgmgr-list-body {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+[data-theme-preset="pop"] .nb-imgmgr-row {
+    position: relative;
+    z-index: 0;
+}
+
+[data-theme-preset="pop"] .nb-imgmgr-row:hover {
+    background: transparent;
+}
+
+[data-theme-preset="pop"] .nb-imgmgr-row::before {
+    content: "";
+    position: absolute;
+    inset: 3px var(--nb-space-1) 4px;
+    z-index: -1;
+    border-radius: var(--nb-radius-md);
+    background: var(--nb-bg-hover);
+    opacity: 0;
+    transition: opacity var(--nb-duration-hover-out) ease-out;
+    pointer-events: none;
+}
+
+[data-theme-preset="pop"] .nb-imgmgr-row:hover::before {
+    opacity: 1;
+}
+
+[data-theme-preset="pop"] .nb-imgmgr-row:last-child::before {
+    bottom: 0;
 }
 
 /* Sortable heads answer the pointer: deeper text, a shade more tint */

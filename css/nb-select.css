@@ -76,12 +76,19 @@ input.modal-input {
 
 /* Media library toolbar selects: match the 32px Library/Trash toggle. */
 .nb-select--nb-imgmgr-folder-filter .nb-select__button,
-.nb-select--nb-imgmgr-upload-type .nb-select__button,
 .nb-select--nb-imgmgr-move-select .nb-select__button {
-    height: 32px;
-    min-height: 32px;
+    height: var(--nb-control-h-sm, 32px);
+    min-height: var(--nb-control-h-sm, 32px);
     padding: 0 var(--nb-select-caret-inset, 14px) 0 10px;
     font-size: 0.8125rem;
+}
+
+/* The upload-type select in the dropzone is as tall as the Upload button beside it */
+.nb-select--nb-imgmgr-upload-type .nb-select__button {
+    height: var(--nb-control-h, 36px);
+    min-height: var(--nb-control-h, 36px);
+    padding: 0 var(--nb-select-caret-inset, 14px) 0 12px;
+    font-size: var(--nb-text-md, 0.875rem);
 }
 
 /* Compact variant for the content editor topbar (language/page pickers):

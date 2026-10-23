@@ -60,13 +60,17 @@ class Site:
         self.port = 0
         self.process = None
 
-    def start(self, router="router.php"):
+    def start(self, router="router.php", ini=None):
+        """ini: extra php.ini overrides, e.g. {"upload_max_filesize": "1M"}."""
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))
             self.port = sock.getsockname()[1]
         self.log = open(self.root / "server.log", "w+")
+        flags = ["-d", "display_errors=0"]
+        for key, value in (ini or {}).items():
+            flags += ["-d", f"{key}={value}"]
         self.process = subprocess.Popen(
-            ["php", "-d", "display_errors=0", "-S", f"127.0.0.1:{self.port}", router],
+            ["php", *flags, "-S", f"127.0.0.1:{self.port}", router],
             cwd=self.root, stdout=self.log, stderr=self.log)
         for _ in range(100):
             if self.process.poll() is not None:

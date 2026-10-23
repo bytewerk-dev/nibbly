@@ -2523,6 +2523,34 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                         </div>
                         <small class="form-hint"><?php echo t('settings.modules_hint'); ?></small>
                     </fieldset>
+                    <fieldset class="settings-section settings-section--compact">
+                        <legend><?php echo t('settings.media_section'); ?></legend>
+                        <div class="form-row-inline">
+                            <div class="form-group">
+                                <label for="settingsMediaMaxUpload"><?php echo t('settings.media_max_upload'); ?></label>
+                                <input type="number" id="settingsMediaMaxUpload" min="1" max="200" step="1" value="20" inputmode="numeric">
+                                <small class="form-hint"><?php echo t('settings.media_max_upload_hint'); ?></small>
+                            </div>
+                            <div class="form-group">
+                                <label for="settingsMediaWebMaxSide"><?php echo t('settings.media_web_max_side'); ?></label>
+                                <input type="number" id="settingsMediaWebMaxSide" min="800" max="6000" step="100" value="2000" inputmode="numeric">
+                            </div>
+                            <div class="form-group">
+                                <label for="settingsMediaWebQuality"><?php echo t('settings.media_web_quality'); ?></label>
+                                <input type="number" id="settingsMediaWebQuality" min="50" max="95" step="1" value="82" inputmode="numeric">
+                            </div>
+                        </div>
+                        <div class="form-group access-toggle-row access-toggle-row--module">
+                            <label class="toggle-label">
+                                <span><?php echo t('settings.media_web_version'); ?></span>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="settingsMediaWebVersion" checked>
+                                    <span class="toggle-slider"></span>
+                                </div>
+                            </label>
+                            <small class="form-hint"><?php echo t('settings.media_web_version_hint'); ?></small>
+                        </div>
+                    </fieldset>
                     <div class="settings-actions">
                         <button type="submit" class="btn btn-primary" id="saveModulesBtn"><?php echo t('settings.save_modules'); ?></button>
                     </div>

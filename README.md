@@ -48,6 +48,12 @@ php -S localhost:3000 router.php
 # Set your site name, language, and admin password
 ```
 
+For large image uploads raise the CLI limits (the default `upload_max_filesize` is often 2M):
+
+```bash
+php -d upload_max_filesize=20M -d post_max_size=25M -S localhost:3000 router.php
+```
+
 That's it. Your site is running.
 
 Before uploading or upgrading a site, follow
