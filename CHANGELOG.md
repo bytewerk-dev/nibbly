@@ -9,6 +9,36 @@ Git milestones and the gaps in publication records.
 
 ## Unreleased
 
+### Added
+
+- **Pop theme** (Settings → Design, `theme.preset: pop`), the sixth preset: a deep slate
+  sidebar and topbar drawn from the base hue as a vertical gradient, a light stage with
+  rounded white cards and soft shadows, legends, panel titles, stat and status labels in
+  pill-shaped chips (stat tiles take turns through base, danger, warning, success and accent),
+  round navigation with a glowing active pill, round colour swatches and tinted table heads.
+  Picking the card brings Atkinson Hyperlegible Next,
+  24 px button radius, glow and its own four-colour palette; every field stays free to change.
+  Light and dark variants; the dark one lifts the colours and darkens the pill text.
+- **Text size** (Settings → Design, `theme.fontSize`: small, default, large). Scales the
+  dashboard's type steps only; spacing, controls and the sidebar keep their size, so the
+  relation between text and elements stays as it is.
+- **Three new local fonts**: IBM Plex Sans, Atkinson Hyperlegible Next and Public Sans
+  (variable, latin and latin-ext, SIL Open Font License, shipped in `admin/fonts/`). Each
+  theme brings its own: Soft Inter, Classic Public Sans, Paper Atkinson Hyperlegible, Studio
+  IBM Plex Sans, Console Geist Mono.
+
+### Fixed
+
+- The breadcrumb in the topbar took the stage's muted text colour and was hard to read on
+  the dark topbars of Classic and Pop; it now uses the topbar's own muted colour.
+- The collapsible boxes in the AI agent settings keep their bottom padding when open, and the
+  hover surface of their heading stays inside the rounded frame.
+
+### Removed
+
+- The Geist sans font. It was hardly distinguishable from Inter; a stored `geist` setting
+  reads as IBM Plex Sans. Geist Mono stays for the Console theme.
+
 ## [2.4.1] — 2026-10-23
 
 ### Changed

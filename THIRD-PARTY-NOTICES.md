@@ -211,13 +211,37 @@ License: Apache License 2.0
    See the License for the specific language governing permissions and
    limitations under the License.
 
-## Geist and Geist Mono
+## Geist Mono
 
-The dashboard can use the Geist typeface, shipped locally in `admin/fonts/` (`geist-variable.woff2`, `geist-mono-variable.woff2`). No external request is made.
+The dashboard's Console theme can use the Geist Mono typeface, shipped locally in `admin/fonts/` (`geist-mono-variable.woff2`). No external request is made.
 
 Source: https://github.com/vercel/geist-font
 
 License: MIT License (SIL Open Font License 1.1 for releases from 1.4.0)
+
+## IBM Plex Sans
+
+The dashboard can use the IBM Plex Sans typeface, shipped locally in `admin/fonts/` as the variable font in the latin and latin-ext subsets (`ibm-plex-sans-variable-latin.woff2`, `ibm-plex-sans-variable-latin-ext.woff2`, downloaded once from Google Fonts). No external request is made at runtime.
+
+Source: https://github.com/IBM/plex (files via https://fonts.google.com/specimen/IBM+Plex+Sans)
+
+License: SIL Open Font License 1.1, Copyright © 2017 IBM Corp. with Reserved Font Name "Plex"
+
+## Atkinson Hyperlegible Next
+
+The dashboard can use the Atkinson Hyperlegible Next typeface, shipped locally in `admin/fonts/` as the variable font in the latin and latin-ext subsets (`atkinson-hyperlegible-next-variable-latin.woff2`, `atkinson-hyperlegible-next-variable-latin-ext.woff2`, downloaded once from Google Fonts). No external request is made at runtime.
+
+Source: https://github.com/googlefonts/atkinson-hyperlegible-next (files via https://fonts.google.com/specimen/Atkinson+Hyperlegible+Next)
+
+License: SIL Open Font License 1.1, Copyright 2020-2024 The Atkinson Hyperlegible Next Project Authors
+
+## Public Sans
+
+The dashboard can use the Public Sans typeface, shipped locally in `admin/fonts/` as the variable font in the latin and latin-ext subsets (`public-sans-variable-latin.woff2`, `public-sans-variable-latin-ext.woff2`, downloaded once from Google Fonts). No external request is made at runtime.
+
+Source: https://github.com/uswds/public-sans (files via https://fonts.google.com/specimen/Public+Sans)
+
+License: SIL Open Font License 1.1 for the Libre Franklin original (Copyright 2015 Impallari Type with Reserved Font Name "Libre Franklin"); the modifications by the U.S. General Services Administration are dedicated to the public domain under CC0 1.0.
 
 ## Inter
 

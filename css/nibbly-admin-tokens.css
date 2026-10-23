@@ -134,13 +134,16 @@
     --nb-space-10: calc(2.5rem * var(--nb-d, 1));    /* 40px */
     --nb-space-12: calc(3rem * var(--nb-d, 1));      /* 48px */
 
-    /* Type scale: six steps. Size separates the levels, weight is secondary. */
-    --nb-text-xs: 0.75rem;     /* table heads, group labels, meta, pills */
-    --nb-text-sm: 0.8125rem;   /* hints, descriptions */
-    --nb-text-md: 0.875rem;    /* body, labels, buttons, inputs */
-    --nb-text-lg: 1rem;        /* h3 card titles */
-    --nb-text-xl: 1.375rem;    /* h2 page titles */
-    --nb-text-2xl: 1.75rem;    /* stat numbers */
+    /* Type scale: six steps. Size separates the levels, weight is secondary.
+       --nb-font-scale (the "Schriftgröße" setting, data-font-size on <html>)
+       multiplies the steps only; spacing and control heights stay as they are. */
+    --nb-font-scale: 1;
+    --nb-text-xs: calc(0.75rem * var(--nb-font-scale));     /* table heads, group labels, meta, pills */
+    --nb-text-sm: calc(0.8125rem * var(--nb-font-scale));   /* hints, descriptions */
+    --nb-text-md: calc(0.875rem * var(--nb-font-scale));    /* body, labels, buttons, inputs */
+    --nb-text-lg: calc(1rem * var(--nb-font-scale));        /* h3 card titles */
+    --nb-text-xl: calc(1.375rem * var(--nb-font-scale));    /* h2 page titles */
+    --nb-text-2xl: calc(1.75rem * var(--nb-font-scale));    /* stat numbers */
 
     /* Controls: one height for inputs, selects and buttons, one small
        variant for toolbars and table rows. */
@@ -233,8 +236,8 @@
    ------------------------------------------------------------
    Needs relative colour syntax (Chrome 119, Safari 16.4, Firefox 128).
    Older browsers keep the static values above. The <html> element carries
-   data-theme-preset="soft|classic|paper|studio" (default soft),
-   data-font="system|geist|inter" and data-density; admin/dashboard.php
+   data-theme-preset="soft|classic|paper|studio|console|pop" (default soft),
+   data-font="system|inter|plex|atkinson|public|geist-mono", data-font-size and data-density; admin/dashboard.php
    sets --nb-base / --nb-accent-base inline from the saved settings.
    ============================================================ */
 
@@ -633,6 +636,77 @@
         --nb-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.6);
         --nb-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.7);
     }
+
+    /* ---------- POP: playful dashboard. Dark gradient chrome, light stage, colourful pills ----------
+       The sidebar and topbar take a deep slate drawn from the base hue and run
+       as a vertical gradient; the stage is a cool light sheet with rounded
+       white cards and soft shadows. Labels, legends and panel titles sit in
+       pill-shaped chips in the primary and semantic colours. The preset pairs
+       with Atkinson Hyperlegible Next and brings its own four-colour palette. */
+    [data-theme-preset="pop"] {
+        --nb-primary-src: var(--nb-base);
+        /* Chrome: deep slate from the base hue; the gradient runs from the sidebar colour
+           to a lighter step of it, so a custom sidebar colour keeps the gradient */
+        --nb-sidebar-bg: oklch(from var(--nb-base) 0.33 min(c, 0.045) h);
+        --nb-sidebar-gradient: linear-gradient(180deg, var(--nb-sidebar-bg) 0%, oklch(from var(--nb-sidebar-bg) calc(l + 0.09) calc(c * 1.1) h) 100%);
+        --nb-bg: oklch(from var(--nb-base) 0.955 min(c, 0.014) h);
+        --nb-bg-elevated: #ffffff;
+        --nb-bg-sunken: oklch(from var(--nb-base) 0.93 min(c, 0.016) h);
+        --nb-bg-hover: oklch(from var(--nb-base) 0.965 min(c, 0.012) h);
+        --nb-border: oklch(from var(--nb-base) 0.90 min(c, 0.02) h);
+        --nb-border-strong: oklch(from var(--nb-base) 0.78 min(c, 0.03) h);
+        --nb-border-subtle: oklch(from var(--nb-base) 0.935 min(c, 0.014) h);
+        --nb-text: oklch(from var(--nb-base) 0.25 min(c, 0.03) h);
+        --nb-text-secondary: oklch(from var(--nb-base) 0.38 min(c, 0.03) h);
+        --nb-text-muted: oklch(from var(--nb-base) 0.50 min(c, 0.03) h);
+        --nb-sidebar-text: oklch(from var(--nb-base) 0.88 min(c, 0.02) h);
+        --nb-sidebar-text-active: var(--nb-text-on-primary);
+        --nb-sidebar-text-hover: #ffffff;
+        --nb-sidebar-hover-bg: rgba(255, 255, 255, 0.09);
+        --nb-sidebar-active-bg: var(--nb-primary);
+        --nb-sidebar-border: rgba(255, 255, 255, 0.10);
+        --nb-topbar-bg: var(--nb-sidebar-bg);
+        --nb-topbar-text: #ffffff;
+        --nb-topbar-text-muted: oklch(from var(--nb-base) 0.82 min(c, 0.02) h);
+        --nb-topbar-border: transparent;
+        --nb-topbar-divider: rgba(255, 255, 255, 0.14);
+        /* Cards on the stage are white sheets; grouped surfaces a shade below */
+        --nb-surface-item: #ffffff;
+        --nb-surface-group: oklch(from var(--nb-base) 0.975 min(c, 0.008) h);
+        --nb-radius-sm: 6px;
+        --nb-radius-md: 10px;
+        --nb-radius-lg: 14px;
+        --nb-radius-xl: 18px;
+        --nb-shadow-sm: 0 1px 2px oklch(from var(--nb-sidebar-bg) l c h / 0.06), 0 3px 10px oklch(from var(--nb-sidebar-bg) l c h / 0.07);
+        --nb-shadow-md: 0 4px 14px oklch(from var(--nb-sidebar-bg) l c h / 0.12), 0 2px 4px oklch(from var(--nb-sidebar-bg) l c h / 0.06);
+        --nb-shadow-lg: 0 12px 32px oklch(from var(--nb-sidebar-bg) l c h / 0.18);
+        --nb-shadow-xl: 0 20px 56px oklch(from var(--nb-sidebar-bg) l c h / 0.26);
+    }
+
+    [data-theme-preset="pop"][data-site-theme="dark"] {
+        --nb-sidebar-bg: oklch(from var(--nb-base) 0.21 min(c, 0.035) h);
+        --nb-sidebar-gradient: linear-gradient(180deg, var(--nb-sidebar-bg) 0%, oklch(from var(--nb-sidebar-bg) calc(l + 0.07) calc(c * 1.1) h) 100%);
+        --nb-bg: oklch(from var(--nb-base) 0.26 min(c, 0.03) h);
+        --nb-bg-elevated: oklch(from var(--nb-base) 0.31 min(c, 0.03) h);
+        --nb-bg-sunken: oklch(from var(--nb-base) 0.23 min(c, 0.03) h);
+        --nb-bg-hover: oklch(from var(--nb-base) 0.34 min(c, 0.03) h);
+        --nb-border: oklch(from var(--nb-base) 0.38 min(c, 0.03) h);
+        --nb-border-strong: oklch(from var(--nb-base) 0.48 min(c, 0.03) h);
+        --nb-border-subtle: oklch(from var(--nb-base) 0.34 min(c, 0.03) h);
+        --nb-text: oklch(from var(--nb-base) 0.94 min(c, 0.01) h);
+        --nb-text-secondary: oklch(from var(--nb-base) 0.82 min(c, 0.015) h);
+        --nb-text-muted: oklch(from var(--nb-base) 0.70 min(c, 0.02) h);
+        --nb-sidebar-text: oklch(from var(--nb-base) 0.84 min(c, 0.02) h);
+        --nb-sidebar-hover-bg: rgba(255, 255, 255, 0.08);
+        --nb-topbar-bg: var(--nb-sidebar-bg);
+        --nb-topbar-text-muted: oklch(from var(--nb-base) 0.74 min(c, 0.02) h);
+        --nb-surface-item: var(--nb-bg-elevated);
+        --nb-surface-group: oklch(from var(--nb-base) 0.29 min(c, 0.03) h);
+        --nb-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25), 0 3px 10px rgba(0, 0, 0, 0.22);
+        --nb-shadow-md: 0 4px 14px rgba(0, 0, 0, 0.35);
+        --nb-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.45);
+        --nb-shadow-xl: 0 20px 56px rgba(0, 0, 0, 0.55);
+    }
 }
 
 
@@ -640,9 +714,20 @@
    FONTS — local files only (admin/fonts.css declares the faces)
    ============================================================ */
 
-[data-font="geist"] {
-    --nb-font-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --nb-font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+/* Text size steps: the type scale only, spacing and controls keep their size */
+[data-font-size="small"] { --nb-font-scale: 0.92; }
+[data-font-size="large"] { --nb-font-scale: 1.1; }
+
+[data-font="plex"] {
+    --nb-font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+[data-font="atkinson"] {
+    --nb-font-sans: 'Atkinson Hyperlegible Next', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+[data-font="public"] {
+    --nb-font-sans: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 [data-font="inter"] {

@@ -431,6 +431,7 @@
         preset: 'soft',
         density: 'auto',
         font: 'system',
+        fontSize: 'default',
         primaryColor: '#3858e9',
         accentColor: '',
         sidebarBg: '',
@@ -459,19 +460,23 @@
         defaultOgImage: ''
     };
 
-    var THEME_PRESETS = ['soft', 'classic', 'paper', 'studio', 'console'];
+    var THEME_PRESETS = ['soft', 'classic', 'paper', 'studio', 'console', 'pop'];
     var THEME_DENSITIES = ['auto', 'compact', 'comfortable'];
-    var THEME_FONTS = ['system', 'geist', 'inter', 'geist-mono'];
+    var THEME_FONTS = ['system', 'inter', 'plex', 'atkinson', 'public', 'geist-mono'];
+    var THEME_FONT_SIZES = ['small', 'default', 'large'];
+    // Retired fonts map to their closest successor
+    var THEME_FONT_ALIASES = { geist: 'plex' };
     // Each preset brings its own defaults: the matching face, button radius
-    // and glow, and for Console the orange base colour. Picking a card applies
+    // and glow, for Console the orange base colour and for Pop its four-colour palette. Picking a card applies
     // them; every field stays free to change afterwards. The colour a user had
     // before Console is remembered and comes back when they leave Console.
     var THEME_PRESET_DEFAULTS = {
         soft:    { font: 'inter',      buttonRadius: 6, buttonGlow: true },
-        classic: { font: 'system',     buttonRadius: 4, buttonGlow: false },
-        paper:   { font: 'system',     buttonRadius: 6, buttonGlow: false },
-        studio:  { font: 'geist',      buttonRadius: 6, buttonGlow: false },
-        console: { font: 'geist-mono', buttonRadius: 0, buttonGlow: false, colors: { primaryColor: '#ff9214', dangerColor: '#fa7000', warningColor: '#ffc400', successColor: '#2ecc71' } }
+        classic: { font: 'public',     buttonRadius: 4, buttonGlow: false },
+        paper:   { font: 'atkinson',   buttonRadius: 6, buttonGlow: false },
+        studio:  { font: 'plex',       buttonRadius: 6, buttonGlow: false },
+        console: { font: 'geist-mono', buttonRadius: 0, buttonGlow: false, colors: { primaryColor: '#ff9214', dangerColor: '#fa7000', warningColor: '#ffc400', successColor: '#2ecc71' } },
+        pop:     { font: 'atkinson',   buttonRadius: 24, buttonGlow: true, colors: { primaryColor: '#3d8ee9', dangerColor: '#f0625d', warningColor: '#ef9524', successColor: '#27b39a' } }
     };
     var presetColorBackup = {};
     var PRESET_COLOR_KEYS = ['primaryColor', 'dangerColor', 'warningColor', 'successColor'];
@@ -693,12 +698,15 @@
 
         var fontSelect = document.getElementById('settingsFont');
         if (fontSelect) {
-            fontSelect.value = pickOne(theme.font, THEME_FONTS, 'system');
+            fontSelect.value = pickOne(THEME_FONT_ALIASES[theme.font] || theme.font, THEME_FONTS, 'system');
             window.nbSelectSync?.(fontSelect);
         }
         var density = pickOne(theme.density, THEME_DENSITIES, 'auto');
         var densityRadio = document.querySelector('input[name="settingsDensity"][value="' + density + '"]');
         if (densityRadio) densityRadio.checked = true;
+        var fontSize = pickOne(theme.fontSize, THEME_FONT_SIZES, 'default');
+        var fontSizeRadio = document.querySelector('input[name="settingsFontSize"][value="' + fontSize + '"]');
+        if (fontSizeRadio) fontSizeRadio.checked = true;
 
         updateThemeContrastFeedback();
     }
@@ -706,11 +714,13 @@
     // Read current theme state from the form (returns the same shape as settings.theme)
     function readThemeFormState() {
         var densityRadio = document.querySelector('input[name="settingsDensity"]:checked');
+        var fontSizeRadio = document.querySelector('input[name="settingsFontSize"]:checked');
         return {
             adminTheme: document.getElementById('settingsAdminTheme').value,
             preset: pickOne(document.getElementById('settingsThemePreset').value, THEME_PRESETS, 'soft'),
             density: pickOne(densityRadio ? densityRadio.value : 'auto', THEME_DENSITIES, 'auto'),
             font: pickOne(document.getElementById('settingsFont')?.value, THEME_FONTS, 'system'),
+            fontSize: pickOne(fontSizeRadio ? fontSizeRadio.value : 'default', THEME_FONT_SIZES, 'default'),
             primaryColor: normalizeHexColor(document.getElementById('settingsPrimaryColor').value),
             accentColor: AUTO_STATE.accentColor ? '' : normalizeHexColor(document.getElementById('settingsAccentColor').value),
             sidebarBg: AUTO_STATE.sidebarBg ? '' : normalizeHexColor(document.getElementById('settingsSidebarBg').value),
@@ -976,7 +986,7 @@
             updateColorPreview();
         });
     });
-    document.querySelectorAll('input[name="settingsDensity"]').forEach(function(radio) {
+    document.querySelectorAll('input[name="settingsDensity"], input[name="settingsFontSize"]').forEach(function(radio) {
         radio.addEventListener('change', updateColorPreview);
     });
     document.getElementById('settingsFont')?.addEventListener('change', updateColorPreview);
@@ -1334,7 +1344,8 @@
         localStorage.setItem('site-admin-theme', theme.adminTheme);
         root.setAttribute('data-theme-preset', pickOne(theme.preset, THEME_PRESETS, 'soft'));
         root.setAttribute('data-density', pickOne(theme.density, THEME_DENSITIES, 'auto'));
-        root.setAttribute('data-font', pickOne(theme.font, THEME_FONTS, 'system'));
+        root.setAttribute('data-font', pickOne(THEME_FONT_ALIASES[theme.font] || theme.font, THEME_FONTS, 'system'));
+        root.setAttribute('data-font-size', pickOne(theme.fontSize, THEME_FONT_SIZES, 'default'));
 
         var base = HEX_RE.test(theme.primaryColor || '') ? normalizeHexColor(theme.primaryColor) : THEME_DEFAULTS.primaryColor;
         var accent = HEX_RE.test(theme.accentColor || '') ? normalizeHexColor(theme.accentColor) : base;

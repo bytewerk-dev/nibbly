@@ -20,6 +20,7 @@ switch ($action) {
                 'adminTheme' => 'light',
                 'preset' => 'soft',
                 'density' => 'auto',
+                'fontSize' => 'default',
                 'font' => 'system',
                 'primaryColor' => '#3858e9',
                 'accentColor' => '',
@@ -139,7 +140,7 @@ switch ($action) {
         // Whitelist allowed keys
         $allowed = [
             'branding' => ['logo', 'logoDark', 'adminLogo', 'name', 'showBranding', 'logoDisplay', 'logoSize'],
-            'theme' => ['adminTheme', 'publicDefault', 'preset', 'density', 'font', 'primaryColor', 'accentColor', 'sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg', 'dangerColor', 'warningColor', 'successColor', 'buttonGlow', 'buttonRadius'],
+            'theme' => ['adminTheme', 'publicDefault', 'preset', 'density', 'font', 'fontSize', 'primaryColor', 'accentColor', 'sidebarBg', 'darkPrimaryColor', 'darkAccentColor', 'darkSidebarBg', 'dangerColor', 'warningColor', 'successColor', 'buttonGlow', 'buttonRadius'],
             'general' => ['adminLanguage', 'frontendLoginRedirect', 'aiLabelArtwork'],
             'email' => ['method', 'recipientEmail', 'bccEmail', 'fromEmail', 'fromName', 'smtpHost', 'smtpPort', 'smtpUsername', 'smtpPassword', 'smtpEncryption'],
             'seo' => ['siteUrl', 'organizationName', 'defaultOgImage', 'noindexSite']
@@ -188,14 +189,20 @@ switch ($action) {
                     if (in_array($key, ['adminTheme', 'publicDefault'], true) && !in_array($value, ['light', 'dark', 'system'], true)) {
                         jsonResponse(false, null, 'Invalid theme value');
                     }
-                    if ($key === 'preset' && !in_array($value, ['soft', 'classic', 'paper', 'studio', 'console'], true)) {
+                    if ($key === 'preset' && !in_array($value, ['soft', 'classic', 'paper', 'studio', 'console', 'pop'], true)) {
                         jsonResponse(false, null, 'Invalid theme preset');
                     }
                     if ($key === 'density' && !in_array($value, ['auto', 'compact', 'comfortable'], true)) {
                         jsonResponse(false, null, 'Invalid density value');
                     }
-                    if ($key === 'font' && !in_array($value, ['system', 'geist', 'inter', 'geist-mono'], true)) {
-                        jsonResponse(false, null, 'Invalid font value');
+                    if ($key === 'font') {
+                        if ($value === 'geist') $value = 'plex'; // retired in 2.4.2
+                        if (!in_array($value, ['system', 'inter', 'plex', 'atkinson', 'public', 'geist-mono'], true)) {
+                            jsonResponse(false, null, 'Invalid font value');
+                        }
+                    }
+                    if ($key === 'fontSize' && !in_array($value, ['small', 'default', 'large'], true)) {
+                        jsonResponse(false, null, 'Invalid font size value');
                     }
 
                     // Validate buttonGlow (boolean)
