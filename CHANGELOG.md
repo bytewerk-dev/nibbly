@@ -9,7 +9,24 @@ Git milestones and the gaps in publication records.
 
 ## Unreleased
 
+## [2.4.1] — 2026-10-23
+
+### Changed
+
+- **Hover on primary buttons brightens briefly, then settles.** The fill colour lifts
+  (lighter, a touch more saturated, derived in OKLCH from the effective primary colour) and eases
+  to a calmer hover tone; leaving returns the rest colour; pressing answers at once. Secondary
+  buttons, the dashboard menu, the settings sub-navigation, the floating AI button and the
+  button preview share the same timing through tokens (`--nb-hover-lift`, `--nb-hover-settle`,
+  `--nb-hover-tint`, `--nb-duration-hover-in/out`, `--nb-ease-overshoot`); active menu items,
+  disabled and loading buttons are left alone, and reduced-motion settings skip the overshoot.
+
 ### Fixed
+
+- **"Glow" off is honoured everywhere.** With the glow disabled, real primary buttons (`.btn-primary`,
+  `.nb-btn--primary`, the inline editor's buttons) lose their sheen, shadows and text shadow in every
+  state, as the preview already did; keyboard focus rings stay. The glow itself is now a sheen
+  over the button colour, so the hover colour animation works with and without it.
 
 - Clicking an image in the visual editor opens the media library with that image selected
   (also the image field of the group dialog and the news cover), on the page that holds it and
@@ -22,6 +39,10 @@ Git milestones and the gaps in publication records.
   navigation under a divider in the sidebar's line style.
 - The agent status in the AI settings no longer disappears for a moment when the dashboard
   overview fills the form before the full AI settings arrive.
+- **Visits are counted even when a site's `includes/header.php` lacks the tracking call.**
+  The router schedules the count as a fallback at the end of the request; whichever runs first
+  counts, so nothing is counted twice. Sites with an older or customised header file showed
+  "no page views yet" although the storage worked. Error pages (404) no longer count as views.
 
 ## [2.4.0] — 2026-10-20
 
