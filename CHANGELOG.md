@@ -9,6 +9,8 @@ Git milestones and the gaps in publication records.
 
 ## Unreleased
 
+## [2.4.2] — 2026-10-23
+
 ### Added
 
 - **Pop theme** (Settings → Design, `theme.preset: pop`), the sixth preset: a deep slate
@@ -16,8 +18,8 @@ Git milestones and the gaps in publication records.
   rounded white cards and soft shadows, legends, panel titles, stat and status labels in
   pill-shaped chips (stat tiles take turns through base, danger, warning, success and accent),
   round navigation with a glowing active pill, round colour swatches and tinted table heads.
-  Picking the card brings Atkinson Hyperlegible Next,
-  24 px button radius, glow and its own four-colour palette; every field stays free to change.
+  Picking the card brings Atkinson Hyperlegible Next, 24 px button radius, glow and its own
+  four-colour palette; every field stays free to change.
   Light and dark variants; the dark one lifts the colours and darkens the pill text.
 - **Text size** (Settings → Design, `theme.fontSize`: small, default, large). Scales the
   dashboard's type steps only; spacing, controls and the sidebar keep their size, so the
@@ -25,7 +27,8 @@ Git milestones and the gaps in publication records.
 - **Three new local fonts**: IBM Plex Sans, Atkinson Hyperlegible Next and Public Sans
   (variable, latin and latin-ext, SIL Open Font License, shipped in `admin/fonts/`). Each
   theme brings its own: Soft Inter, Classic Public Sans, Paper Atkinson Hyperlegible, Studio
-  IBM Plex Sans, Console Geist Mono.
+  IBM Plex Sans, Console Geist Mono, Pop Atkinson Hyperlegible. The text size steps also scale
+  the dashboard menu, the topbar and the settings sub-navigation.
 
 ### Fixed
 
