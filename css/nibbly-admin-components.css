@@ -145,8 +145,8 @@
 .nb-btn--primary:hover {
     background-color: var(--nb-hover-settle, var(--nb-primary-hover));
     box-shadow: 0 4px 20px color-mix(in srgb, var(--nb-primary) 35%, transparent);
-    animation: nb-hover-fill var(--nb-duration-hover-in, 760ms) var(--nb-ease) both;
-    transition: box-shadow var(--nb-duration-hover-in, 760ms) var(--nb-ease-overshoot, ease),
+    animation: nb-hover-fill var(--nb-duration-hover-in, 1400ms) linear both;
+    transition: box-shadow calc(var(--nb-duration-hover-in, 1400ms) * 0.4) var(--nb-ease),
                 transform var(--nb-duration-fast) var(--nb-ease);
 }
 
@@ -172,7 +172,8 @@
 
 @keyframes nb-hover-fill {
     0% { background-color: var(--nb-hover-from); }
-    38% { background-color: var(--nb-hover-peak); }
+    36% { background-color: var(--nb-hover-peak); }
+    62% { background-color: var(--nb-hover-peak); }
     100% { background-color: var(--nb-hover-to); }
 }
 

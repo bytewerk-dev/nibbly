@@ -167,9 +167,10 @@
     --nb-ease: cubic-bezier(0.22, 1, 0.36, 1);
     --nb-duration-fast: 150ms;
     --nb-duration-normal: 200ms;
-    /* Hover motion: enter with a short overshoot, leave calmly, press at once */
+    /* Hover motion: rise to the peak, hold it, then settle; leave calmly, press at once.
+       The in-duration covers the whole rise-hold-settle run of @keyframes nb-hover-fill. */
     --nb-ease-overshoot: cubic-bezier(0.16, 2.3, 0.4, 1);
-    --nb-duration-hover-in: 760ms;
+    --nb-duration-hover-in: 1400ms;
     --nb-duration-hover-out: 320ms;
     --nb-duration-press: 100ms;
 

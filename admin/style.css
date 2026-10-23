@@ -491,8 +491,8 @@ select:not([multiple]) {
 .btn-primary:hover {
     background-color: var(--nb-hover-settle);
     box-shadow: 0 4px 20px color-mix(in srgb, var(--nb-primary) 35%, transparent);
-    animation: nb-hover-fill var(--nb-duration-hover-in) var(--nb-ease) both;
-    transition: box-shadow var(--nb-duration-hover-in) var(--nb-ease-overshoot),
+    animation: nb-hover-fill var(--nb-duration-hover-in) linear both;
+    transition: box-shadow calc(var(--nb-duration-hover-in) * 0.4) var(--nb-ease),
                 transform var(--nb-duration-fast) var(--nb-ease);
 }
 
@@ -506,7 +506,8 @@ select:not([multiple]) {
    settled hover colour. Each control sets the three custom properties. */
 @keyframes nb-hover-fill {
     0% { background-color: var(--nb-hover-from); }
-    38% { background-color: var(--nb-hover-peak); }
+    36% { background-color: var(--nb-hover-peak); }
+    62% { background-color: var(--nb-hover-peak); }
     100% { background-color: var(--nb-hover-to); }
 }
 
@@ -544,7 +545,7 @@ select:not([multiple]) {
 .btn-secondary:hover {
     background-color: var(--nb-hover-tint-settle);
     border-color: var(--nb-text-muted);
-    animation: nb-hover-fill var(--nb-duration-hover-in) var(--nb-ease) both;
+    animation: nb-hover-fill var(--nb-duration-hover-in) linear both;
 }
 
 .btn-secondary:active {
@@ -961,7 +962,7 @@ select:not([multiple]) {
     --nb-hover-to: var(--nb-sidebar-hover-bg);
     background: var(--nb-sidebar-hover-bg);
     color: var(--nb-sidebar-text-hover, var(--nb-sidebar-text-active));
-    animation: nb-hover-fill var(--nb-duration-hover-in) var(--nb-ease) both;
+    animation: nb-hover-fill var(--nb-duration-hover-in) linear both;
 }
 
 .sidebar-nav-item {
@@ -1030,7 +1031,7 @@ select:not([multiple]) {
 
 .sidebar-version:hover,
 .sidebar-version:focus-visible {
-    color: var(--nb-sidebar-text-active);
+    color: var(--nb-sidebar-text-hover, var(--nb-sidebar-text-active));
     opacity: 0.9;
 }
 
@@ -3883,7 +3884,7 @@ select.modal-input {
     --nb-hover-to: var(--nb-bg-hover);
     color: var(--nb-text);
     background: var(--nb-bg-hover);
-    animation: nb-hover-fill var(--nb-duration-hover-in) var(--nb-ease) both;
+    animation: nb-hover-fill var(--nb-duration-hover-in) linear both;
 }
 
 .settings-tab-btn {
@@ -4948,7 +4949,7 @@ select.modal-input {
 
 .btn-preview-primary:hover {
     background-color: var(--nb-hover-settle);
-    animation: nb-hover-fill var(--nb-duration-hover-in) var(--nb-ease) both;
+    animation: nb-hover-fill var(--nb-duration-hover-in) linear both;
 }
 
 .btn-preview-secondary {
@@ -4960,7 +4961,7 @@ select.modal-input {
 
 .btn-preview-secondary:hover {
     background-color: var(--nb-hover-tint-settle);
-    animation: nb-hover-fill var(--nb-duration-hover-in) var(--nb-ease) both;
+    animation: nb-hover-fill var(--nb-duration-hover-in) linear both;
 }
 
 /* With the glow the real button has a faint text shadow; flat buttons do not */

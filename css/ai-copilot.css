@@ -72,7 +72,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 
 .nb-copilot-toggle:hover {
     background: var(--nb-hover-settle, var(--editor-primary-hover, var(--nb-primary-hover, #1d4ed8)));
-    animation: nb-hover-fill var(--nb-duration-hover-in, 760ms) var(--nb-ease, ease) both;
+    animation: nb-hover-fill var(--nb-duration-hover-in, 1400ms) linear both;
 }
 
 .nb-copilot-toggle:focus-visible {
@@ -83,7 +83,8 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 
 @keyframes nb-hover-fill {
     0% { background-color: var(--nb-hover-from); }
-    38% { background-color: var(--nb-hover-peak); }
+    36% { background-color: var(--nb-hover-peak); }
+    62% { background-color: var(--nb-hover-peak); }
     100% { background-color: var(--nb-hover-to); }
 }
 
