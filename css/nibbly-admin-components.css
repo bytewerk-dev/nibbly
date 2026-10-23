@@ -126,41 +126,54 @@
 }
 
 /* Primary */
+/* Same hover as .btn-primary in admin/style.css: lift, then settle; glow is a sheen
+   plus shadow that .nb-flat-buttons removes */
 .nb-btn--primary {
-    background: var(--nb-primary-btn);
+    --nb-hover-from: var(--nb-primary);
+    --nb-hover-peak: var(--nb-hover-lift, var(--nb-primary-hover));
+    --nb-hover-to: var(--nb-hover-settle, var(--nb-primary-hover));
+    background-color: var(--nb-primary);
+    background-image: var(--nb-primary-sheen, none);
     color: var(--nb-text-on-primary);
     text-shadow: 0 1px 1px rgba(255,255,255,0.25), 0 -1px 1px rgba(0,0,0,0.15);
-    box-shadow: 0 2px 8px rgba(59, 177, 184, 0.15);
-    position: relative;
-    overflow: hidden;
-    z-index: 0;
-    transition: box-shadow 800ms var(--nb-ease) 250ms,
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--nb-primary) 15%, transparent);
+    transition: background-color var(--nb-duration-hover-out, 320ms) ease-out,
+                box-shadow var(--nb-duration-hover-out, 320ms) ease-out,
                 transform var(--nb-duration-fast) var(--nb-ease);
-}
-
-.nb-btn--primary::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: var(--nb-primary-btn-hover);
-    opacity: 0;
-    transition: opacity 800ms var(--nb-ease) 250ms;
-    z-index: -1;
 }
 
 .nb-btn--primary:hover {
-    box-shadow: 0 4px 20px rgba(107, 251, 243, 0.35);
-    transition: box-shadow 800ms var(--nb-ease),
+    background-color: var(--nb-hover-settle, var(--nb-primary-hover));
+    box-shadow: 0 4px 20px color-mix(in srgb, var(--nb-primary) 35%, transparent);
+    animation: nb-hover-fill var(--nb-duration-hover-in, 760ms) var(--nb-ease) both;
+    transition: box-shadow var(--nb-duration-hover-in, 760ms) var(--nb-ease-overshoot, ease),
                 transform var(--nb-duration-fast) var(--nb-ease);
 }
 
-.nb-btn--primary:hover::after {
-    opacity: 1;
-    transition: opacity 800ms var(--nb-ease);
+.nb-btn--primary:active {
+    background-color: var(--nb-primary-active);
+    animation: none;
+    transition-duration: var(--nb-duration-press, 100ms);
 }
 
-.nb-btn--primary:active {
-    background: var(--nb-primary-active);
+.nb-flat-buttons .nb-btn--primary,
+.nb-flat-buttons .nb-btn--primary:hover,
+.nb-flat-buttons .nb-btn--primary:active {
+    background-image: none;
+    box-shadow: none;
+    text-shadow: none;
+}
+
+.nb-btn:disabled,
+.nb-btn[aria-busy="true"] {
+    animation: none;
+    pointer-events: none;
+}
+
+@keyframes nb-hover-fill {
+    0% { background-color: var(--nb-hover-from); }
+    38% { background-color: var(--nb-hover-peak); }
+    100% { background-color: var(--nb-hover-to); }
 }
 
 /* Secondary */
