@@ -16,8 +16,9 @@ Git milestones and the gaps in publication records.
 - **Hover on primary buttons brightens briefly, then settles.** The fill colour lifts
   (lighter, a touch more saturated, derived in OKLCH from the effective primary colour) and eases
   to a calmer hover tone; leaving returns the rest colour; pressing answers at once. Secondary
-  buttons, the dashboard menu, the settings sub-navigation, the floating AI button and the
-  button preview share the same timing through tokens (`--nb-hover-lift`, `--nb-hover-settle`,
+  buttons, the floating AI button and the button preview share the same timing through tokens;
+  the dashboard menu and the settings sub-navigation brighten monochrome, not in the accent,
+  and keep their own text colour (white in Classic). Tokens (`--nb-hover-lift`, `--nb-hover-settle`,
   `--nb-hover-tint`, `--nb-duration-hover-in/out`, `--nb-ease-overshoot`); active menu items,
   disabled and loading buttons are left alone, and reduced-motion settings skip the overshoot.
 

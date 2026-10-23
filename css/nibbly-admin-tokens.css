@@ -63,6 +63,8 @@
        stylesheet only ever reads them. */
     --nb-sidebar-text: var(--nb-text-secondary);
     --nb-sidebar-text-active: var(--nb-primary);
+    /* Hover text in the sidebar; presets whose active item sits on the primary colour set their own */
+    --nb-sidebar-text-hover: var(--nb-sidebar-text-active);
     --nb-sidebar-hover-bg: var(--nb-primary-subtle);
     --nb-sidebar-active-bg: var(--nb-primary-subtle);
     --nb-sidebar-border: rgba(0, 0, 0, 0.06);
@@ -383,6 +385,7 @@
         --nb-text-muted: #646970;
         --nb-sidebar-text: #f0f0f1;
         --nb-sidebar-text-active: var(--nb-text-on-primary);
+        --nb-sidebar-text-hover: #ffffff;
         --nb-sidebar-hover-bg: rgba(255, 255, 255, 0.08);
         --nb-sidebar-active-bg: var(--nb-primary);
         --nb-sidebar-border: rgba(255, 255, 255, 0.08);

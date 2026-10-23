@@ -954,12 +954,13 @@ select:not([multiple]) {
     transition: opacity var(--nb-duration-fast) var(--nb-ease);
 }
 
+/* Menus brighten monochrome (a little of the text colour over the hover surface), not in the accent */
 .sidebar-nav-item:not(.active):hover {
     --nb-hover-from: transparent;
-    --nb-hover-peak: color-mix(in srgb, var(--nb-primary) 14%, var(--nb-sidebar-hover-bg));
+    --nb-hover-peak: color-mix(in srgb, var(--nb-sidebar-text) 9%, var(--nb-sidebar-hover-bg));
     --nb-hover-to: var(--nb-sidebar-hover-bg);
     background: var(--nb-sidebar-hover-bg);
-    color: var(--nb-sidebar-text-active);
+    color: var(--nb-sidebar-text-hover, var(--nb-sidebar-text-active));
     animation: nb-hover-fill var(--nb-duration-hover-in) var(--nb-ease) both;
 }
 
@@ -3878,7 +3879,7 @@ select.modal-input {
 
 .settings-tab-btn:not(.active):hover {
     --nb-hover-from: transparent;
-    --nb-hover-peak: var(--nb-hover-tint);
+    --nb-hover-peak: color-mix(in srgb, var(--nb-text) 7%, var(--nb-bg-hover));
     --nb-hover-to: var(--nb-bg-hover);
     color: var(--nb-text);
     background: var(--nb-bg-hover);
