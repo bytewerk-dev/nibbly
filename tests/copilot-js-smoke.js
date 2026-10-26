@@ -269,7 +269,7 @@ assertMatches(adminStyles, /\.theme-contrast-feedback\[data-state="error"\]::bef
 assertContains(adminStyles, '.preset-card.selected', 'Design settings should mark the selected preset card.');
 assertContains(adminStyles, '[data-theme-preset="paper"] .sidebar-nav-item.active', 'Paper preset should mark the active sidebar item with a bar instead of a fill.');
 assertContains(adminStyles, 'background: color-mix(in srgb, var(--nb-bg-elevated) 82%, var(--nb-bg));', 'Button style preview should use the lighter preview background.');
-assertMatches(adminStyles, /\.settings-tabs\s*\{[\s\S]*?box-shadow:\s*none;/, 'Settings sidebar should use a border-only container without shadow.');
+assertMatches(adminStyles, /html\[data-settings-open\] \.settings-subnav\s*\{[\s\S]*?background:\s*var\(--nb-sidebar-bg\);/, 'Settings sub-navigation should be a second sidebar in the sidebar colours.');
 assertMatches(adminStyles, /\.settings-panel\s*\{[\s\S]*?box-shadow:\s*none;/, 'Settings panels should use a border-only container without shadow.');
 assertContains(adminApi, "'primaryColor' => '#3858e9'", 'Settings API defaults should use the updated nibbly primary color.');
 assertContains(adminApi, "'accentColor' => ''", 'Settings API defaults derive the accent from the base colour.');

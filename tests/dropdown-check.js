@@ -63,7 +63,8 @@ async function walk(page, sizeName) {
         if (tab !== 'settings') { await checkVisibleDropdowns(page, sizeName + ' ' + tab); continue; }
         const settingsTabs = await page.evaluate(() => Array.from(document.querySelectorAll('.settings-tab-btn[data-settings-tab]')).map(el => el.getAttribute('data-settings-tab')));
         for (const settingsTab of Array.from(new Set(settingsTabs))) {
-            await page.evaluate(name => { const button = document.querySelector('.settings-tab-btn[data-settings-tab="' + name + '"]'); if (button) button.click(); }, settingsTab);
+            // Activated directly: on narrow screens a tap on the slim sub-navigation first opens it
+            await page.evaluate(name => activateSettingsTab(name), settingsTab);
             await page.waitForTimeout(200);
             await checkVisibleDropdowns(page, sizeName + ' settings/' + settingsTab);
         }

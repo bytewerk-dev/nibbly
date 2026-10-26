@@ -96,6 +96,16 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         'refresh'   => '<path d="M21 12a9 9 0 11-2.64-6.36"/><path d="M21 3v6h-6"/>',
         'users' => '<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a7 7 0 0 1 14 0v2M17 4a4 4 0 0 1 0 8M22 21v-2a7 7 0 0 0-4-6"/>',
         'menu-dropdown' => '<rect x="3" y="3" width="18" height="7" rx="2"/><path d="M15 6l2 2 2-2M6 14h12M6 19h8"/>',
+        // Settings sub-navigation (one icon per section, for the slim bar)
+        'brand'     => '<path d="M12 21a9 9 0 1 1 9-9c0 1.66-1.34 2.5-3 2.5h-1.8a2 2 0 0 0-1.4 3.4A1.8 1.8 0 0 1 12 21z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="16.5" cy="10.5" r="1"/>',
+        'sliders'   => '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',
+        'modules'   => '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+        'language'  => '<circle cx="13" cy="10" r="6"/><path d="M6.64 3.64a9 9 0 0 0 12.72 12.72"/><path d="M13 19v2M9.5 21h7"/>',
+        'lock'      => '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+        'shield'    => '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+        'form'      => '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>',
+        'user'      => '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/>',
+        'login'     => '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>',
         'ai'        => '<path d="M12 2l1.6 5.2L19 9l-5.4 1.8L12 16l-1.6-5.2L5 9l5.4-1.8L12 2z"/><path d="M19 14l.8 2.7L22 17.5l-2.2.8L19 21l-.8-2.7-2.2-.8 2.2-.8L19 14z"/><path d="M5 13l.7 2.1L8 16l-2.3.9L5 19l-.7-2.1L2 16l2.3-.9L5 13z"/>',
     ];
     $p = $paths[$name] ?? '';
@@ -140,10 +150,12 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
     </script>
     <?php endif; ?>
     <script>
-    /* Sidebar collapse state before first paint, so nothing jumps */
+    /* Sidebar collapse state before first paint, so nothing jumps (a settings link opens collapsed) */
     (function() {
+        var settings = /^#settings(\/|$)/.test(window.location.hash);
+        if (settings) document.documentElement.setAttribute('data-settings-open', '');
         try {
-            if (window.localStorage.getItem('nibblySidebarCollapsed') === '1') {
+            if (settings || window.localStorage.getItem('nibblySidebarCollapsed') === '1') {
                 document.documentElement.setAttribute('data-sidebar', 'collapsed');
             }
         } catch (e) {}
@@ -350,6 +362,49 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
             <a class="sidebar-version" href="https://nibbly.dev" target="_blank" rel="noopener noreferrer">nibbly <?php echo htmlspecialchars(nibblyVersion(), ENT_QUOTES, 'UTF-8'); ?></a>
         </div>
     </aside>
+    <!-- Settings sub-navigation: a second sidebar next to the (then collapsed) main one; on narrow
+         screens a slim icon bar that slides out as a side menu (scripts/settings.php) -->
+    <div class="settings-subnav-backdrop" id="settingsSubnavBackdrop" hidden></div>
+    <nav class="settings-tabs settings-subnav" id="settingsSubnav" aria-label="<?php echo htmlspecialchars(t('settings.title'), ENT_QUOTES, 'UTF-8'); ?>">
+        <button class="sidebar-nav-item settings-subnav__toggle" type="button" id="settingsSubnavToggle" aria-expanded="false" aria-controls="settingsSubnav"><?php echo nbIcon('settings'); ?><span><?php echo t('settings.title'); ?></span></button>
+        <div class="sidebar-nav settings-subnav__list">
+        <?php if ($isAdminUser): ?>
+        <section class="settings-nav-group">
+            <h3><?php echo t('settings.group_site'); ?></h3>
+            <button class="sidebar-nav-item settings-tab-btn active" type="button" data-settings-tab="branding"><?php echo nbIcon('brand'); ?><span><?php echo t('settings.branding'); ?></span></button>
+            <button class="sidebar-nav-item settings-tab-btn" type="button" data-settings-tab="theme"><?php echo nbIcon('sliders'); ?><span><?php echo t('settings.dashboard_design'); ?></span></button>
+            <button class="sidebar-nav-item settings-tab-btn" type="button" data-settings-tab="modules"><?php echo nbIcon('modules'); ?><span><?php echo t('settings.modules_nav'); ?></span></button>
+            <button class="sidebar-nav-item settings-tab-btn" type="button" data-settings-tab="language"><?php echo nbIcon('language'); ?><span><?php echo t('settings.language'); ?></span></button>
+        </section>
+        <section class="settings-nav-group">
+            <h3><?php echo t('settings.group_features'); ?></h3>
+            <button class="sidebar-nav-item settings-tab-btn" type="button" data-settings-tab="access"><?php echo nbIcon('lock'); ?><span><?php echo t('settings.access'); ?></span></button>
+            <button class="sidebar-nav-item settings-tab-btn" type="button" data-settings-tab="email"><?php echo nbIcon('mail'); ?><span><?php echo t('settings.email'); ?></span></button>
+            <button class="sidebar-nav-item settings-tab-btn" type="button" data-settings-tab="privacy"><?php echo nbIcon('shield'); ?><span><?php echo t('settings.privacy'); ?></span></button>
+            <button class="sidebar-nav-item settings-tab-btn" type="button" data-settings-tab="forms"><?php echo nbIcon('form'); ?><span><?php echo t('forms.title'); ?></span></button>
+            <?php if ($aiFeaturesEnabled): ?>
+            <button class="sidebar-nav-item settings-tab-btn" type="button" data-settings-tab="ai"><?php echo nbIcon('ai'); ?><span><?php echo t('ai.settings'); ?></span></button>
+            <?php endif; ?>
+        </section>
+        <section class="settings-nav-group">
+            <h3><?php echo t('settings.group_users'); ?></h3>
+            <button class="sidebar-nav-item settings-tab-btn" type="button" data-settings-tab="users"><?php echo nbIcon('users'); ?><span><?php echo t('settings.users'); ?></span></button>
+            <button class="sidebar-nav-item settings-tab-btn" type="button" data-settings-tab="my-account"><?php echo nbIcon('user'); ?><span><?php echo t('settings.my_account'); ?></span></button>
+            <button class="sidebar-nav-item settings-tab-btn" type="button" data-settings-tab="login"><?php echo nbIcon('login'); ?><span><?php echo t('settings.login'); ?></span></button>
+        </section>
+        <section class="settings-nav-group">
+            <h3><?php echo t('settings.group_system'); ?></h3>
+            <button class="sidebar-nav-item settings-tab-btn" type="button" data-settings-action="backup"><?php echo nbIcon('download'); ?><span><?php echo t('settings.backup'); ?></span></button>
+            <button class="sidebar-nav-item settings-tab-btn settings-tab-btn--danger" type="button" data-settings-tab="danger"><?php echo nbIcon('alert'); ?><span><?php echo t('settings.danger_zone'); ?></span></button>
+        </section>
+        <?php else: ?>
+        <section class="settings-nav-group">
+            <h3><?php echo t('settings.group_users'); ?></h3>
+            <button class="sidebar-nav-item settings-tab-btn active" type="button" data-settings-tab="my-account"><?php echo nbIcon('user'); ?><span><?php echo t('settings.my_account'); ?></span></button>
+        </section>
+        <?php endif; ?>
+        </div>
+    </nav>
 
     <div class="admin-main<?php echo !empty($_SESSION['password_warning']) ? ' has-security-warning' : ''; ?>" id="adminMain">
     <?php
@@ -1266,44 +1321,6 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
     <!-- Settings Tab -->
     <div class="admin-container" id="settingsTab" style="display: none;">
         <div class="settings-layout">
-        <label class="settings-mobile-navigation" for="settingsMobileNav"><?php echo t('settings.title'); ?><select id="settingsMobileNav"></select></label>
-        <nav class="settings-tabs" aria-label="<?php echo htmlspecialchars(t('settings.title'), ENT_QUOTES, 'UTF-8'); ?>">
-            <?php if ($isAdminUser): ?>
-            <section class="settings-nav-group">
-                <h3><?php echo t('settings.group_site'); ?></h3>
-                <button class="settings-tab-btn active" data-settings-tab="branding"><?php echo t('settings.branding'); ?></button>
-                <button class="settings-tab-btn" data-settings-tab="theme"><?php echo t('settings.dashboard_design'); ?></button>
-                <button class="settings-tab-btn" data-settings-tab="modules"><?php echo t('settings.modules_nav'); ?></button>
-                <button class="settings-tab-btn" data-settings-tab="language"><?php echo t('settings.language'); ?></button>
-            </section>
-            <section class="settings-nav-group">
-                <h3><?php echo t('settings.group_features'); ?></h3>
-                <button class="settings-tab-btn" data-settings-tab="access"><?php echo t('settings.access'); ?></button>
-                <button class="settings-tab-btn" data-settings-tab="email"><?php echo t('settings.email'); ?></button>
-                <button class="settings-tab-btn" data-settings-tab="privacy"><?php echo t('settings.privacy'); ?></button>
-                <button class="settings-tab-btn" data-settings-tab="forms"><?php echo t('forms.title'); ?></button>
-                <?php if ($aiFeaturesEnabled): ?>
-                <button class="settings-tab-btn" data-settings-tab="ai"><?php echo t('ai.settings'); ?></button>
-                <?php endif; ?>
-            </section>
-            <section class="settings-nav-group">
-                <h3><?php echo t('settings.group_users'); ?></h3>
-                <button class="settings-tab-btn" data-settings-tab="users"><?php echo t('settings.users'); ?></button>
-                <button class="settings-tab-btn" data-settings-tab="my-account"><?php echo t('settings.my_account'); ?></button>
-                <button class="settings-tab-btn" data-settings-tab="login"><?php echo t('settings.login'); ?></button>
-            </section>
-            <section class="settings-nav-group">
-                <h3><?php echo t('settings.group_system'); ?></h3>
-                <button class="settings-tab-btn" type="button" data-settings-action="backup"><?php echo t('settings.backup'); ?></button>
-                <button class="settings-tab-btn settings-tab-btn--danger" data-settings-tab="danger"><?php echo t('settings.danger_zone'); ?></button>
-            </section>
-            <?php else: ?>
-            <section class="settings-nav-group">
-                <h3><?php echo t('settings.group_users'); ?></h3>
-                <button class="settings-tab-btn active" data-settings-tab="my-account"><?php echo t('settings.my_account'); ?></button>
-            </section>
-            <?php endif; ?>
-        </nav>
         <div class="settings-panels">
 
             <?php if ($isAdminUser): ?>

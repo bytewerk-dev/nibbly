@@ -9,6 +9,17 @@ Git milestones and the gaps in publication records.
 
 ## Unreleased
 
+### Changed
+
+- **Settings navigation as a second sidebar.** Opening the settings collapses the main sidebar to its
+  icons (the settings icon stays highlighted; the saved collapse preference is not changed and comes
+  back when you leave) and shows the settings sections in a second sidebar beside it, in the colours
+  and item style of the main menu in every theme, each section with its own icon. Below 1100 px it
+  is a slim icon bar: a tap slides the full menu out over the content, choosing a section closes it
+  again (also Escape or a tap beside it). On phones the slim bar sits at the left edge. The box with
+  the section list in the content area and the select menu on narrow screens are gone, with their
+  styles.
+
 ## [2.5.0] — 2026-10-26
 
 ### Added

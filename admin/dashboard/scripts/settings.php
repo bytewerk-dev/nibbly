@@ -1,14 +1,24 @@
 <?php if (!defined('NIBBLY_DASHBOARD')) { http_response_code(404); exit; } ?>
-    const settingsMobileNav = document.getElementById('settingsMobileNav');
-    document.querySelectorAll('.settings-tab-btn[data-settings-tab]').forEach(button => {
-        settingsMobileNav?.add(new Option(button.textContent.trim(), button.dataset.settingsTab));
-    });
-    // A settings link (#settings/…) can activate a tab before this script runs: show it in the menu too
-    if (settingsMobileNav) {
-        settingsMobileNav.value = document.querySelector('.settings-tab-btn.active')?.dataset.settingsTab || settingsMobileNav.value;
-        window.nbSelectSync?.(settingsMobileNav);
+    // Settings sub-navigation: a second sidebar; below 1100 px a slim icon bar that slides the full
+    // menu out when tapped and closes again once a section is chosen (Escape and the backdrop close it too)
+    const settingsSubnav = document.getElementById('settingsSubnav');
+    const settingsSubnavBackdrop = document.getElementById('settingsSubnavBackdrop');
+    const settingsSubnavToggle = document.getElementById('settingsSubnavToggle');
+    const settingsSubnavSlim = () => window.matchMedia('(max-width: 1100px)').matches;
+    function setSettingsSubnavOpen(open) {
+        if (!settingsSubnav) return;
+        settingsSubnav.classList.toggle('is-open', open);
+        if (settingsSubnavBackdrop) settingsSubnavBackdrop.hidden = !open;
+        settingsSubnavToggle?.setAttribute('aria-expanded', String(open));
     }
-    settingsMobileNav?.addEventListener('change', () => activateSettingsTab(settingsMobileNav.value));
+    settingsSubnavToggle?.addEventListener('click', () => setSettingsSubnavOpen(!settingsSubnav.classList.contains('is-open')));
+    settingsSubnavBackdrop?.addEventListener('click', () => setSettingsSubnavOpen(false));
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && settingsSubnav?.classList.contains('is-open')) { setSettingsSubnavOpen(false); settingsSubnavToggle?.focus(); }
+    });
+    window.matchMedia('(max-width: 1100px)').addEventListener?.('change', () => setSettingsSubnavOpen(false));
+    // Icons alone explain themselves on hover in the slim bar
+    settingsSubnav?.querySelectorAll('.sidebar-nav-item').forEach(item => { const label = item.querySelector(':scope > span'); if (label) item.title = label.textContent.trim(); });
     function loadSettingsTabData(tab) {
         if (tab === 'users' && typeof loadUsers === 'function' && typeof _usersLoaded !== 'undefined' && !_usersLoaded) {
             _usersLoaded = true;
@@ -33,9 +43,6 @@
         if (typeof window.nbSetTopbarTitle === 'function') {
             window.nbSetTopbarTitle([t('settings.title'), btn.textContent.trim()]);
         }
-        // Looked up here: the initial route can call this before the constant above is initialized
-        var mobileNav = document.getElementById('settingsMobileNav');
-        if (mobileNav) { mobileNav.value = tab; window.nbSelectSync?.(mobileNav); }
         var panel = document.getElementById('settingsPanel-' + tab);
         if (panel) panel.classList.add('active');
         loadSettingsTabData(tab);
@@ -44,6 +51,9 @@
 
     document.querySelectorAll('.settings-tab-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
+            // In the slim bar the first tap opens the menu; choosing a section closes it again
+            if (settingsSubnavSlim() && !settingsSubnav.classList.contains('is-open')) { setSettingsSubnavOpen(true); this.focus(); return; }
+            setSettingsSubnavOpen(false);
             var action = this.getAttribute('data-settings-action');
             if (action === 'backup') {
                 switchTab('backup');

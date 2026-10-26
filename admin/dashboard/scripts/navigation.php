@@ -50,12 +50,19 @@
             });
         }
 
-        applySidebarCollapsed(collapsed);
+        applySidebarCollapsed(collapsed || document.documentElement.hasAttribute('data-settings-open'));
         btn.addEventListener('click', function() {
-            collapsed = !collapsed;
+            // Toggle what is shown (it may be collapsed for the settings only) and remember that
+            collapsed = document.documentElement.getAttribute('data-sidebar') !== 'collapsed';
             try { window.localStorage.setItem(KEY, collapsed ? '1' : '0'); } catch (e) {}
             applySidebarCollapsed(collapsed);
         });
+        // The settings show their own sub-navigation beside the main sidebar, which then shows only its
+        // icons; leaving them brings back the saved state. Nothing is stored for this.
+        window.nbSidebarForSettings = function(active) {
+            document.documentElement.toggleAttribute('data-settings-open', active);
+            applySidebarCollapsed(active || collapsed);
+        };
     })();
 
     function nbSetTopbarTitle(parts) {
@@ -252,6 +259,7 @@
             return;
         }
 
+        if (typeof window.nbSidebarForSettings === 'function') window.nbSidebarForSettings(tab === 'settings');
         const systemTab = document.getElementById('systemTab');
         if (systemTab) systemTab.style.display = tab === 'system' ? 'block' : 'none';
         if (tab === 'system') loadSystemStatus();
