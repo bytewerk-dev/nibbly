@@ -3,6 +3,7 @@
 import json
 import os
 from pathlib import Path
+import re
 import signal
 import socket
 import subprocess
@@ -34,7 +35,8 @@ def php_processes(root):
     for line in output.splitlines():
         fields = line.split(None, 3)
         if len(fields) == 4 and not fields[2].startswith('Z'):
-            if Path(fields[3].split()[0]).name == 'php' and ' -S ' in fields[3] and str(root) in fields[3]:
+            # Versioned binaries count too (/usr/bin/php8.1 on CI runners), as in server_process.py
+            if re.fullmatch(r'php(?:\d+(?:\.\d+)*)?', Path(fields[3].split()[0]).name) and ' -S ' in fields[3] and str(root) in fields[3]:
                 result.append((int(fields[0]), int(fields[1])))
     return result
 
