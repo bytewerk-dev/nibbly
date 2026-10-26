@@ -3866,78 +3866,6 @@ select.modal-input {
    SETTINGS
    ============================================================ */
 
-.settings-layout {
-    display: grid;
-    grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
-    gap: var(--nb-space-5);
-    align-items: start;
-}
-
-.settings-tabs {
-    position: sticky;
-    top: var(--nb-space-4);
-    display: flex;
-    flex-direction: column;
-    gap: var(--nb-space-5);
-    border: 1px solid var(--nb-border);
-    border-radius: var(--nb-radius-lg);
-    background: color-mix(in srgb, var(--nb-bg-elevated) 88%, var(--nb-bg));
-    padding: var(--nb-space-4);
-    box-shadow: none;
-}
-
-.settings-nav-group {
-    display: flex;
-    flex-direction: column;
-    gap: var(--nb-space-0-5);
-}
-
-.settings-nav-group h3 {
-    margin: 0 0 var(--nb-space-2);
-    color: var(--nb-text-muted);
-    font-size: calc(0.72rem * var(--nb-font-scale));
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    line-height: 1.2;
-    text-transform: uppercase;
-}
-
-.settings-tab-btn {
-    width: 100%;
-    padding: 7px var(--nb-space-2-5);
-    font-size: var(--nb-text-md);
-    font-weight: 500;
-    line-height: 1.3;
-    text-align: left;
-    color: var(--nb-text-muted);
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: var(--nb-radius-md);
-    cursor: pointer;
-    transition: color 0.15s, border-color 0.15s, background 0.15s;
-}
-
-.settings-tab-btn:not(.active):hover {
-    --nb-hover-from: transparent;
-    --nb-hover-peak: color-mix(in srgb, var(--nb-text) 7%, var(--nb-bg-hover));
-    --nb-hover-to: var(--nb-bg-hover);
-    color: var(--nb-text);
-    background: var(--nb-bg-hover);
-    animation: nb-hover-fill var(--nb-duration-hover-in) linear both;
-}
-
-.settings-tab-btn {
-    transition: background-color var(--nb-duration-hover-out) ease-out,
-                color var(--nb-duration-fast) var(--nb-ease),
-                border-color var(--nb-duration-fast) var(--nb-ease);
-}
-
-.settings-tab-btn.active {
-    color: var(--nb-primary);
-    border-color: var(--nb-primary-muted);
-    background: var(--nb-primary-subtle);
-}
-
 .settings-panel {
     display: none;
     background: var(--nb-surface-panel, var(--nb-bg-elevated));
@@ -3956,26 +3884,6 @@ select.modal-input {
     font-size: 1.25rem;
     line-height: 1.1;
     font-weight: 600;
-}
-
-@media (max-width: 980px) {
-    .settings-layout {
-        grid-template-columns: 1fr;
-        gap: var(--nb-space-4);
-    }
-
-    .settings-tabs {
-        position: static;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-        gap: var(--nb-space-4);
-    }
-}
-
-@media (max-width: 560px) {
-    .settings-tabs {
-        grid-template-columns: 1fr;
-    }
 }
 
 .settings-description {
@@ -5316,22 +5224,7 @@ input.color-hex-input,
     max-width: 100%;
 }
 
-/* Danger Zone Tab & Panel */
-.settings-tab-btn--danger {
-    color: var(--nb-danger-text);
-}
-
-.settings-tab-btn--danger:hover {
-    color: var(--nb-danger-text);
-    background: var(--nb-danger-subtle);
-}
-
-.settings-tab-btn--danger.active {
-    color: var(--nb-danger-text);
-    border-color: color-mix(in srgb, var(--nb-danger) 35%, var(--nb-border));
-    background: var(--nb-danger-subtle);
-}
-
+/* Danger Zone Panel */
 /* Email Settings */
 .settings-hint-box {
     padding: var(--nb-space-3) var(--nb-space-4);
@@ -9275,7 +9168,6 @@ input.color-hex-input,
     box-shadow: none;
 }
 
-.settings-tabs,
 .settings-section,
 .ce-settings-card,
 .forms-admin-list,
@@ -9532,10 +9424,9 @@ input.color-hex-input,
     .security-warning-banner .info-banner__cta { grid-column: 2; justify-self: start; }
 }
 
-.settings-panels, .settings-panel, .settings-tabs, .settings-layout { min-width: 0; }
+.settings-panels, .settings-panel { min-width: 0; }
 .settings-panel { container-type: inline-size; container-name: settings; }
 .settings-actions-row, .color-input-group { flex-wrap: wrap; }
-.settings-mobile-navigation { display: none; }
 .forms-admin-list__head { grid-template-columns: minmax(0, 1fr) auto; }
 .forms-fields-table { display: block; }
 .forms-fields-table td { grid-template-rows: auto minmax(38px, auto); }
@@ -9551,12 +9442,6 @@ input.color-hex-input,
     .access-maintenance-grid > .access-toggle-row .toggle-label { white-space: normal; }
     .access-maintenance-grid > .visual-overlay-color-group { grid-column: auto; }
     .access-maintenance-grid > .access-toggle-row { margin-top: 0; min-height: 0; }
-}
-@container dashboard (max-width: 65rem) {
-    .settings-layout { grid-template-columns: minmax(0, 1fr); }
-    .settings-tabs { position: static; display: none; }
-    .settings-mobile-navigation { display: grid; gap: 8px; }
-    .settings-mobile-navigation .nb-select { width: 100%; }
 }
 @container settings (max-width: 28rem) {
     .menu-order-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 8px; padding: 10px; }
@@ -10550,18 +10435,6 @@ html[data-density="compact"] .sidebar-bottom {
     }
 }
 
-/* Compact density: tighter settings sub-navigation */
-html[data-density="compact"] .settings-tab-btn {
-    padding-block: var(--nb-space-1);
-}
-
-html[data-density="compact"] .settings-tabs {
-    gap: var(--nb-space-3);
-}
-
-html[data-density="compact"] .settings-nav-group h3 {
-    margin-bottom: var(--nb-space-1);
-}
 
 
 /* ============================================================
@@ -10991,8 +10864,7 @@ label.toggle-label > .toggle-switch,
     gap: var(--nb-space-0-5);
 }
 
-[data-theme-preset="console"] .sidebar-nav-item,
-[data-theme-preset="console"] .settings-tab-btn {
+[data-theme-preset="console"] .sidebar-nav-item {
     font-size: var(--nb-text-xs);
     font-weight: 600;
     letter-spacing: 0.08em;
@@ -11099,7 +10971,6 @@ label.toggle-label > .toggle-switch,
 [data-theme-preset="console"] .preset-card.selected,
 [data-theme-preset="console"] .theme-option.selected,
 [data-theme-preset="console"] .segmented label:has(input:checked),
-[data-theme-preset="console"] .settings-tab-btn.active,
 [data-theme-preset="console"] .sidebar-nav-item.active,
 [data-theme-preset="console"] .ai-tool-tab.active,
 [data-theme-preset="console"] .dashboard-range-tab.active,
@@ -11117,14 +10988,7 @@ label.toggle-label > .toggle-switch,
     --nb-xh-len: 12px;
 }
 
-[data-theme-preset="console"] .settings-tab-btn.active {
-    color: var(--nb-text);
-    background: var(--nb-sidebar-active-bg);
-    border-color: transparent;
-}
-
 [data-theme-preset="console"] .segmented label:has(input:checked),
-[data-theme-preset="console"] .settings-tab-btn.active,
 [data-theme-preset="console"] .sidebar-nav-item.active,
 [data-theme-preset="console"] .ai-tool-tab.active,
 [data-theme-preset="console"] .dashboard-range-tab.active,
@@ -11138,7 +11002,6 @@ label.toggle-label > .toggle-switch,
 [data-theme-preset="console"] .preset-card.selected::after,
 [data-theme-preset="console"] .theme-option.selected::after,
 [data-theme-preset="console"] .segmented label:has(input:checked)::after,
-[data-theme-preset="console"] .settings-tab-btn.active::after,
 [data-theme-preset="console"] .sidebar-nav-item.active::after,
 [data-theme-preset="console"] .ai-tool-tab.active::after,
 [data-theme-preset="console"] .dashboard-range-tab.active::after,
@@ -11490,27 +11353,6 @@ html[data-theme-preset="pop"] .settings-panel h3.settings-subheading,
     --nb-pop-pill-text: #11141b;
 }
 
-/* Settings sub-navigation: group heads as tinted pills, one step quieter */
-[data-theme-preset="pop"] .settings-nav-group h3 {
-    display: inline-block;
-    line-height: calc(1.375rem * var(--nb-font-scale));
-    padding: 0 var(--nb-space-2-5);
-    margin: 0 0 var(--nb-space-2) var(--nb-space-1);
-    border-radius: var(--nb-radius-full, 999px);
-    /* A step stronger than the active item below (primary-subtle), so the two read apart */
-    background: var(--nb-primary-muted);
-    color: var(--nb-primary);
-    font-size: calc(0.6875rem * var(--nb-font-scale));
-    letter-spacing: 0.08em;
-}
-
-/* Items sit inside the width of their group title's pill */
-[data-theme-preset="pop"] .settings-tab-btn {
-    border-radius: var(--nb-radius-full, 999px);
-    margin-inline: var(--nb-space-3);
-    width: calc(100% - 2 * var(--nb-space-3));
-}
-
 /* Navigation: round items, the active one a filled pill with a coloured glow */
 [data-theme-preset="pop"] .sidebar-nav {
     padding-inline: var(--nb-space-3);
@@ -11530,7 +11372,7 @@ html[data-theme-preset="pop"] .settings-panel h3.settings-subheading,
 }
 
 /* Collapsed sidebar: the active pill shrinks to a circle around the icon */
-html[data-sidebar="collapsed"][data-theme-preset="pop"] .sidebar-nav-item {
+html[data-sidebar="collapsed"][data-theme-preset="pop"] .admin-sidebar .sidebar-nav-item {
     padding-inline: 0;
 }
 
@@ -11778,8 +11620,7 @@ html[data-sidebar="collapsed"][data-theme-preset="pop"] .sidebar-nav-item {
 }
 
 /* Focus rings follow the round shapes */
-[data-theme-preset="pop"] .sidebar-nav-item:focus-visible,
-[data-theme-preset="pop"] .settings-tab-btn:focus-visible {
+[data-theme-preset="pop"] .sidebar-nav-item:focus-visible {
     outline-offset: 3px;
     border-radius: var(--nb-radius-full, 999px);
 }
@@ -11816,24 +11657,24 @@ html[data-sidebar="collapsed"][data-theme-preset="pop"] .sidebar-nav-item {
         --nb-sidebar-w: 3.5rem;
     }
 
-    html[data-sidebar="collapsed"] .sidebar-nav,
-    html[data-sidebar="collapsed"] .sidebar-bottom {
+    html[data-sidebar="collapsed"] .admin-sidebar .sidebar-nav,
+    html[data-sidebar="collapsed"] .admin-sidebar .sidebar-bottom {
         padding-inline: var(--nb-space-2);
     }
 
-    html[data-sidebar="collapsed"] .sidebar-nav-item {
+    html[data-sidebar="collapsed"] .admin-sidebar .sidebar-nav-item {
         position: relative;
         justify-content: center;
         padding-inline: 0;
         gap: 0;
     }
 
-    html[data-sidebar="collapsed"] .sidebar-nav-item > span:not(.mail-badge) {
+    html[data-sidebar="collapsed"] .admin-sidebar .sidebar-nav-item > span:not(.mail-badge) {
         display: none;
     }
 
     /* Icons carry the whole meaning now, so no preset may shrink them */
-    html[data-sidebar="collapsed"] .sidebar-nav-item svg {
+    html[data-sidebar="collapsed"] .admin-sidebar .sidebar-nav-item svg {
         width: 1.25rem;
         height: 1.25rem;
         min-width: 1.25rem;
@@ -11841,12 +11682,12 @@ html[data-sidebar="collapsed"][data-theme-preset="pop"] .sidebar-nav-item {
         opacity: 0.85;
     }
 
-    html[data-sidebar="collapsed"] .sidebar-nav-item.active svg,
-    html[data-sidebar="collapsed"] .sidebar-nav-item:hover svg {
+    html[data-sidebar="collapsed"] .admin-sidebar .sidebar-nav-item.active svg,
+    html[data-sidebar="collapsed"] .admin-sidebar .sidebar-nav-item:hover svg {
         opacity: 1;
     }
 
-    html[data-sidebar="collapsed"] .sidebar-nav-item > .mail-badge {
+    html[data-sidebar="collapsed"] .admin-sidebar .sidebar-nav-item > .mail-badge {
         position: absolute;
         top: 2px;
         right: 2px;
@@ -11858,12 +11699,12 @@ html[data-sidebar="collapsed"][data-theme-preset="pop"] .sidebar-nav-item {
         box-shadow: none;
     }
 
-    html[data-sidebar="collapsed"] .sidebar-version {
+    html[data-sidebar="collapsed"] .admin-sidebar .sidebar-version {
         display: none;
     }
 
     /* Paper marks the active item with a bar at the edge; keep that readable */
-    html[data-sidebar="collapsed"][data-theme-preset="paper"] .sidebar-nav-item.active {
+    html[data-sidebar="collapsed"][data-theme-preset="paper"] .admin-sidebar .sidebar-nav-item.active {
         box-shadow: inset 2px 0 0 var(--nb-primary);
     }
 }
@@ -12414,7 +12255,7 @@ html[data-sidebar="collapsed"][data-theme-preset="pop"] .sidebar-nav-item {
     box-shadow: 0 0 0 2px var(--nb-sidebar-bg);
     pointer-events: none;
 }
-html[data-sidebar="collapsed"] .sidebar-nav-item.has-unsaved::after { left: calc(50% + 0.35rem); }
+html[data-sidebar="collapsed"] .admin-sidebar .sidebar-nav-item.has-unsaved::after { left: calc(50% + 0.35rem); }
 
 @media (max-width: 768px) {
     .mf-panel { padding: var(--nb-space-4); }
@@ -12675,3 +12516,128 @@ html[data-sidebar="collapsed"] .sidebar-nav-item.has-unsaved::after { left: calc
 @media(max-width:1050px){.nb-writing-view .editor-header>.nb-lang-switch{margin-right:calc(13.75rem + var(--nb-space-5))}}
 @media(max-width:850px){.editor-header:has(>.nb-lang-switch){flex-wrap:wrap;gap:var(--nb-space-2)}.nb-writing-view .editor-header>.nb-lang-switch{margin:0;justify-content:flex-start}}
 #topbarSelectors[hidden],#mobileSelectors[hidden]{display:none}
+
+/* ============================================================
+   SETTINGS SUB-NAVIGATION
+   ------------------------------------------------------------
+   While the settings are open (<html data-settings-open>) the main sidebar shows
+   only its icons and a second sidebar with the settings sections sits beside it,
+   in the colours and item style of the main menu. Below 1100 px it is a slim
+   icon bar; tapping it slides the full menu out over the content (.is-open).
+   ============================================================ */
+:root { --nb-subnav-w: 13.75rem; }
+.settings-subnav { display: none; }
+.settings-subnav-backdrop[hidden] { display: none; }
+
+html[data-settings-open] .settings-subnav {
+    position: sticky;
+    top: var(--nb-topbar-h);
+    z-index: calc(var(--nb-z-sticky) - 1);
+    display: flex;
+    flex-direction: column;
+    flex: none;
+    align-self: flex-start;
+    width: var(--nb-subnav-w);
+    height: calc(100vh - var(--nb-topbar-h));
+    overflow-x: hidden;
+    overflow-y: auto;
+    background: var(--nb-sidebar-bg);
+    border-left: 1px solid var(--nb-sidebar-border);
+    transition: width var(--nb-duration-normal) var(--nb-ease), margin-right var(--nb-duration-normal) var(--nb-ease);
+}
+
+[data-theme-preset="pop"][data-settings-open] .settings-subnav {
+    background: var(--nb-sidebar-gradient, var(--nb-sidebar-bg));
+}
+
+.settings-subnav .settings-subnav__list { gap: var(--nb-space-4); }
+.settings-subnav .settings-nav-group { display: flex; flex-direction: column; gap: var(--nb-space-1); }
+
+.settings-subnav .settings-nav-group h3 {
+    margin: 0 0 var(--nb-space-1);
+    padding-inline: var(--nb-space-4);
+    color: var(--nb-sidebar-text);
+    opacity: 0.6;
+    font-size: calc(0.6875rem * var(--nb-font-scale));
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1.2;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+/* Pop: group heads as tinted pills that hug their text, one step quieter */
+html[data-theme-preset="pop"] .settings-subnav .settings-nav-group h3 {
+    align-self: flex-start;
+    margin: 0 0 var(--nb-space-1) var(--nb-space-2);
+    padding: 0 var(--nb-space-2-5);
+    border-radius: var(--nb-radius-full, 999px);
+    /* A step stronger than the active item below (primary-subtle), so the two read apart */
+    background: var(--nb-primary-muted);
+    color: var(--nb-primary);
+    opacity: 1;
+    letter-spacing: 0.08em;
+    line-height: calc(1.5rem * var(--nb-font-scale));
+}
+
+/* The section items are main-menu items (.sidebar-nav-item); their labels stay on one line */
+.settings-subnav .sidebar-nav-item > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.settings-subnav .sidebar-nav-item.active {
+    background: var(--nb-sidebar-active-bg);
+    color: var(--nb-sidebar-text-active);
+}
+
+.settings-subnav .sidebar-nav-item.active svg { opacity: 1; }
+
+.settings-subnav .settings-tab-btn--danger,
+.settings-subnav .settings-tab-btn--danger.active { color: color-mix(in srgb, var(--nb-danger) 75%, var(--nb-sidebar-text)); }
+
+/* The toggle only exists for the slim bar */
+.settings-subnav__toggle { display: none; }
+
+@media (min-width: 769px) {
+    html[data-settings-open] .admin-topbar {
+        padding-inline-end: calc(
+            (100% - var(--nb-sidebar-w) - var(--nb-subnav-w) - min(100% - var(--nb-sidebar-w) - var(--nb-subnav-w), var(--nb-content-max))) / 2
+            + var(--nb-space-6)
+        );
+    }
+}
+
+@media (max-width: 1100px) {
+    html[data-settings-open] { --nb-subnav-w: 3.5rem; }
+
+    html[data-settings-open] .settings-subnav__toggle {
+        display: flex;
+        margin: var(--nb-space-3) var(--nb-space-2) 0;
+        width: auto;
+    }
+
+    /* Slim: icons only, centred like the collapsed main sidebar */
+    html[data-settings-open] .settings-subnav:not(.is-open) .sidebar-nav { padding-inline: var(--nb-space-2); }
+    html[data-settings-open] .settings-subnav:not(.is-open) .sidebar-nav-item { justify-content: center; padding-inline: 0; gap: 0; }
+    html[data-settings-open] .settings-subnav:not(.is-open) .sidebar-nav-item > span,
+    html[data-settings-open] .settings-subnav:not(.is-open) .settings-nav-group h3 { display: none; }
+    html[data-settings-open] .settings-subnav:not(.is-open) .settings-subnav__list { gap: var(--nb-space-3); }
+    html[data-settings-open] .settings-subnav:not(.is-open) .settings-nav-group + .settings-nav-group { border-top: 1px solid var(--nb-sidebar-border); padding-top: var(--nb-space-3); }
+
+    /* Open: the full menu slides out over the content; the flow keeps the slim width */
+    html[data-settings-open] .settings-subnav.is-open {
+        width: 16rem;
+        margin-right: calc(var(--nb-subnav-w) - 16rem);
+        z-index: calc(var(--nb-z-sticky) + 2);
+        box-shadow: var(--nb-shadow-xl);
+    }
+
+    .settings-subnav-backdrop {
+        position: fixed;
+        inset: var(--nb-topbar-h) 0 0 0;
+        z-index: calc(var(--nb-z-sticky) + 1);
+        background: rgb(0 0 0 / 0.25);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html[data-settings-open] .settings-subnav { transition: none; }
+}

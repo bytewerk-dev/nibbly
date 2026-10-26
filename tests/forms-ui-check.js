@@ -67,7 +67,7 @@ async function login(browser, viewport) {
         for (const viewport of [{ width: 1280, height: 900 }, { width: 2000, height: 900 }, { width: 820, height: 900 }, { width: 390, height: 900 }]) {
             ({ context, page } = await login(browser, viewport));
             await page.evaluate(() => switchTab('settings'));
-            await page.evaluate(() => document.querySelector('.settings-tab-btn[data-settings-tab="forms"]').click());
+            await page.evaluate(() => activateSettingsTab('forms'));
             await page.locator('.forms-field-row').first().waitFor({ state: 'visible' });
             const where = viewport.width + 'px: ';
             const geometry = await page.evaluate(() => {
