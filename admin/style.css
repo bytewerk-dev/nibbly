@@ -5357,6 +5357,11 @@ input.color-hex-input,
     margin-right: 0;
 }
 
+/* Actions start under their column heading like every other cell */
+.users-table .users-table__actions {
+    justify-content: flex-start;
+}
+
 .role-badge {
     display: inline-block;
     font-size: inherit;
@@ -5423,10 +5428,38 @@ input.color-hex-input,
     margin-bottom: var(--nb-space-4);
 }
 
-/* Danger Zone */
-.danger-zone-title {
-    color: var(--nb-danger-text);
+/* Total reset: folded away at the end of the backup page; the summary stays quiet,
+   the card inside carries the warning colour */
+.danger-zone {
+    margin-top: var(--nb-space-8);
 }
+
+.danger-zone > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--nb-space-2);
+    cursor: pointer;
+    color: var(--nb-text-muted);
+    font-size: var(--nb-text-sm);
+    list-style: none;
+}
+
+.danger-zone > summary::-webkit-details-marker { display: none; }
+
+.danger-zone > summary::before {
+    content: "";
+    width: 0.4em;
+    height: 0.4em;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform var(--nb-transition-fast, 0.15s) ease;
+}
+
+.danger-zone[open] > summary::before { transform: rotate(45deg); }
+.danger-zone > summary:hover { color: var(--nb-text); }
+
+.danger-zone[open] > .danger-zone-card { margin-top: var(--nb-space-3); }
 
 .danger-zone-card {
     border: 1px solid var(--nb-danger);
@@ -6430,11 +6463,16 @@ input.color-hex-input,
 
 .password-field-row input {
     flex: 1;
+    min-width: 0;
 }
 
-.password-field-row .btn-sm {
-    white-space: nowrap;
+/* The generate button takes the height of the field beside it */
+.password-field-row > .btn {
+    flex: none;
     align-self: stretch;
+    height: auto;
+    margin: 0;
+    white-space: nowrap;
 }
 
 .generated-password {
@@ -9695,6 +9733,13 @@ input.color-hex-input,
     padding-right: 20%;
 }
 
+/* Inside a section the description belongs to its fields: no divider */
+.settings-description--compact {
+    padding-bottom: 0;
+    border-bottom: 0;
+    margin-bottom: var(--nb-space-4);
+}
+
 .page-list-header .last-modified {
     font-size: var(--nb-text-xs);
 }
@@ -9755,11 +9800,12 @@ input.color-hex-input,
 }
 
 .settings-panel .settings-section > legend {
-    float: none;
+    /* Floated, the legend leaves the fieldset border: the section line runs
+       above the heading instead of through it */
+    float: left;
     display: block;
     width: auto;
-    /* The fieldset line resumes right after the legend box; keep it off the letters */
-    padding: 0 var(--nb-space-3) 0 0;
+    padding: 0;
     margin: 0 0 var(--nb-space-3);
     font-size: var(--nb-text-xs);
     font-weight: 600;
@@ -9769,7 +9815,7 @@ input.color-hex-input,
 }
 
 .settings-panel .settings-section > legend + * {
-    clear: none;
+    clear: left;
 }
 
 .settings-panel .settings-section .form-group:last-child {
@@ -9864,7 +9910,8 @@ input.color-hex-input,
 
     .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group):not(.access-toggle-row):not(.ai-feature-toggle-grid):not(:has(> label.toggle-label)):not(:has(> label:first-child input)):last-child,
     .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group):not(.access-toggle-row):not(.ai-feature-toggle-grid):not(:has(> label.toggle-label)):not(:has(> label:first-child input)):has(+ .settings-actions),
-    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group):not(.access-toggle-row):not(.ai-feature-toggle-grid):not(:has(> label.toggle-label)):not(:has(> label:first-child input)):has(+ .settings-section) {
+    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group):not(.access-toggle-row):not(.ai-feature-toggle-grid):not(:has(> label.toggle-label)):not(:has(> label:first-child input)):has(+ .settings-section),
+    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group):not(.access-toggle-row):not(.ai-feature-toggle-grid):not(:has(> label.toggle-label)):not(:has(> label:first-child input)):has(+ .smtp-grid) {
         border-bottom: 0;
     }
 
@@ -9879,6 +9926,11 @@ input.color-hex-input,
     .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group):not(.access-toggle-row):not(.ai-feature-toggle-grid):not(:has(> label.toggle-label)):not(:has(> label:first-child input)) > :not(label:first-child) {
         grid-column: 2;
         min-width: 0;
+    }
+
+    /* A button standing in for the field keeps its own width */
+    .settings-panel :is(.settings-form, .settings-form--embedded, .settings-section, .form-group-row) > .form-group:not(.branding-main-grid .form-group):not(.access-toggle-row):not(.ai-feature-toggle-grid):not(:has(> label.toggle-label)):not(:has(> label:first-child input)) > .btn {
+        justify-self: start;
     }
 
     /* A label that wraps its own control (checkbox, toggle) spans both columns */
@@ -10164,6 +10216,11 @@ input.color-hex-input,
     border: 1px solid var(--nb-border);
     border-radius: var(--nb-radius-md);
     background: var(--nb-bg-sunken);
+}
+
+/* A hint between label and control is text, not a caption: keep the bar off it */
+.form-hint + .segmented {
+    margin-top: var(--nb-space-3);
 }
 
 .segmented label {
@@ -11275,7 +11332,6 @@ html[data-theme-preset="pop"] .settings-panel h3.settings-subheading,
 
 /* Second level inside a card (sub-blocks, retention, image jobs): the same
    pill, tinted instead of filled */
-html[data-theme-preset="pop"] .settings-panel h3.settings-subheading,
 [data-theme-preset="pop"] .frontend-logos-block__title,
 [data-theme-preset="pop"] .scheduled-form__fieldset legend,
 [data-theme-preset="pop"] .ai-image-jobs-panel__copy h4,
@@ -11756,6 +11812,7 @@ html[data-sidebar="collapsed"][data-theme-preset="pop"] .admin-sidebar .sidebar-
 }
 
 .smtp-grid > .settings-subheading {
+    justify-self: start;
     margin-bottom: 0;
 }
 
@@ -12522,8 +12579,9 @@ html[data-sidebar="collapsed"] .admin-sidebar .sidebar-nav-item.has-unsaved::aft
    ------------------------------------------------------------
    While the settings are open (<html data-settings-open>) the main sidebar shows
    only its icons and a second sidebar with the settings sections sits beside it,
-   in the colours and item style of the main menu. Below 1100 px it is a slim
-   icon bar; tapping it slides the full menu out over the content (.is-open).
+   in the colours and item style of the main menu. Between 769 and 1100 px it is
+   a slim icon bar that slides the full menu out over the content (.is-open);
+   on phones the section row above the settings opens it as a side menu.
    ============================================================ */
 :root { --nb-subnav-w: 13.75rem; }
 .settings-subnav { display: none; }
@@ -12566,18 +12624,56 @@ html[data-settings-open] .settings-subnav {
     white-space: nowrap;
 }
 
-/* Pop: group heads as tinted pills that hug their text, one step quieter */
+/* Pop: group heads in the accent colour without a pill, so they do not compete
+   with the pills in the content */
 html[data-theme-preset="pop"] .settings-subnav .settings-nav-group h3 {
-    align-self: flex-start;
-    margin: 0 0 var(--nb-space-1) var(--nb-space-2);
-    padding: 0 var(--nb-space-2-5);
-    border-radius: var(--nb-radius-full, 999px);
-    /* A step stronger than the active item below (primary-subtle), so the two read apart */
-    background: var(--nb-primary-muted);
-    color: var(--nb-primary);
+    color: color-mix(in srgb, var(--nb-primary) 65%, var(--nb-sidebar-text-active));
     opacity: 1;
     letter-spacing: 0.08em;
-    line-height: calc(1.5rem * var(--nb-font-scale));
+}
+
+.settings-subnav [hidden] { display: none !important; }
+
+/* Filter: finds sections by their name and by the headings and fields inside them */
+.settings-subnav__filter {
+    display: flex;
+    align-items: center;
+    gap: var(--nb-space-2);
+    margin: var(--nb-space-4) var(--nb-space-3) 0;
+    padding: 0 var(--nb-space-3);
+    height: 2.25rem;
+    border-radius: var(--nb-radius-md);
+    background: color-mix(in srgb, var(--nb-sidebar-text) 9%, transparent);
+    color: var(--nb-sidebar-text);
+    cursor: text;
+}
+
+.settings-subnav__filter:focus-within { box-shadow: 0 0 0 2px var(--nb-focus-ring); }
+.settings-subnav__filter svg { flex: none; width: 1rem; height: 1rem; opacity: 0.6; }
+
+.settings-subnav .settings-subnav__filter input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    color: inherit;
+    font: inherit;
+    font-size: var(--nb-text-sm);
+    outline: none;
+}
+
+.settings-subnav .settings-subnav__filter input::placeholder { color: inherit; opacity: 0.55; }
+
+.settings-subnav__empty {
+    margin: var(--nb-space-4) var(--nb-space-4) 0;
+    color: var(--nb-sidebar-text);
+    opacity: 0.7;
+    font-size: var(--nb-text-sm);
 }
 
 /* The section items are main-menu items (.sidebar-nav-item); their labels stay on one line */
@@ -12590,11 +12686,9 @@ html[data-theme-preset="pop"] .settings-subnav .settings-nav-group h3 {
 
 .settings-subnav .sidebar-nav-item.active svg { opacity: 1; }
 
-.settings-subnav .settings-tab-btn--danger,
-.settings-subnav .settings-tab-btn--danger.active { color: color-mix(in srgb, var(--nb-danger) 75%, var(--nb-sidebar-text)); }
-
-/* The toggle only exists for the slim bar */
-.settings-subnav__toggle { display: none; }
+/* The toggle only exists for the slim bar, the section row only on phones */
+.settings-subnav__toggle,
+.settings-phone-nav { display: none; }
 
 @media (min-width: 769px) {
     html[data-settings-open] .admin-topbar {
@@ -12606,6 +12700,20 @@ html[data-theme-preset="pop"] .settings-subnav .settings-nav-group h3 {
 }
 
 @media (max-width: 1100px) {
+    .settings-subnav-backdrop {
+        position: fixed;
+        inset: var(--nb-topbar-h) 0 0 0;
+        z-index: calc(var(--nb-z-sticky) + 1);
+        background: rgb(0 0 0 / 0.25);
+    }
+
+    html[data-settings-open] .settings-subnav.is-open {
+        z-index: calc(var(--nb-z-sticky) + 2);
+        box-shadow: var(--nb-shadow-xl);
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1100px) {
     html[data-settings-open] { --nb-subnav-w: 3.5rem; }
 
     html[data-settings-open] .settings-subnav__toggle {
@@ -12618,26 +12726,73 @@ html[data-theme-preset="pop"] .settings-subnav .settings-nav-group h3 {
     html[data-settings-open] .settings-subnav:not(.is-open) .sidebar-nav { padding-inline: var(--nb-space-2); }
     html[data-settings-open] .settings-subnav:not(.is-open) .sidebar-nav-item { justify-content: center; padding-inline: 0; gap: 0; }
     html[data-settings-open] .settings-subnav:not(.is-open) .sidebar-nav-item > span,
-    html[data-settings-open] .settings-subnav:not(.is-open) .settings-nav-group h3 { display: none; }
+    html[data-settings-open] .settings-subnav:not(.is-open) .settings-nav-group h3,
+    html[data-settings-open] .settings-subnav:not(.is-open) .settings-subnav__filter { display: none; }
     html[data-settings-open] .settings-subnav:not(.is-open) .settings-subnav__list { gap: var(--nb-space-3); }
     html[data-settings-open] .settings-subnav:not(.is-open) .settings-nav-group + .settings-nav-group { border-top: 1px solid var(--nb-sidebar-border); padding-top: var(--nb-space-3); }
 
-    /* Open: the full menu slides out over the content; the flow keeps the slim width */
+    /* Open: the full menu widens out of the slim bar; the flow keeps the slim width */
     html[data-settings-open] .settings-subnav.is-open {
         width: 16rem;
         margin-right: calc(var(--nb-subnav-w) - 16rem);
+    }
+}
+
+@media (max-width: 768px) {
+    /* Phones: no bar beside the content; the menu slides in from the left */
+    html[data-settings-open] .settings-subnav {
+        position: fixed;
+        top: var(--nb-topbar-h);
+        bottom: 0;
+        left: 0;
+        width: min(17rem, 85vw);
+        height: auto;
+        align-self: stretch;
         z-index: calc(var(--nb-z-sticky) + 2);
-        box-shadow: var(--nb-shadow-xl);
+        transform: translateX(-100%);
+        visibility: hidden;
+        transition: transform var(--nb-duration-normal) var(--nb-ease), visibility 0s linear var(--nb-duration-normal);
     }
 
-    .settings-subnav-backdrop {
-        position: fixed;
-        inset: var(--nb-topbar-h) 0 0 0;
-        z-index: calc(var(--nb-z-sticky) + 1);
-        background: rgb(0 0 0 / 0.25);
+    html[data-settings-open] .settings-subnav.is-open {
+        transform: none;
+        visibility: visible;
+        transition: transform var(--nb-duration-normal) var(--nb-ease);
+    }
+
+    .settings-phone-nav {
+        display: flex;
+        align-items: center;
+        gap: var(--nb-space-2);
+        width: 100%;
+        margin-bottom: var(--nb-space-4);
+        padding: var(--nb-space-2-5) var(--nb-space-3);
+        border: 1px solid var(--nb-border);
+        border-radius: var(--nb-radius-md);
+        background: var(--nb-bg);
+        color: var(--nb-text);
+        font: inherit;
+        font-weight: 600;
+        text-align: left;
+        cursor: pointer;
+    }
+
+    .settings-phone-nav span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .settings-phone-nav svg { flex: none; color: var(--nb-text-muted); }
+}
+
+/* Entering and leaving the settings (and the collapse button) animate the
+   width of the main sidebar; the sub-navigation grows in beside it. Only
+   while .nb-sidebar-animating is set, so the first paint never moves. */
+@media (min-width: 769px) {
+    html.nb-sidebar-animating .admin-sidebar { transition: width var(--nb-duration-normal) var(--nb-ease); }
+
+    @starting-style {
+        html.nb-sidebar-animating[data-settings-open] .settings-subnav { width: 0; }
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    html[data-settings-open] .settings-subnav { transition: none; }
+    html[data-settings-open] .settings-subnav,
+    html.nb-sidebar-animating .admin-sidebar { transition: none; }
 }

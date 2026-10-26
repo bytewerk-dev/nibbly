@@ -506,7 +506,7 @@ CONFIGTPL;
                     <div class="password-field-row">
                         <input type="password" id="password" name="password" required
                                autocomplete="new-password">
-                        <button type="button" class="btn btn-secondary btn-sm" id="generatePwBtn" title="<?php echo t('setup.generate'); ?>"><?php echo t('setup.generate'); ?></button>
+                        <button type="button" class="btn btn-secondary" id="generatePwBtn" title="<?php echo t('setup.generate'); ?>"><?php echo t('setup.generate'); ?></button>
                     </div>
                     <div class="generated-password" id="generatedPw" style="display: none;">
                         <code id="generatedPwText"></code>

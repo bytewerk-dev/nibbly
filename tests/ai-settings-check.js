@@ -56,7 +56,8 @@ const assert = (c, m) => { if (!c) throw new Error('ASSERT: ' + m); };
   assert(!(await page.locator('#modalOverlay').isVisible()), 'not asked again for the same model');
   // reload: the level is shown again
   await page.reload();
-  await page.locator('.sidebar-nav-item[data-tab="settings"]').click();
+  // The page reopens in the settings; a click on their button would close them again
+  await page.evaluate(() => switchTab('settings'));
   await page.locator('.settings-tab-btn[data-settings-tab="ai"]').click();
   await page.waitForTimeout(800);
   assert(await page.locator('#aiChatEffort').inputValue() === 'high' && await page.locator('#aiChatModel').inputValue() === 'gpt-4.1', 'settings survive a reload');
@@ -121,7 +122,8 @@ const assert = (c, m) => { if (!c) throw new Error('ASSERT: ' + m); };
   // The assistant button goes with the key and comes back without a reload
   assert(await page.locator('.nb-copilot').evaluate(el => getComputedStyle(el).display) === 'none', 'the assistant button is gone when the key is removed');
   await page.reload();
-  await page.locator('.sidebar-nav-item[data-tab="settings"]').click();
+  // The page reopens in the settings; a click on their button would close them again
+  await page.evaluate(() => switchTab('settings'));
   await page.locator('.settings-tab-btn[data-settings-tab="ai"]').click();
   await page.waitForTimeout(600);
   assert((await page.locator('.nb-copilot').count()) === 0, 'a page loaded without a key has no assistant button');

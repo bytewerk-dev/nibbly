@@ -75,6 +75,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         'hamburger' => '<path d="M3 12h18M3 6h18M3 18h18"/>',
         'chevron-up'   => '<path d="M18 15l-6-6-6 6"/>',
         'chevron-down' => '<path d="M6 9l6 6 6-6"/>',
+        'search' => '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
         'collapse'  => '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>',
         'home'      => '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/>',
         'edit'      => '<path d="M12 20h9M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4L16.5 3.5z"/>',
@@ -91,6 +92,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         'redo'      => '<path d="M21 7v6h-6"/><path d="M3 17a9 9 0 019-9 9 9 0 016.69 3L21 13"/>',
         'news'      => '<path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><line x1="10" y1="6" x2="18" y2="6"/><line x1="10" y1="10" x2="18" y2="10"/><line x1="10" y1="14" x2="14" y2="14"/>',
         'download'  => '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+        'backup'    => '<ellipse cx="9.08" cy="4.67" rx="6.78" ry="2.67"/><path d="M2.3 4.67v10.46c0 1.48 3.03 2.67 6.78 2.67c.37 0 .73-.01 1.09-.03M11.89 12.14c-.85.15-1.8.24-2.81.24C5.34 12.38 2.3 11.18 2.3 9.71M15.86 10.14V4.67M21.21 18.6c.31-.71.49-1.48.49-2.3c0-3.15-2.56-5.7-5.71-5.7s-5.71 2.55-5.71 5.7s2.56 5.7 5.71 5.7c.78 0 1.52-.16 2.19-.44M15.99 14.78v3.45M14.22 16.14l1.77-1.77 1.77 1.77"/>',
         'upload'    => '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
         'alert'     => '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
         'refresh'   => '<path d="M21 12a9 9 0 11-2.64-6.36"/><path d="M21 3v6h-6"/>',
@@ -340,13 +342,13 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
             </nav>
         </div>
         <div class="sidebar-bottom">
-            <button class="sidebar-nav-item" onclick="switchTab('settings')" data-tab="settings">
+            <button class="sidebar-nav-item" onclick="toggleSettingsTab()" data-tab="settings">
                 <?php echo nbIcon('settings'); ?>
                 <span><?php echo t('nav.settings'); ?></span>
             </button>
             <?php if ($isAdminUser): ?>
             <button class="sidebar-nav-item" onclick="switchTab('backup')" data-tab="backup">
-                <?php echo nbIcon('download'); ?>
+                <?php echo nbIcon('backup'); ?>
                 <span><?php echo t('settings.backup'); ?></span>
             </button>
                 <button class="sidebar-nav-item" data-tab="system" onclick="switchTab('system')"><?php echo nbIcon('alert'); ?><span><?php echo t('system.title'); ?></span><span class="mail-badge mail-badge--hidden system-badge" id="systemBadge"></span></button>
@@ -363,10 +365,13 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
         </div>
     </aside>
     <!-- Settings sub-navigation: a second sidebar next to the (then collapsed) main one; on narrow
-         screens a slim icon bar that slides out as a side menu (scripts/settings.php) -->
+         screens a slim icon bar that slides out as a side menu, on phones a side menu opened from
+         the section row above the settings (scripts/settings.php) -->
     <div class="settings-subnav-backdrop" id="settingsSubnavBackdrop" hidden></div>
     <nav class="settings-tabs settings-subnav" id="settingsSubnav" aria-label="<?php echo htmlspecialchars(t('settings.title'), ENT_QUOTES, 'UTF-8'); ?>">
         <button class="sidebar-nav-item settings-subnav__toggle" type="button" id="settingsSubnavToggle" aria-expanded="false" aria-controls="settingsSubnav"><?php echo nbIcon('settings'); ?><span><?php echo t('settings.title'); ?></span></button>
+        <label class="settings-subnav__filter"><?php echo nbIcon('search'); ?><input type="search" id="settingsSubnavFilter" placeholder="<?php echo htmlspecialchars(t('settings.filter_placeholder'), ENT_QUOTES, 'UTF-8'); ?>" aria-label="<?php echo htmlspecialchars(t('settings.filter_label'), ENT_QUOTES, 'UTF-8'); ?>" autocomplete="off" spellcheck="false"></label>
+        <p class="settings-subnav__empty" id="settingsSubnavEmpty" hidden><?php echo t('settings.filter_empty'); ?></p>
         <div class="sidebar-nav settings-subnav__list">
         <?php if ($isAdminUser): ?>
         <section class="settings-nav-group">
@@ -391,11 +396,6 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
             <button class="sidebar-nav-item settings-tab-btn" type="button" data-settings-tab="users"><?php echo nbIcon('users'); ?><span><?php echo t('settings.users'); ?></span></button>
             <button class="sidebar-nav-item settings-tab-btn" type="button" data-settings-tab="my-account"><?php echo nbIcon('user'); ?><span><?php echo t('settings.my_account'); ?></span></button>
             <button class="sidebar-nav-item settings-tab-btn" type="button" data-settings-tab="login"><?php echo nbIcon('login'); ?><span><?php echo t('settings.login'); ?></span></button>
-        </section>
-        <section class="settings-nav-group">
-            <h3><?php echo t('settings.group_system'); ?></h3>
-            <button class="sidebar-nav-item settings-tab-btn" type="button" data-settings-action="backup"><?php echo nbIcon('download'); ?><span><?php echo t('settings.backup'); ?></span></button>
-            <button class="sidebar-nav-item settings-tab-btn settings-tab-btn--danger" type="button" data-settings-tab="danger"><?php echo nbIcon('alert'); ?><span><?php echo t('settings.danger_zone'); ?></span></button>
         </section>
         <?php else: ?>
         <section class="settings-nav-group">
@@ -1320,6 +1320,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
 
     <!-- Settings Tab -->
     <div class="admin-container" id="settingsTab" style="display: none;">
+        <button type="button" class="settings-phone-nav" id="settingsPhoneNav" aria-controls="settingsSubnav" aria-expanded="false"><?php echo nbIcon('hamburger', 18); ?><span id="settingsPhoneNavLabel"></span><?php echo nbIcon('chevron-down', 16); ?></button>
         <div class="settings-layout">
         <div class="settings-panels">
 
@@ -2009,7 +2010,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                 <form id="privacyForm" class="settings-form">
                     <fieldset class="settings-section settings-section--compact">
                         <legend><?php echo t('settings.privacy'); ?></legend>
-                        <div class="form-group access-toggle-row">
+                        <div class="form-group">
                             <label class="toggle-label">
                                 <span><?php echo t('settings.email_obfuscation'); ?></span>
                                 <div class="toggle-switch">
@@ -2019,7 +2020,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                             </label>
                             <small class="form-hint"><?php echo t('settings.email_obfuscation_hint'); ?></small>
                         </div>
-                        <div class="form-group access-toggle-row">
+                        <div class="form-group">
                             <label class="toggle-label">
                                 <span><?php echo t('settings.remember_public_theme'); ?></span>
                                 <div class="toggle-switch">
@@ -2029,7 +2030,16 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                             </label>
                             <small class="form-hint"><?php echo t('settings.remember_public_theme_hint'); ?></small>
                         </div>
-                        <div class="form-group"><label class="toggle-label"><span><?php echo t('analytics.enabled'); ?></span><span class="toggle-switch"><input type="checkbox" id="analyticsEnabled" checked><span class="toggle-slider"></span></span></label><small class="form-hint"><?php echo t('analytics.hint'); ?></small></div>
+                        <div class="form-group">
+                            <label class="toggle-label">
+                                <span><?php echo t('analytics.enabled'); ?></span>
+                                <span class="toggle-switch">
+                                    <input type="checkbox" id="analyticsEnabled" checked>
+                                    <span class="toggle-slider"></span>
+                                </span>
+                            </label>
+                            <small class="form-hint"><?php echo t('analytics.hint'); ?></small>
+                        </div>
                     </fieldset>
                     <div class="settings-actions">
                         <button type="submit" class="btn btn-primary" id="savePrivacyBtn"><?php echo t('settings.save_privacy'); ?></button>
@@ -2571,7 +2581,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                         </details>
 
                         <div class="form-group">
-                            <button type="button" class="btn btn-secondary btn-sm" id="aiAgentClearCache"><?php echo t('ai.agent_clear_cache'); ?></button>
+                            <button type="button" class="btn btn-secondary" id="aiAgentClearCache"><?php echo t('ai.agent_clear_cache'); ?></button>
                             <small class="form-hint"><?php echo t('ai.agent_cache_hint'); ?></small>
                         </div>
                     </fieldset>
@@ -2753,28 +2763,6 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                 </form>
             </div>
 
-            <?php if ($isAdminUser): ?>
-            <!-- Danger Zone Panel -->
-            <div class="settings-panel" id="settingsPanel-danger">
-                <h2 class="danger-zone-title"><?php echo t('settings.danger_zone'); ?></h2>
-                <p class="settings-description"><?php echo t('settings.danger_zone_desc'); ?></p>
-
-                <div class="danger-zone-card">
-                    <div class="danger-zone-card__header">
-                        <h3><?php echo t('settings.total_reset'); ?></h3>
-                        <p><?php echo t('settings.total_reset_desc'); ?></p>
-                    </div>
-                    <div class="danger-zone-card__warning">
-                        <strong>⚠ <?php echo t('settings.total_reset_warning'); ?></strong>
-                    </div>
-                    <div class="danger-zone-card__action">
-                        <label for="totalResetConfirm"><?php echo t('settings.total_reset_confirm_label'); ?></label>
-                        <input type="text" id="totalResetConfirm" placeholder="<?php echo t('settings.total_reset_confirm_placeholder'); ?>" autocomplete="off" spellcheck="false">
-                        <button type="button" class="btn btn-danger" id="totalResetBtn" disabled><?php echo t('settings.total_reset_btn'); ?></button>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
 
         </div><!-- /.settings-panels -->
         </div><!-- /.settings-layout -->
@@ -3027,6 +3015,26 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                 <p class="scheduled-cron__hint"><?php echo t('settings.web_cron_hint'); ?></p>
             </details>
         </div>
+        <!-- Total reset: a rare, irreversible action, folded away at the end of the backup page -->
+        <?php if ($isAdminUser): ?>
+        <details class="danger-zone" id="dangerZone">
+            <summary><?php echo t('settings.danger_zone'); ?></summary>
+            <div class="danger-zone-card">
+                <div class="danger-zone-card__header">
+                    <h3><?php echo t('settings.total_reset'); ?></h3>
+                    <p><?php echo t('settings.total_reset_desc'); ?></p>
+                </div>
+                <div class="danger-zone-card__warning">
+                    <strong>⚠ <?php echo t('settings.total_reset_warning'); ?></strong>
+                </div>
+                <div class="danger-zone-card__action">
+                    <label for="totalResetConfirm"><?php echo t('settings.total_reset_confirm_label'); ?></label>
+                    <input type="text" id="totalResetConfirm" placeholder="<?php echo t('settings.total_reset_confirm_placeholder'); ?>" autocomplete="off" spellcheck="false">
+                    <button type="button" class="btn btn-danger" id="totalResetBtn" disabled><?php echo t('settings.total_reset_btn'); ?></button>
+                </div>
+            </div>
+        </details>
+        <?php endif; ?>
     </div>
 
     <?php if ($isAdminUser): ?>
@@ -3173,7 +3181,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                         <label class="modal-label"><?php echo t('login.password'); ?>
                             <div class="password-field-row">
                                 <input type="password" id="userFormPassword" class="modal-input" autocomplete="new-password">
-                                <button type="button" class="btn btn-secondary btn-sm" id="userGenPwBtn"><?php echo t('setup.generate'); ?></button>
+                                <button type="button" class="btn btn-secondary" id="userGenPwBtn"><?php echo t('setup.generate'); ?></button>
                             </div>
                         </label>
                         <div class="generated-password" id="userGeneratedPw" style="display: none;">
@@ -3199,7 +3207,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                     <label class="modal-label"><?php echo t('login.password'); ?>
                         <div class="password-field-row">
                             <input type="password" id="resetPwInput" class="modal-input" required minlength="8" autocomplete="new-password">
-                            <button type="button" class="btn btn-secondary btn-sm" id="resetPwGenBtn"><?php echo t('setup.generate'); ?></button>
+                            <button type="button" class="btn btn-secondary" id="resetPwGenBtn"><?php echo t('setup.generate'); ?></button>
                         </div>
                     </label>
                     <div class="generated-password" id="resetPwGenerated" style="display: none;">

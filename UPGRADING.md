@@ -3,6 +3,18 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.5.0 to 2.5.1
+
+Version 2.5.1 is a compatible release: the settings get their own second sidebar with a search
+field, the total reset moves to the end of the backup page, and several settings layouts are
+tidied. No manual step is needed.
+
+1. Deploy the complete core. Changed: the dashboard (`admin/dashboard.php`,
+   `admin/dashboard/scripts/*`, `admin/style.css`), `admin/setup.php`, `includes/ai/nibbly-map.php`
+   and `admin/lang/*.json`.
+2. The total reset is no longer a settings section; it is the folded section at the end of the
+   backup page. Instructions for editors that point to "Settings → Danger zone" need updating.
+
 ## Upgrading from 2.4.3 to 2.5.0
 
 Version 2.5.0 adds the People module with Person and Team blocks, a Menus & Footer editor, own

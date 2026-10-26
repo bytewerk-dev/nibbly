@@ -45,7 +45,6 @@ function nibblyMapSettingsTabs(): array {
         'users' => ['settings.users', 'admin', false],
         'my-account' => ['settings.my_account', 'editor', false],
         'login' => ['settings.login', 'admin', false],
-        'danger' => ['settings.danger_zone', 'admin', false],
     ];
 }
 
@@ -83,7 +82,7 @@ function nibblyMapEntries(): array {
         'tab_users' => ['settings', 'users', 'settings.users', ['users', 'user', 'accounts', 'editors', 'roles', 'add user', 'delete user', 'benutzer', 'nutzer', 'konten', 'rollen', 'benutzer anlegen', 'benutzer löschen'], 'Create, edit and remove users and set their role (administrator or editor).'],
         'tab_my_account' => ['settings', 'my-account', 'settings.my_account', ['my account', 'profile', 'my email', 'mein konto', 'profil'], 'Your own password and e-mail address.'],
         'tab_login' => ['settings', 'login', 'settings.login', ['login', 'sign in', 'log in page', 'frontend login', 'anmeldung', 'login-seite', 'anmeldeseite'], 'Design of the login page and where people land after signing in.'],
-        'tab_danger' => ['settings', 'danger', 'settings.danger_zone', ['reset', 'delete everything', 'factory reset', 'zurücksetzen', 'alles löschen', 'werkseinstellungen'], 'Total reset of the site. Irreversible; only the person who owns the site should use it.'],
+        'tab_danger' => ['backup', '', 'settings.danger_zone', ['reset', 'delete everything', 'factory reset', 'zurücksetzen', 'alles löschen', 'werkseinstellungen'], 'Total reset of the site, folded away at the bottom of the backup page. Irreversible; only the person who owns the site should use it.'],
 
         // Single settings
         'set_admin_language' => ['settings', 'language', 'settings.admin_language', ['system language', 'interface language', 'ui language', 'dashboard language', 'admin language', 'language of the dashboard', 'change language', 'systemsprache', 'oberflächensprache', 'sprache des dashboards', 'dashboard-sprache', 'sprache der oberfläche', 'sprache ändern', 'idioma del sistema', 'langue du système', 'lingua del sistema'], 'Language of the dashboard (the admin interface). The assistant can change it after you confirm.'],
@@ -96,7 +95,7 @@ function nibblyMapEntries(): array {
         'set_smtp' => ['settings', 'email', 'settings.smtp_settings', ['smtp', 'mail server', 'mailserver', 'send emails', 'mails senden'], 'Mail server for sending form messages.'],
         'set_password' => ['settings', 'my-account', 'settings.change_password', ['password', 'change my password', 'passwort ändern', 'mein passwort'], 'Change your own password.'],
         'set_analytics' => ['settings', 'privacy', 'analytics.enabled', ['visitor statistics', 'analytics', 'tracking', 'besucherstatistik', 'statistik'], 'Switch visitor statistics on or off.'],
-        'set_total_reset' => ['settings', 'danger', 'settings.total_reset', ['reset the whole site', 'wipe site', 'alles zurücksetzen'], 'Wipes the site back to a fresh install. Never done by the assistant.'],
+        'set_total_reset' => ['backup', '', 'settings.total_reset', ['reset the whole site', 'wipe site', 'alles zurücksetzen'], 'Wipes the site back to a fresh install. Never done by the assistant.'],
         'set_ai_label' => ['settings', 'language', 'settings.ai_label_artwork', ['ai label', 'ai images label', 'ki-kennzeichnung', 'kennzeichnung ki-bilder'], 'Language of the AI label shown on generated images.'],
     ];
 }
@@ -349,7 +348,7 @@ function nibblyMapStructureSummary(bool $isAdmin): string {
     }
     $tabs = [];
     foreach (nibblyMapSettingsTabs() as $id => [$label, $role, $needsAi]) {
-        if ($id === 'danger' || ($role === 'admin' && !$isAdmin) || ($needsAi && !nibblyMapAiTabAvailable())) continue;
+        if (($role === 'admin' && !$isAdmin) || ($needsAi && !nibblyMapAiTabAvailable())) continue;
         $tabs[] = nibblyMapLabel($label);
     }
     return 'The dashboard has these areas: ' . implode(', ', $areas) . '. The settings have these tabs: ' . implode(', ', $tabs)

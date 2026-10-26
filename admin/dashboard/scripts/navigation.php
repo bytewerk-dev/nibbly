@@ -55,11 +55,20 @@
             // Toggle what is shown (it may be collapsed for the settings only) and remember that
             collapsed = document.documentElement.getAttribute('data-sidebar') !== 'collapsed';
             try { window.localStorage.setItem(KEY, collapsed ? '1' : '0'); } catch (e) {}
+            animateSidebarWidth();
             applySidebarCollapsed(collapsed);
         });
         // The settings show their own sub-navigation beside the main sidebar, which then shows only its
         // icons; leaving them brings back the saved state. Nothing is stored for this.
+        // Width changes animate only while .nb-sidebar-animating is set, never on the first paint
+        var animateTimer = null;
+        function animateSidebarWidth() {
+            document.documentElement.classList.add('nb-sidebar-animating');
+            clearTimeout(animateTimer);
+            animateTimer = setTimeout(function() { document.documentElement.classList.remove('nb-sidebar-animating'); }, 400);
+        }
         window.nbSidebarForSettings = function(active) {
+            if (document.documentElement.hasAttribute('data-settings-open') !== active) animateSidebarWidth();
             document.documentElement.toggleAttribute('data-settings-open', active);
             applySidebarCollapsed(active || collapsed);
         };
@@ -238,8 +247,19 @@
         if (banner) banner.remove();
     }
 
+    // A second click on the settings button closes them again: back to the area they were opened from
+    let tabBeforeSettings = 'home';
+    function toggleSettingsTab() {
+        if (document.documentElement.hasAttribute('data-settings-open')) switchTab(tabBeforeSettings);
+        else switchTab('settings');
+    }
+
     function switchTab(tab, options) {
         options = options || {};
+        if (tab === 'settings') {
+            const from = document.querySelector('.admin-sidebar .sidebar-nav-item.active[data-tab]')?.dataset.tab;
+            if (from && from !== 'settings') tabBeforeSettings = from;
+        }
         if (!isDashboardModuleEnabled(tab)) {
             tab = 'home';
             options = Object.assign({}, options, { replace: true });
