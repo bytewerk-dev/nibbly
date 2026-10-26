@@ -6,6 +6,7 @@
 require_once __DIR__ . '/../admin/lang/i18n.php';
 require_once __DIR__ . '/access-guard.php';
 require_once __DIR__ . '/ai-labels.php';
+require_once __DIR__ . '/public-strings.php';
 require_once __DIR__ . '/html-sanitizer.php';
 
 if (!defined('CONTENT_BASE_PATH')) {
@@ -124,6 +125,9 @@ function getBlockTypes() {
     static $blockTypes = null;
     if ($blockTypes === null) {
         $blockTypes = require __DIR__ . '/block-types.php';
+        $icons = require __DIR__ . '/block-icons.php';
+        foreach ($blockTypes as &$definition) $definition['iconSvg'] = $icons[$definition['icon'] ?? 'text'] ?? $icons['text'];
+        unset($definition);
     }
     return $blockTypes;
 }
@@ -1560,7 +1564,7 @@ function renderTimeline($page) {
         $html .= '<span class="timeline-item__date">' . editableText($page, "timeline.entries.$i.date", '2026') . '</span>';
         $html .= '<span class="timeline-item__version">' . editableText($page, "timeline.entries.$i.version", 'v1.0') . '</span>';
         if ($status === 'upcoming') {
-            $html .= '<span class="timeline-item__badge timeline-item__badge--upcoming">upcoming</span>';
+            $html .= '<span class="timeline-item__badge timeline-item__badge--upcoming">' . htmlspecialchars(nibblyPublicString('timeline_upcoming', strstr((string)$page, '_', true) ?: null)) . '</span>';
         }
         $html .= '</div>';
         $html .= '<h3 class="timeline-item__title">' . editableText($page, "timeline.entries.$i.title", 'Release') . '</h3>';
@@ -1770,7 +1774,7 @@ function renderNewsList($limit = 0, $lang = 'en') {
         // Format date
         try {
             $dateObj = new DateTime($date);
-            $formattedDate = $dateObj->format('M j, Y');
+            $formattedDate = nibblyFormatNewsDate($dateObj, $lang);
         } catch (Exception $e) {
             $formattedDate = htmlspecialchars($date);
         }
@@ -1838,6 +1842,45 @@ function loadEvents() {
     });
 
     return $events;
+}
+
+/**
+ * Site-relative URL of the first public page in $lang that shows some content, for the "back" links
+ * of event and person pages: a page template calling $templateCall, else a JSON page with a section
+ * that $sectionMatches. Null when there is none.
+ */
+function nibblyPublicPageShowing(string $lang, string $templateCall = '', ?callable $sectionMatches = null): ?string {
+    $root = dirname(__DIR__);
+    $default = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
+    $url = fn(string $slug) => ($lang === $default ? '' : $lang . '/') . ($slug === 'home' ? '' : $slug);
+    if ($templateCall !== '') {
+        foreach (glob($root . '/' . $lang . '/*.php') ?: [] as $file) {
+            if (str_contains((string)file_get_contents($file), $templateCall)) return $url(basename($file, '.php'));
+        }
+    }
+    if ($sectionMatches) {
+        foreach (glob($root . '/content/pages/' . $lang . '_*.json') ?: [] as $file) {
+            $page = json_decode((string)file_get_contents($file), true);
+            if (!is_array($page) || ($page['visibility']['status'] ?? 'public') === 'private') continue;
+            foreach (is_array($page['sections'] ?? null) ? $page['sections'] : [] as $section) {
+                if (is_array($section) && $sectionMatches($section)) return $url((string)($page['path'] ?? substr(basename($file, '.json'), strlen($lang) + 1)));
+            }
+        }
+    }
+    return null;
+}
+
+/** An event by id (hidden ones included; the event page decides who sees them), or null. */
+function nibblyFindEvent(string $id): ?array {
+    foreach (loadEvents() as $event) if (is_array($event) && ($event['id'] ?? '') === $id) return $event;
+    return null;
+}
+
+/** Site-relative URL of an event's own page: "events/2026-11-14-…" or "en/events/2026-11-14-…". */
+function nibblyEventPath(array $event, string $lang = ''): string {
+    $default = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
+    $lang = $lang ?: ($GLOBALS['currentLang'] ?? $default);
+    return ($lang === $default ? '' : $lang . '/') . 'events/' . ($event['id'] ?? '');
 }
 
 /**
@@ -2035,9 +2078,11 @@ function renderEvent($event, $lang = 'de', $showImage = true, $editable = false)
     }
     $html .= '</div>';
 
-    // Title
-    if (!empty($url)) {
-        $html .= '<h3 class="event-card__title"><a href="' . htmlspecialchars(nibblySanitizeHref((string)$url)) . '" target="_blank" rel="noopener">' . htmlspecialchars($title) . '</a></h3>';
+    // Title: links to the event's own page (the external link stays in the footer)
+    if (!empty($event['id'])) {
+        $base = rtrim($GLOBALS['basePath'] ?? '', '/');
+        $href = ($base === '' ? '' : $base . '/') . nibblyEventPath($event, $lang);
+        $html .= '<h3 class="event-card__title"><a href="' . htmlspecialchars($href) . '">' . htmlspecialchars($title) . '</a></h3>';
     } else {
         $html .= '<h3 class="event-card__title">' . htmlspecialchars($title) . '</h3>';
     }

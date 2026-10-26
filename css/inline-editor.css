@@ -33,23 +33,96 @@ body.edit-mode-active .editable-field {
    ADMIN BAR
    ============================================================ */
 
+/* The bar takes the dashboard's topbar: js/inline-editor.js copies the saved
+   preset, light/dark mode, font and text size onto #admin-bar as the same
+   data attributes the dashboard sets on <html>, and includes/footer.php sets
+   the base colour on it. css/nibbly-admin-tokens.css then derives every
+   --nb-* token for the bar alone, so the site around it stays untouched.
+   Quiet states mix from the topbar text colour, so they read on light
+   (Soft, Paper, Studio, Console) and dark (Classic, Pop, dark mode) bars. */
+/* Sizes follow the dashboard, not the site: its fluid root size
+   (admin/style.css, 14px below ~1100px up to 18px) as --ab-rem, its density
+   factor as --ab-d (auto follows the viewport, compact/comfortable override). */
 #admin-bar {
+    --ab-rem: clamp(14px, 11.1px + 0.26vw, 18px);
+    --ab-d: 1;
+    --ab-control-h: calc(var(--ab-rem) * (1.75 * var(--ab-d) + 0.25));
+    --ab-quiet-bg: color-mix(in srgb, var(--nb-topbar-text) 4%, transparent);
+    --ab-hover-bg: color-mix(in srgb, var(--nb-topbar-text) 9%, transparent);
+    --ab-line: color-mix(in srgb, var(--nb-topbar-text) 20%, transparent);
+    --ab-line-strong: color-mix(in srgb, var(--nb-topbar-text) 38%, transparent);
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    background: var(--editor-bar-bg, #23282d);
-    color: #fff;
+    background: var(--nb-topbar-bg, #1d2327);
+    color: var(--nb-topbar-text, #f0f0f1);
+    border-bottom: 1px solid var(--nb-border, transparent);
     z-index: 10000;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    font-size: 13px;
+    font-family: var(--nb-font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif);
+    font-size: calc(var(--ab-rem) * 0.8125 * var(--nb-font-scale, 1));
+    font-weight: 400;
+    line-height: 1.4;
+    letter-spacing: normal;
+    text-transform: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
+@media (max-width: 1100px) {
+    #admin-bar:not([data-density]),
+    #admin-bar[data-density="auto"] { --ab-d: 0.85; }
+}
+@media (min-width: 1900px) {
+    #admin-bar:not([data-density]),
+    #admin-bar[data-density="auto"] { --ab-d: 1.08; }
+}
+#admin-bar[data-density="compact"] { --ab-d: 0.8; }
+#admin-bar[data-density="comfortable"] { --ab-d: 1.12; }
+
+/* Tokens the dashboard always resolves on <html> (light block matches :root):
+   on a dark bar they would otherwise inherit the site root's light values.
+   Zero specificity, so every preset rule in the token file still wins. */
+:where(#admin-bar) {
+    --nb-topbar-divider: var(--nb-border);
+    --nb-font-display: var(--nb-font-sans);
+    --nb-border-focus: var(--nb-primary);
+    --nb-focus-ring: var(--nb-primary-muted);
+    --nb-hover-lift: color-mix(in srgb, var(--nb-primary) 90%, white);
+    --nb-hover-settle: color-mix(in srgb, var(--nb-primary) 95%, white);
+}
+@supports (color: oklch(from red l c h)) {
+    :where(#admin-bar) {
+        --nb-hover-lift: oklch(from var(--nb-primary) min(calc(l + 0.045 + max(0, 0.3 - l) * 0.25), 0.95) calc(c * 1.16) h);
+        --nb-hover-settle: oklch(from var(--nb-primary) min(calc(l + 0.03 + max(0, 0.3 - l) * 0.15), 0.93) calc(c * 1.08) h);
+    }
+}
+
+#admin-bar[data-theme-preset="pop"],
+#admin-bar[data-theme-preset="classic"] {
+    border-bottom-color: transparent;
+}
+
+/* Full width like the dashboard's topbar: starts at the left edge with its
+   inset; the right end lines up where the dashboard's content column ends
+   (viewport minus sidebar, capped at --nb-content-max = 100rem, centred).
+   --ab-sidebar-w follows the dashboard's collapsed sidebar (data-sidebar). */
+#admin-bar {
+    --ab-sidebar-w: calc(var(--ab-rem) * 12.5);
+}
+@media (min-width: 769px) {
+    #admin-bar[data-sidebar="collapsed"] { --ab-sidebar-w: calc(var(--ab-rem) * 3.5); }
+}
 .admin-bar-inner {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 8px 20px;
+    min-height: calc(var(--ab-rem) * 3.0625);
+    margin: 0;
+    padding-block: calc(var(--ab-rem) * 0.5 * var(--ab-d));
+    padding-inline-start: calc(var(--ab-rem) * 1.5 * var(--ab-d));
+    padding-inline-end: calc(
+        (100% - var(--ab-sidebar-w) - min(100% - var(--ab-sidebar-w), var(--ab-rem) * 100)) / 2
+        + var(--ab-rem) * 1.5 * var(--ab-d)
+    );
+    box-sizing: border-box;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -59,7 +132,7 @@ body.edit-mode-active .editable-field {
 .admin-bar-left {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--nb-space-2, 8px);
     flex-shrink: 0;
 }
 
@@ -72,7 +145,7 @@ body.edit-mode-active .editable-field {
 .admin-bar-right {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--nb-space-2, 8px);
     flex-shrink: 0;
 }
 
@@ -84,14 +157,38 @@ body.edit-mode-active .editable-field {
     flex-shrink: 0;
 }
 
-/* Dark single-colour logos (default Nibbly icon) turn white; set by markAdminBarLogo() */
-.admin-bar-logo-icon--default {
-    filter: brightness(0) invert(1);
-    opacity: 0.85;
+/* Single-colour logos (default Nibbly icon), marked by markAdminBarLogo(), take the
+   primary colour like the dashboard's inline SVG logo: the file becomes a mask */
+#admin-bar .admin-bar-logo-icon--default {
+    background-color: var(--nb-primary);
+    -webkit-mask: var(--ab-logo-mask) center / contain no-repeat;
+    mask: var(--ab-logo-mask) center / contain no-repeat;
+    object-position: -9999px 0;
+    border-radius: 0;
+}
+
+/* Site name and divider, as in the dashboard's topbar brand */
+.admin-bar-brand {
+    font-family: var(--nb-font-display, inherit);
+    font-size: calc(var(--ab-rem) * var(--nb-font-scale, 1));
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--nb-topbar-text);
+    white-space: nowrap;
+    max-width: 22ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.admin-bar-divider {
+    align-self: stretch;
+    width: 1px;
+    margin: 6px 4px;
+    background: var(--nb-topbar-divider, var(--nb-border));
 }
 
 .admin-bar-info {
-    opacity: 0.8;
+    color: var(--nb-topbar-text-muted);
     white-space: nowrap;
 }
 
@@ -107,9 +204,9 @@ body.edit-mode-active .editable-field {
     align-items: center;
     gap: 6px;
     min-width: 0;
-    padding-inline-end: 24px;
-    margin-inline-end: 16px;
-    border-inline-end: 1px solid rgba(255, 255, 255, .25);
+    padding-inline-end: 16px;
+    margin-inline-end: 8px;
+    border-inline-end: 1px solid var(--nb-topbar-divider, var(--ab-line));
 }
 .admin-bar-backups[hidden] { display: none; }
 #admin-bar.has-page-backups .admin-bar-info { display: none; }
@@ -117,22 +214,26 @@ body.edit-mode-active .editable-field {
     width: 240px;
     max-width: 100%;
     min-width: 0;
-    height: 30px;
-    padding-block: 4px;
-    padding-inline-start: 9px;
-    border: 1px solid rgba(255, 255, 255, .4);
-    border-radius: var(--editor-btn-radius, 6px);
-    background-color: var(--editor-bar-bg, #23282d);
-    color: #fff;
-    color-scheme: dark;
+    height: var(--ab-control-h);
+    padding-block: 0;
+    padding-inline-start: 10px;
+    border: 1px solid var(--ab-line-strong);
+    border-radius: var(--editor-btn-radius, var(--nb-radius-md, 6px));
+    background-color: var(--nb-topbar-bg, #1d2327);
+    color: var(--nb-topbar-text, #fff);
     font: inherit;
     font-variant-numeric: tabular-nums;
     cursor: pointer;
-    --nb-select-caret-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    --nb-select-caret-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+#admin-bar[data-site-theme="dark"] .admin-bar-backup-select,
+#admin-bar[data-theme-preset="classic"] .admin-bar-backup-select,
+#admin-bar[data-theme-preset="pop"] .admin-bar-backup-select {
+    color-scheme: dark;
 }
 #admin-bar .admin-bar-backup-select:focus-visible,
 #admin-bar #admin-btn-restore-backup:focus-visible {
-    outline: 2px solid #fff;
+    outline: 2px solid var(--nb-primary, #fff);
     outline-offset: 2px;
 }
 #admin-bar .admin-bar-backup-select:disabled { opacity: .6; cursor: default; }
@@ -153,7 +254,7 @@ body.edit-mode-active .editable-field {
         padding: 0 0 12px;
         margin-bottom: 4px;
         border-inline-end: 0;
-        border-bottom: 1px solid rgba(255, 255, 255, .25);
+        border-bottom: 1px solid var(--nb-topbar-divider, var(--ab-line));
     }
 }
 @media (max-width: 600px) {
@@ -163,21 +264,37 @@ body.edit-mode-active .editable-field {
     #admin-bar .admin-bar-backup-select { flex: 1; max-width: 260px; }
 }
 
-.admin-bar-link {
+/* Quiet links, like the dashboard's "View site" */
+#admin-bar .admin-bar-link {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    color: rgba(255, 255, 255, 0.75);
+    gap: 6px;
+    height: var(--ab-control-h);
+    padding: 0 var(--ab-link-pad, 10px);
+    box-sizing: border-box;
+    color: var(--nb-topbar-text-muted);
+    font-weight: 500;
     text-decoration: none;
-    padding: 4px 10px;
-    border-radius: 3px;
-    transition: background 0.2s, color 0.2s;
+    border-radius: var(--editor-btn-radius, var(--nb-radius-md, 6px));
+    transition: background-color var(--nb-duration-fast, 150ms) ease, color var(--nb-duration-fast, 150ms) ease;
     white-space: nowrap;
 }
 
-.admin-bar-link:hover {
-    background: var(--editor-bar-hover, #32373c);
-    color: #fff;
+/* The last link's text ends on the dashboard's right edge; its hover area reaches past it */
+#admin-bar .admin-bar-right > .admin-bar-link:last-child {
+    margin-inline-end: calc(-1 * var(--ab-link-pad, 10px));
+}
+
+#admin-bar .admin-bar-link:hover,
+#admin-bar .admin-bar-link:focus-visible {
+    background: var(--ab-hover-bg);
+    color: var(--nb-topbar-text);
+    text-decoration: none;
+}
+
+#admin-bar .admin-bar-link:focus-visible {
+    outline: 2px solid var(--nb-primary);
+    outline-offset: 2px;
 }
 
 .admin-bar-seo {
@@ -185,46 +302,59 @@ body.edit-mode-active .editable-field {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    padding: 4px 9px;
-    border: 1px solid rgba(255, 255, 255, 0.24);
+    height: var(--ab-control-h);
+    padding: 0 12px;
+    box-sizing: border-box;
+    border: 1px solid var(--ab-line);
     border-radius: 999px;
-    color: rgba(255, 255, 255, 0.86);
+    color: var(--nb-topbar-text-muted);
+    font-weight: 500;
     cursor: pointer;
     outline: none;
     text-decoration: none;
     white-space: nowrap;
+    transition: background-color var(--nb-duration-fast, 150ms) ease, border-color var(--nb-duration-fast, 150ms) ease, color var(--nb-duration-fast, 150ms) ease;
 }
 
-.admin-bar-seo:hover {
-    color: #fff;
+.admin-bar-seo:hover,
+.admin-bar-seo:focus-visible {
+    background: var(--ab-hover-bg);
+    border-color: var(--ab-line-strong);
+    color: var(--nb-topbar-text);
     text-decoration: none;
 }
 
+.admin-bar-seo:focus-visible {
+    outline: 2px solid var(--nb-primary);
+    outline-offset: 2px;
+}
+
 .admin-bar-seo-dot {
-    width: 9px;
-    height: 9px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    background: #f59e0b;
-    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.16);
+    background: var(--nb-warning);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--nb-warning) 20%, transparent);
 }
 
 .admin-bar-seo--green .admin-bar-seo-dot {
-    background: #22c55e;
-    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.16);
+    background: var(--nb-success);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--nb-success) 20%, transparent);
 }
 
 .admin-bar-seo--yellow .admin-bar-seo-dot {
-    background: #f59e0b;
-    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18);
+    background: var(--nb-warning);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--nb-warning) 20%, transparent);
 }
 
 .admin-bar-seo--red .admin-bar-seo-dot {
-    background: #ef4444;
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18);
+    background: var(--nb-danger);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--nb-danger) 20%, transparent);
 }
 
 .admin-bar-seo-score {
-    opacity: 0.72;
+    opacity: 0.75;
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
 
@@ -232,6 +362,7 @@ body.edit-mode-active .editable-field {
     white-space: nowrap;
 }
 
+/* Popover: a dashboard card (elevated surface, border, shadow) */
 .admin-bar-seo-popover {
     position: absolute;
     top: calc(100% + 10px);
@@ -239,10 +370,13 @@ body.edit-mode-active .editable-field {
     width: min(360px, calc(100vw - 28px));
     max-width: calc(100vw - 28px);
     padding: 14px 16px;
-    border-radius: 8px;
-    background: #16191d;
-    color: #fff;
-    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+    box-sizing: border-box;
+    border: 1px solid var(--nb-border, transparent);
+    border-radius: var(--nb-radius-lg, 8px);
+    background: var(--nb-bg-elevated, #16191d);
+    color: var(--nb-text, #fff);
+    font-weight: 400;
+    box-shadow: var(--nb-shadow-lg, 0 18px 45px rgba(0, 0, 0, 0.35));
     opacity: 0;
     visibility: hidden;
     transform: translateY(-4px);
@@ -250,6 +384,7 @@ body.edit-mode-active .editable-field {
     pointer-events: none;
     white-space: normal;
     overflow-wrap: anywhere;
+    text-align: start;
 }
 
 .admin-bar-seo:hover .admin-bar-seo-popover,
@@ -262,11 +397,13 @@ body.edit-mode-active .editable-field {
 .admin-bar-seo-popover strong {
     display: block;
     margin-bottom: 8px;
+    font-weight: 600;
 }
 
 .admin-bar-seo-popover ul {
     margin: 0;
     padding-left: 18px;
+    color: var(--nb-text-secondary, inherit);
 }
 
 .admin-bar-seo-popover li + li {
@@ -413,7 +550,7 @@ body.edit-mode-active .editable-overlay:hover {
 }
 
 .overlay-btn-delete:hover {
-    background: var(--editor-danger, #dc3545);
+    background: var(--nb-danger);
 }
 
 .overlay-btn-hide {
@@ -1432,12 +1569,12 @@ textarea.editor-html {
 }
 
 .editor-btn-danger {
-    background: var(--editor-danger, #dc3545);
-    color: white;
+    background: var(--nb-danger);
+    color: var(--nb-text-on-danger);
 }
 
 .editor-btn-danger:hover {
-    background: var(--editor-danger-hover, #c82333);
+    background: var(--nb-danger-hover);
 }
 
 /* ============================================================
@@ -1467,7 +1604,7 @@ textarea.editor-html {
 }
 
 .editor-toast-error {
-    background: var(--editor-danger, #dc3545);
+    background: var(--nb-danger);
 }
 
 @keyframes slideInToast {
@@ -1497,35 +1634,59 @@ textarea.editor-html {
    ADMIN BAR BUTTON
    ============================================================ */
 
+/* Secondary: the dashboard's outlined button, mixed from the topbar text so
+   it sits on light and dark bars alike */
 #admin-bar .admin-bar-btn {
-    display: flex;
+    --nb-hover-from: var(--ab-quiet-bg);
+    --nb-hover-peak: color-mix(in srgb, var(--nb-primary) 18%, var(--ab-quiet-bg));
+    --nb-hover-to: color-mix(in srgb, var(--nb-primary) 10%, var(--ab-quiet-bg));
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: #fff;
-    padding: 4px 12px;
-    border-radius: var(--editor-btn-radius, 6px);
-    font-size: 13px;
+    height: var(--ab-control-h);
+    padding: 0 12px;
+    box-sizing: border-box;
+    background: var(--ab-quiet-bg);
+    border: 1px solid var(--ab-line-strong);
+    color: var(--nb-topbar-text);
+    border-radius: var(--editor-btn-radius, var(--nb-radius-md, 6px));
+    font-family: inherit;
+    font-size: calc(var(--ab-rem) * 0.8125 * var(--nb-font-scale, 1));
+    font-weight: 500;
+    line-height: 1.2;
+    text-decoration: none;
     cursor: pointer;
-    transition: background-color 0.15s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+    transition: background-color var(--nb-duration-hover-out, 320ms) ease-out,
+                border-color var(--nb-duration-hover-out, 320ms) ease-out,
+                color var(--nb-duration-fast, 150ms) ease,
+                box-shadow var(--nb-duration-hover-out, 320ms) ease-out,
+                transform var(--nb-duration-fast, 150ms) ease;
     white-space: nowrap;
 }
 
 #admin-bar .admin-bar-btn:hover,
-#admin-bar .admin-bar-btn.is-hover,
+#admin-bar .admin-bar-btn.is-hover {
+    background-color: var(--nb-hover-to);
+    border-color: color-mix(in srgb, var(--nb-topbar-text) 55%, transparent);
+    color: var(--nb-topbar-text);
+    animation: nb-admin-bar-hover-fill var(--nb-duration-hover-in, 1400ms) linear both;
+}
+
 #admin-bar .admin-bar-btn:focus-visible {
-    background: rgba(255, 255, 255, 0.18) !important;
-    border-color: rgba(255, 255, 255, 0.85) !important;
-    color: #fff !important;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 8px 22px rgba(0, 0, 0, 0.28) !important;
-    transform: translateY(-2px) !important;
-    outline: none;
+    outline: 2px solid var(--nb-primary);
+    outline-offset: 2px;
+}
+
+#admin-bar .admin-bar-btn:active {
+    transform: scale(0.98);
+    animation: none;
 }
 
 #admin-bar .admin-bar-btn svg {
     width: 16px;
     height: 16px;
+    flex-shrink: 0;
     fill: currentColor;
 }
 
@@ -1534,77 +1695,88 @@ textarea.editor-html {
     cursor: not-allowed;
 }
 
-#admin-bar .admin-bar-btn:disabled:hover {
-    background: transparent !important;
-    border-color: rgba(255, 255, 255, 0.3) !important;
-    color: #fff !important;
-    box-shadow: none !important;
-    transform: none !important;
+#admin-bar .admin-bar-btn:disabled:hover,
+#admin-bar .admin-bar-btn:disabled.is-hover {
+    background: var(--ab-quiet-bg);
+    border-color: var(--ab-line-strong);
+    color: var(--nb-topbar-text);
+    animation: none;
+    transform: none;
 }
 
-#admin-bar .admin-bar-btn-edit {
-    background: var(--editor-btn-bg, radial-gradient(ellipse at 50% 0%, #4580ed 0%, #2563eb 70%));
-    border-color: var(--editor-primary, #2563eb);
-    font-weight: 600;
+/* Primary: the dashboard's primary button (fill, sheen, soft shadow, lift-then-settle hover) */
+#admin-bar .admin-bar-btn-edit,
+#admin-bar .admin-bar-btn-save-exit {
+    --nb-hover-from: var(--nb-primary);
+    --nb-hover-peak: var(--nb-hover-lift, var(--nb-primary-hover));
+    --nb-hover-to: var(--nb-hover-settle, var(--nb-primary-hover));
+    background-color: var(--nb-primary, #3858e9);
+    background-image: var(--nb-primary-sheen, none);
+    border-color: transparent;
+    color: var(--nb-text-on-primary, #fff);
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.25), 0 -1px 1px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--nb-primary) 15%, transparent);
 }
 
 #admin-bar .admin-bar-btn-edit:hover,
 #admin-bar .admin-bar-btn-edit.is-hover,
-#admin-bar .admin-bar-btn-edit:focus-visible {
-    background: var(--editor-btn-bg-hover, radial-gradient(ellipse at 50% 0%, #5d94ef 0%, #2563eb 70%)) !important;
-    border-color: var(--editor-primary-hover, #1d4ed8) !important;
-    color: #fff !important;
+#admin-bar .admin-bar-btn-save-exit:hover,
+#admin-bar .admin-bar-btn-save-exit.is-hover {
+    background-color: var(--nb-hover-to);
+    border-color: transparent;
+    color: var(--nb-text-on-primary, #fff);
+    box-shadow: 0 4px 20px color-mix(in srgb, var(--nb-primary) 35%, transparent);
+}
+
+#admin-bar .admin-bar-btn-edit:active,
+#admin-bar .admin-bar-btn-save-exit:active {
+    background-color: var(--nb-primary-active, var(--nb-primary));
+}
+
+/* Glow off (Settings → Design): no sheen, no shadow, no text shadow */
+.editor-flat #admin-bar .admin-bar-btn-edit,
+.editor-flat #admin-bar .admin-bar-btn-edit:hover,
+.editor-flat #admin-bar .admin-bar-btn-edit.is-hover,
+.editor-flat #admin-bar .admin-bar-btn-save-exit,
+.editor-flat #admin-bar .admin-bar-btn-save-exit:hover,
+.editor-flat #admin-bar .admin-bar-btn-save-exit.is-hover {
+    background-image: none;
+    box-shadow: none;
+    text-shadow: none;
 }
 
 #admin-bar .admin-bar-btn-content-editor {
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
     line-height: 1;
-    box-sizing: border-box;
 }
 
-#admin-bar .admin-bar-btn-content-editor:hover,
-#admin-bar .admin-bar-btn-content-editor.is-hover,
-#admin-bar .admin-bar-btn-content-editor:focus-visible {
-    background: rgba(255, 255, 255, 0.15) !important;
-    color: #fff !important;
-}
-
+/* Save: outlined in the primary colour */
 #admin-bar .admin-bar-btn-save {
-    background: transparent;
-    border-color: var(--editor-primary, #2563eb);
+    border-color: var(--nb-primary);
     font-weight: 600;
 }
 
-#admin-bar .admin-bar-btn-save:hover,
-#admin-bar .admin-bar-btn-save.is-hover,
-#admin-bar .admin-bar-btn-save:focus-visible {
-    background: rgba(255, 255, 255, 0.18) !important;
-    border-color: var(--editor-primary-hover, #1d4ed8) !important;
-    color: #fff !important;
-}
-
-#admin-bar .admin-bar-btn-save-exit {
-    background: var(--editor-btn-bg, radial-gradient(ellipse at 50% 0%, #4580ed 0%, #2563eb 70%));
-    border-color: var(--editor-primary, #2563eb);
-}
-
-#admin-bar .admin-bar-btn-save-exit:hover,
-#admin-bar .admin-bar-btn-save-exit.is-hover,
-#admin-bar .admin-bar-btn-save-exit:focus-visible {
-    background: var(--editor-btn-bg-hover, radial-gradient(ellipse at 50% 0%, #5d94ef 0%, #2563eb 70%)) !important;
-    border-color: var(--editor-primary-hover, #1d4ed8) !important;
-}
-
-
 #admin-bar .admin-bar-btn-cancel {
-    border-color: rgba(255, 255, 255, 0.5);
+    border-color: var(--ab-line-strong);
 }
 
 #admin-bar .admin-bar-btn-undo,
 #admin-bar .admin-bar-btn-redo {
-    padding: 4px 8px;
+    min-width: var(--ab-control-h);
+    padding-inline: 7px;
+}
+
+@keyframes nb-admin-bar-hover-fill {
+    0% { background-color: var(--nb-hover-from); }
+    36% { background-color: var(--nb-hover-peak); }
+    62% { background-color: var(--nb-hover-peak); }
+    100% { background-color: var(--nb-hover-to); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #admin-bar .admin-bar-btn:hover,
+    #admin-bar .admin-bar-btn.is-hover {
+        animation: none;
+    }
 }
 
 .admin-bar-edit-controls {
@@ -1703,7 +1875,7 @@ textarea.editor-html {
     width: 48px;
     height: 48px;
     margin: 0 auto 15px;
-    color: var(--editor-danger, #dc3545);
+    color: var(--nb-danger);
 }
 
 .confirm-dialog-icon svg {
@@ -2449,7 +2621,7 @@ body.edit-mode-active .editable-list-overlay:hover {
 }
 
 .editable-list-overlay .overlay-btn-delete:hover {
-    background: var(--editor-danger, #dc3545);
+    background: var(--nb-danger);
 }
 
 .editable-list-overlay .list-drag-handle {
@@ -3020,8 +3192,8 @@ body.edit-mode-active .event-card-editable:hover .event-edit-buttons {
 }
 
 .event-delete-btn:hover {
-    background: rgba(220, 53, 69, 0.3);
-    color: #dc3545;
+    background: color-mix(in srgb, var(--nb-danger) 30%, transparent);
+    color: color-mix(in srgb, var(--nb-danger) 72%, white);
 }
 
 /* Hidden event card styling */
@@ -3206,23 +3378,23 @@ body.edit-mode-active .event-card-hidden .event-hide-btn {
 @media (max-width: 1400px) {
     body.visual-editing .admin-bar-inner,
     body.edit-mode-active .admin-bar-inner {
-        max-width: none;
-        padding-inline: 12px;
         gap: 10px;
     }
 
     body.visual-editing .admin-bar-info,
     body.edit-mode-active .admin-bar-info,
     body.visual-editing .admin-bar-seo,
-    body.edit-mode-active .admin-bar-seo {
+    body.edit-mode-active .admin-bar-seo,
+    body.visual-editing .admin-bar-brand,
+    body.edit-mode-active .admin-bar-brand,
+    body.visual-editing .admin-bar-divider,
+    body.edit-mode-active .admin-bar-divider {
         display: none;
     }
 }
 
 @media (max-width: 1200px) {
     .admin-bar-inner {
-        max-width: none;
-        padding-inline: 10px;
         gap: 8px;
     }
 
@@ -3230,14 +3402,22 @@ body.edit-mode-active .event-card-hidden .event-hide-btn {
         display: none;
     }
 
-    #admin-bar .admin-bar-btn,
-    .admin-bar-link {
+    #admin-bar {
+        --ab-link-pad: 9px;
+    }
+
+    #admin-bar .admin-bar-btn {
         padding-inline: 9px;
     }
 }
 
 @media (max-width: 980px) {
     .admin-bar-seo-score {
+        display: none;
+    }
+
+    .admin-bar-brand,
+    .admin-bar-divider {
         display: none;
     }
 }
@@ -3247,6 +3427,15 @@ body.edit-mode-active .event-card-hidden .event-hide-btn {
         flex-wrap: wrap;
         justify-content: center;
         text-align: center;
+    }
+
+    /* Edit mode on phones: the controls wrap instead of running off the screen */
+    .admin-bar-center,
+    .admin-bar-edit-controls {
+        flex-wrap: wrap;
+        justify-content: center;
+        min-width: 0;
+        max-width: 100%;
     }
 
     .admin-bar-info {
@@ -3529,15 +3718,15 @@ body.edit-mode-active .cell-toggle-group {
 }
 
 .cell-toggle-btn--active[data-mode="yes"] {
-    background: rgba(34, 197, 94, 0.2);
-    border-color: rgba(34, 197, 94, 0.5);
-    color: #22c55e;
+    background: color-mix(in srgb, var(--nb-success) 20%, transparent);
+    border-color: color-mix(in srgb, var(--nb-success) 50%, transparent);
+    color: color-mix(in srgb, var(--nb-success) 72%, white);
 }
 
 .cell-toggle-btn--active[data-mode="no"] {
-    background: rgba(239, 68, 68, 0.2);
-    border-color: rgba(239, 68, 68, 0.5);
-    color: #ef4444;
+    background: color-mix(in srgb, var(--nb-danger) 20%, transparent);
+    border-color: color-mix(in srgb, var(--nb-danger) 50%, transparent);
+    color: color-mix(in srgb, var(--nb-danger) 72%, white);
 }
 
 .cell-toggle-btn--active[data-mode="text"] {
@@ -3665,12 +3854,12 @@ body.edit-mode-active .cell-toggle-group {
 
 /* Danger buttons */
 [data-site-theme="dark"] .editor-btn-danger {
-    background: #7f1d1d;
-    color: #fca5a5;
+    background: var(--nb-danger-subtle);
+    color: var(--nb-danger-text);
 }
 
 [data-site-theme="dark"] .editor-btn-danger:hover {
-    background: #991b1b;
+    background: var(--nb-danger-border);
 }
 
 /* Event editor tabs */

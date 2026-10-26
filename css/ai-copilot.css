@@ -745,13 +745,13 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 }
 
 .nb-copilot-bool--true {
-    background: #dcfce7;
-    color: #166534;
+    background: var(--nb-success-subtle);
+    color: var(--nb-success-text);
 }
 
 .nb-copilot-bool--false {
-    background: #fee2e2;
-    color: #991b1b;
+    background: var(--nb-danger-subtle);
+    color: var(--nb-danger-text);
 }
 
 .nb-copilot-option {
@@ -1090,7 +1090,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     border: 1px solid var(--nb-border-strong, #cbd5e1);
     border-radius: var(--nb-radius-lg, 8px);
     background: var(--nb-bg-elevated, #fff);
-    color: #991b1b;
+    color: var(--nb-danger-text);
     cursor: pointer;
 }
 
@@ -1585,7 +1585,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     flex: 0 0 auto;
     display: inline-flex;
     margin-top: 1px;
-    color: #15803d;
+    color: var(--nb-success-text);
 }
 
 .nb-agent-steps li.is-failed .nb-agent-step__mark {
@@ -1666,18 +1666,18 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 }
 
 .nb-agent-tag--ok {
-    background: #dcfce7;
-    color: #166534;
+    background: var(--nb-success-subtle);
+    color: var(--nb-success-text);
 }
 
 .nb-agent-tag--warn {
-    background: #fef3c7;
-    color: #92400e;
+    background: var(--nb-warning-subtle);
+    color: var(--nb-warning-text);
 }
 
 .nb-agent-tag--danger {
-    background: #fee2e2;
-    color: #b91c1c;
+    background: var(--nb-danger-subtle);
+    color: var(--nb-danger-text);
 }
 
 .nb-agent-tag--ai {
@@ -1699,9 +1699,9 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 }
 
 .nb-agent-note--warn {
-    border: 1px solid #fcd34d;
-    background: #fffbeb;
-    color: #78350f;
+    border: 1px solid var(--nb-warning-border);
+    background: var(--nb-warning-subtle);
+    color: var(--nb-warning-text-strong);
 }
 
 .nb-agent-note--info {
@@ -1722,7 +1722,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     display: flex;
     align-items: center;
     gap: var(--nb-space-1-5, 6px);
-    color: #166534;
+    color: var(--nb-success-text);
     font-size: 12px;
     font-weight: 700;
 }
@@ -1742,8 +1742,8 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 }
 
 .nb-agent-op.is-destructive {
-    border-color: #fecaca;
-    background: #fef2f2;
+    border-color: var(--nb-danger-border);
+    background: var(--nb-danger-subtle);
 }
 
 .nb-agent-diff {
@@ -1856,10 +1856,10 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 .nb-copilot-limit {
     margin-bottom: var(--nb-space-3, 12px);
     padding: 9px var(--nb-space-3, 12px);
-    border: 1px solid #fcd34d;
+    border: 1px solid var(--nb-warning-border);
     border-radius: var(--nb-radius-lg, 8px);
-    background: #fffbeb;
-    color: #78350f;
+    background: var(--nb-warning-subtle);
+    color: var(--nb-warning-text-strong);
     font-size: 12px;
     line-height: 1.4;
 }
@@ -1869,13 +1869,13 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 }
 
 .nb-copilot-limit__line--reached {
-    color: #991b1b;
+    color: var(--nb-danger-text);
     font-weight: 700;
 }
 
 .nb-copilot-limit__hint {
     margin-bottom: 0 !important;
-    color: #92400e;
+    color: var(--nb-warning-text);
 }
 
 /* Dashboard actions: cards the person confirms (open a section, change the dashboard look) */
@@ -1922,11 +1922,11 @@ body:not(.visual-editing) .nb-copilot-selected-field {
 }
 
 .nb-copilot-dash footer .nb-copilot-dash__ok {
-    color: #166534;
+    color: var(--nb-success-text);
 }
 
 .nb-copilot-dash footer .nb-copilot-dash__error {
-    color: #b91c1c;
+    color: var(--nb-danger-text);
 }
 
 .nb-copilot-dash button {
@@ -2009,8 +2009,8 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     padding: var(--nb-space-2, 8px) var(--nb-space-2-5, 10px);
     border-left: 4px solid var(--nb-brand, #b45309);
     border-radius: var(--nb-radius-md, 6px);
-    background: #fffbeb;
-    color: #78350f;
+    background: var(--nb-warning-subtle);
+    color: var(--nb-warning-text-strong);
     font-size: 12px;
     line-height: 1.45;
 }

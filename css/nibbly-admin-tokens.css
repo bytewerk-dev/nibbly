@@ -89,18 +89,53 @@
     --nb-border-focus: var(--nb-primary);
     --nb-focus-ring: var(--nb-primary-muted);
 
-    /* Semantic */
-    --nb-success: #3858e9;
-    --nb-success-subtle: #eff6ff;
-    --nb-danger: #dc2626;
-    --nb-danger-hover: #b91c1c;
-    --nb-danger-subtle: #fef2f2;
-    --nb-danger-btn: radial-gradient(ellipse at 50% 0%, #ef4444 0%, #b91c1c 70%);
-    --nb-danger-btn-hover: radial-gradient(ellipse at 50% 0%, #f87171 0%, #dc2626 70%);
-    --nb-warning: #d97706;
-    --nb-warning-subtle: #fffbeb;
-    --nb-warning-text: #92400e;
-    --nb-warning-text-strong: #78350f;
+    /* Semantic: every shade derives from the three base colours above, so a
+       saved dangerColor / warningColor / successColor reaches text, fills,
+       borders, focus rings, shadows and gradients alike. These color-mix()
+       versions serve browsers without relative colour syntax; the @supports
+       block below replaces them with OKLCH derivations. Per colour:
+         --nb-X            fill (buttons, dots, bars, outlines)
+         --nb-X-hover      fill on hover
+         --nb-X-subtle     tinted background
+         --nb-X-border     tinted border
+         --nb-X-ring       focus ring / dot halo
+         --nb-X-text       readable text on the page and on -subtle
+         --nb-X-text-strong  headings on -subtle
+         --nb-text-on-X    text on the -X fill
+         --nb-X-shadow / -shadow-hover  button glow (none when glow is off)
+         --nb-X-btn / -btn-hover        button gradient */
+    --nb-danger: var(--nb-danger-base);
+    --nb-danger-hover: color-mix(in srgb, var(--nb-danger-base) 84%, black);
+    --nb-danger-subtle: color-mix(in srgb, var(--nb-danger-base) 8%, transparent);
+    --nb-danger-border: color-mix(in srgb, var(--nb-danger-base) 28%, transparent);
+    --nb-danger-ring: color-mix(in srgb, var(--nb-danger-base) 16%, transparent);
+    --nb-danger-text: color-mix(in srgb, var(--nb-danger-base) 84%, black);
+    --nb-danger-text-strong: color-mix(in srgb, var(--nb-danger-base) 66%, black);
+    --nb-text-on-danger: #ffffff;
+    --nb-danger-btn: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--nb-danger-base) 80%, white) 0%, var(--nb-danger-hover) 70%);
+    --nb-danger-btn-hover: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--nb-danger-base) 64%, white) 0%, var(--nb-danger) 70%);
+    --nb-danger-shadow: 0 2px 8px color-mix(in srgb, var(--nb-danger) 15%, transparent);
+    --nb-danger-shadow-hover: 0 4px 20px color-mix(in srgb, var(--nb-danger) 40%, transparent);
+    --nb-warning: var(--nb-warning-base);
+    --nb-warning-hover: color-mix(in srgb, var(--nb-warning-base) 86%, black);
+    --nb-warning-subtle: color-mix(in srgb, var(--nb-warning-base) 10%, transparent);
+    --nb-warning-border: color-mix(in srgb, var(--nb-warning-base) 34%, transparent);
+    --nb-warning-ring: color-mix(in srgb, var(--nb-warning-base) 18%, transparent);
+    --nb-warning-text: color-mix(in srgb, var(--nb-warning-base) 62%, black);
+    --nb-warning-text-strong: color-mix(in srgb, var(--nb-warning-base) 50%, black);
+    --nb-text-on-warning: #1a1a1a;
+    --nb-success: var(--nb-success-base);
+    --nb-success-hover: color-mix(in srgb, var(--nb-success-base) 86%, black);
+    --nb-success-subtle: color-mix(in srgb, var(--nb-success-base) 8%, transparent);
+    --nb-success-border: color-mix(in srgb, var(--nb-success-base) 28%, transparent);
+    --nb-success-ring: color-mix(in srgb, var(--nb-success-base) 16%, transparent);
+    --nb-success-text: color-mix(in srgb, var(--nb-success-base) 84%, black);
+    --nb-success-text-strong: color-mix(in srgb, var(--nb-success-base) 66%, black);
+    --nb-text-on-success: #ffffff;
+    --nb-success-btn: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--nb-success-base) 80%, white) 0%, var(--nb-success) 70%);
+    --nb-success-btn-hover: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--nb-success-base) 64%, white) 0%, var(--nb-success) 70%);
+    --nb-success-shadow: 0 2px 8px color-mix(in srgb, var(--nb-success) 15%, transparent);
+    --nb-success-shadow-hover: 0 4px 20px color-mix(in srgb, var(--nb-success) 35%, transparent);
 
     /* Shadows (blue-tinted, layered) */
     --nb-shadow-sm: 0 1px 2px rgba(37, 99, 235, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
@@ -223,11 +258,31 @@
     --nb-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.5);
     --nb-shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.6);
 
-    --nb-success-subtle: rgba(37, 99, 235, 0.1);
-    --nb-danger-subtle: rgba(220, 38, 38, 0.1);
-    --nb-warning-subtle: rgba(217, 119, 6, 0.1);
-    --nb-warning-text: #fbbf24;
-    --nb-warning-text-strong: #fcd34d;
+    /* Semantic on dark surfaces: fills lifted towards white, text lifted
+       further so it stays readable on the dark stage and on -subtle */
+    --nb-danger: color-mix(in srgb, var(--nb-danger-base) 82%, white);
+    --nb-danger-hover: color-mix(in srgb, var(--nb-danger-base) 68%, white);
+    --nb-danger-subtle: color-mix(in srgb, var(--nb-danger-base) 14%, transparent);
+    --nb-danger-border: color-mix(in srgb, var(--nb-danger-base) 40%, transparent);
+    --nb-danger-ring: color-mix(in srgb, var(--nb-danger-base) 26%, transparent);
+    --nb-danger-text: color-mix(in srgb, var(--nb-danger-base) 58%, white);
+    --nb-danger-text-strong: color-mix(in srgb, var(--nb-danger-base) 40%, white);
+    --nb-text-on-danger: #11141b;
+    --nb-warning: color-mix(in srgb, var(--nb-warning-base) 88%, white);
+    --nb-warning-hover: color-mix(in srgb, var(--nb-warning-base) 74%, white);
+    --nb-warning-subtle: color-mix(in srgb, var(--nb-warning-base) 14%, transparent);
+    --nb-warning-border: color-mix(in srgb, var(--nb-warning-base) 42%, transparent);
+    --nb-warning-ring: color-mix(in srgb, var(--nb-warning-base) 26%, transparent);
+    --nb-warning-text: color-mix(in srgb, var(--nb-warning-base) 62%, white);
+    --nb-warning-text-strong: color-mix(in srgb, var(--nb-warning-base) 42%, white);
+    --nb-success: color-mix(in srgb, var(--nb-success-base) 82%, white);
+    --nb-success-hover: color-mix(in srgb, var(--nb-success-base) 68%, white);
+    --nb-success-subtle: color-mix(in srgb, var(--nb-success-base) 14%, transparent);
+    --nb-success-border: color-mix(in srgb, var(--nb-success-base) 40%, transparent);
+    --nb-success-ring: color-mix(in srgb, var(--nb-success-base) 26%, transparent);
+    --nb-success-text: color-mix(in srgb, var(--nb-success-base) 58%, white);
+    --nb-success-text-strong: color-mix(in srgb, var(--nb-success-base) 40%, white);
+    --nb-text-on-success: #11141b;
 }
 
 
@@ -272,17 +327,43 @@
         --nb-brand-dark: oklch(from var(--nb-accent-base) calc(l - 0.10) c h);
         --nb-brand-darker: oklch(from var(--nb-accent-base) calc(l - 0.18) c h);
         --nb-brand-subtle: oklch(from var(--nb-accent-base) l c h / 0.12);
+        /* Semantic colours (see the list in the static block above). The same
+           base gives a fill at its own lightness and a text shade capped dark
+           enough for light surfaces; text on a fill flips to near-black once
+           the fill is light (lightness above ~0.62, e.g. a yellow warning
+           or a lifted dark-mode fill). */
         --nb-danger: oklch(from var(--nb-danger-base) l c h);
         --nb-danger-hover: oklch(from var(--nb-danger-base) calc(l - 0.08) c h);
         --nb-danger-subtle: oklch(from var(--nb-danger-base) l c h / 0.10);
+        --nb-danger-border: oklch(from var(--nb-danger-base) l c h / 0.30);
+        --nb-danger-ring: oklch(from var(--nb-danger-base) l c h / 0.16);
+        --nb-danger-text: oklch(from var(--nb-danger-base) min(l, 0.52) c h);
+        --nb-danger-text-strong: oklch(from var(--nb-danger-base) min(calc(l - 0.10), 0.44) c h);
+        --nb-text-on-danger: oklch(from var(--nb-danger) clamp(0.17, (0.62 - l) * 100, 0.985) 0 0);
         --nb-danger-btn: radial-gradient(ellipse at 50% 0%, oklch(from var(--nb-danger-base) calc(l + 0.10) c h) 0%, var(--nb-danger) 70%);
         --nb-danger-btn-hover: radial-gradient(ellipse at 50% 0%, oklch(from var(--nb-danger-base) calc(l + 0.16) c h) 0%, var(--nb-danger) 70%);
+        --nb-danger-shadow: 0 2px 8px oklch(from var(--nb-danger) l c h / 0.15);
+        --nb-danger-shadow-hover: 0 4px 20px oklch(from var(--nb-danger) l c h / 0.40);
         --nb-warning: oklch(from var(--nb-warning-base) l c h);
+        --nb-warning-hover: oklch(from var(--nb-warning-base) calc(l - 0.07) c h);
         --nb-warning-subtle: oklch(from var(--nb-warning-base) l c h / 0.12);
+        --nb-warning-border: oklch(from var(--nb-warning-base) l c h / 0.38);
+        --nb-warning-ring: oklch(from var(--nb-warning-base) l c h / 0.18);
         --nb-warning-text: oklch(from var(--nb-warning-base) min(calc(l - 0.18), 0.48) calc(c * 0.9) h);
         --nb-warning-text-strong: oklch(from var(--nb-warning-base) min(calc(l - 0.28), 0.40) calc(c * 0.9) h);
+        --nb-text-on-warning: oklch(from var(--nb-warning) clamp(0.17, (0.62 - l) * 100, 0.985) 0 0);
         --nb-success: oklch(from var(--nb-success-base) l c h);
+        --nb-success-hover: oklch(from var(--nb-success-base) calc(l - 0.07) c h);
         --nb-success-subtle: oklch(from var(--nb-success-base) l c h / 0.10);
+        --nb-success-border: oklch(from var(--nb-success-base) l c h / 0.30);
+        --nb-success-ring: oklch(from var(--nb-success-base) l c h / 0.16);
+        --nb-success-text: oklch(from var(--nb-success-base) min(l, 0.50) c h);
+        --nb-success-text-strong: oklch(from var(--nb-success-base) min(calc(l - 0.10), 0.42) c h);
+        --nb-text-on-success: oklch(from var(--nb-success) clamp(0.17, (0.62 - l) * 100, 0.985) 0 0);
+        --nb-success-btn: radial-gradient(ellipse at 50% 0%, oklch(from var(--nb-success-base) calc(l + 0.10) c h) 0%, var(--nb-success) 70%);
+        --nb-success-btn-hover: radial-gradient(ellipse at 50% 0%, oklch(from var(--nb-success-base) calc(l + 0.16) c h) 0%, var(--nb-success) 70%);
+        --nb-success-shadow: 0 2px 8px oklch(from var(--nb-success) l c h / 0.15);
+        --nb-success-shadow-hover: 0 4px 20px oklch(from var(--nb-success) l c h / 0.35);
     }
 
     /* --- Interactive colour, every preset, dark: never darker than l 0.72 --- */
@@ -302,17 +383,33 @@
         --nb-text-muted: #a1a5ad;
         /* The lifted primary is light, so text on it has to be dark to stay readable */
         --nb-text-on-primary: #11141b;
+        /* Semantic colours on dark surfaces: fills lifted to l 0.68-0.72, text
+           to l 0.78-0.80 so it stays readable on the stage and on -subtle */
         --nb-danger: oklch(from var(--nb-danger-base) max(l, 0.68) c h);
         --nb-danger-hover: oklch(from var(--nb-danger-base) calc(max(l, 0.68) + 0.06) c h);
         --nb-danger-subtle: oklch(from var(--nb-danger-base) max(l, 0.68) c h / 0.16);
+        --nb-danger-border: oklch(from var(--nb-danger-base) max(l, 0.68) c h / 0.42);
+        --nb-danger-ring: oklch(from var(--nb-danger-base) max(l, 0.68) c h / 0.28);
+        --nb-danger-text: oklch(from var(--nb-danger-base) max(l, 0.78) calc(c * 0.9) h);
+        --nb-danger-text-strong: oklch(from var(--nb-danger-base) max(l, 0.86) calc(c * 0.75) h);
         --nb-danger-btn: radial-gradient(ellipse at 50% 0%, oklch(from var(--nb-danger-base) calc(max(l, 0.68) + 0.10) c h) 0%, var(--nb-danger) 70%);
         --nb-danger-btn-hover: radial-gradient(ellipse at 50% 0%, oklch(from var(--nb-danger-base) calc(max(l, 0.68) + 0.16) c h) 0%, var(--nb-danger) 70%);
         --nb-warning: oklch(from var(--nb-warning-base) max(l, 0.72) c h);
+        --nb-warning-hover: oklch(from var(--nb-warning-base) calc(max(l, 0.72) + 0.06) c h);
         --nb-warning-subtle: oklch(from var(--nb-warning-base) max(l, 0.72) c h / 0.14);
+        --nb-warning-border: oklch(from var(--nb-warning-base) max(l, 0.72) c h / 0.42);
+        --nb-warning-ring: oklch(from var(--nb-warning-base) max(l, 0.72) c h / 0.28);
         --nb-warning-text: oklch(from var(--nb-warning-base) max(l, 0.80) c h);
         --nb-warning-text-strong: oklch(from var(--nb-warning-base) max(l, 0.87) calc(c * 0.8) h);
         --nb-success: oklch(from var(--nb-success-base) max(l, 0.72) c h);
+        --nb-success-hover: oklch(from var(--nb-success-base) calc(max(l, 0.72) + 0.06) c h);
         --nb-success-subtle: oklch(from var(--nb-success-base) max(l, 0.72) c h / 0.16);
+        --nb-success-border: oklch(from var(--nb-success-base) max(l, 0.72) c h / 0.42);
+        --nb-success-ring: oklch(from var(--nb-success-base) max(l, 0.72) c h / 0.28);
+        --nb-success-text: oklch(from var(--nb-success-base) max(l, 0.80) calc(c * 0.9) h);
+        --nb-success-text-strong: oklch(from var(--nb-success-base) max(l, 0.87) calc(c * 0.75) h);
+        --nb-success-btn: radial-gradient(ellipse at 50% 0%, oklch(from var(--nb-success-base) calc(max(l, 0.72) + 0.10) c h) 0%, var(--nb-success) 70%);
+        --nb-success-btn-hover: radial-gradient(ellipse at 50% 0%, oklch(from var(--nb-success-base) calc(max(l, 0.72) + 0.16) c h) 0%, var(--nb-success) 70%);
     }
 
     /* ---------- SOFT (default): shadcn/ui measures on a faintly tinted shell ----------
@@ -711,6 +808,30 @@
 
 
 /* ============================================================
+   GLOW OFF — "Glow-Effekt" unchecked in Settings → Design
+   ------------------------------------------------------------
+   The dashboard puts .nb-flat-buttons on <html>, the frontend .editor-flat.
+   Semantic buttons then lose their gradient and coloured shadow; the
+   [data-site-theme] descendants cover the admin bar, which derives its
+   tokens on its own element.
+   ============================================================ */
+
+.nb-flat-buttons,
+.nb-flat-buttons [data-site-theme],
+.editor-flat,
+.editor-flat [data-site-theme] {
+    --nb-danger-btn: var(--nb-danger);
+    --nb-danger-btn-hover: var(--nb-danger-hover);
+    --nb-danger-shadow: none;
+    --nb-danger-shadow-hover: none;
+    --nb-success-btn: var(--nb-success);
+    --nb-success-btn-hover: var(--nb-success-hover);
+    --nb-success-shadow: none;
+    --nb-success-shadow-hover: none;
+}
+
+
+/* ============================================================
    FONTS — local files only (admin/fonts.css declares the faces)
    ============================================================ */
 
@@ -739,18 +860,3 @@
     --nb-font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 }
 
-
-/* ============================================================
-   ADMIN BAR — always dark, scoped tokens
-   ============================================================ */
-
-#admin-bar,
-.nb-adminbar {
-    --nb-bar-bg: rgba(20, 20, 20, 0.92);
-    --nb-bar-bg-solid: #141414;
-    --nb-bar-border: #2a2a2a;
-    --nb-bar-text: #e5e5e5;
-    --nb-bar-text-muted: #888888;
-    --nb-bar-hover: #222222;
-    --nb-bar-accent: #b45309;
-}

@@ -163,28 +163,76 @@ switch ($action) {
         jsonResponse(true, ['hidden' => $post['hidden']]);
         break;
 
-    case 'delete-news':
-        if (!validateCsrfToken()) {
-            jsonResponse(false, null, 'Invalid CSRF token');
-        }
-
+    // Trash: deleted posts move to content/news-trash/{id}_{date}_{time}.json, like pages
+    case 'trash-news':
         $postId = $_POST['post_id'] ?? '';
-        if (empty($postId) || !preg_match('/^[a-z0-9][a-z0-9-]*$/', $postId)) {
+        if (!is_string($postId) || !preg_match('/^[a-z0-9][a-z0-9-]*$/', $postId)) {
             jsonResponse(false, null, 'Invalid post ID');
         }
-
-        $newsDir = dirname(CONTENT_PATH) . '/news/';
-        $filepath = $newsDir . $postId . '.json';
-
+        $filepath = dirname(CONTENT_PATH) . '/news/' . $postId . '.json';
+        $trashDir = dirname(CONTENT_PATH) . '/news-trash/';
         if (!is_file($filepath)) {
             jsonResponse(false, null, 'Post not found');
         }
-
-        if (!unlink($filepath)) {
-            jsonResponse(false, null, 'Error deleting post');
+        if (!is_dir($trashDir) && !@mkdir($trashDir, 0755, true)) {
+            jsonResponse(false, null, 'Error moving post to trash');
         }
+        $trashFile = $trashDir . $postId . '_' . date('Y-m-d_His') . '.json';
+        if (!rename($filepath, $trashFile)) {
+            jsonResponse(false, null, 'Error moving post to trash');
+        }
+        @touch($trashFile);
+        jsonResponse(true, null, 'Post moved to trash');
+        break;
 
-        jsonResponse(true, null, 'Post deleted');
+    case 'list-news-trash':
+        $items = [];
+        foreach (glob(dirname(CONTENT_PATH) . '/news-trash/*.json') ?: [] as $file) {
+            if (!preg_match('/^([a-z0-9][a-z0-9-]*)_\d{4}-\d{2}-\d{2}_\d{6}\.json$/', basename($file), $m)) continue;
+            $post = json_decode((string)file_get_contents($file), true);
+            $items[] = [
+                'filename' => basename($file),
+                'id' => $m[1],
+                'title' => is_array($post) ? (string)($post['title'] ?? $m[1]) : $m[1],
+                'lang' => is_array($post) ? (string)($post['lang'] ?? '') : '',
+                'date' => is_array($post) ? (string)($post['date'] ?? '') : '',
+                'deletedAt' => date('c', (int)filemtime($file)),
+            ];
+        }
+        usort($items, fn($a, $b) => strcmp($b['deletedAt'], $a['deletedAt']));
+        jsonResponse(true, $items);
+        break;
+
+    case 'restore-news':
+    case 'delete-news-permanent':
+        $filename = $_POST['filename'] ?? '';
+        if (!is_string($filename) || !preg_match('/^([a-z0-9][a-z0-9-]*)_\d{4}-\d{2}-\d{2}_\d{6}\.json$/', $filename, $m)) {
+            jsonResponse(false, null, 'Invalid file');
+        }
+        $trashFile = dirname(CONTENT_PATH) . '/news-trash/' . $filename;
+        if (!is_file($trashFile)) {
+            jsonResponse(false, null, 'Post not found in trash');
+        }
+        if ($action === 'delete-news-permanent') {
+            if (!unlink($trashFile)) jsonResponse(false, null, 'Error deleting post');
+            jsonResponse(true, null, 'Post permanently deleted');
+        }
+        $target = dirname(CONTENT_PATH) . '/news/' . $m[1] . '.json';
+        if (is_file($target)) {
+            http_response_code(409);
+            jsonResponse(false, null, t('news.restore_conflict'));
+        }
+        if (!rename($trashFile, $target)) {
+            jsonResponse(false, null, 'Error restoring post');
+        }
+        jsonResponse(true, ['id' => $m[1]], 'Post restored');
+        break;
+
+    case 'empty-news-trash':
+        foreach (glob(dirname(CONTENT_PATH) . '/news-trash/*.json') ?: [] as $file) {
+            if (!unlink($file)) jsonResponse(false, null, 'Error emptying trash');
+        }
+        jsonResponse(true, null, 'News trash emptied');
         break;
 
     // ============================================================

@@ -17,9 +17,19 @@ const { writeFileSync } = require('node:fs');
         for (const width of (process.env.REVIEW_WIDTH ? [Number(process.env.REVIEW_WIDTH)] : [360, 390, 768, 1024, 1440])) {
             await page.setViewportSize({ width, height: 1000 });
             const settingsTabs = await page.locator('[data-settings-tab]').evaluateAll(nodes => nodes.map(node => 'settings:' + node.dataset.settingsTab));
-            for (const tab of ['backup', 'settings', 'content', 'news', 'events', 'mails', 'media', 'icons', 'home', 'system', ...settingsTabs]) {
+            for (const tab of ['backup', 'settings', 'content', 'news', 'events', 'mails', 'media', 'menus', 'icons', 'home', 'system', ...settingsTabs]) {
                 await page.evaluate(tab => { switchTab(tab.split(':')[0]); if (tab.includes(':')) document.querySelector('[data-settings-tab="' + tab.split(':')[1] + '"]').click(); }, tab);
                 await page.waitForLoadState('networkidle');
+                if (tab === 'menus') {
+                    // An expanded entry and the "add entry" form are the widest states of the menu editor.
+                    await page.waitForSelector('#mfMenus [data-mf-toggle]');
+                    await page.evaluate(() => {
+                        const toggle = document.querySelector('#mfMenus .mf-row [data-mf-toggle]');
+                        if (toggle && toggle.getAttribute('aria-expanded') !== 'true') toggle.click();
+                        const add = document.querySelector('#mfMenus [data-mf-add-toggle]');
+                        if (add && add.getAttribute('aria-expanded') !== 'true') add.click();
+                    });
+                }
                 states++;
                 const layout = await page.evaluate(() => {
                     const visible = element => !element.closest('.nb-imgmgr-folder-list, .users-table-wrap') && element.getClientRects().length && getComputedStyle(element).visibility !== 'hidden' && getComputedStyle(element).opacity !== '0';
@@ -34,7 +44,7 @@ const { writeFileSync } = require('node:fs');
                     };
                 });
                 if (layout.overflow || layout.narrow.length || layout.outside.length) findings.push({ width, tab, ...layout });
-                if (tab === 'backup' || tab === 'settings:menus' || width === 390) {
+                if (tab === 'backup' || tab === 'menus' || width === 390) {
                     const filename = tab.replace(/[^a-z0-9_-]/gi, '-') + '-' + width + '.png';
                     await page.screenshot({ path: process.env.REVIEW_SCREENSHOTS + '/' + filename, fullPage: true });
                 }

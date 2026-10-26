@@ -264,8 +264,8 @@ assertContains(adminStyles, 'background: var(--nb-brand-subtle);', 'Success toas
 assertContains(adminStyles, 'background: var(--nb-brand);', 'Success toast icons should use the accent color.');
 assertContains(adminStyles, '.toast.warning', 'Dashboard toasts should support warning messages for contrast guidance.');
 assertContains(adminStyles, '.theme-contrast-feedback[data-state="error"]', 'Theme contrast feedback should style unreadable color warnings.');
-assertContains(adminStyles, 'background: #16a34a;', 'Theme contrast ok dots should use fixed green.');
-assertContains(adminStyles, 'background: #dc2626;', 'Theme contrast error dots should use fixed red.');
+assertMatches(adminStyles, /\.theme-contrast-feedback\[data-state="ok"\]::before\s*\{\s*background:\s*var\(--nb-success\);/, 'Theme contrast ok dots should use the derived success colour.');
+assertMatches(adminStyles, /\.theme-contrast-feedback\[data-state="error"\]::before\s*\{\s*background:\s*var\(--nb-danger\);/, 'Theme contrast error dots should use the derived danger colour.');
 assertContains(adminStyles, '.preset-card.selected', 'Design settings should mark the selected preset card.');
 assertContains(adminStyles, '[data-theme-preset="paper"] .sidebar-nav-item.active', 'Paper preset should mark the active sidebar item with a bar instead of a fill.');
 assertContains(adminStyles, 'background: color-mix(in srgb, var(--nb-bg-elevated) 82%, var(--nb-bg));', 'Button style preview should use the lighter preview background.');

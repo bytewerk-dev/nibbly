@@ -192,7 +192,8 @@
     background-color: var(--nb-hover-settle, var(--nb-imgmgr-accent-hover));
 }
 
-.nb-flat-buttons .nb-imgmgr-upload-btn {
+.nb-flat-buttons .nb-imgmgr-upload-btn,
+.editor-flat .nb-imgmgr-upload-btn {
     background-image: none;
     box-shadow: none;
     text-shadow: none;
@@ -504,8 +505,8 @@
 }
 
 .nb-imgmgr-folder-item-delete:hover {
-    background: var(--nb-danger-bg, rgba(192, 57, 43, 0.12));
-    color: var(--nb-danger, #c0392b);
+    background: var(--nb-danger-subtle);
+    color: var(--nb-danger-text);
 }
 
 .nb-imgmgr-folder-item-delete svg {
@@ -985,7 +986,7 @@
 
 .nb-imgmgr-action-btn--danger:hover {
     background: var(--nb-bg-hover, #f5f5f5);
-    color: var(--nb-danger, #dc2626);
+    color: var(--nb-danger-text);
 }
 
 /* ============================================================
@@ -1217,7 +1218,7 @@
 }
 
 .nb-imgmgr-error {
-    color: var(--nb-danger, #dc2626);
+    color: var(--nb-danger-text);
 }
 
 /* ============================================================
@@ -1485,8 +1486,8 @@
 }
 
 .nb-imgmgr-size-badge--original {
-    background: var(--nb-success-subtle, #ecfdf5);
-    color: var(--nb-success, #15803d);
+    background: var(--nb-success-subtle);
+    color: var(--nb-success-text);
     border: 0;
     font-family: inherit;
     cursor: pointer;
@@ -1494,7 +1495,7 @@
 
 .nb-imgmgr-size-badge--original:hover,
 .nb-imgmgr-size-badge--original:focus-visible {
-    outline: 2px solid var(--nb-success, #15803d);
+    outline: 2px solid var(--nb-success);
     outline-offset: 1px;
 }
 
@@ -1534,12 +1535,12 @@
 }
 
 .nb-imgmgr-size-badge--large {
-    background: var(--nb-warning-subtle, #fffbeb);
-    color: var(--nb-warning-text, #92400e);
+    background: var(--nb-warning-subtle);
+    color: var(--nb-warning-text);
 }
 
 .nb-imgmgr-formats--server-bound {
-    color: var(--nb-warning-text, #92400e);
+    color: var(--nb-warning-text);
 }
 
 .nb-imgmgr-list-thumb .nb-imgmgr-ai-badge {

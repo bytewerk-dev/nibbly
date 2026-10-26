@@ -90,7 +90,8 @@ if ($_dateRaw !== '') {
     try {
         $_dateObj = new DateTime($_dateRaw);
         $_dateMachine = $_dateObj->format('Y-m-d');
-        $_formattedDate = $_dateObj->format('F j, Y');
+        require_once __DIR__ . '/public-strings.php';
+        $_formattedDate = nibblyFormatNewsDate($_dateObj, $currentLang, true);
     } catch (Exception $e) {
         $_dateMachine = '';
     }

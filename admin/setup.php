@@ -29,53 +29,45 @@ function isPasswordWeak($password) {
     return false;
 }
 
-// Languages available for selection in setup
-$setupLanguages = [
-    'de' => 'Deutsch',
-    'en' => 'English',
-    'fr' => 'Français',
-    'es' => 'Español',
-    'it' => 'Italiano',
-    'pt' => 'Português',
-    'nl' => 'Nederlands',
-    'pl' => 'Polski',
-    'cs' => 'Čeština',
-    'da' => 'Dansk',
-    'sv' => 'Svenska',
-    'no' => 'Norsk',
-    'fi' => 'Suomi',
-    'hu' => 'Magyar',
-    'ro' => 'Română',
-    'hr' => 'Hrvatski',
-    'sk' => 'Slovenčina',
-    'sl' => 'Slovenščina',
-    'bg' => 'Български',
-    'el' => 'Ελληνικά',
-    'tr' => 'Türkçe',
-    'ru' => 'Русский',
-    'uk' => 'Українська',
-    'ja' => '日本語',
-    'zh' => '中文',
-    'ko' => '한국어',
-    'ar' => 'العربية',
-];
+// Languages available for selection in setup (shared with Settings → Language)
+require_once __DIR__ . '/../includes/site-languages.php';
+$setupLanguages = nibblySiteLanguageCatalog();
 
-$selectedSecondaryLang = $_POST['secondary_lang'] ?? 'de';
-if ($selectedSecondaryLang !== '' && !isset($setupLanguages[$selectedSecondaryLang])) {
-    $selectedSecondaryLang = 'de';
+/**
+ * The site languages chosen in the form (languages[] in switcher order, primary_lang
+ * one of them): [primary code, all codes in switcher order]. Unknown and repeated
+ * codes are dropped; without a valid choice the site is English only.
+ */
+function setupSelectedLanguages(array $setupLanguages, array $post): array
+{
+    $list = [];
+    foreach ((array)($post['languages'] ?? []) as $code) {
+        if (is_string($code) && isset($setupLanguages[$code]) && !in_array($code, $list, true)) $list[] = $code;
+    }
+    if (!$list) $list = ['en'];
+    $primary = is_string($post['primary_lang'] ?? null) && in_array($post['primary_lang'], $list, true) ? $post['primary_lang'] : $list[0];
+    return [$primary, $list];
 }
+
+// Shown in the form: the posted choice after an error, else English (primary) and German
+[$formPrimaryLang, $formLanguages] = $_SERVER['REQUEST_METHOD'] === 'POST'
+    ? setupSelectedLanguages($setupLanguages, $_POST)
+    : ['en', ['en', 'de']];
 
 /**
  * Generate starter site files after config is created.
  * Creates: language dirs, homepage + demo page templates, starter content,
  * nav-config, settings, news posts, .htaccess update.
  */
-function generateStarterSite($primaryLang, $secondaryLang, $siteName, $setupLanguages) {
+/**
+ * @param string $primaryLang  Language served at the root URL
+ * @param array  $languages    All site languages in language-switcher order (contains $primaryLang)
+ */
+function generateStarterSite(string $primaryLang, array $languages, $siteName, $setupLanguages) {
     require_once __DIR__ . '/starter-content.php';
 
     $root = dirname(__DIR__);
-    $languages = [$primaryLang];
-    if (!empty($secondaryLang)) $languages[] = $secondaryLang;
+    $languages = array_values(array_unique(array_merge($languages, [$primaryLang])));
 
     $i18n = getStarterI18n($siteName);
     $contentDir = $root . '/content/pages';
@@ -149,17 +141,18 @@ PHPTPL;
         $compContent = getComponentsContent($lang, $t);
         file_put_contents($contentDir . '/' . $lang . '_components.json', json_encode($compContent, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
-        // Contact page (JSON only — front controller serves it + includes contact form)
+        // Contact page (JSON only — front controller serves it; "form" names the JSON form below the content)
         $contactSlug = $lang === 'de' ? 'kontakt' : ($lang === 'es' ? 'contacto' : 'contact');
         $contactTitle = $lang === 'de' ? 'Kontakt' : ($lang === 'es' ? 'Contacto' : 'Contact');
         $contactHeadingText = $lang === 'de' ? 'Kontakt aufnehmen' : ($lang === 'es' ? 'Ponte en contacto' : 'Get in Touch');
-        $contactSubtitle = $lang === 'de' ? 'Wir freuen uns auf Ihre Nachricht' : ($lang === 'es' ? 'Nos encantaría saber de ti' : 'We\'d love to hear from you');
-        $contactIntro = $lang === 'de' ? '<p>Haben Sie eine Frage, Feedback oder möchten Sie einfach Hallo sagen? Füllen Sie das Formular aus und wir melden uns so schnell wie möglich bei Ihnen.</p>' : ($lang === 'es' ? '<p>¿Tienes una pregunta, comentario o simplemente quieres saludar? Rellena el formulario y te responderemos lo antes posible.</p>' : '<p>Have a question, feedback, or just want to say hello? Fill out the form below and we\'ll get back to you as soon as possible.</p>');
+        $contactSubtitle = $lang === 'de' ? 'Wir freuen uns auf deine Nachricht' : ($lang === 'es' ? 'Nos encantaría saber de ti' : 'We\'d love to hear from you');
+        $contactIntro = $lang === 'de' ? '<p>Hast du eine Frage, Feedback oder möchtest du einfach Hallo sagen? Füll das Formular aus und wir melden uns so schnell wie möglich bei dir.</p>' : ($lang === 'es' ? '<p>¿Tienes una pregunta, comentario o simplemente quieres saludar? Rellena el formulario y te responderemos lo antes posible.</p>' : '<p>Have a question, feedback, or just want to say hello? Fill out the form below and we\'ll get back to you as soon as possible.</p>');
         $contactContent = [
             'page' => $lang . '_' . $contactSlug,
             'lang' => $lang,
             'title' => $contactTitle,
             'description' => $contactTitle,
+            'form' => 'contact',
             'sections' => [
                 ['id' => 's1', 'type' => 'heading', 'text' => $contactHeadingText, 'level' => 'h1', 'subtitle' => $contactSubtitle],
                 ['id' => 's2', 'type' => 'text', 'title' => '', 'content' => $contactIntro],
@@ -168,7 +161,7 @@ PHPTPL;
         file_put_contents($contentDir . '/' . $lang . '_' . $contactSlug . '.json', json_encode($contactContent, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
         // 3. Create demo news posts
-        $posts = getNewsPosts($lang, $t);
+        $posts = getNewsPosts($lang, $t, $primaryLang);
         foreach ($posts as $post) {
             file_put_contents($newsDir . '/' . $post['filename'], json_encode($post['data'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
         }
@@ -255,9 +248,25 @@ PHPTPL;
     $starterEvents = getStarterEvents($languages);
     file_put_contents($root . '/content/events.json', json_encode($starterEvents, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 
+    // 7b. Create demo people profiles (shown by the Team block on the about page)
+    file_put_contents($root . '/content/people.json', json_encode(getStarterPeople($languages, $primaryLang), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
     // 8. Create demo contact messages
     $starterMails = getStarterMails();
     file_put_contents($root . '/content/mails.json', json_encode($starterMails, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+    // 8a. Contact form with its texts in the installed languages
+    if (!is_dir($root . '/content/forms')) @mkdir($root . '/content/forms', 0755, true);
+    file_put_contents($root . '/content/forms/contact.json', json_encode(getStarterContactForm($languages), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+    // 8b. Label the bundled AI-generated starter images (merged, existing entries win)
+    $mediaMetaPath = $root . '/content/media-meta.json';
+    $mediaMeta = is_file($mediaMetaPath) ? json_decode((string)file_get_contents($mediaMetaPath), true) : [];
+    if (!is_array($mediaMeta)) $mediaMeta = [];
+    foreach (getStarterMediaMeta($root) as $type => $entries) {
+        $mediaMeta[$type] = ($mediaMeta[$type] ?? []) + $entries;
+    }
+    file_put_contents($mediaMetaPath, json_encode($mediaMeta, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
     // 9. Update .htaccess primary language if not 'en'
     $htaccessPath = $root . '/.htaccess';
@@ -278,19 +287,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
     $passwordConfirm = $_POST['password_confirm'] ?? '';
-    $primaryLang = $_POST['primary_lang'] ?? 'en';
-    $secondaryLang = $_POST['secondary_lang'] ?? '';
-
-    // Validate language selections
-    if (!isset($setupLanguages[$primaryLang])) {
-        $primaryLang = 'en';
-    }
-    if (!empty($secondaryLang) && !isset($setupLanguages[$secondaryLang])) {
-        $secondaryLang = '';
-    }
-    if ($secondaryLang === $primaryLang) {
-        $secondaryLang = '';
-    }
+    // Site languages: any number, in switcher order, one of them primary
+    [$primaryLang, $siteLangList] = setupSelectedLanguages($setupLanguages, $_POST);
 
     // Validation
     if (!is_string($_POST['csrf_token'] ?? null) || !hash_equals($_SESSION['setup_csrf'], $_POST['csrf_token'])) {
@@ -312,10 +310,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $hash = password_hash($password, PASSWORD_DEFAULT);
         $escapedSiteName = addcslashes($siteName, "'\\");
 
-        // Build $SITE_LANGUAGES array
-        $languages = [$primaryLang => $setupLanguages[$primaryLang]];
-        if (!empty($secondaryLang)) {
-            $languages[$secondaryLang] = $setupLanguages[$secondaryLang];
+        // Build $SITE_LANGUAGES array (its order is the order of the language switcher)
+        $languages = [];
+        foreach ($siteLangList as $code) {
+            $languages[$code] = $setupLanguages[$code];
         }
 
         // Build languages PHP code
@@ -413,7 +411,7 @@ CONFIGTPL;
             saveUsers($usersData);
 
             // Generate starter site files
-            generateStarterSite($primaryLang, $secondaryLang, $siteName, $setupLanguages);
+            generateStarterSite($primaryLang, $siteLangList, $siteName, $setupLanguages);
             $success = true;
         }
     }
@@ -466,31 +464,25 @@ CONFIGTPL;
                            placeholder="<?php echo t('setup.site_name_placeholder'); ?>">
                 </div>
 
-                <div class="setup-lang-row">
-                    <div class="form-group">
-                        <label for="primary_lang"><?php echo t('setup.primary_language'); ?></label>
-                        <select id="primary_lang" name="primary_lang">
-                            <?php foreach ($setupLanguages as $code => $name): ?>
-                            <option value="<?php echo $code; ?>"<?php echo ($code === ($_POST['primary_lang'] ?? 'en')) ? ' selected' : ''; ?>>
-                                <?php echo htmlspecialchars($name); ?> (<?php echo $code; ?>)
-                            </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <small class="form-hint"><?php echo t('setup.primary_language_hint'); ?></small>
+                <div class="form-group setup-languages">
+                    <span class="form-group-label" id="setupLanguagesLabel"><?php echo t('setup.languages'); ?></span>
+                    <div class="setup-lang-list" id="setupLangList" role="group" aria-labelledby="setupLanguagesLabel">
+                        <?php foreach ($formLanguages as $_rowLang): ?>
+                        <div class="setup-lang-item">
+                            <select name="languages[]" aria-label="<?php echo htmlspecialchars(t('setup.languages')); ?>">
+                                <?php foreach ($setupLanguages as $code => $name): ?>
+                                <option value="<?php echo $code; ?>"<?php echo $code === $_rowLang ? ' selected' : ''; ?>><?php echo htmlspecialchars($name); ?> (<?php echo $code; ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                            <label class="setup-lang-primary"><input type="radio" name="primary_lang" value="<?php echo $_rowLang; ?>"<?php echo $_rowLang === $formPrimaryLang ? ' checked' : ''; ?>> <span><?php echo t('setup.language_primary'); ?></span></label>
+                            <button type="button" class="setup-lang-btn" data-lang-action="up" aria-label="<?php echo htmlspecialchars(t('setup.language_up')); ?>" title="<?php echo htmlspecialchars(t('setup.language_up')); ?>">&uarr;</button>
+                            <button type="button" class="setup-lang-btn" data-lang-action="down" aria-label="<?php echo htmlspecialchars(t('setup.language_down')); ?>" title="<?php echo htmlspecialchars(t('setup.language_down')); ?>">&darr;</button>
+                            <button type="button" class="setup-lang-btn" data-lang-action="remove" aria-label="<?php echo htmlspecialchars(t('setup.language_remove')); ?>" title="<?php echo htmlspecialchars(t('setup.language_remove')); ?>">&times;</button>
+                        </div>
+                        <?php endforeach; ?>
                     </div>
-
-                    <div class="form-group">
-                        <label for="secondary_lang"><?php echo t('setup.additional_language'); ?></label>
-                        <select id="secondary_lang" name="secondary_lang">
-                            <option value=""><?php echo t('setup.additional_language_none'); ?></option>
-                            <?php foreach ($setupLanguages as $code => $name): ?>
-                            <option value="<?php echo $code; ?>"<?php echo ($code === $selectedSecondaryLang) ? ' selected' : ''; ?>>
-                                <?php echo htmlspecialchars($name); ?> (<?php echo $code; ?>)
-                            </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <small class="form-hint" id="secondaryLangHint" data-template="<?php echo htmlspecialchars(t('setup.additional_language_hint'), ENT_QUOTES); ?>"><?php echo $selectedSecondaryLang !== '' ? t('setup.additional_language_hint', ['code' => $selectedSecondaryLang]) : ''; ?></small>
-                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm setup-lang-add" id="setupLangAdd"><?php echo t('setup.language_add'); ?></button>
+                    <small class="form-hint"><?php echo t('setup.languages_hint'); ?></small>
                 </div>
 
                 <div class="form-group">
@@ -546,37 +538,58 @@ CONFIGTPL;
 
     <script>
     (function() {
-        // Language dropdowns: prevent selecting same language for both
-        var primaryLang = document.getElementById('primary_lang');
-        var secondaryLang = document.getElementById('secondary_lang');
-
-        if (primaryLang && secondaryLang) {
-            var secondaryLangHint = document.getElementById('secondaryLangHint');
-
-            function updateSecondaryHint() {
-                if (!secondaryLangHint) return;
-                if (!secondaryLang.value) {
-                    secondaryLangHint.textContent = '';
-                    return;
+        // Language list: add, remove, reorder; one primary; each language once.
+        // The order is the order of the language switcher.
+        var langList = document.getElementById('setupLangList');
+        var langAdd = document.getElementById('setupLangAdd');
+        if (langList && langAdd) {
+            var rows = function() { return Array.prototype.slice.call(langList.querySelectorAll('.setup-lang-item')); };
+            var syncLanguages = function() {
+                var list = rows();
+                var used = list.map(function(row) { return row.querySelector('select').value; });
+                if (!langList.querySelector('input[name="primary_lang"]:checked') && list[0]) {
+                    list[0].querySelector('input[name="primary_lang"]').checked = true;
                 }
-                secondaryLangHint.textContent = secondaryLangHint.dataset.template.replace('{code}', secondaryLang.value);
-            }
-
-            function updateSecondaryOptions() {
-                var primaryVal = primaryLang.value;
-                var options = secondaryLang.querySelectorAll('option');
-                for (var i = 0; i < options.length; i++) {
-                    if (options[i].value === '' ) continue;
-                    options[i].disabled = (options[i].value === primaryVal);
-                }
-                if (secondaryLang.value === primaryVal) {
-                    secondaryLang.value = '';
-                }
-                updateSecondaryHint();
-            }
-            primaryLang.addEventListener('change', updateSecondaryOptions);
-            secondaryLang.addEventListener('change', updateSecondaryHint);
-            updateSecondaryOptions();
+                list.forEach(function(row, index) {
+                    var select = row.querySelector('select');
+                    row.querySelector('input[name="primary_lang"]').value = select.value;
+                    Array.prototype.forEach.call(select.options, function(option) {
+                        option.disabled = option.value !== select.value && used.indexOf(option.value) !== -1;
+                    });
+                    row.querySelector('[data-lang-action="up"]').disabled = index === 0;
+                    row.querySelector('[data-lang-action="down"]').disabled = index === list.length - 1;
+                    row.querySelector('[data-lang-action="remove"]').disabled = list.length === 1;
+                });
+                var free = Array.prototype.some.call(list[0].querySelector('select').options, function(option) { return used.indexOf(option.value) === -1; });
+                langAdd.disabled = !free;
+            };
+            langList.addEventListener('change', function(event) {
+                if (event.target.tagName === 'SELECT') syncLanguages();
+            });
+            langList.addEventListener('click', function(event) {
+                var button = event.target.closest('[data-lang-action]');
+                if (!button) return;
+                var row = button.closest('.setup-lang-item');
+                var action = button.dataset.langAction;
+                if (action === 'up' && row.previousElementSibling) langList.insertBefore(row, row.previousElementSibling);
+                if (action === 'down' && row.nextElementSibling) langList.insertBefore(row.nextElementSibling, row);
+                if (action === 'remove' && rows().length > 1) row.remove();
+                syncLanguages();
+            });
+            langAdd.addEventListener('click', function() {
+                var list = rows();
+                var used = list.map(function(row) { return row.querySelector('select').value; });
+                var row = list[list.length - 1].cloneNode(true);
+                var select = row.querySelector('select');
+                var free = Array.prototype.find.call(select.options, function(option) { return used.indexOf(option.value) === -1; });
+                if (!free) return;
+                select.value = free.value;
+                row.querySelector('input[name="primary_lang"]').checked = false;
+                langList.appendChild(row);
+                syncLanguages();
+                select.focus();
+            });
+            syncLanguages();
         }
 
         var pw = document.getElementById('password');

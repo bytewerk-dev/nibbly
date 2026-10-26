@@ -160,7 +160,8 @@ header("X-Robots-Tag: noindex, nofollow"); header("Content-Type: text/plain"); e
 $socket = stream_socket_server('tcp://127.0.0.1:0', $errno, $error);
 $port = (int)substr(strrchr((string)stream_socket_get_name($socket, false), ':'), 1);
 fclose($socket);
-$server = proc_open(['php', '-S', "127.0.0.1:$port", $router], [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes);
+require_once __DIR__ . '/server-support.php';
+$server = new NibblyTestServer([PHP_BINARY, '-S', "127.0.0.1:$port", $router]);
 try {
     for ($wait = 0; $wait < 100 && !@fsockopen('127.0.0.1', $port); $wait++) usleep(50000);
     $insecure = false;
@@ -169,8 +170,7 @@ try {
     seoCheckAssert(strlen($answer['body']) === 1000 && $answer['error'] === '', 'the body is cut at the limit without an error');
     seoCheckAssert(nibblySecurityHttpFetch("http://127.0.0.1:$port/x", $insecure, 5)['body'] === '', 'without a limit no body is kept (security check)');
 } finally {
-    proc_terminate($server);
-    proc_close($server);
+    $server->close();
     @unlink($router);
 }
 

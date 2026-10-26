@@ -6,9 +6,22 @@
  * stays small: generated/vibecoded templates can define the structure, while
  * admins can safely edit labels, placeholders, options, required state and
  * column widths.
+ *
+ * Multilingual texts: every visitor-facing text (form label, description,
+ * submit.successText, field label/placeholder/help, option labels) is either a
+ * plain string (one text for all languages, as before) or a map of language
+ * codes, e.g. {"de": "Nachricht", "en": "Message"}. nibblyFormLocalize() resolves
+ * a form for one language: that language, else the primary language, else the
+ * first text given. Field keys, option values and the e-mail subject stay single.
  */
 
 require_once __DIR__ . '/form-protection.php';
+
+// The public endpoints (api/form.php, api/form-submit.php) need the primary language
+// for text maps; pages have loaded the config already
+if (!defined('SITE_LANG_DEFAULT') && is_file(dirname(__DIR__) . '/admin/config.php')) {
+    require_once dirname(__DIR__) . '/admin/config.php';
+}
 
 if (!defined('NIBBLY_FORMS_DIR')) {
     define('NIBBLY_FORMS_DIR', dirname(__DIR__) . '/content/forms');
@@ -55,25 +68,86 @@ function nibblyFormsWriteJson(string $path, array $data): bool
     return file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX) !== false;
 }
 
+/** Language codes accepted as keys of a text map. */
+function nibblyFormIsLangCode($code): bool
+{
+    return is_string($code) && preg_match('/^[a-z]{2}$/', $code) === 1;
+}
+
+/** A translatable text as stored: a string, or a map of language code => string (empty entries dropped). */
+function nibblyFormNormalizeText($value)
+{
+    if (!is_array($value)) {
+        return is_scalar($value) ? (string)$value : '';
+    }
+    $map = [];
+    foreach ($value as $lang => $text) {
+        if (nibblyFormIsLangCode($lang) && is_scalar($text) && trim((string)$text) !== '') {
+            $map[$lang] = (string)$text;
+        }
+    }
+    return $map ?: '';
+}
+
+/** The text of a translatable value in one language: that language, the primary language, then the first text. */
+function nibblyFormText($value, ?string $lang = null): string
+{
+    if (!is_array($value)) {
+        return is_scalar($value) ? (string)$value : '';
+    }
+    $primary = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
+    foreach ([$lang, $primary] as $candidate) {
+        if ($candidate !== null && isset($value[$candidate]) && trim((string)$value[$candidate]) !== '') {
+            return (string)$value[$candidate];
+        }
+    }
+    foreach ($value as $text) {
+        if (is_scalar($text) && trim((string)$text) !== '') {
+            return (string)$text;
+        }
+    }
+    return '';
+}
+
+/** A copy of a (normalized) form with every translatable text resolved for one language. */
+function nibblyFormLocalize(array $form, ?string $lang = null): array
+{
+    foreach (['label', 'description'] as $key) {
+        $form[$key] = nibblyFormText($form[$key] ?? '', $lang);
+    }
+    if (is_array($form['submit'] ?? null) && array_key_exists('successText', $form['submit'])) {
+        $form['submit']['successText'] = nibblyFormText($form['submit']['successText'], $lang);
+    }
+    foreach (($form['fields'] ?? []) as $index => $field) {
+        foreach (['label', 'placeholder', 'help'] as $key) {
+            $form['fields'][$index][$key] = nibblyFormText($field[$key] ?? '', $lang);
+        }
+        foreach (($field['options'] ?? []) as $optionIndex => $option) {
+            $form['fields'][$index]['options'][$optionIndex]['label'] = nibblyFormText($option['label'] ?? '', $lang) ?: (string)($option['value'] ?? '');
+        }
+    }
+    return $form;
+}
+
 function nibblyFormDefaultDefinition(string $id = 'contact'): array
 {
     $id = nibblyFormIdClean($id);
     return [
         'id' => $id,
-        'label' => $id === 'contact' ? 'Kontaktformular' : ucfirst(str_replace('-', ' ', $id)),
+        'label' => $id === 'contact' ? ['en' => 'Contact form', 'de' => 'Kontaktformular', 'es' => 'Formulario de contacto'] : ucfirst(str_replace('-', ' ', $id)),
         'description' => '',
         'enabled' => true,
         'submit' => [
             'store' => true,
             'email' => true,
             'subject' => '{form}: {name}',
-            'successText' => 'Vielen Dank für deine Nachricht.',
+            'successText' => ['en' => 'Thank you for your message.', 'de' => 'Vielen Dank für deine Nachricht.', 'es' => 'Gracias por tu mensaje.'],
         ],
         'fields' => [
-            ['key' => 'name', 'type' => 'text', 'label' => 'Name', 'required' => true, 'width' => 6],
-            ['key' => 'email', 'type' => 'email', 'label' => 'E-Mail', 'required' => true, 'width' => 6],
-            ['key' => 'phone', 'type' => 'tel', 'label' => 'Telefon', 'required' => false, 'width' => 12],
-            ['key' => 'message', 'type' => 'textarea', 'label' => 'Nachricht', 'required' => true, 'width' => 12],
+            ['key' => 'name', 'type' => 'text', 'label' => ['en' => 'Name', 'de' => 'Name', 'es' => 'Nombre'], 'required' => true, 'width' => 6],
+            ['key' => 'email', 'type' => 'email', 'label' => ['en' => 'Email', 'de' => 'E-Mail', 'es' => 'Correo electrónico'], 'required' => true, 'width' => 6],
+            ['key' => 'phone', 'type' => 'tel', 'label' => ['en' => 'Phone', 'de' => 'Telefon', 'es' => 'Teléfono'], 'required' => false, 'width' => 12],
+            ['key' => 'message', 'type' => 'textarea', 'label' => ['en' => 'Message', 'de' => 'Nachricht', 'es' => 'Mensaje'], 'required' => true, 'width' => 12],
         ],
     ];
 }
@@ -92,8 +166,10 @@ function nibblyFormNormalizeField(array $field, int $index = 0): array
     if (is_array($field['options'] ?? null)) {
         foreach ($field['options'] as $option) {
             if (is_array($option)) {
-                $value = (string)($option['value'] ?? $option['label'] ?? '');
-                $label = (string)($option['label'] ?? $value);
+                $label = nibblyFormNormalizeText($option['label'] ?? '');
+                $value = (string)($option['value'] ?? '');
+                if ($value === '') $value = nibblyFormText($label);
+                if ($label === '') $label = $value;
             } else {
                 $value = (string)$option;
                 $label = (string)$option;
@@ -107,9 +183,9 @@ function nibblyFormNormalizeField(array $field, int $index = 0): array
     return [
         'key' => $key,
         'type' => $type,
-        'label' => (string)($field['label'] ?? $key),
-        'placeholder' => (string)($field['placeholder'] ?? ''),
-        'help' => (string)($field['help'] ?? ''),
+        'label' => nibblyFormNormalizeText($field['label'] ?? $key) ?: $key,
+        'placeholder' => nibblyFormNormalizeText($field['placeholder'] ?? ''),
+        'help' => nibblyFormNormalizeText($field['help'] ?? ''),
         'required' => !empty($field['required']),
         'width' => $width,
         'options' => $options,
@@ -122,8 +198,8 @@ function nibblyFormNormalize(array $form, string $fallbackId = 'form'): array
     $id = nibblyFormIdClean((string)($form['id'] ?? $fallbackId));
     $normalized = [
         'id' => $id,
-        'label' => trim((string)($form['label'] ?? '')) ?: ucfirst(str_replace('-', ' ', $id)),
-        'description' => (string)($form['description'] ?? ''),
+        'label' => nibblyFormNormalizeText($form['label'] ?? '') ?: ucfirst(str_replace('-', ' ', $id)),
+        'description' => nibblyFormNormalizeText($form['description'] ?? ''),
         'enabled' => !array_key_exists('enabled', $form) || !empty($form['enabled']),
         'submit' => array_replace([
             'store' => true,
@@ -133,6 +209,7 @@ function nibblyFormNormalize(array $form, string $fallbackId = 'form'): array
         ], is_array($form['submit'] ?? null) ? $form['submit'] : []),
         'fields' => [],
     ];
+    $normalized['submit']['successText'] = nibblyFormNormalizeText($normalized['submit']['successText']) ?: 'Vielen Dank für deine Nachricht.';
     foreach (($form['fields'] ?? []) as $index => $field) {
         if (is_array($field)) {
             $normalized['fields'][] = nibblyFormNormalizeField($field, (int)$index);
@@ -174,8 +251,8 @@ function nibblyFormsList(): array
         $form = nibblyFormNormalize(nibblyFormsReadJson($file), pathinfo($file, PATHINFO_FILENAME));
         $forms[] = [
             'id' => $form['id'],
-            'label' => $form['label'],
-            'description' => $form['description'],
+            'label' => nibblyFormText($form['label']),
+            'description' => nibblyFormText($form['description']),
             'enabled' => $form['enabled'],
             'store' => !empty($form['submit']['store']),
             'fieldCount' => count($form['fields']),
@@ -246,6 +323,29 @@ function nibblyFormRenderField(array $field, string $formId): string
     return $html;
 }
 
+/**
+ * Skeleton for a JSON form while it loads lazily (see nibblyFormSkeleton()):
+ * same heading, description, grid spans and button label as nibblyFormRender(),
+ * textareas tall, hidden fields left out.
+ */
+function nibblyFormSkeletonSpec(array $form, string $lang, array $options = []): array
+{
+    $form = nibblyFormLocalize($form, $lang);
+    $cells = [];
+    foreach ($form['fields'] as $field) {
+        $type = (string)($field['type'] ?? 'text');
+        if ($type === 'hidden') continue;
+        $kind = in_array($type, ['textarea', 'heading', 'note'], true) ? $type : ($type === 'checkbox' ? 'check' : 'input');
+        $cells[] = ['span' => (int)($field['width'] ?? 12), 'kind' => $kind];
+    }
+    return [
+        'heading' => (string)$form['label'],
+        'description' => (string)($form['description'] ?? ''),
+        'button' => (string)($options['submitLabel'] ?? nibblyPublicString('form_send', $lang)),
+        'cells' => $cells,
+    ];
+}
+
 function nibblyFormRender(string $formId, array $options = []): string
 {
     $form = nibblyFormLoad($formId);
@@ -255,6 +355,7 @@ function nibblyFormRender(string $formId, array $options = []): string
     $basePath = nibblySafeFormBasePath((string)($options['basePath'] ?? ($GLOBALS['basePath'] ?? '')));
     $lang = (string)($options['lang'] ?? ($GLOBALS['currentLang'] ?? 'en'));
     $lazy = array_key_exists('lazy', $options) ? !empty($options['lazy']) : true;
+    $form = nibblyFormLocalize($form, $lang);
 
     if ($lazy && !nibblyIsLazyFormRender()) {
         return nibblyLazyFormPlaceholder($form['id'], [
@@ -263,6 +364,7 @@ function nibblyFormRender(string $formId, array $options = []): string
                 'lang' => $lang,
                 'basePath' => $basePath,
             ],
+            'skeleton' => nibblyFormSkeletonSpec($form, $lang, $options),
         ]);
     }
 
@@ -279,11 +381,11 @@ function nibblyFormRender(string $formId, array $options = []): string
         $html .= nibblyFormRenderField($field, $form['id']);
     }
     $html .= '</div>';
-    $send = (string)($options['submitLabel'] ?? ($lang === 'de' ? 'Absenden' : 'Send'));
-    $sending = (string)($options['sendingLabel'] ?? ($lang === 'de' ? 'Wird gesendet…' : 'Sending…'));
+    $send = (string)($options['submitLabel'] ?? nibblyPublicString('form_send', $lang));
+    $sending = (string)($options['sendingLabel'] ?? nibblyPublicString('form_sending', $lang));
     $success = (string)($form['submit']['successText'] ?? 'Vielen Dank.');
     $html .= '<div class="form-actions"><button type="submit" class="btn btn-gradient"><span class="btn-text">' . nibblyFormEscape($send) . '</span><span class="btn-loading" style="display:none">' . nibblyFormEscape($sending) . '</span></button></div>';
-    $error = $lang === 'de' ? 'Fehler beim Senden. Bitte versuch es später noch mal.' : 'Could not send the form. Please try again later.';
+    $error = nibblyPublicString('form_send_error', $lang);
     $html .= '<div class="form-feedback" data-success="' . nibblyFormEscape($success) . '" data-error="' . nibblyFormEscape($error) . '"></div>';
     $html .= '</form></section>';
     return $html;
@@ -319,11 +421,11 @@ function nibblyFormValidateSubmission(array $form, string $lang = 'en'): array
         $value = nibblyFormSubmittedValue($field);
         $values[$field['key']] = $value;
         if (!empty($field['required']) && $value === '') {
-            $errors[] = ($field['label'] ?? $field['key']) . ($lang === 'de' ? ' ist erforderlich' : ' is required');
+            $errors[] = str_replace('{field}', nibblyFormText($field['label'] ?? '', $lang) ?: (string)$field['key'], nibblyPublicString('form_field_required', $lang));
             continue;
         }
         if ($type === 'email' && $value !== '' && !filter_var($value, FILTER_VALIDATE_EMAIL)) {
-            $errors[] = $lang === 'de' ? 'Gültige E-Mail ist erforderlich' : 'Valid email is required';
+            $errors[] = nibblyPublicString('form_email_invalid', $lang);
         }
     }
     return [$errors, $values];
@@ -333,11 +435,11 @@ function nibblyFormsApplySubjectTemplate(string $template, array $form, array $v
 {
     $subject = $template ?: '{form}';
     $replacements = [
-        '{form}' => (string)$form['label'],
+        '{form}' => nibblyFormText($form['label']),
         '{name}' => (string)($values['name'] ?? ''),
         '{email}' => (string)($values['email'] ?? ''),
     ];
-    return trim(strtr($subject, $replacements)) ?: (string)$form['label'];
+    return trim(strtr($subject, $replacements)) ?: nibblyFormText($form['label']);
 }
 
 function nibblyFormsSaveSubmission(array $submission): bool
@@ -412,13 +514,13 @@ function nibblyFormsSendNotification(array $form, array $values, string $subject
 
 function nibblyFormsBuildBody(array $form, array $values): string
 {
-    $body = 'Neue Einsendung über Formular: ' . $form['label'] . "\n";
+    $body = 'Neue Einsendung über Formular: ' . nibblyFormText($form['label']) . "\n";
     $body .= str_repeat('-', 40) . "\n\n";
     foreach ($form['fields'] as $field) {
         if (in_array(($field['type'] ?? ''), ['heading', 'note', 'hidden'], true)) {
             continue;
         }
-        $body .= ($field['label'] ?? $field['key']) . ': ' . ($values[$field['key']] ?? '') . "\n";
+        $body .= (nibblyFormText($field['label'] ?? '') ?: $field['key']) . ': ' . ($values[$field['key']] ?? '') . "\n";
     }
     return $body;
 }

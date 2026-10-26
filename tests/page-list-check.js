@@ -32,7 +32,7 @@ const rows = page => page.locator('#pageListBody .page-list-row');
     try {
         let { context, page } = await openPageList(browser);
         // The view language is German (the site's primary language): one row per page, each with its own German path
-        await page.selectOption('#pageListLang', 'de');
+        await page.click('#pageFilterLinks [data-filter-value="de"]');
         assert(await rows(page).count() === 4, 'four pages, one row each: ' + await rows(page).count());
         const slugs = await page.locator('#pageListBody .page-list-slug').allTextContents();
         assert(slugs.includes('/leistungen') && slugs.includes('/ueber-uns') && !slugs.includes('/services'), 'the German paths are shown: ' + slugs);
@@ -49,15 +49,16 @@ const rows = page => page.locator('#pageListBody .page-list-row');
         assert((await page.locator('#editorViewBtn').getAttribute('href')) === '../en/services', 'the view link is the public English URL: ' + await page.locator('#editorViewBtn').getAttribute('href'));
         await page.screenshot({ path: path.join(shots, 'editor-en-services.png') });
 
-        // The language buttons follow the page: German leads to "leistungen", English back to "services"
-        await page.selectOption('#langSelect', 'de');
-        assert(await page.locator('#pageSelect').inputValue() === 'leistungen', 'switching to German selects the German version: ' + await page.locator('#pageSelect').inputValue());
-        await page.locator('#topbarSelectors button', { hasText: /load|laden/i }).click();
-        await page.waitForFunction(() => document.getElementById('editorTitle').textContent.trim() === 'Leistungen', null, { timeout: 15000 });
-        await page.selectOption('#langSelect', 'en');
+        // The language switch under the heading follows the page: German leads to "leistungen", English back to "services"
+        const switchTo = async (lang, title) => {
+            await page.locator(`#editorContainer .nb-lang-switch input[value="${lang}"]`).locator('xpath=..').click();
+            await page.waitForFunction(text => document.getElementById('editorTitle').textContent.trim() === text, title, { timeout: 15000 });
+        };
+        await switchTo('de', 'Leistungen');
+        assert(await page.locator('#langSelect').inputValue() === 'de' && await page.locator('#pageSelect').inputValue() === 'leistungen', 'switching to German opens the German version: ' + await page.locator('#pageSelect').inputValue());
+        await switchTo('en', 'Services');
         assert(await page.locator('#pageSelect').inputValue() === 'services', 'and back to English');
-        // A page that has only one version keeps its select value (nothing to translate to)
-        await page.selectOption('#langSelect', 'de');
+        assert(!(await page.locator('#topbarSelectors').isVisible()), 'the old language and page selects in the top bar are gone');
 
         // Back in the list: the missing English version of "Über uns" is offered with the mapped path
         await page.evaluate(() => showPageList());
@@ -74,7 +75,7 @@ const rows = page => page.locator('#pageListBody .page-list-row');
         await page.screenshot({ path: path.join(shots, 'page-list-after-create.png') });
 
         // English view: same four pages, English paths, Edit leads to the German versions
-        await page.selectOption('#pageListLang', 'en');
+        await page.click('#pageFilterLinks [data-filter-value="en"]');
         assert(await rows(page).count() === 4, 'four rows in English too');
         const englishSlugs = await page.locator('#pageListBody .page-list-slug').allTextContents();
         assert(englishSlugs.includes('/services') && englishSlugs.includes('/about-us') && !englishSlugs.includes('/leistungen'), 'the English paths are shown: ' + englishSlugs);

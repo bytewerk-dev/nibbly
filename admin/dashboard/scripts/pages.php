@@ -270,6 +270,8 @@
     let pageListCache = null;
     let currentSeoHealth = null;
     let pageListSearchQuery = '';
+    let pageStatusFilter = 'all';
+    let pageTrashCount = 0;
 
     function pageContentKey(lang, path) {
         return lang + '_' + String(path || '').replaceAll('/', '__');
@@ -277,8 +279,13 @@
 
     async function loadPageList() {
         try {
-            const response = await fetch('api.php?action=list-pages&_=' + Date.now());
+            // The trash only contributes its count to the filter links
+            const [response, trash] = await Promise.all([
+                fetch('api.php?action=list-pages&_=' + Date.now()),
+                fetch('api.php?action=list-trash&_=' + Date.now()).then(r => r.json()).catch(() => null)
+            ]);
             const result = await response.json();
+            if (trash?.success) pageTrashCount = (trash.data || []).length;
             if (result.success) {
                 applyPageList(result.data);
             }
@@ -312,6 +319,7 @@
     }
 
     function renderPageListForLang(lang) {
+        document.getElementById('pageListLang').value = lang;
         dashboardListPages.pages = 1;
         if (pageListCache) {
             renderPageList(pageListCache, lang);
@@ -354,12 +362,14 @@
             const viewInfo = page.languages[viewLang];
             // Skip pages that have no entry at all for this language
             if (!viewInfo) return false;
+            if (pageStatusFilter !== 'all' && (viewInfo.visibility || 'public') !== pageStatusFilter) return false;
             const titleText = viewInfo.title || pageVersionSlug(page, viewLang);
             if (pageListSearchQuery && !normalizePageListSearchValue(titleText).includes(pageListSearchQuery)) {
                 return false;
             }
             return true;
         });
+        renderPageFilterLinks(document.getElementById('pageFilterLinks'), false);
         const pageSize = getDashboardPageSize();
         const paged = pageSlice(visiblePages, 'pages', pageSize);
         renderAdminListFooter('pageListFooter', 'pages', visiblePages.length, pageSize, function() {
@@ -599,7 +609,7 @@
         if (m) m.value = lang;
         const pm = document.getElementById('pageSelectMobile');
         if (pm) pm.value = slug;
-        loadContent();
+        return loadContent();
     }
 
     function getPageSeoHealth(lang, slug) {
@@ -705,6 +715,33 @@
         }
     }
 
+    // Status (all / published / private / trash) and view language as WordPress-style filter links
+    function renderPageFilterLinks(target, inTrash) {
+        if (!pageListCache) return;
+        const { pages, languages } = pageListCache;
+        const viewLang = document.getElementById('pageListLang').value;
+        const versions = pages.map(page => page.languages[viewLang]).filter(Boolean);
+        const count = status => versions.filter(v => (v.visibility || 'public') === status).length;
+        const status = (value, label, total) => ({ value, label, count: total, active: !inTrash && pageStatusFilter === value, onSelect() {
+            pageStatusFilter = value;
+            dashboardListPages.pages = 1;
+            if (inTrash) showPageList(); else renderPageList(pageListCache, viewLang);
+        } });
+        const langs = Object.keys(languages);
+        renderFilterLinks(target, [
+            { items: [
+                status('all', t('filter.all'), versions.length),
+                status('public', t('filter.published'), count('public')),
+                status('private', t('filter.private'), count('private')),
+                { value: 'trash', label: t('pages.trash'), count: pageTrashCount, active: inTrash, onSelect: showTrash }
+            ] },
+            !inTrash && langs.length > 1 && { label: t('filter.language'), icon: 'language', items: langs.map(lang => ({
+                value: lang, label: languages[lang], count: pages.filter(page => page.languages[lang]).length,
+                active: lang === viewLang, onSelect() { renderPageListForLang(lang); }
+            })) }
+        ]);
+    }
+
     function showPageList(pushHistory = true) {
         document.getElementById('pageListContainer').style.display = 'block';
         document.getElementById('trashContainer').style.display = 'none';
@@ -716,8 +753,6 @@
         const topbarTitle = document.getElementById('topbarTitle');
         if (topbarTitle) topbarTitle.textContent = t('pages.title');
         // Hide topbar selectors, show them only when editing
-        const topbarSelectors = document.getElementById('topbarSelectors');
-        if (topbarSelectors) topbarSelectors.style.display = 'none';
         loadPageList();
         if (pushHistory) {
             updateDashboardHash('content');
@@ -735,8 +770,6 @@
         document.getElementById('trashContainer').style.display = 'block';
         const topbarTitle = document.getElementById('topbarTitle');
         if (topbarTitle) topbarTitle.textContent = t('trash.title');
-        const topbarSelectors = document.getElementById('topbarSelectors');
-        if (topbarSelectors) topbarSelectors.style.display = 'none';
         await loadTrash();
     }
 
@@ -753,6 +786,8 @@
     }
 
     function renderTrash(items) {
+        pageTrashCount = (items || []).length;
+        renderPageFilterLinks(document.getElementById('trashFilterLinks'), true);
         const tbody = document.getElementById('trashBody');
         const emptyMsg = document.getElementById('trashEmptyMsg');
         const emptyBtn = document.getElementById('emptyTrashBtn');
@@ -983,9 +1018,6 @@
                 document.getElementById('toggleAllBtn').style.display = '';
                 allExpanded = false;
                 document.getElementById('toggleAllBtn').textContent = t('editor.expand_all');
-                // Show topbar selectors when editing
-                const topbarSelectors = document.getElementById('topbarSelectors');
-                if (topbarSelectors) topbarSelectors.style.display = 'flex';
                 // Update topbar title
                 const topbarTitle = document.getElementById('topbarTitle');
                 if (topbarTitle) topbarTitle.textContent = t('editor.title');
@@ -993,7 +1025,10 @@
                 const _defLang = '<?php echo SITE_LANG_DEFAULT; ?>';
                 const _viewUrl = (lang === _defLang) ? '../' + page : '../' + lang + '/' + page;
                 const viewBtn = document.getElementById('editorViewBtn');
-                if (viewBtn) viewBtn.href = _viewUrl;
+                if (viewBtn) {
+                    viewBtn.href = _viewUrl;
+                    viewBtn.onclick = e => viewWithUnsavedCheck(e, viewBtn, () => isDirty, saveContent);
+                }
 
                 // Push history state so browser back button returns to page list
                 if (pushHistory) {
@@ -1140,7 +1175,7 @@
                     <input type="text" class="ce-input" id="seoOgImage" placeholder="/assets/images/og-image.jpg" value="${escapeHtml(seo.ogImage || '')}">
                     <button type="button" class="btn btn-secondary btn-sm" onclick="browseSeoOgImage()">${t('btn.browse')}</button>
                 </div>
-                ${AI_FEATURES_ENABLED ? `<p class="ai-field-hint">${t('ai.image_field_hint')} <button type="button" class="btn btn-secondary btn-sm" onclick="openAiImageGenerator(getSeoOgImagePrompt(), '16:9')">${t('ai.open_image_generator')}</button></p>` : ''}
+                ${AI_FEATURES_ENABLED ? `<p class="ai-field-hint"${dashboardAiImageUsable ? '' : ' hidden'}>${t('ai.image_field_hint')} <button type="button" class="btn btn-secondary btn-sm" onclick="openAiImageGenerator(getSeoOgImagePrompt(), '16:9')">${t('ai.open_image_generator')}</button></p>` : ''}
             </div>
             <label class="ce-nav-check ce-nav-check--standalone"><input type="checkbox" id="seoSitemap"> ${t('editor.seo_sitemap')}</label>
         `;
@@ -1167,6 +1202,12 @@
         const customLocations = navLocations.filter(l => !menuIds.includes(l));
         const adminLang = document.getElementById('langSelect')?.value || document.documentElement.lang || 'en';
 
+        // A managed menu (Menus & Footer) shows whether it holds this page.
+        const pageKey = currentPage || '';
+        const pageLang = pageKey.slice(0, Math.max(0, pageKey.indexOf('_')));
+        const pageSlug = pageKey.slice(pageKey.indexOf('_') + 1).replaceAll('__', '/');
+        const menuHasPage = (items, slug) => (items || []).some(item => item && (item.page === slug || menuHasPage(item.children, slug)));
+
         menuIds.forEach(menuId => {
             const menu = registeredMenus[menuId];
             const label = document.createElement('label');
@@ -1174,10 +1215,11 @@
             const cb = document.createElement('input');
             cb.type = 'checkbox';
             cb.dataset.navLocation = menuId;
-            cb.checked = navLocations.includes(menuId);
+            const managedItems = menu.items && Array.isArray(menu.items[pageLang]) ? menu.items[pageLang] : null;
+            cb.checked = managedItems ? menuHasPage(managedItems, pageSlug) : navLocations.includes(menuId);
             cb.addEventListener('change', () => markDirty());
             label.appendChild(cb);
-            const displayName = menu.label[adminLang] || menu.label['en'] || menuId;
+            const displayName = (menu.label && (menu.label[adminLang] || menu.label['en'])) || menuId;
             label.appendChild(document.createTextNode(' ' + displayName));
             navRow.appendChild(label);
         });
@@ -1261,9 +1303,7 @@
             btn.disabled = !usable;
             btn.title = usable ? t('editor.ai_fill_field') : t('ai.not_configured_text');
         });
-        document.querySelectorAll('.ai-field-hint').forEach(function(hint) {
-            hint.hidden = !dashboardAiImageUsable;
-        });
+        syncAiImageHints();
         var status = document.getElementById('seoAiStatus');
         if (status) status.textContent = usable ? '' : t('editor.ai_unavailable');
     }
@@ -1474,7 +1514,6 @@
     let sectionScrollLockIndex = null;
     let sectionScrollLockTimer = null;
     let sectionDragIndex = null;
-    let sectionCompactMode = localStorage.getItem('nibblySectionCompactMode') === '1';
 
     function getSectionTypeLabel(section) {
         const def = window.BlockTypeRegistry?.[section?.type];
@@ -1523,12 +1562,22 @@
         const wrap = document.createElement('div');
         wrap.className = 'ce-section-insert';
         wrap.dataset.insertIndex = index;
-        let html = `<button type="button" class="ce-section-insert__trigger" onclick="toggleSectionInsertMenu(this)">${t('editor.insert_here')}</button>`;
+        const label = t('editor.insert_here');
+        let html = `<button type="button" class="ce-section-insert__trigger" onclick="toggleSectionInsertMenu(this)" aria-expanded="false" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>`;
         html += '<div class="ce-section-insert__menu" hidden>';
-        if (window.BlockTypeRegistry) {
-            for (const [type, def] of Object.entries(window.BlockTypeRegistry)) {
-                html += `<button type="button" onclick="addSection('${type}', ${index})">+ ${escapeHtml(def.label || type)}</button>`;
+        // Same grouping and glyphs as the block picker of the visual editor
+        const grouped = {};
+        for (const [type, def] of Object.entries(window.BlockTypeRegistry || {})) {
+            (grouped[def.category || 'other'] ||= []).push([type, def]);
+        }
+        const order = ['content', 'cards', 'media', 'interactive', 'embed', 'layout'];
+        const categories = [...order.filter(c => grouped[c]), ...Object.keys(grouped).filter(c => !order.includes(c))];
+        for (const cat of categories) {
+            html += `<div class="ce-section-insert__group"><span class="ce-section-insert__group-label">${escapeHtml(t('cat.' + cat) || cat)}</span><div class="ce-section-insert__grid">`;
+            for (const [type, def] of grouped[cat]) {
+                html += `<button type="button" onclick="addSection('${type}', ${index})"><span class="ce-section-insert__icon">${def.iconSvg || ''}</span><span>${escapeHtml(def.label || type)}</span></button>`;
             }
+            html += '</div></div>';
         }
         html += '</div>';
         wrap.innerHTML = html;
@@ -1538,9 +1587,26 @@
     function toggleSectionInsertMenu(btn) {
         const menu = btn.parentElement?.querySelector('.ce-section-insert__menu');
         if (!menu) return;
-        const nextHidden = !menu.hidden;
+        const open = menu.hidden;
+        closeSectionInsertMenus();
+        menu.hidden = !open;
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (!open) return;
+        // Open upwards when the window has more room above the button than below it
+        menu.classList.remove('is-above');
+        const rect = btn.getBoundingClientRect();
+        if (rect.bottom + menu.offsetHeight + 12 > window.innerHeight && rect.top > window.innerHeight - rect.bottom) menu.classList.add('is-above');
+        menu.scrollIntoView({ block: 'nearest' });
+    }
+
+    function closeSectionInsertMenus() {
         document.querySelectorAll('.ce-section-insert__menu').forEach(el => { el.hidden = true; });
-        menu.hidden = nextHidden;
+        document.querySelectorAll('.ce-section-insert__trigger').forEach(el => el.setAttribute('aria-expanded', 'false'));
+    }
+
+    if (typeof document !== 'undefined' && document.addEventListener) {
+        document.addEventListener('click', e => { if (!e.target.closest?.('.ce-section-insert')) closeSectionInsertMenus(); });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSectionInsertMenus(); });
     }
 
     function getEditorSectionItems() {
@@ -1576,7 +1642,6 @@
         items.forEach(item => {
             const isActive = Number(item.dataset.index) === activeSectionIndex;
             item.classList.toggle('is-active', isActive);
-            if (sectionCompactMode && isActive) item.classList.add('is-open');
         });
         document.querySelectorAll('.ce-section-nav__item').forEach(item => {
             item.classList.toggle('is-active', Number(item.dataset.sectionIndex) === activeSectionIndex);
@@ -1611,66 +1676,73 @@
             sectionScrollLockTimer = null;
         }, 800);
         setActiveSection(index);
+        if (target.classList.contains('section-item') && !target.classList.contains('is-open')) toggleSectionOpen(index, true);
         target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    function toggleCompactMode(force) {
-        sectionCompactMode = typeof force === 'boolean' ? force : !sectionCompactMode;
-        localStorage.setItem('nibblySectionCompactMode', sectionCompactMode ? '1' : '0');
-        document.querySelectorAll('.ce-content-layout').forEach(layout => {
-            layout.classList.toggle('ce-content-layout--compact', sectionCompactMode);
-        });
-        const btn = document.getElementById('sectionCompactToggle');
-        if (btn) {
-            btn.classList.toggle('active', sectionCompactMode);
-            btn.setAttribute('aria-pressed', sectionCompactMode ? 'true' : 'false');
-        }
-        if (sectionCompactMode) {
-            document.querySelectorAll('.section-item').forEach(item => {
-                item.classList.toggle('is-open', Number(item.dataset.index) === activeSectionIndex);
-                const sectionBtn = item.querySelector('.section-toggle-btn');
-                if (sectionBtn) {
-                    const open = item.classList.contains('is-open');
-                    sectionBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
-                    sectionBtn.title = open ? t('editor.collapse_section') : t('editor.expand_section');
-                }
-            });
-        } else {
-            document.querySelectorAll('.section-item').forEach(item => item.classList.add('is-open'));
-        }
+    // Collapsed sections are remembered per page for this browser session, keyed by section id.
+    function collapsedSectionsKey() {
+        return 'nibblyCollapsedSections:' + (currentPage || '');
     }
 
-    function toggleSectionOpen(index) {
-        const item = document.getElementById(`section-${index}`);
-        if (!item) return;
-        item.classList.toggle('is-open');
+    function sectionStateKey(index) {
+        return currentContent?.sections?.[index]?.id || 'index-' + index;
+    }
+
+    function setSectionOpen(item, open) {
+        item.classList.toggle('is-open', open);
         const btn = item.querySelector('.section-toggle-btn');
         if (btn) {
-            const open = item.classList.contains('is-open');
             btn.setAttribute('aria-expanded', open ? 'true' : 'false');
             btn.title = open ? t('editor.collapse_section') : t('editor.expand_section');
         }
+    }
+
+    function getSectionItems() {
+        return Array.from(document.querySelectorAll('#sectionsLegacyContainer .section-item'));
+    }
+
+    function saveCollapsedSections() {
+        const closed = getSectionItems().filter(item => !item.classList.contains('is-open')).map(item => sectionStateKey(Number(item.dataset.index)));
+        try { sessionStorage.setItem(collapsedSectionsKey(), JSON.stringify(closed)); } catch (e) {}
+        updateSectionToggleAll();
+    }
+
+    function applyCollapsedSections() {
+        let closed = [];
+        try { closed = JSON.parse(sessionStorage.getItem(collapsedSectionsKey()) || '[]'); } catch (e) {}
+        getSectionItems().forEach(item => setSectionOpen(item, !closed.includes(sectionStateKey(Number(item.dataset.index)))));
+        updateSectionToggleAll();
+    }
+
+    function updateSectionToggleAll() {
+        const link = document.getElementById('sectionToggleAll');
+        if (!link) return;
+        const anyClosed = getSectionItems().some(item => !item.classList.contains('is-open'));
+        link.textContent = anyClosed ? t('editor.expand_all') : t('editor.collapse_all');
+    }
+
+    function toggleAllSections() {
+        const items = getSectionItems();
+        const open = items.some(item => !item.classList.contains('is-open'));
+        items.forEach(item => setSectionOpen(item, open));
+        saveCollapsedSections();
+    }
+
+    function toggleSectionOpen(index, open) {
+        const item = document.getElementById(`section-${index}`);
+        if (!item) return;
+        setSectionOpen(item, typeof open === 'boolean' ? open : !item.classList.contains('is-open'));
+        saveCollapsedSections();
     }
 
     function reorderSection(fromIndex, toIndex) {
         if (!currentContent?.sections || fromIndex === toIndex) return;
         if (toIndex < 0 || toIndex >= currentContent.sections.length) return;
         pushUndoSnapshot();
-        const openTypes = sectionCompactMode
-            ? Array.from(document.querySelectorAll('.section-item.is-open')).map(item => Number(item.dataset.index))
-            : [];
         const [moved] = currentContent.sections.splice(fromIndex, 1);
         currentContent.sections.splice(toIndex, 0, moved);
         renderEditor();
-        if (sectionCompactMode) {
-            openTypes.forEach(oldIndex => {
-                let next = oldIndex;
-                if (oldIndex === fromIndex) next = toIndex;
-                else if (fromIndex < toIndex && oldIndex > fromIndex && oldIndex <= toIndex) next = oldIndex - 1;
-                else if (fromIndex > toIndex && oldIndex >= toIndex && oldIndex < fromIndex) next = oldIndex + 1;
-                document.getElementById(`section-${next}`)?.classList.add('is-open');
-            });
-        }
         setActiveSection(toIndex);
         markDirty();
     }
@@ -1761,7 +1833,6 @@
 
         const layout = document.createElement('div');
         layout.className = 'ce-content-layout';
-        layout.classList.toggle('ce-content-layout--compact', sectionCompactMode);
 
         const nav = document.createElement('aside');
         nav.className = 'ce-section-nav';
@@ -1805,7 +1876,7 @@
         header.innerHTML = `<h3>${t('editor.sections')}</h3>
             <div class="ce-section-editor__tools">
                 <span>${hasLegacySections ? t('editor.items', {count: itemCount}) : t('editor.field_groups_count', {count: itemCount})}</span>
-                ${hasLegacySections ? `<button type="button" class="btn btn-secondary btn-sm" id="sectionCompactToggle" aria-pressed="${sectionCompactMode ? 'true' : 'false'}" onclick="toggleCompactMode()">${t('editor.compact_mode')}</button>` : ''}
+                ${hasLegacySections ? `<a href="#" class="ce-section-toggle-all" id="sectionToggleAll" onclick="toggleAllSections(); return false;">${t('editor.collapse_all')}</a>` : ''}
             </div>`;
         editor.appendChild(header);
 
@@ -1862,7 +1933,7 @@
             let addBtnsHtml = '<p>' + t('editor.add_section') + '</p><div class="add-section-buttons">';
             if (window.BlockTypeRegistry) {
                 for (const [type, def] of Object.entries(window.BlockTypeRegistry)) {
-                    addBtnsHtml += `<button class="btn btn-secondary btn-sm" onclick="addSection('${type}')">+ ${def.label}</button>`;
+                    addBtnsHtml += `<button class="btn btn-secondary btn-sm" onclick="addSection('${type}')">${def.iconSvg || '+'} <span>${def.label}</span></button>`;
                 }
             }
             addBtnsHtml += '</div>';
@@ -1890,7 +1961,7 @@
         panel.appendChild(layout);
         nav.querySelector('#sectionSearchInput')?.addEventListener('input', applySectionFilter);
         nav.querySelector('#sectionTypeFilter')?.addEventListener('change', applySectionFilter);
-        if (hasLegacySections) toggleCompactMode(sectionCompactMode);
+        if (hasLegacySections) applyCollapsedSections();
         initSectionObserver();
     }
 
@@ -1928,6 +1999,75 @@
         // Auto-resize all textareas
         container.querySelectorAll('textarea.ce-textarea:not(.ce-textarea--manual-resize)').forEach(autoResizeTextarea);
         initManualTextareaResize(container);
+        // The writing view (scripts/page-writing.php) is optional; without it the plain editor stays
+        window.NbPageEditor?.enhance(currentContent, { markDirty, pushUndoSnapshot });
+        mountPageLanguageSwitch();
+    }
+
+    // Language choice top right in the header. Each language is its own page version: the choice opens it,
+    // or creates it (as a copy, optionally translated by AI) when it does not exist yet.
+    function mountPageLanguageSwitch() {
+        const container = document.getElementById('editorContainer');
+        if (typeof container?.querySelector !== 'function') return; // minimal DOM (routing smoke test)
+        const languages = Object.keys(pageListCache?.languages || SITE_LANGUAGES);
+        if (languages.length < 2 || !currentPage) return placeLanguageSwitch(container, null);
+        const lang = document.getElementById('langSelect').value;
+        const slug = document.getElementById('pageSelect').value;
+        const group = findPageGroup(lang, slug);
+        const exists = code => code === lang || !!group?.languages?.[code]?.exists;
+        const label = code => SITE_LANGUAGES[code] || code;
+        const sw = renderLanguageSwitch({
+            name: 'page',
+            current: lang,
+            languages: languages.map(code => ({ code, label: label(code), exists: exists(code) })),
+            onSelect(code) {
+                continueWithUnsaved(() => isDirty, saveContent, () => {
+                    if (exists(code)) openPageFromList(code, pageVersionSlug(group, code));
+                    else chooseVersionCreation(label(code), withAi => createPageVersion(lang, slug, code, group?.targetSlugs?.[code] || slug, withAi));
+                });
+                return false;
+            },
+            onTranslate: lang !== DEFAULT_LANG && exists(DEFAULT_LANG) ? button => translatePageFrom(DEFAULT_LANG, pageVersionSlug(group, DEFAULT_LANG), button) : null,
+            translateLabel: t('editor.translate_from', { lang: label(DEFAULT_LANG) })
+        });
+        placeLanguageSwitch(container, sw);
+    }
+
+    async function createPageVersion(fromLang, fromSlug, toLang, toSlug, withAi) {
+        try {
+            const result = await copyPageToLang(fromLang, fromSlug, toLang, toSlug);
+            showToast(t('toast.page_created', { title: pageContentKey(toLang, toSlug) }), 'success');
+            if (result.data?.pageList) applyPageList(result.data.pageList);
+            await openPageFromList(toLang, toSlug);
+            if (withAi) await translatePageFrom(fromLang, fromSlug, document.querySelector('#editorContainer .nb-ai-translate'));
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    }
+
+    // The texts of another language version, translated into this one (title, SEO texts and the sections
+    // that line up by position and type). Applied to the editor as a change still to be saved.
+    async function translatePageFrom(sourceLang, sourceSlug, button) {
+        const targetLang = document.getElementById('langSelect').value;
+        let source;
+        try {
+            const result = await (await fetch('api.php?action=load&page=' + encodeURIComponent(pageContentKey(sourceLang, sourceSlug)))).json();
+            if (!result.success) throw new Error(result.message);
+            source = result.data;
+        } catch (error) { showToast(error.message || t('toast.error'), 'error'); return; }
+        const fields = Object.fromEntries(Object.entries(translatableStrings(source)).filter(([path]) => {
+            const match = path.match(/^sections\.(\d+)\./);
+            return !match || currentContent.sections?.[match[1]]?.type === source.sections?.[match[1]]?.type;
+        }));
+        const translations = await aiTranslateFields(sourceLang, [targetLang], fields, button, 8000);
+        if (!translations?.[targetLang]) return;
+        pushUndoSnapshot();
+        let applied = 0;
+        Object.entries(translations[targetLang]).forEach(([path, value]) => { if (typeof value === 'string' && setPathValue(currentContent, path, value)) applied++; });
+        if (!applied) return;
+        renderEditor();
+        markDirty();
+        showToast(t('editor.translate_review'), 'success');
     }
 
     // Save/restore open state of groups across re-renders

@@ -50,12 +50,20 @@ function nibblyIconOrImg(string $path, string $alt = '', array $opts = [], strin
     }
 
     $isSvg = str_ends_with(strtolower(parse_url($path, PHP_URL_PATH) ?? $path), '.svg');
-    if ($isSvg) {
+    $isExternal = (bool)preg_match('#^([a-z][a-z0-9+.-]*:)?//#i', $path);
+    if ($isSvg && !$isExternal) {
+        // Page paths carry $basePath ('', '../', '../../'): resolve them from the project root
         $relative = ltrim(parse_url($path, PHP_URL_PATH) ?? $path, '/');
-        $absolute = $projectRoot . '/' . $relative;
-        if (is_file($absolute) && is_readable($absolute)) {
+        $relative = preg_replace('#^(\./|\.\./)+#', '', $relative);
+        $absolute = realpath($projectRoot . '/' . $relative);
+        $root = realpath($projectRoot);
+        $inside = $absolute !== false && $root !== false && str_starts_with($absolute, $root . DIRECTORY_SEPARATOR);
+        if ($inside && is_file($absolute) && is_readable($absolute)) {
             $svg = file_get_contents($absolute);
             if ($svg !== false) {
+                // A file's own :root styles (the default favicon picks its tab colour that way)
+                // would apply to the whole page once inlined; the icon takes the page's colour instead
+                $svg = preg_replace('#<style\b[^>]*>(?:(?!</style>).)*:root(?:(?!</style>).)*</style>\s*#is', '', $svg);
                 $attrs = '';
                 if ($class !== '') $attrs .= ' class="' . htmlspecialchars($class) . '"';
                 if ($width)        $attrs .= ' width="' . (int)$width . '"';

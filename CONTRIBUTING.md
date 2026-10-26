@@ -43,6 +43,16 @@ Run `python3 tests/run-smoke.py` from the repository root. The runner needs PHP
 site copies, uses generated fixture accounts, and makes no paid AI calls or
 external email deliveries. Live configuration and customer content are not copied.
 
+On macOS/Linux, start PHP test servers with `start_server`/`stop_server` from
+`tests/server_process.py`, or `NibblyTestServer` from `tests/server-support.php`.
+Each start checks for marked servers whose owning test has exited and removes
+those leftovers. Active tests and ordinary development servers are preserved.
+Python worker pools use their own process groups; sequential PHP fixtures do
+not spawn workers. Always close servers in `finally`; exit/signal cleanup is a
+fallback. SIGKILL cannot run cleanup, so its leftovers are removed on the next
+start. There is no background monitor. Run `python3 tests/server-lifecycle-smoke.py`
+to verify cleanup, restart, errors, signals and isolation (also in the full suite).
+
 The suite covers PHP/JavaScript syntax, translation JSON, permissions, sessions,
 CSRF, safe HTML, routing, forms, backup/restore, concurrent file writes, and mocked
 AI provider requests. Browser checks are separate from the offline runner.

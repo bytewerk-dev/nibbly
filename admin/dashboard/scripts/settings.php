@@ -14,10 +14,6 @@
             _usersLoaded = true;
             loadUsers();
         }
-        if (tab === 'menus' && typeof loadMenuOrder === 'function' && typeof _menuOrderLoaded !== 'undefined' && !_menuOrderLoaded) {
-            _menuOrderLoaded = true;
-            loadMenuOrder();
-        }
         if (tab === 'forms' && typeof loadFormsAdmin === 'function' && !formsAdminLoaded) {
             formsAdminLoaded = true;
             loadFormsAdmin();
@@ -272,10 +268,13 @@
         if (moduleAiEl) moduleAiEl.checked = modules.ai !== false;
         var moduleNewsEl = document.getElementById('moduleNews');
         if (moduleNewsEl) moduleNewsEl.checked = modules.news !== false;
+        document.getElementById('modulePeople').checked = modules.people !== false;
         var moduleEventsEl = document.getElementById('moduleEvents');
         if (moduleEventsEl) moduleEventsEl.checked = modules.events !== false;
         var moduleMessagesEl = document.getElementById('moduleMessages');
         if (moduleMessagesEl) moduleMessagesEl.checked = modules.messages !== false;
+        var moduleMenusEl = document.getElementById('moduleMenus');
+        if (moduleMenusEl) moduleMenusEl.checked = modules.menus !== false;
         var moduleIconManagerEl = document.getElementById('moduleIconManager');
         if (moduleIconManagerEl) moduleIconManagerEl.checked = modules.iconManager !== false;
         var media = settings.media || {};
@@ -1365,7 +1364,7 @@
             else root.style.removeProperty(pair[1]);
         });
 
-        var css = '';
+        var css = themeFallbackCss(theme, base, accent);
         if (HEX_RE.test(theme.sidebarBg || '')) {
             css += ':root, [data-site-theme="light"] { --nb-sidebar-bg: ' + theme.sidebarBg + '; --nb-topbar-bg: ' + theme.sidebarBg + '; }';
         }
@@ -1393,6 +1392,41 @@
 
         updateAdminBrowserFavicon(themeValue);
         updateBtnStylePreview();
+    }
+
+    // Browsers without relative colour syntax: the same color-mix() derivation
+    // admin/dashboard.php writes into #nb-theme-server, rebuilt here because
+    // applyTheme() disables that block. The semantic colours need nothing
+    // extra: css/nibbly-admin-tokens.css mixes them from --nb-*-base.
+    function themeFallbackCss(theme, pcLight, acLight) {
+        if (window.CSS && CSS.supports && CSS.supports('color', 'oklch(from red l c h)')) return '';
+        var pcDark = HEX_RE.test(theme.darkPrimaryColor || '') ? normalizeHexColor(theme.darkPrimaryColor) : pcLight;
+        var acDark = HEX_RE.test(theme.darkAccentColor || '') ? normalizeHexColor(theme.darkAccentColor) : acLight;
+        var sbLight = HEX_RE.test(theme.sidebarBg || '') ? normalizeHexColor(theme.sidebarBg) : 'color-mix(in srgb, ' + pcLight + ' 12%, white)';
+        var sbDark = HEX_RE.test(theme.darkSidebarBg || '') ? normalizeHexColor(theme.darkSidebarBg) : 'color-mix(in srgb, ' + pcDark + ' 10%, #0b0d12)';
+        function mix(color, pct, other) { return 'color-mix(in srgb, ' + color + ' ' + pct + '%, ' + other + ')'; }
+        function block(selector, pc, ac, sb, light) {
+            return selector + ' {'
+                + '--nb-primary:' + pc + ';'
+                + '--nb-primary-subtle:' + mix(pc, light ? 8 : 12, 'transparent') + ';'
+                + '--nb-primary-muted:' + mix(pc, light ? 15 : 22, 'transparent') + ';'
+                + '--nb-primary-medium:' + mix(pc, light ? 30 : 38, 'transparent') + ';'
+                + '--nb-primary-btn:radial-gradient(ellipse at 50% 0%, ' + mix(pc, 70, 'white') + ' 0%, ' + pc + ' 70%);'
+                + '--nb-primary-btn-hover:radial-gradient(ellipse at 50% 0%, ' + mix(pc, 50, 'white') + ' 0%, ' + pc + ' 70%);'
+                + '--nb-brand:' + ac + ';'
+                + '--nb-brand-light:' + mix(ac, light ? 65 : 70, 'white') + ';'
+                + '--nb-brand-dark:' + mix(ac, 80, 'black') + ';'
+                + '--nb-brand-subtle:' + mix(ac, light ? 12 : 18, 'transparent') + ';'
+                + '--nb-sidebar-bg:' + sb + ';'
+                + (light
+                    ? '--nb-bg:' + mix(sb, 55, 'white') + ';--nb-bg-elevated:' + mix(sb, 18, 'white') + ';--nb-bg-sunken:' + mix(sb, 82, 'white') + ';--nb-bg-hover:' + mix(sb, 68, 'white') + ';--nb-border:' + mix(sb, 55, '#9ca3af') + ';--nb-border-strong:' + mix(sb, 48, '#7b8492') + ';'
+                    : '--nb-bg:' + mix(sb, 78, '#202428') + ';--nb-bg-elevated:' + mix(sb, 58, '#2a2d31') + ';--nb-bg-sunken:' + mix(sb, 88, '#030405') + ';--nb-bg-hover:' + mix(sb, 42, '#34383e') + ';--nb-border:' + mix(sb, 55, '#5a6472') + ';--nb-border-strong:' + mix(sb, 44, '#717b88') + ';')
+                + '}';
+        }
+        return '@supports not (color: oklch(from red l c h)) {'
+            + block(':root, [data-site-theme="light"]', pcLight, acLight, sbLight, true)
+            + block('[data-site-theme="dark"]', pcDark, acDark, sbDark, false)
+            + '}';
     }
 
     function adjustColor(hex, amount) {
@@ -2777,8 +2811,10 @@
                 settings.modules = settings.modules || {};
                 settings.modules.ai = document.getElementById('moduleAi').checked;
                 settings.modules.news = document.getElementById('moduleNews').checked;
+                settings.modules.people = document.getElementById('modulePeople').checked;
                 settings.modules.events = document.getElementById('moduleEvents').checked;
                 settings.modules.messages = document.getElementById('moduleMessages').checked;
+                settings.modules.menus = document.getElementById('moduleMenus').checked;
                 settings.modules.iconManager = document.getElementById('moduleIconManager').checked;
                 var clampInt = function(id, min, max, fallback) {
                     var el = document.getElementById(id);

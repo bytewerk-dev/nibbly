@@ -44,7 +44,8 @@ with tempfile.TemporaryDirectory(prefix='nibbly-workflows-') as folder:
         body = guest.request('/admin/setup.php')[2]
         token = re.search(rb'name="csrf_token" value="([^"]+)"', body)[1].decode()
         fields = {'site_name': 'Workflow fixture', 'username': 'admin', 'email': 'admin@example.invalid',
-                  'password': site.password, 'password_confirm': site.password, 'primary_lang': 'en', 'secondary_lang': 'de'}
+                  'password': site.password, 'password_confirm': site.password,
+                  'languages[0]': 'en', 'languages[1]': 'de', 'primary_lang': 'en'}
         guest.request('/admin/setup.php', fields)
         assert not (site.root / 'admin/config.php').exists(), 'Setup accepted a missing CSRF token'
         status, _, body = guest.request('/admin/setup.php', {**fields, 'csrf_token': token})

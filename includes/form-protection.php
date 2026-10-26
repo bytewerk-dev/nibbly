@@ -9,6 +9,7 @@
  */
 
 require_once __DIR__ . '/json-store.php';
+require_once __DIR__ . '/public-strings.php';
 
 const NIBBLY_FORM_TOKEN_FILE = __DIR__ . '/../content/form-tokens.json';
 const NIBBLY_FORM_RATE_FILE = __DIR__ . '/../content/form-rate-limit.json';
@@ -104,6 +105,7 @@ function nibblyLazyFormPlaceholder(string $formId, array $options = []): string
         'data-nibbly-lazy-form' => $formId,
         'data-endpoint' => $endpoint,
         'data-delay' => (string) max(0, $delay),
+        'data-load-error' => nibblyPublicString('form_load_error'),
     ];
 
     foreach (($options['params'] ?? []) as $key => $value) {
@@ -118,7 +120,63 @@ function nibblyLazyFormPlaceholder(string $formId, array $options = []): string
         $htmlAttrs .= ' ' . $key . '="' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . '"';
     }
 
-    return '<div' . $htmlAttrs . '><noscript>This form requires JavaScript.</noscript></div>';
+    $skeleton = is_array($options['skeleton'] ?? null) ? nibblyFormSkeleton($options['skeleton']) : '';
+    if ($skeleton !== '') $htmlAttrs .= ' aria-busy="true"';
+
+    return '<div' . $htmlAttrs . '><noscript>' . htmlspecialchars(nibblyPublicString('form_requires_js')) . '</noscript>' . $skeleton . '</div>';
+}
+
+/**
+ * Stand-in for a lazy form until it arrives: the form's own layout classes
+ * (section, rows or 12-column grid, field groups, actions) with empty boxes in
+ * place of labels and inputs, so the page has its final height from the start
+ * and nothing jumps when the form loads. It carries no <form>, no inputs, no
+ * field names and no endpoint, so bots learn nothing from it; only the heading
+ * and the label of a disabled, form-less button are real text. Hidden from
+ * assistive technology.
+ *
+ * $spec: heading, description (optional), button and cells: the fields in the
+ * form's 12-column grid (.nibbly-form-grid), each
+ * ['span' => 1-12, 'kind' => 'input'|'textarea'|'check'|'heading'|'note'].
+ * Built from a JSON form by nibblyFormSkeletonSpec().
+ */
+function nibblyFormSkeleton(array $spec): string
+{
+    $esc = static function ($value): string {
+        return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+    };
+    $cell = static function (array $cell): string {
+        $kind = in_array($cell['kind'] ?? 'input', ['input', 'textarea', 'check', 'heading', 'note'], true) ? $cell['kind'] : 'input';
+        $span = max(1, min(12, (int) ($cell['span'] ?? 12)));
+        $class = 'form-group form-group--span-' . $span;
+        if ($kind === 'heading') {
+            return '<div class="' . $class . ' nibbly-form-heading"><h3><span class="nb-form-skeleton__line"></span></h3></div>';
+        }
+        if ($kind === 'note' || $kind === 'check') {
+            return '<div class="' . $class . '"><p class="nb-form-skeleton__text"><span class="nb-form-skeleton__line nb-form-skeleton__line--' . $kind . '"></span></p></div>';
+        }
+        return '<div class="' . $class . '"><span class="nb-form-skeleton__label"></span>'
+            . '<span class="nb-form-skeleton__field' . ($kind === 'textarea' ? ' nb-form-skeleton__field--textarea' : '') . '"></span></div>';
+    };
+
+    $html = '<section class="contact-form-section nb-form-skeleton" aria-hidden="true">';
+    if (($spec['heading'] ?? '') !== '') {
+        $html .= '<h2>' . $esc($spec['heading']) . '</h2>';
+    }
+    if (($spec['description'] ?? '') !== '') {
+        $html .= '<p class="nibbly-form-description">' . $esc($spec['description']) . '</p>';
+    }
+    $html .= '<div class="contact-form"><div class="nibbly-form-grid">';
+    foreach (($spec['cells'] ?? []) as $c) {
+        if (is_array($c)) $html .= $cell($c);
+    }
+    $html .= '</div>';
+    if (($spec['button'] ?? '') !== '') {
+        // A disabled button outside any form: same metrics as the real one, does nothing
+        $html .= '<div class="form-actions"><button type="button" class="btn btn-gradient nb-form-skeleton__button" disabled tabindex="-1">' . $esc($spec['button']) . '</button></div>';
+    }
+    $html .= '</div></section>';
+    return $html;
 }
 
 function nibblyValidateFormToken(?string $token, string $formId = 'contact'): array

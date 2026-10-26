@@ -227,5 +227,6 @@
     "copilot.choose_target_required": "Wähle zuerst das Feld aus, das geändert werden soll.",
     "copilot.current_field_content": "Aktueller Inhalt",
     "copilot.current_field_empty": "Dieses Feld ist derzeit leer.",
-    "copilot.current_field_select": "Wähle ein Zielfeld aus, um den aktuellen Inhalt anzuzeigen."
+    "copilot.current_field_select": "Wähle ein Zielfeld aus, um den aktuellen Inhalt anzuzeigen.",
+    "auto_generated_fields": "{count} fehlende Felder mit Standardtext angelegt, damit du sie bearbeiten kannst."
 }

@@ -12,11 +12,8 @@
     function adminLangCodes() {
         return Object.keys(SITE_LANGUAGES || {});
     }
-    function adminLangLabel(code) {
-        return String((SITE_LANGUAGES && SITE_LANGUAGES[code]) || code).toUpperCase();
-    }
     function activeAdminLang(section) {
-        return section.querySelector('.ce-lang-tab.active')?.dataset.lang || DEFAULT_LANG;
+        return document.querySelector('#eventsEditorView .editor-header .nb-lang-switch input:checked')?.value || DEFAULT_LANG;
     }
     function readAdminLangField(fieldEl) {
         const input = fieldEl.querySelector('textarea, input:not([type="hidden"]), select');
@@ -30,7 +27,7 @@
         input.dispatchEvent(new Event('change', { bubbles: true }));
     }
     async function translateAdminLanguageSection(section, button) {
-        if (!AI_FEATURES_ENABLED || !section) return;
+        if (!dashboardAiTextUsable || !section) return;
         const sourceLang = activeAdminLang(section);
         const targetLangs = adminLangCodes().filter(code => code !== sourceLang);
         const fields = {};
@@ -38,54 +35,62 @@
             const value = readAdminLangField(fieldEl);
             if (value.trim() !== '') fields[fieldEl.dataset.i18nField] = value;
         });
-        if (!Object.keys(fields).length) {
-            showToast(t('editor.translate_no_source') || 'No source text to translate.', 'error');
-            return;
-        }
-        const previous = button.textContent;
-        button.disabled = true;
-        button.textContent = t('editor.translating') || 'Translating...';
-        try {
-            const formData = new FormData();
-            formData.append('action', 'ai-generate-text');
-            formData.append('maxOutputTokens', '1800');
-            formData.append('prompt', [
-                'Translate these nibbly admin editor fields from ' + sourceLang + ' into the requested target languages.',
-                'Return strict JSON only. Shape: {"translations":{"LANG":{"field":"translated value"}}}.',
-                'Keep HTML tags if present. Do not add Markdown or explanations.',
-                '',
-                JSON.stringify({ sourceLang, targetLangs, fields: fields }, null, 2)
-            ].join('\n'));
-            formData.append('csrf_token', CSRF_TOKEN);
-            const response = await fetch('api.php', { method: 'POST', body: formData });
-            const result = await response.json();
-            if (!result.success) throw new Error(result.message || t('toast.error'));
-            let payload;
-            try {
-                payload = JSON.parse(String(result.data?.text || '').replace(/^```json\s*|\s*```$/g, '').trim());
-            } catch (error) {
-                throw new Error(t('editor.translate_invalid_response') || 'AI returned an unreadable translation.');
-            }
-            const translations = payload.translations || payload;
-            targetLangs.forEach(lang => {
-                Object.entries(translations[lang] || {}).forEach(([field, value]) => {
-                    const fieldEl = section.querySelector('[data-lang="' + CSS.escape(lang) + '"][data-i18n-field="' + CSS.escape(field) + '"]');
-                    if (fieldEl) writeAdminLangField(fieldEl, value);
-                });
+        const translations = await aiTranslateFields(sourceLang, targetLangs, fields, button);
+        if (!translations) return;
+        targetLangs.forEach(lang => {
+            Object.entries(translations[lang] || {}).forEach(([field, value]) => {
+                const fieldEl = section.querySelector('[data-lang="' + CSS.escape(lang) + '"][data-i18n-field="' + CSS.escape(field) + '"]');
+                if (fieldEl) writeAdminLangField(fieldEl, value);
             });
-            updateAiUsage(result.data ? result.data.limits : null);
-            showToast(t('editor.translate_done') || 'Translations inserted.', 'success');
-        } catch (error) {
-            showToast(error.message, 'error');
-        } finally {
-            button.disabled = false;
-            button.textContent = previous;
-        }
+        });
+        showToast(t('editor.translate_done'), 'success');
+    }
+
+    let eventsStatusFilter = 'all';
+    // View language of the list: titles and locations in that language, the primary language as fallback
+    let eventsViewLang = DEFAULT_LANG;
+    const eventTranslated = (event, lang) => !!String(event.title?.[lang] || '').trim();
+    let eventsTrashCount = 0;
+
+    // "upcoming" (incl. today), "past", or "draft" for an event without a date
+    function eventPhase(event) {
+        const today = new Date().toISOString().split('T')[0];
+        if (!event.date) return 'draft';
+        return (event['end-date'] || event.date) >= today ? 'upcoming' : 'past';
+    }
+
+    function eventMatchesFilter(event) {
+        if (eventsStatusFilter === 'hidden') return !!event.hidden;
+        return eventsStatusFilter === 'all' || eventPhase(event) === eventsStatusFilter;
+    }
+
+    // Filter links (all / upcoming / past / hidden / trash)
+    function renderEventsFilterLinks(target, inTrash) {
+        const events = (eventsData && eventsData.events) || [];
+        const status = (value, label, count) => ({ value, label, count, active: !inTrash && eventsStatusFilter === value, onSelect() {
+            eventsStatusFilter = value;
+            if (inTrash) closeEventsTrash(); else renderEventsList();
+        } });
+        renderFilterLinks(target, [{ items: [
+            status('all', t('filter.all'), events.length),
+            status('upcoming', t('filter.upcoming'), events.filter(e => eventPhase(e) === 'upcoming').length),
+            status('past', t('filter.past'), events.filter(e => eventPhase(e) === 'past').length),
+            status('hidden', t('filter.hidden'), events.filter(e => e.hidden).length),
+            { value: 'trash', label: t('pages.trash'), count: eventsTrashCount, active: inTrash, onSelect: showEventsTrash }
+        ] }, !inTrash && Object.keys(SITE_LANGUAGES).length > 1 && { label: t('filter.language'), icon: 'language', items: Object.keys(SITE_LANGUAGES).map(lang => ({
+            value: lang, label: SITE_LANGUAGES[lang], count: events.filter(e => eventTranslated(e, lang)).length,
+            active: lang === eventsViewLang, onSelect() { eventsViewLang = lang; renderEventsList(); }
+        })) }]);
     }
 
     async function loadEventsEditor() {
         try {
-            const response = await fetch('api.php?action=load-events');
+            // The trash only contributes its count to the filter links
+            const [response, trash] = await Promise.all([
+                fetch('api.php?action=load-events'),
+                fetch('api.php?action=list-events-trash&_=' + Date.now()).then(r => r.json()).catch(() => null)
+            ]);
+            if (trash?.success) eventsTrashCount = (trash.data || []).length;
             const result = await response.json();
             if (result.success) {
                 eventsData = result.data;
@@ -111,6 +116,7 @@
         }
 
         const events = (eventsData && eventsData.events) || [];
+        renderEventsFilterLinks(document.getElementById('eventsFilterLinks'), false);
         if (events.length === 0) {
             nbRenderEmptyRow(tbody, 4, t('events.no_events'), { label: t('events.new_event'), onClick: addNewEvent });
             renderAdminListFooter('eventsListFooter', 'events', 0, getDashboardPageSize(), renderEventsList, 'eventsListFooterTop');
@@ -120,14 +126,15 @@
         // Sort by date ascending
         events.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
         const pageSize = getDashboardPageSize();
-        const paged = pageSlice(events, 'events', pageSize);
-        renderAdminListFooter('eventsListFooter', 'events', events.length, pageSize, renderEventsList, 'eventsListFooterTop');
+        const shown = events.filter(eventMatchesFilter);
+        const paged = pageSlice(shown, 'events', pageSize);
+        renderAdminListFooter('eventsListFooter', 'events', shown.length, pageSize, renderEventsList, 'eventsListFooterTop');
 
         const todayStr = new Date().toISOString().split('T')[0];
 
         paged.items.forEach((event) => {
             const index = events.indexOf(event);
-            const title = event.title?.[DEFAULT_LANG] || event.title?.en || event.title?.de || t('events.untitled');
+            const title = event.title?.[eventsViewLang] || event.title?.[DEFAULT_LANG] || Object.values(event.title || {}).find(Boolean) || t('events.untitled');
             const dateStr = event.date || '';
             const endDateStr = event['end-date'] || dateStr;
 
@@ -158,6 +165,12 @@
             titleLink.textContent = title;
             titleLink.onclick = (e) => { e.preventDefault(); openEventEditor(index); };
             tdTitle.appendChild(titleLink);
+            if (!eventTranslated(event, eventsViewLang)) {
+                const missing = document.createElement('span');
+                missing.className = 'nb-untranslated';
+                missing.textContent = t('filter.not_translated');
+                tdTitle.appendChild(missing);
+            }
 
             // Hover action row
             const actions = document.createElement('div');
@@ -170,14 +183,16 @@
             editLink.onclick = (e) => { e.preventDefault(); openEventEditor(index); };
             actions.appendChild(editLink);
 
-            if (event.url) {
+            // View: the event's own page (saved events only)
+            const viewHref = event.id ? '../events/' + encodeURIComponent(event.id) : '';
+            if (viewHref) {
                 const sep1 = document.createElement('span');
                 sep1.className = 'page-list-row-action-sep';
                 sep1.textContent = '|';
                 actions.appendChild(sep1);
 
                 const viewLink = document.createElement('a');
-                viewLink.href = event.url;
+                viewLink.href = viewHref;
                 viewLink.target = '_blank';
                 viewLink.rel = 'noopener';
                 viewLink.className = 'page-list-row-action';
@@ -216,7 +231,7 @@
             tdDate.textContent = dateStr ? (window.nbFormatDate ? nbFormatDate(dateStr) : dateStr) : '—';
 
             const tdLocation = document.createElement('td');
-            tdLocation.textContent = event.location?.[DEFAULT_LANG] || event.location?.en || event.location?.de || '';
+            tdLocation.textContent = event.location?.[eventsViewLang] || event.location?.[DEFAULT_LANG] || '';
 
             const tdStatus = document.createElement('td');
             tdStatus.className = 'page-list-cell-date';
@@ -243,9 +258,25 @@
         document.getElementById('eventEditorTitle').textContent = title;
         document.getElementById('eventEditorDeleteBtn').style.display = event.id ? '' : 'none';
 
+        // Writing view like pages and news: title and texts in the main column,
+        // save controls, date/time, link and image in the sidebar
+        const view = document.getElementById('eventsEditorView');
+        view.classList.add('nb-writing-view', 'nb-event-writing');
         const body = document.getElementById('eventEditorBody');
-        body.innerHTML = '';
-        renderEventFields(body, event, index);
+        const headerActions = view.querySelector('.editor-header-right');
+        if (headerActions) view.querySelector('.editor-header').append(headerActions);
+        body.innerHTML = `
+            <div class="nb-writing-layout">
+                <div class="nb-news-main nb-event-main"></div>
+                <aside class="nb-page-sidebar" aria-label="${escapeHtml(t('events.writing_actions'))}">
+                    <section class="nb-page-save">
+                        <h3>${escapeHtml(t('events.writing_save'))}</h3>
+                        <div class="nb-page-save-controls"></div>
+                    </section>
+                </aside>
+            </div>`;
+        if (headerActions) body.querySelector('.nb-page-save-controls').append(headerActions);
+        renderEventFields(body.querySelector('.nb-event-main'), event, index, body.querySelector('.nb-page-sidebar'));
     }
 
     function closeEventEditor() {
@@ -273,60 +304,48 @@
         openEventEditor(eventsData.events.length - 1);
     }
 
-    function renderEventFields(container, eventObj, index) {
+    function renderEventFields(container, eventObj, index, sidebar) {
         const prefix = `events.${index}`;
+        // Without a sidebar (other callers) everything stays in one column
+        const side = sidebar || container;
+        const panel = (titleKey, html) => {
+            const section = document.createElement('section');
+            section.className = 'nb-page-panel';
+            section.innerHTML = `<h3>${escapeHtml(t(titleKey))}</h3>${html}`;
+            side.appendChild(section);
+            return section;
+        };
+        const row = (path, type, labelKey, value) => `<div class="editor-form-row"><label for="ev-${index}-${path}">${escapeHtml(t(labelKey))}</label>
+            <input type="${type}" id="ev-${index}-${path}" class="ce-input editor-input" data-event-path="${prefix}.${path}" value="${escapeHtml(value || '')}"></div>`;
 
-        // Date/time row
-        const dateRow = document.createElement('div');
-        dateRow.className = 'ce-field-row';
-        dateRow.innerHTML = `
-            <div class="ce-field"><label class="ce-field-label">${t('events.start_date')}</label>
-                <input type="date" class="ce-input" data-event-path="${prefix}.date" value="${escapeHtml(eventObj.date || '')}"></div>
-            <div class="ce-field"><label class="ce-field-label">${t('events.start_time')}</label>
-                <input type="time" class="ce-input" data-event-path="${prefix}.time" value="${escapeHtml(eventObj.time || '')}"></div>
-            <div class="ce-field"><label class="ce-field-label">${t('events.end_date')}</label>
-                <input type="date" class="ce-input" data-event-path="${prefix}.end-date" value="${escapeHtml(eventObj['end-date'] || '')}"></div>
-            <div class="ce-field"><label class="ce-field-label">${t('events.end_time')}</label>
-                <input type="time" class="ce-input" data-event-path="${prefix}.end-time" value="${escapeHtml(eventObj['end-time'] || '')}"></div>
-        `;
-        container.appendChild(dateRow);
+        // Date and time
+        panel('events.writing_when',
+            row('date', 'date', 'events.start_date', eventObj.date) +
+            row('time', 'time', 'events.start_time', eventObj.time) +
+            row('end-date', 'date', 'events.end_date', eventObj['end-date']) +
+            row('end-time', 'time', 'events.end_time', eventObj['end-time']));
 
-        // URL
-        const urlField = document.createElement('div');
-        urlField.className = 'ce-field';
-        urlField.innerHTML = `<label class="ce-field-label">URL</label>
-            <input type="url" class="ce-input" data-event-path="${prefix}.url" value="${escapeHtml(eventObj.url || '')}">`;
-        container.appendChild(urlField);
+        // Link
+        panel('events.writing_link', row('url', 'url', 'events.url', eventObj.url));
 
-        // Image
-        const imgField = document.createElement('div');
-        imgField.className = 'ce-field';
-        imgField.innerHTML = `<label class="ce-field-label">Image</label>
+        // Image with preview, like the news cover
+        const imageSrc = eventObj.image ? (eventObj.image.startsWith('/') ? '..' + eventObj.image : eventObj.image) : '';
+        const imgPanel = panel('events.image', `
+            <div class="ce-image-preview"><img src="${escapeHtml(imageSrc)}" alt="" style="${eventObj.image ? '' : 'display:none;'}"></div>
             <div class="ce-image-input-row">
-                <input type="text" class="ce-input" data-event-path="${prefix}.image" value="${escapeHtml(eventObj.image || '')}">
-                <button type="button" class="btn btn-secondary btn-sm ce-browse-btn">Browse</button>
-            </div>`;
-        const eventBrowseBtn = imgField.querySelector('.ce-browse-btn');
-        const eventImgInput = imgField.querySelector('.ce-input');
-        eventBrowseBtn.addEventListener('click', function() {
-            browseImageForField(eventImgInput, null);
+                <input type="text" class="ce-input editor-input" data-event-path="${prefix}.image" value="${escapeHtml(eventObj.image || '')}" aria-label="${escapeHtml(t('events.image'))}">
+                <button type="button" class="btn btn-secondary btn-sm ce-browse-btn">${escapeHtml(t('btn.browse'))}</button>
+            </div>`);
+        const eventImgInput = imgPanel.querySelector('[data-event-path]');
+        imgPanel.querySelector('.ce-browse-btn').addEventListener('click', function() {
+            browseImageForField(eventImgInput, imgPanel.querySelector('.ce-image-preview'));
         });
-        container.appendChild(imgField);
 
         // Translatable fields — language tabs
         const langSection = document.createElement('div');
         langSection.className = 'ce-lang-section';
         const langCodes = Object.keys(SITE_LANGUAGES);
         const isMultiLang = langCodes.length > 1;
-
-        const tabsHtml = isMultiLang ? langCodes.map(code => {
-            const isDefault = code === DEFAULT_LANG;
-            return `<button type="button" class="ce-lang-tab${isDefault ? ' active' : ''}" role="tab" aria-selected="${isDefault ? 'true' : 'false'}" tabindex="${isDefault ? '0' : '-1'}" data-lang="${code}" data-event-idx="${index}">${escapeHtml(adminLangLabel(code))}${isDefault ? ' ★' : ''}</button>`;
-        }).join('') : '';
-
-        langSection.innerHTML = isMultiLang
-            ? `<div class="ce-lang-header"><div class="ce-lang-tabs" role="tablist" aria-label="${escapeHtml(t('editor.language_tabs') || 'Languages')}">${tabsHtml}</div>${AI_FEATURES_ENABLED ? `<button type="button" class="btn btn-secondary btn-sm ce-lang-translate">${escapeHtml(t('editor.translate_from_active') || 'Translate from active language')}</button>` : ''}</div>`
-            : '';
 
         langCodes.forEach(code => {
             const panel = document.createElement('div');
@@ -344,14 +363,15 @@
                 fieldDiv.className = 'ce-field';
                 fieldDiv.dataset.lang = code;
                 fieldDiv.dataset.i18nField = field;
-                fieldDiv.innerHTML = `<label class="ce-field-label">${field.charAt(0).toUpperCase() + field.slice(1)}</label>`;
+                fieldDiv.innerHTML = `<label class="ce-field-label">${escapeHtml(t('events.field_' + field))}</label>`;
+                if (field === 'title') fieldDiv.classList.add('nb-page-title-field');
 
                 if (isLong) {
                     const ta = document.createElement('textarea');
                     ta.className = 'ce-textarea';
                     ta.value = val;
                     ta.dataset.eventPath = `${prefix}.${field}.${code}`;
-                    ta.rows = 3;
+                    ta.rows = 8;
                     fieldDiv.appendChild(ta);
                 } else {
                     const input = document.createElement('input');
@@ -367,45 +387,16 @@
             langSection.appendChild(panel);
         });
 
+        // Language choice top right in the header, as in every editor; the panels hold each language's texts
+        const filled = code => EVENT_TRANSLATABLE.some(field => String(eventObj[field]?.[code] || '').trim() !== '');
+        placeLanguageSwitch(document.getElementById('eventsEditorView'), isMultiLang && renderLanguageSwitch({
+                name: 'event-' + index,
+                current: DEFAULT_LANG,
+                languages: langCodes.map(code => ({ code, label: SITE_LANGUAGES[code] || code, exists: filled(code) })),
+                onSelect(code) { langSection.querySelectorAll('.ce-lang-panel').forEach(p => { p.hidden = p.dataset.lang !== code; p.classList.toggle('active', p.dataset.lang === code); }); },
+                onTranslate(button) { translateAdminLanguageSection(langSection, button); }
+        }));
         container.appendChild(langSection);
-
-        // Tab switching
-        langSection.querySelectorAll('.ce-lang-tab').forEach((tab, tabIndex) => {
-            const activateTab = (targetTab, focus = false) => {
-                langSection.querySelectorAll('.ce-lang-tab').forEach(t => {
-                    const active = t === targetTab;
-                    t.classList.toggle('active', active);
-                    t.setAttribute('aria-selected', active ? 'true' : 'false');
-                    t.tabIndex = active ? 0 : -1;
-                    if (active && focus) t.focus();
-                });
-                langSection.querySelectorAll('.ce-lang-panel').forEach(p => {
-                    const active = p.dataset.lang === targetTab.dataset.lang;
-                    p.hidden = !active;
-                    p.classList.toggle('active', active);
-                });
-            };
-            tab.addEventListener('click', () => {
-                activateTab(tab);
-            });
-            tab.addEventListener('keydown', e => {
-                const tabs = Array.from(langSection.querySelectorAll('.ce-lang-tab'));
-                if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
-                e.preventDefault();
-                let next = tabIndex;
-                if (e.key === 'ArrowLeft') next = tabIndex === 0 ? tabs.length - 1 : tabIndex - 1;
-                if (e.key === 'ArrowRight') next = tabIndex === tabs.length - 1 ? 0 : tabIndex + 1;
-                if (e.key === 'Home') next = 0;
-                if (e.key === 'End') next = tabs.length - 1;
-                activateTab(tabs[next], true);
-            });
-        });
-        const translateBtn = langSection.querySelector('.ce-lang-translate');
-        if (translateBtn) {
-            translateBtn.addEventListener('click', function() {
-                translateAdminLanguageSection(langSection, translateBtn);
-            });
-        }
 
         // Save button is in the editor header, not duplicated inline.
     }
@@ -549,6 +540,8 @@
     }
 
     function renderEventsTrash(items) {
+        eventsTrashCount = (items || []).length;
+        renderEventsFilterLinks(document.getElementById('eventsTrashFilterLinks'), true);
         const tbody = document.getElementById('eventsTrashBody');
         const emptyMsg = document.getElementById('eventsTrashEmptyMsg');
         const emptyBtn = document.getElementById('emptyEventsTrashBtn');

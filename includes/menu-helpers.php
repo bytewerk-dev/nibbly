@@ -92,71 +92,26 @@ function navItemInLocation(array $item, string $location): bool {
 }
 
 /**
- * Get all nav items for a specific menu, combining manual $NAV_ITEMS
- * entries with auto-discovered pages from JSON content files.
+ * Get all nav items for a specific menu.
+ *
+ * Managed menus (content/menus.json → menus.{id}.items.{lang}, edited in the
+ * dashboard under "Menus & Footer") are returned as stored. Until a menu is
+ * managed for a language, the items are derived as before: manual $NAV_ITEMS
+ * entries plus auto-discovered pages from JSON content files, sorted by
+ * menus.json → order.{lang} (see nibblyMenuLegacyItems()).
  *
  * @param string $menuId       Menu ID (e.g. 'header', 'footer-pages')
  * @param string $lang         Current language code
  * @param string $basePath     Relative path prefix ('' or '../')
  * @param array  $allNavItems  Full $NAV_ITEMS array for the current language
- * @return array               Array of nav items: ['href' => ..., 'label' => ..., 'page' => ..., 'children' => [...]]
+ * @return array               Array of nav items: ['href' => ..., 'label' => ..., 'page' => ..., 'children' => [...], 'target' => ..., 'rel' => ...]
  */
 function getMenuItems(string $menuId, string $lang, string $basePath, array $allNavItems): array {
-    require_once __DIR__ . '/page-path.php';
-    $defaultLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
-
-    // 1. Filter manual nav items to this menu location
-    $items = array_values(array_filter($allNavItems, fn($item) => navItemInLocation($item, $menuId)));
-
-    // 2. Collect all pages already covered (including children)
-    $existingPages = array_column($allNavItems, 'page');
-    foreach ($allNavItems as $ni) {
-        if (!empty($ni['children'])) {
-            foreach ($ni['children'] as $child) {
-                $existingPages[] = $child['page'] ?? '';
-            }
-        }
+    $managed = nibblyMenuManagedItems($menuId, $lang, getMenuRegistry());
+    if ($managed !== null) {
+        return nibblyMenuResolveItems($managed, $lang);
     }
-
-    // 3. Auto-discover pages from JSON files
-    $contentPath = __DIR__ . '/../content/pages/';
-    $pageFiles = glob($contentPath . $lang . '_*.json');
-    if ($pageFiles) {
-        foreach ($pageFiles as $pf) {
-            $page = nibblyPageParseContentKey(basename($pf, '.json'));
-            if ($page === null || $page['lang'] !== $lang) continue;
-            $slug = $page['path'];
-
-            // Skip system partials
-            if (in_array($slug, ['home', 'footer', 'sidebar', 'header'])) continue;
-
-            if (!in_array($slug, $existingPages)) {
-                $data = json_decode(file_get_contents($pf), true);
-                $locations = getNavLocations($data ?: []);
-                if ($data && in_array($menuId, $locations)) {
-                    $title = $data['title'] ?? ucfirst(str_replace('-', ' ', $slug));
-                    $href = ltrim(nibblyPageUrlPath($lang, $slug, $defaultLang), '/');
-                    $items[] = ['href' => $href, 'label' => $title, 'page' => $slug];
-                }
-            }
-        }
-    }
-
-    // 4. Sort items by menu order (if defined in registry)
-    $registry = getMenuRegistry()['menus'] ?? [];
-    $order = $registry[$menuId]['order'][$lang] ?? null;
-    if ($order && is_array($order)) {
-        $orderMap = array_flip($order); // slug => position
-        usort($items, function ($a, $b) use ($orderMap) {
-            $posA = $orderMap[$a['page'] ?? ''] ?? PHP_INT_MAX;
-            $posB = $orderMap[$b['page'] ?? ''] ?? PHP_INT_MAX;
-            if ($posA === $posB) {
-                // Both unordered: sort alphabetically by label
-                return strcasecmp($a['label'] ?? '', $b['label'] ?? '');
-            }
-            return $posA <=> $posB;
-        });
-    }
-
-    return $items;
+    return nibblyMenuLegacyItems($menuId, $lang, $allNavItems, getMenuRegistry());
 }
+
+require_once __DIR__ . '/menu-store.php';

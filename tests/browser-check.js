@@ -20,9 +20,10 @@ const { chromium } = require('playwright');
         if (!(await page.locator('#dashboardAnalyticsState').textContent()).includes('disabled')) throw Error('Disabled analytics state missing');
         const ticks = await page.locator('#dashboardTrafficChart .dashboard-chart-grid text').allTextContents();
         if (ticks.length !== 5 || new Set(ticks).size !== 5) throw Error('Chart repeats integer axis labels');
-        for (const tab of ['content', 'news', 'mails', 'media', 'icons', 'settings', 'backup', 'home']) {
+        for (const tab of ['content', 'news', 'mails', 'media', 'menus', 'icons', 'settings', 'backup', 'home']) {
             await page.locator('.sidebar-nav-item[data-tab="' + tab + '"]').click();
             await page.waitForLoadState('networkidle');
+            if (tab === 'menus') await page.waitForSelector('#mfMenus .mf-panel [data-mf-add-toggle]', { timeout: 5000 });
         }
         await page.screenshot({ path: process.env.REVIEW_SCREENSHOTS + '/dashboard.png' });
         await page.goto(base + '/services/test/');
@@ -40,7 +41,7 @@ const { chromium } = require('playwright');
         await guest.goto(base + '/services/test/');
         if (await guest.locator('#admin-bar').count()) throw Error('Guest sees admin bar');
         if (errors.length) throw Error(errors.join('\n'));
-        console.log('PASS Chromium login, eight dashboard tabs, integer chart ticks, disabled AI, mobile admin offset, guest page and no JS errors');
+        console.log('PASS Chromium login, nine dashboard tabs, integer chart ticks, disabled AI, mobile admin offset, guest page and no JS errors');
     } finally {
         await browser.close();
     }

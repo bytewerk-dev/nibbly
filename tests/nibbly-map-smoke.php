@@ -48,10 +48,10 @@ foreach (array_keys($tabs) as $tab) {
     mapAssert(count(array_filter(array_keys($entries), static fn($id) => str_starts_with($id, 'tab_') && $entries[$id][1] === $tab)) === 1, "settings tab '{$tab}' needs exactly one tab_ entry");
 }
 // The module keys the map uses are the ones the dashboard uses.
-preg_match("/'news' => true, 'events' => true, 'messages' => true, 'iconManager' => true, 'ai' => true/", $dashboard) or mapAssert(false, 'the dashboard module list changed; update nibblyMapSections()');
+preg_match("/'news' => true, 'events' => true, 'people' => true, 'messages' => true, 'menus' => true, 'iconManager' => true, 'ai' => true/", $dashboard) or mapAssert(false, 'the dashboard module list changed; update nibblyMapSections()');
 foreach ($sections as $area => [$label, $role, $module]) {
     mapAssert(in_array($role, ['admin', 'editor'], true), "area '{$area}' has an unknown role");
-    mapAssert($module === '' || in_array($module, ['news', 'events', 'messages', 'iconManager'], true), "area '{$area}' has an unknown module");
+    mapAssert($module === '' || in_array($module, ['news', 'events', 'people', 'messages', 'menus', 'iconManager'], true), "area '{$area}' has an unknown module");
 }
 
 // ---- Every name exists in every admin language -----------------------------------------------------------------
@@ -102,6 +102,7 @@ foreach ([
     'Wartungsmodus einschalten' => 'set_maintenance',
     'where are the form messages' => 'area_messages',
     'Logo ändern' => 'set_logo',
+    'Teammitglied anlegen' => 'area_people',
     'SMTP Server einstellen' => 'set_smtp',
 ] as $query => $expected) {
     mapAssert($first($query) === $expected, "'{$query}' should find {$expected}, found " . json_encode($first($query)));

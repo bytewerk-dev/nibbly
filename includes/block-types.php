@@ -9,7 +9,23 @@
 
 require_once __DIR__ . '/../admin/lang/i18n.php';
 
+require_once __DIR__ . '/people.php';
+
 return [
+    'person' => [
+        'label' => t('people.person'), 'category' => 'cards', 'icon' => 'person',
+        'defaults' => ['personId' => ''],
+        'fields' => [['key' => 'personId', 'type' => 'select', 'label' => t('people.person'), 'options' => nibblyPeopleBlockOptions(), 'hint' => t('people.choose_hint')]],
+    ],
+    'team' => [
+        'label' => t('people.team'), 'category' => 'cards', 'icon' => 'person',
+        'defaults' => ['group' => '', 'columns' => '3', 'details' => 'summary'],
+        'fields' => [
+            ['key' => 'group', 'type' => 'input', 'label' => t('people.group_filter'), 'hint' => t('people.group_hint')],
+            ['key' => 'columns', 'type' => 'select', 'label' => t('people.columns'), 'options' => [['value'=>'2','label'=>'2'],['value'=>'3','label'=>'3'],['value'=>'4','label'=>'4']]],
+            ['key' => 'details', 'type' => 'select', 'label' => t('people.details'), 'options' => [['value'=>'summary','label'=>t('people.summary')],['value'=>'full','label'=>t('people.biography')]]],
+        ],
+    ],
     'text' => [
         'label'    => t('block.text'),
         'category' => 'content',

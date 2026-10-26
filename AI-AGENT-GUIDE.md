@@ -18,6 +18,8 @@ This is the canonical, tool-neutral guide for AI coding agents. `AGENTS.md` and 
 | Menu registry | `content/menus.json` |
 | Navigation | `includes/nav-config.php` |
 | Menu helpers | `includes/menu-helpers.php` |
+| Menus & Footer store | `includes/menu-store.php` (managed items, derivation, footer fields, detection) |
+| Menu/footer adapters | `includes/menu-adapters.php` (core), `includes/site-menus.php` (optional, site-owned) |
 | Migration redirects | `content/redirects.json` (copy from `content/redirects.example.json`) |
 | Redirect helper | `includes/redirect-helper.php` |
 | Site page hook | `includes/site-page-hook.php` (optional, survives core updates) |
@@ -36,7 +38,6 @@ This is the canonical, tool-neutral guide for AI coding agents. `AGENTS.md` and 
 | SMTP mailer | `api/SmtpMailer.php` |
 | JSON form renderer | `includes/forms.php` |
 | Public form submit API | `api/form-submit.php` |
-| Legacy contact form API | `api/contact.php` |
 | AI gateway | `includes/ai/ai-helper.php` |
 | AI settings | `content/ai-settings.json` (no keys), `content/ai-secrets.json` (API keys only, chat and image services) |
 | AI image services | `includes/ai/image-services.json` (registry), `includes/ai/image-services.php` (adapters) |
@@ -116,6 +117,16 @@ Supported field types are `text`, `email`, `tel`, `textarea`, `select`,
 widths are `3`, `4`, `6`, `8`, and `12` on a 12-column grid. `select` and
 `radio` fields use `options` entries shaped as `{ "value": "...", "label": "..." }`.
 
+Multilingual sites: every visitor-facing text (`label`, `description`,
+`submit.successText`, field `label`/`placeholder`/`help`, option `label`) may be
+a plain string (one text for all languages) or a map of language codes, e.g.
+`"label": { "de": "Nachricht", "en": "Message" }`. The form renders in the page
+language, falling back to the primary language and then to the first text.
+Keys, option `value`s and `submit.subject` stay single. Visitor messages
+(button, validation, errors) come from `includes/public-strings.php`; stored
+messages and notification e-mails use the primary-language texts. The
+dashboard editor switches between the site languages.
+
 ### Rendering
 
 For a direct server-side render:
@@ -145,10 +156,11 @@ shared footer JavaScript. Submissions are stored in `content/mails.json` with
 `formId`, `formLabel`, and a structured `fields[]` array; the dashboard inbox can
 filter by form.
 
-### Legacy and Custom PHP Forms
+### Placing a Form and Custom PHP Forms
 
-The legacy `includes/contact-form.php` and `api/contact.php` continue to work
-for older templates. For fully custom PHP forms that do not use JSON rendering,
+A JSON-only page shows a form below its sections when its JSON names it:
+`"form": "contact"` (the id of `content/forms/contact.json`). Templates call
+`nibblyForm('contact')`. For fully custom PHP forms that do not use JSON rendering,
 include `includes/form-protection.php`, call `nibblyFormProtectionFields($id)`,
 validate with `nibblyValidateFormToken()`, and store messages with the same
 `formId`/`formLabel` metadata if they should appear clearly in the inbox.
@@ -1612,7 +1624,68 @@ Defines available menus with multilingual labels and sort order:
 }
 ```
 
-Footer columns are rendered automatically from the registry (all menus except `header`). Adding a new footer column = add an entry to `menus.json` + tag pages with the new menu ID. Column headings come from the `label` field. The dashboard's Page Settings checkboxes are generated dynamically from the registry.
+A template that wants footer columns from the registry loops over `getRegisteredMenuIds()` (all menus except `header`) and renders each with `getMenuItems()`; column headings come from the `label` field. The core `includes/footer.php` does not do this: it renders the single link row `footer-links` (see [Menus & Footer](#menus--footer)). The dashboard's Page Settings checkboxes are generated dynamically from the registry.
+
+### Menus & Footer
+
+The dashboard item **Menus & Footer** (administrators, `#menus`; module `menus` under Settings → Modules) edits every menu and the footer content in one place. It replaces the old *Settings → Menus* order list; there is one editor and, per menu and language, one source:
+
+| State | Source of the items | Shown as |
+|---|---|---|
+| Derived (default) | `$NAV_ITEMS` + page `"nav"` fields + `order.{lang}` — or a template adapter's fallback | "Detected", with the origin files |
+| Managed (after the first save) | `content/menus.json` → `menus.{id}.items.{lang}` | "Managed" |
+
+Saving a derived menu adopts it into `menus.json` (with a backup in `backups/menus-registry_*.json`); **Reset to source** removes `items.{lang}` again and the untouched derived source applies. `nav-config.php` is never rewritten. A language added later starts derived; copying a language copies managed items (site paths get the new prefix, page references follow by slug).
+
+Managed item format (unknown project fields such as `class` or `icon` are kept as they are):
+
+```json
+{ "uid": "mi_3ece8dfada25", "type": "page", "page": "about", "label": "", "hidden": false,
+  "children": [ { "uid": "mi_8358d2dc5298", "type": "link", "label": "Shop", "href": "https://shop.example.com",
+                  "target": "_blank", "rel": "noopener" } ] }
+```
+
+- `type: page` refers to the page by slug; the URL is built at render time, an empty `label` uses the page title, and a missing page is skipped in the output and flagged in the editor for relinking. `nibblyMenusRenamePage($lang, $old, $new)` moves references after a slug change.
+- `type: link` keeps `href` (site path, `/path`, `https://`, `mailto:`, `tel:`, `#anchor`; `javascript:` and similar are rejected). `target` is `_blank`/`_self`; `rel` is limited to known tokens; a new window always gets `noopener`.
+- `depth` of a menu: `header` 2 (one dropdown level), other registry menus 1; override with `"depth"` in the registry entry.
+- Page Settings → menu checkboxes add or remove the page in managed menus; a new page joins the managed menus its `"nav"` lists (default `header`), like auto-discovery did.
+- Templates render managed and derived menus alike: `getMenuItems($id, $lang, $basePath, $navItems)` or `nibblyMenuItems($id, $lang)`, with `nibblyMenuHref($item, $basePath)` and `nibblyMenuLinkAttrs($item, $classes)` for `href`, `target`, `rel` and item classes. Desktop and mobile navigation read the same items.
+
+**Footer.** Footer fields are edited where they live, in `content/pages/footer.json`. Types: `text`, `link`, `linkgroup`, `image`, `contact`. Strings and `{lang: text}` maps are edited per field; unchanged values keep their bytes, unknown keys stay, numbered-object lists (`{"0": …}`) stay numbered objects. Fields with `html` are sanitized like rich text. Other top-level keys of `footer.json` are listed as findings with their origin and template references (`file:line`, and whether the template prints the value); the administrator assigns a type or ignores them (stored in `menus.json → footer.fields`, keyed by path, so detecting again never duplicates anything).
+
+**Adapters for custom templates.** Detection never edits a template. Hard-coded `<nav>` blocks found in `includes/header.php`, `includes/footer.php`, language templates and `templates/` are listed with file and line only. To make such markup editable, render it from a menu and register the menu and fields in `includes/site-menus.php` (site-owned, loaded by `includes/menu-adapters.php`):
+
+```php
+<?php
+// includes/site-menus.php
+nibblyRegisterMenu('service-nav', [
+    'label'    => ['en' => 'Service navigation', 'de' => 'Service-Navigation'],
+    'template' => 'includes/header.php',   // shown as origin
+    'depth'    => 1,
+    'fallback' => fn(string $lang) => [     // what the template showed before; used until the first save
+        ['label' => 'Shop', 'href' => 'https://shop.example.com', 'target' => '_blank', 'rel' => 'noopener'],
+        ['label' => $lang === 'de' ? 'Kontakt' : 'Contact', 'type' => 'page', 'page' => 'contact'],
+    ],
+]);
+nibblyRegisterFooterField('social', [
+    'type' => 'linkgroup', 'label' => ['en' => 'Social links', 'de' => 'Social-Media-Links'],
+    'template' => 'includes/footer.php',
+    'supports' => ['add' => true, 'remove' => true, 'order' => true, 'hidden' => true], // hidden: the template must skip entries with "hidden": true
+]);
+```
+
+```php
+<!-- in the template: keep the markup and classes, swap the hard-coded links for the loop -->
+<nav class="service-nav">
+  <?php foreach (nibblyMenuItems('service-nav', $currentLang) as $item): ?>
+    <a href="<?php echo htmlspecialchars(nibblyMenuHref($item, $basePath)); ?>"<?php echo nibblyMenuLinkAttrs($item, ['service-nav__link']); ?>><?php echo htmlspecialchars($item['label']); ?></a>
+  <?php endforeach; ?>
+</nav>
+```
+
+The core footer registers `footer-links` and the fields `summary` and `copyright` the same way, but only while `includes/footer.php` still contains those bindings, so a customised footer is not offered fields it does not print.
+
+**API** (`admin/api/navigation.php`, administrators): `load-menus-footer` (state, findings, revisions), `save-menus-footer` (`payload` = `{menus: {id: {lang: items}}, reset: [{menu, lang}], footer: {path: value}, assign: {path: type|"ignore"|""}}`, `revisions` = `{menus, footer}`; 409 when a store changed since loading, 428 without revisions, 422 with per-item errors and nothing written), `list-menus-backups`, `restore-menus-backup`. `save-menu-order` still works and reorders a managed menu in place.
 
 ### Nested Menus (Dropdowns)
 
@@ -1634,7 +1707,8 @@ $NAV_ITEMS = [
 - Desktop: hover/focus opens a dropdown below the parent
 - Mobile: children are rendered inline, indented
 - If any child is the active page, the parent also gets the `.active` class
-- Manual items support an optional `'nav'` key (defaults to `['header', 'footer']`)
+- Manual items support an optional `'nav'` key (defaults to `['header', 'footer-pages']`)
+- Once a menu is managed under Menus & Footer, its hierarchy lives in `content/menus.json` instead
 
 ### One-Page Menus
 
@@ -1958,3 +2032,53 @@ When calling `save` or `save-settings`, first load the resource through `load` o
 Handle HTTP 409 as a concurrent-edit conflict and HTTP 428 as a missing load.
 Never fetch a newer revision solely to force an old snapshot through. The shared
 browser revision client already handles normal dashboard and inline-editor forms.
+
+
+## Reusable people profiles
+
+Dashboard → People (`#people`, administrators and editors) manages reusable people separately
+from login accounts. Store: `content/people.json`, root `people` array. Every profile has a
+server-generated stable `person_<hex>` id, `name`, `status` (`draft`, `published`, `trash`),
+`order`, `groups`, `photo`, `alt`, `credit`, `website`, `email`, `phone` and `translations`:
+`{lang: {role, organization, summary, biography, quote}}`. Only biography accepts sanitized
+rich HTML. Missing language fields fall back to the default site language; explicitly empty
+fields remain empty. Contact details are intentionally public when published.
+
+Use a `person` block with `personId`, or a `team` block with `group` (empty = all published),
+`columns` (`2`, `3`, `4`) and `details` (`summary`, `full`). Profiles are references, never
+copies. Drafts and trashed profiles produce no public output, even when the viewer is an
+administrator. A blank reference shows an editing hint only in edit mode. Register block
+choices through the existing block registry; the native dashboard and inline editor use it.
+
+Custom templates can require `includes/people.php` and call `nibblyPeople($group)` for published
+profiles, `nibblyPersonText($profile, $field, $lang)` and
+`nibblyRenderPerson($profile, $lang, $full)`. Set `$basePath` and `$currentLang` as usual.
+The shared `.people-grid` / `.person-card` styles can be overridden in website CSS.
+
+Authenticated actions: `load-people`, `save-person`, `trash-person`, `restore-person`.
+Load first, then send the returned top-level `revision`, `csrf_token`, `id` (empty for create)
+and a JSON `person` for saves. Stale writes return 409, missing revision 428; never retry
+with a newer revision automatically. Restore always creates a draft. Pre-write snapshots
+are `backups/people_*.json` and full-site backups include the store. `modules.people=false`
+disables dashboard/API management but preserves published rendering. Never automatically
+convert a site's speaker/event data: map and validate a separate explicit migration.
+
+Validation: `python3 tests/people-smoke.py` uses disposable content only.
+
+
+## Dashboard page writing view
+
+`admin/dashboard/scripts/page-writing.php` enhances the standard `sections[]` editor
+through `NbPageEditor.enhance()` after each native render. Save controls and panel tabs
+move into a responsive right sidebar; a single text block uses the full writing column.
+Custom JSON pages without `sections` keep the generic field editor. Multiple blocks keep
+navigation, reordering and all registered field types (including Person and Team).
+
+Visual rich-text fields synchronize into the existing `.section-field` textarea. It remains
+the data source for collection, undo snapshots and the revision-aware save API. The HTML
+mode edits that same source; merely switching modes never rewrites it. Paste and rendered
+HTML use an inert allowlist sanitizer; server validation stays final. Use admin theme tokens
+and `editor.writing.*` translations for changes. Do not add a second save or content store.
+
+Validation: `python3 tests/page-writing-smoke.py`; add `--serve` for the isolated browser
+fixture (single text, multiple blocks, empty sections and custom JSON).
