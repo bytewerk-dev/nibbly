@@ -1208,8 +1208,10 @@ function sanitizeModuleSettings(array $settings): array {
     return array_intersect_key([
         'ai' => !array_key_exists('ai', $modules) || !empty($modules['ai']),
         'news' => !array_key_exists('news', $modules) || !empty($modules['news']),
+        'people' => !array_key_exists('people', $modules) || !empty($modules['people']),
         'events' => !array_key_exists('events', $modules) || !empty($modules['events']),
         'messages' => !array_key_exists('messages', $modules) || !empty($modules['messages']),
+        'menus' => !array_key_exists('menus', $modules) || !empty($modules['menus']),
         'iconManager' => !array_key_exists('iconManager', $modules) || !empty($modules['iconManager']),
     ], $modules);
 }
@@ -1941,6 +1943,7 @@ function buildPageList() {
             'slug' => $slug,
             'title' => $title,
             'lastModified' => $lastModified,
+            'visibility' => ($data['visibility']['status'] ?? 'public') === 'private' ? 'private' : 'public',
             'seoHealth' => buildPageSeoHealth($lang, $slug, is_array($data) ? $data : []),
         ];
     }
@@ -2015,6 +2018,7 @@ function buildPageList() {
                     'slug' => $langData[$lang]['slug'],
                     'title' => $langData[$lang]['title'],
                     'lastModified' => $langData[$lang]['lastModified'],
+                    'visibility' => $langData[$lang]['visibility'],
                     'seoHealth' => $langData[$lang]['seoHealth'],
                 ];
             }

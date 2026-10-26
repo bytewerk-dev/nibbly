@@ -11,6 +11,8 @@
             formData.append('action', 'save');
             formData.append('page', currentPage);
             formData.append('content', JSON.stringify(currentContent));
+            // The menu checkboxes show the managed menus' state, so they decide there.
+            if (document.querySelector('[data-nav-location]')) formData.append('nav_sync', '1');
             formData.append('csrf_token', CSRF_TOKEN);
 
             const response = await fetch('api.php', {
@@ -34,12 +36,13 @@
                 document.getElementById('lastModified').textContent =
                     t('editor.last_saved', {date: formatDateShort(result.data.lastModified)});
                 loadBackups();
-            } else {
-                showToast(result.message, 'error');
+                return true;
             }
+            showToast(result.message, 'error');
         } catch (error) {
             showToast(t('toast.error_saving', {message: error.message}), 'error');
         }
+        return false;
     }
 
     // Load backups
@@ -259,6 +262,13 @@
         if (options.confirmText) confirmBtn.textContent = options.confirmText;
         if (options.confirmClass) confirmBtn.className = options.confirmClass;
         if (options.hideConfirm) confirmBtn.style.display = 'none';
+        // Optional third choice between Cancel and Confirm
+        var altBtn = document.getElementById('modalAlt');
+        if (altBtn && options.altText) {
+            altBtn.textContent = options.altText;
+            altBtn.onclick = options.onAlt || closeModal;
+            altBtn.style.display = '';
+        }
         setTimeout(() => {
             var focusTarget = options.focusSelector ? document.querySelector(options.focusSelector) : confirmBtn;
             (focusTarget || confirmBtn).focus();
@@ -277,6 +287,58 @@
         btn.className = 'btn btn-danger';
         btn.disabled = false;
         btn.style.display = '';
+        const alt = document.getElementById('modalAlt');
+        if (alt) { alt.style.display = 'none'; alt.onclick = null; }
+    }
+
+    // Before leaving an editor with unsaved changes (e.g. switching to another language version):
+    // save and continue, continue without saving, or cancel. Without changes it continues at once.
+    function continueWithUnsaved(hasChanges, save, proceed) {
+        if (!hasChanges()) return proceed();
+        showModal(t('editor.view_unsaved_title'), t('editor.switch_unsaved_text'), async function() {
+            closeModal();
+            if (await save()) proceed();
+        }, {
+            confirmText: t('editor.switch_save_and_continue'),
+            confirmClass: 'btn btn-primary',
+            altText: t('editor.switch_discard'),
+            onAlt() { closeModal(); proceed(); }
+        });
+    }
+
+    // A missing language version: with AI text generation set up, ask whether to translate it right away
+    function chooseVersionCreation(langLabel, proceed) {
+        if (!dashboardAiTextUsable) return proceed(false);
+        showModal(t('editor.create_version_title', { lang: langLabel }), t('editor.create_version_text'), function() { closeModal(); proceed(true); }, {
+            confirmText: t('editor.create_version_ai'),
+            confirmClass: 'btn btn-primary',
+            altText: t('editor.create_version_copy'),
+            onAlt() { closeModal(); proceed(false); }
+        });
+    }
+
+    // "View" opens the saved page in a new tab. With unsaved changes it first offers to save,
+    // so nothing typed in the editor is lost and the tab shows what the editor shows.
+    function viewWithUnsavedCheck(event, link, hasChanges, save) {
+        if (!hasChanges()) return;
+        event.preventDefault();
+        const url = link.href;
+        const openTab = () => { const tab = window.open('about:blank', '_blank'); if (tab) tab.opener = null; return tab; };
+        showModal(t('editor.view_unsaved_title'), t('editor.view_unsaved_text'), async function() {
+            // Open the tab inside the click, otherwise pop-up blockers stop it after the save
+            const tab = openTab();
+            closeModal();
+            if (await save()) {
+                if (tab) tab.location.href = url; else window.open(url, '_blank', 'noopener');
+            } else if (tab) {
+                tab.close();
+            }
+        }, {
+            confirmText: t('editor.view_save_and_view'),
+            confirmClass: 'btn btn-primary',
+            altText: t('editor.view_saved_version'),
+            onAlt() { closeModal(); window.open(url, '_blank', 'noopener'); }
+        });
     }
 
     // Format date without seconds

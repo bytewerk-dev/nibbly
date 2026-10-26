@@ -80,8 +80,9 @@ include $_includeBase . 'includes/content-loader.php';
         <div class="content-inner">
             <?php echo renderBreadcrumb($contentPage, $basePath); ?>
             <?php echo renderAllSections($contentPage); ?>
-            <?php if (!empty($data['contactForm']) || $slug === 'contact' || $slug === 'kontakt' || $slug === 'contacto'): ?>
-                <?php include $_includeBase . 'includes/contact-form.php'; ?>
+            <?php if (!empty($data['form']) && is_string($data['form'])): ?>
+                <?php require_once $_includeBase . 'includes/forms.php'; ?>
+                <?php echo nibblyFormRender($data['form'], ['basePath' => $basePath, 'lang' => $currentLang]); ?>
             <?php endif; ?>
         </div>
     </main>

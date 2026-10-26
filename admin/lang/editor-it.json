@@ -209,5 +209,6 @@
     "copilot.choose_target_required": "Choose the field you want to change first.",
     "copilot.current_field_content": "Current content",
     "copilot.current_field_empty": "This field is currently empty.",
-    "copilot.current_field_select": "Choose a target field to preview its current content."
+    "copilot.current_field_select": "Choose a target field to preview its current content.",
+    "auto_generated_fields": "Aggiunti {count} campi mancanti con il testo predefinito, così puoi modificarli."
 }

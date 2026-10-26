@@ -397,7 +397,7 @@ async function mainFlow(browser, user) {
         // The x asks first; cancelling keeps the key, confirming deletes it at once.
         await page.locator('#aiRemoveBraveApiKey').click();
         await page.locator('#modalConfirm').waitFor({ state: 'visible' });
-        await page.locator('#modalOverlay .modal-actions .btn-secondary').click();
+        await page.locator('#modalCancel').click();
         assert(JSON.parse(fs.readFileSync(path.join(siteRoot, 'content/ai-secrets.json'), 'utf8')).research.brave.apiKey === 'BSA-browser-brave-key-1234', 'cancelling keeps the key');
         await page.locator('#aiRemoveBraveApiKey').click();
         await page.locator('#modalConfirm').click();

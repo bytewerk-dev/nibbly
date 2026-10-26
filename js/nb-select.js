@@ -104,7 +104,8 @@
             var spaceBelow = window.innerHeight - rect.bottom;
             var maxHeight = Math.min(280, Math.max(spaceBelow - 12, 120));
             list.style.minWidth = rect.width + 'px';
-            list.style.left = Math.round(rect.left) + 'px';
+            // A list wider than its button may not run past the right edge of the window (phones).
+            list.style.left = Math.round(Math.max(8, Math.min(rect.left, window.innerWidth - list.offsetWidth - 8))) + 'px';
             list.style.maxHeight = Math.round(maxHeight) + 'px';
             if (spaceBelow < 140 && rect.top > window.innerHeight - rect.bottom) {
                 list.style.top = 'auto';

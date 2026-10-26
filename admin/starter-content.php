@@ -31,7 +31,10 @@ function getStarterI18n($siteName) {
             'home_getting_started' => '<p>Open the <a href="admin/">admin panel</a> to manage pages, upload images, and configure your site. You can also log in and click <strong>Edit Page</strong> in the toolbar to make changes directly.</p><p>Check out the other demo pages to see what\'s possible: <a href="blocks">Block Types</a> shows every content block, <a href="components">Components</a> demonstrates interactive widgets, and <a href="about">About</a> is a typical content page you can use as a starting point.</p>',
             'home_cta_title' => 'Start Building',
             'home_cta_text' => '<p>This example content can be deleted at any time — either from the dashboard or by removing sections in the inline editor. Replace it with your own content and make this site yours.</p>',
-            'home_img_caption' => 'Replace this placeholder with your own image.',
+            'home_img_caption' => 'Paper, folds and light: these starter images ship with nibbly. Swap them for your own anytime.',
+            'home_img_alt' => 'Landscape of folded white paper with a blue accent',
+            'about_img_alt' => 'Five origami paper cranes standing together',
+            'blocks_image_alt' => 'Paper folded into a zigzag tessellation pattern',
             'home_card_1_title' => 'For Websites',
             'home_card_1_desc' => 'Business sites, portfolios, landing pages — any content-driven site that needs easy editing without a database.',
             'home_card_2_title' => 'For Clients',
@@ -50,6 +53,7 @@ function getStarterI18n($siteName) {
             'about_quote' => 'Simplicity is the ultimate sophistication.',
             'about_quote_author' => 'Leonardo da Vinci',
             'about_values_title' => 'What We Value',
+            'about_team_heading' => 'Our Team',
             'about_value_1' => 'Simplicity over complexity',
             'about_value_2' => 'Ownership over dependency',
             'about_value_3' => 'Transparency over magic',
@@ -75,13 +79,13 @@ function getStarterI18n($siteName) {
             'blocks_list_3' => 'Items can be added, removed, and reordered',
             'blocks_list_4' => 'Great for feature lists, steps, or checklists',
             'blocks_card_heading' => 'Card Block',
-            'blocks_card_1_title' => 'First Card',
+            'blocks_card_1_title' => 'The First Fold',
             'blocks_card_1_desc' => 'Cards automatically arrange in a responsive grid. Each card has an image, title, and description.',
-            'blocks_card_2_title' => 'Second Card',
+            'blocks_card_2_title' => 'Pleats',
             'blocks_card_2_desc' => 'Use cards for team members, services, portfolio items, or any content that benefits from a visual grid layout.',
-            'blocks_card_3_title' => 'Third Card',
+            'blocks_card_3_title' => 'Facets',
             'blocks_card_3_desc' => 'All card content is editable inline. Click any text to change it, or click the image to replace it.',
-            'blocks_card_4_title' => 'Fourth Card',
+            'blocks_card_4_title' => 'The Crane',
             'blocks_card_4_desc' => 'Cards automatically form a 2×2 or 4×1 grid depending on screen width. Add as many as you need.',
             'blocks_media_heading' => 'Media Blocks',
             'blocks_media_text' => '<p>nibbly also supports <strong>YouTube</strong>, <strong>SoundCloud</strong>, and <strong>audio</strong> embeds. These blocks accept a video/track ID or audio file path and render the appropriate player.</p><p>Below is an example YouTube embed:</p>',
@@ -171,6 +175,8 @@ function getStarterI18n($siteName) {
             'comp_tl_3_title' => 'Go Live',
             'comp_tl_3_desc' => 'Upload to your server and share with the world. Any PHP hosting works.',
             'comp_tl_3_version' => 'Step 3',
+            'comp_events_heading' => 'Upcoming Events',
+            'comp_events_empty' => 'No upcoming events. Add events in the admin dashboard.',
             'comp_closing' => '<p>These examples use nibbly\'s structured component helpers: <code>renderFeatureGrid()</code>, <code>renderStats()</code>, <code>renderTestimonials()</code>, <code>renderTeamGrid()</code>, <code>renderFaqAccordion()</code>, <code>renderTimeline()</code>, and <code>renderEventList()</code>. Standard page content is still handled by <code>renderAllSections()</code> and the individual block renderers.</p>',
 
             // News
@@ -210,7 +216,10 @@ function getStarterI18n($siteName) {
             'home_getting_started' => '<p>Öffne den <a href="admin/">Admin-Bereich</a>, um Seiten zu verwalten, Bilder hochzuladen und deine Website zu konfigurieren. Du kannst dich auch einloggen und in der Toolbar auf <strong>Seite bearbeiten</strong> klicken, um Änderungen direkt vorzunehmen.</p><p>Schau dir die anderen Demo-Seiten an: <a href="blocks">Block-Typen</a> zeigt jeden Content-Block, <a href="components">Komponenten</a> demonstriert interaktive Widgets, und <a href="about">Über uns</a> ist eine typische Inhaltsseite als Ausgangspunkt.</p>',
             'home_cta_title' => 'Loslegen',
             'home_cta_text' => '<p>Dieser Beispiel-Inhalt kann jederzeit gelöscht werden — entweder im Dashboard oder durch Entfernen der Abschnitte im Inline-Editor. Ersetze ihn durch deine eigenen Inhalte.</p>',
-            'home_img_caption' => 'Ersetze diesen Platzhalter durch ein eigenes Bild.',
+            'home_img_caption' => 'Papier, Falten und Licht: Diese Starterbilder liefert nibbly mit. Tausche sie jederzeit gegen eigene aus.',
+            'home_img_alt' => 'Landschaft aus gefaltetem weißem Papier mit blauem Akzent',
+            'about_img_alt' => 'Fünf Origami-Kraniche aus Papier, die beieinanderstehen',
+            'blocks_image_alt' => 'Papier, gefaltet zu einem Zickzack-Muster',
             'home_card_1_title' => 'Für Websites',
             'home_card_1_desc' => 'Firmenwebsites, Portfolios, Landing Pages — jede inhaltliche Seite, die einfache Bearbeitung ohne Datenbank braucht.',
             'home_card_2_title' => 'Für Kunden',
@@ -229,6 +238,7 @@ function getStarterI18n($siteName) {
             'about_quote' => 'Einfachheit ist die höchste Stufe der Vollendung.',
             'about_quote_author' => 'Leonardo da Vinci',
             'about_values_title' => 'Unsere Werte',
+            'about_team_heading' => 'Unser Team',
             'about_value_1' => 'Einfachheit statt Komplexität',
             'about_value_2' => 'Kontrolle statt Abhängigkeit',
             'about_value_3' => 'Transparenz statt Magie',
@@ -254,13 +264,13 @@ function getStarterI18n($siteName) {
             'blocks_list_3' => 'Einträge können hinzugefügt, entfernt und umsortiert werden',
             'blocks_list_4' => 'Ideal für Feature-Listen, Anleitungen oder Checklisten',
             'blocks_card_heading' => 'Karten-Block',
-            'blocks_card_1_title' => 'Erste Karte',
+            'blocks_card_1_title' => 'Die erste Falte',
             'blocks_card_1_desc' => 'Karten ordnen sich automatisch in einem responsiven Raster an. Jede Karte hat ein Bild, einen Titel und eine Beschreibung.',
-            'blocks_card_2_title' => 'Zweite Karte',
+            'blocks_card_2_title' => 'Plissee',
             'blocks_card_2_desc' => 'Verwende Karten für Teammitglieder, Dienstleistungen, Portfolio-Einträge oder andere Inhalte, die von einem visuellen Raster profitieren.',
-            'blocks_card_3_title' => 'Dritte Karte',
+            'blocks_card_3_title' => 'Facetten',
             'blocks_card_3_desc' => 'Alle Karteninhalte sind inline bearbeitbar. Klicke auf einen Text, um ihn zu ändern, oder auf das Bild, um es auszutauschen.',
-            'blocks_card_4_title' => 'Vierte Karte',
+            'blocks_card_4_title' => 'Der Kranich',
             'blocks_card_4_desc' => 'Karten bilden je nach Bildschirmbreite ein 2×2- oder 4×1-Raster. Füge so viele hinzu wie du brauchst.',
             'blocks_media_heading' => 'Medien-Blöcke',
             'blocks_media_text' => '<p>nibbly unterstützt auch <strong>YouTube</strong>-, <strong>SoundCloud</strong>- und <strong>Audio</strong>-Einbettungen. Diese Blöcke akzeptieren eine Video-/Track-ID oder einen Dateipfad und rendern den passenden Player.</p><p>Unten ist ein Beispiel für eine YouTube-Einbettung:</p>',
@@ -336,7 +346,7 @@ function getStarterI18n($siteName) {
             'comp_btn_primary' => 'Primärer Button',
             'comp_btn_secondary' => 'Sekundärer Button',
             'comp_btn_text' => 'Textlink',
-            'comp_timeline_heading' => 'Timeline',
+            'comp_timeline_heading' => 'Zeitleiste',
             'comp_timeline_desc' => 'Ein vertikaler Zeitstrahl für Meilensteine oder Versionshistorie.',
             'comp_tl_1_date' => 'Heute',
             'comp_tl_1_title' => 'Installation abgeschlossen',
@@ -350,6 +360,8 @@ function getStarterI18n($siteName) {
             'comp_tl_3_title' => 'Online gehen',
             'comp_tl_3_desc' => 'Lade die Dateien auf deinen Server und teile die Seite mit der Welt. Jedes PHP-Hosting funktioniert.',
             'comp_tl_3_version' => 'Schritt 3',
+            'comp_events_heading' => 'Kommende Termine',
+            'comp_events_empty' => 'Keine kommenden Termine. Lege Termine im Admin-Bereich unter Events an.',
             'comp_closing' => '<p>Diese Beispiele nutzen nibblys strukturierte Komponenten-Helper: <code>renderFeatureGrid()</code>, <code>renderStats()</code>, <code>renderTestimonials()</code>, <code>renderTeamGrid()</code>, <code>renderFaqAccordion()</code>, <code>renderTimeline()</code> und <code>renderEventList()</code>. Standard-Seiteninhalte laufen weiterhin über <code>renderAllSections()</code> und die einzelnen Block-Renderer.</p>',
 
             // News
@@ -389,7 +401,10 @@ function getStarterI18n($siteName) {
             'home_getting_started' => '<p>Abre el <a href="admin/">panel de administración</a> para gestionar páginas, subir imágenes y configurar tu sitio. También puedes iniciar sesión y hacer clic en <strong>Editar página</strong> en la barra de herramientas para hacer cambios directamente.</p><p>Explora las otras páginas de demostración: <a href="blocks">Tipos de bloque</a> muestra cada bloque de contenido, <a href="components">Componentes</a> demuestra widgets interactivos, y <a href="about">Acerca de</a> es una página de contenido típica como punto de partida.</p>',
             'home_cta_title' => 'Empezar a construir',
             'home_cta_text' => '<p>Este contenido de ejemplo se puede eliminar en cualquier momento — desde el panel o eliminando secciones en el editor inline. Reemplázalo con tu propio contenido.</p>',
-            'home_img_caption' => 'Reemplaza este marcador con tu propia imagen.',
+            'home_img_caption' => 'Papel, pliegues y luz: estas imágenes de inicio vienen con nibbly. Cámbialas por las tuyas cuando quieras.',
+            'home_img_alt' => 'Paisaje de papel blanco plegado con un acento azul',
+            'about_img_alt' => 'Cinco grullas de origami de papel juntas',
+            'blocks_image_alt' => 'Papel plegado en un patrón de zigzag',
             'home_card_1_title' => 'Para sitios web',
             'home_card_1_desc' => 'Sitios corporativos, portfolios, landing pages — cualquier sitio que necesite edición fácil sin base de datos.',
             'home_card_2_title' => 'Para clientes',
@@ -408,6 +423,7 @@ function getStarterI18n($siteName) {
             'about_quote' => 'La simplicidad es la sofisticación suprema.',
             'about_quote_author' => 'Leonardo da Vinci',
             'about_values_title' => 'Nuestros valores',
+            'about_team_heading' => 'Nuestro equipo',
             'about_value_1' => 'Simplicidad sobre complejidad',
             'about_value_2' => 'Control sobre dependencia',
             'about_value_3' => 'Transparencia sobre magia',
@@ -433,13 +449,13 @@ function getStarterI18n($siteName) {
             'blocks_list_3' => 'Los elementos se pueden añadir, eliminar y reordenar',
             'blocks_list_4' => 'Ideal para listas de características, pasos o checklists',
             'blocks_card_heading' => 'Bloque de tarjeta',
-            'blocks_card_1_title' => 'Primera tarjeta',
+            'blocks_card_1_title' => 'El primer pliegue',
             'blocks_card_1_desc' => 'Las tarjetas se organizan automáticamente en una cuadrícula responsiva. Cada tarjeta tiene imagen, título y descripción.',
-            'blocks_card_2_title' => 'Segunda tarjeta',
+            'blocks_card_2_title' => 'Plisado',
             'blocks_card_2_desc' => 'Usa tarjetas para miembros del equipo, servicios, portfolio u otro contenido que se beneficie de un diseño visual en cuadrícula.',
-            'blocks_card_3_title' => 'Tercera tarjeta',
+            'blocks_card_3_title' => 'Facetas',
             'blocks_card_3_desc' => 'Todo el contenido de las tarjetas es editable inline. Haz clic en cualquier texto para cambiarlo o en la imagen para reemplazarla.',
-            'blocks_card_4_title' => 'Cuarta tarjeta',
+            'blocks_card_4_title' => 'La grulla',
             'blocks_card_4_desc' => 'Las tarjetas forman una cuadrícula 2×2 o 4×1 según el ancho de pantalla. Añade tantas como necesites.',
             'blocks_media_heading' => 'Bloques de medios',
             'blocks_media_text' => '<p>nibbly también soporta incrustaciones de <strong>YouTube</strong>, <strong>SoundCloud</strong> y <strong>audio</strong>. Estos bloques aceptan un ID de video/pista o una ruta de archivo y renderizan el reproductor adecuado.</p><p>Abajo hay un ejemplo de incrustación de YouTube:</p>',
@@ -529,6 +545,8 @@ function getStarterI18n($siteName) {
             'comp_tl_3_title' => 'Publicar',
             'comp_tl_3_desc' => 'Sube los archivos a tu servidor y compártelo con el mundo. Cualquier hosting PHP funciona.',
             'comp_tl_3_version' => 'Paso 3',
+            'comp_events_heading' => 'Próximos eventos',
+            'comp_events_empty' => 'No hay eventos próximos. Añade eventos en el panel de administración.',
             'comp_closing' => '<p>Estos ejemplos usan los helpers de componentes estructurados de nibbly: <code>renderFeatureGrid()</code>, <code>renderStats()</code>, <code>renderTestimonials()</code>, <code>renderTeamGrid()</code>, <code>renderFaqAccordion()</code>, <code>renderTimeline()</code> y <code>renderEventList()</code>. El contenido estándar de página sigue usando <code>renderAllSections()</code> y los renderers de bloque individuales.</p>',
 
             // News
@@ -587,8 +605,8 @@ function getHomeContent($lang, $siteName, $t) {
             [
                 'id' => $rid(),
                 'type' => 'image',
-                'src' => 'https://picsum.photos/1200/600?random=1',
-                'alt' => $siteName,
+                'src' => '/assets/images/starter/home-hero.webp',
+                'alt' => $t['home_img_alt'],
                 'caption' => $t['home_img_caption'],
             ],
             [
@@ -599,30 +617,30 @@ function getHomeContent($lang, $siteName, $t) {
             [
                 'id' => $rid(),
                 'type' => 'card',
-                'image' => 'https://picsum.photos/400/250?random=1',
+                'image' => '/assets/images/starter/card-websites.webp',
                 'title' => $t['home_card_1_title'],
-                'description' => $t['home_card_1_desc'],
+                'content' => $t['home_card_1_desc'],
             ],
             [
                 'id' => $rid(),
                 'type' => 'card',
-                'image' => 'https://picsum.photos/400/250?random=2',
+                'image' => '/assets/images/starter/card-clients.webp',
                 'title' => $t['home_card_2_title'],
-                'description' => $t['home_card_2_desc'],
+                'content' => $t['home_card_2_desc'],
             ],
             [
                 'id' => $rid(),
                 'type' => 'card',
-                'image' => 'https://picsum.photos/400/250?random=3',
+                'image' => '/assets/images/starter/card-developers.webp',
                 'title' => $t['home_card_3_title'],
-                'description' => $t['home_card_3_desc'],
+                'content' => $t['home_card_3_desc'],
             ],
             [
                 'id' => $rid(),
                 'type' => 'card',
-                'image' => 'https://picsum.photos/400/250?random=4',
+                'image' => '/assets/images/starter/card-ai.webp',
                 'title' => $t['home_card_4_title'],
-                'description' => $t['home_card_4_desc'],
+                'content' => $t['home_card_4_desc'],
             ],
             [
                 'id' => $rid(),
@@ -700,8 +718,8 @@ function getAboutContent($lang, $t) {
             [
                 'id' => $rid(),
                 'type' => 'image',
-                'src' => 'https://picsum.photos/1200/600?random=2',
-                'alt' => $t['about_heading'],
+                'src' => '/assets/images/starter/about.webp',
+                'alt' => $t['about_img_alt'],
                 'caption' => '',
             ],
             [
@@ -726,6 +744,20 @@ function getAboutContent($lang, $t) {
                     ['text' => $t['about_value_3']],
                     ['text' => $t['about_value_4']],
                 ],
+            ],
+            [
+                'id' => $rid(),
+                'type' => 'heading',
+                'text' => $t['about_team_heading'],
+                'level' => 'h2',
+            ],
+            [
+                // Published profiles of the "Team" group from content/people.json
+                'id' => $rid(),
+                'type' => 'team',
+                'group' => 'Team',
+                'columns' => '3',
+                'details' => 'summary',
             ],
             [
                 'id' => $rid(),
@@ -815,8 +847,8 @@ function getBlocksContent($lang, $t) {
             [
                 'id' => $rid(),
                 'type' => 'image',
-                'src' => 'https://picsum.photos/1200/600?random=3',
-                'alt' => 'Placeholder image',
+                'src' => '/assets/images/starter/blocks-image.webp',
+                'alt' => $t['blocks_image_alt'],
                 'caption' => $t['blocks_image_caption'],
                 'width' => 'full',
             ],
@@ -856,30 +888,30 @@ function getBlocksContent($lang, $t) {
             [
                 'id' => $rid(),
                 'type' => 'card',
-                'image' => 'https://picsum.photos/400/300?random=5',
+                'image' => '/assets/images/starter/blocks-card-1.webp',
                 'title' => $t['blocks_card_1_title'],
-                'description' => $t['blocks_card_1_desc'],
+                'content' => $t['blocks_card_1_desc'],
             ],
             [
                 'id' => $rid(),
                 'type' => 'card',
-                'image' => 'https://picsum.photos/400/300?random=6',
+                'image' => '/assets/images/starter/blocks-card-2.webp',
                 'title' => $t['blocks_card_2_title'],
-                'description' => $t['blocks_card_2_desc'],
+                'content' => $t['blocks_card_2_desc'],
             ],
             [
                 'id' => $rid(),
                 'type' => 'card',
-                'image' => 'https://picsum.photos/400/300?random=7',
+                'image' => '/assets/images/starter/blocks-card-3.webp',
                 'title' => $t['blocks_card_3_title'],
-                'description' => $t['blocks_card_3_desc'],
+                'content' => $t['blocks_card_3_desc'],
             ],
             [
                 'id' => $rid(),
                 'type' => 'card',
-                'image' => 'https://picsum.photos/400/300?random=8',
+                'image' => '/assets/images/starter/blocks-card-4.webp',
                 'title' => $t['blocks_card_4_title'],
-                'description' => $t['blocks_card_4_desc'],
+                'content' => $t['blocks_card_4_desc'],
             ],
             [
                 'id' => $rid(),
@@ -971,10 +1003,11 @@ function getComponentsContent($lang, $t) {
             'heading' => $t['comp_stats_heading'],
             'desc' => $t['comp_stats_desc'],
             'items' => [
-                ['value' => $t['comp_stat_1_value'], 'label' => $t['comp_stat_1_label']],
-                ['value' => $t['comp_stat_2_value'], 'label' => $t['comp_stat_2_label']],
-                ['value' => $t['comp_stat_3_value'], 'label' => $t['comp_stat_3_label']],
-                ['value' => $t['comp_stat_4_value'], 'label' => $t['comp_stat_4_label']],
+                // 'desc' is asked for by renderStats(); without it the first admin visit writes it
+                ['value' => $t['comp_stat_1_value'], 'label' => $t['comp_stat_1_label'], 'desc' => ''],
+                ['value' => $t['comp_stat_2_value'], 'label' => $t['comp_stat_2_label'], 'desc' => ''],
+                ['value' => $t['comp_stat_3_value'], 'label' => $t['comp_stat_3_label'], 'desc' => ''],
+                ['value' => $t['comp_stat_4_value'], 'label' => $t['comp_stat_4_label'], 'desc' => ''],
             ],
         ],
         'buttons' => [
@@ -998,25 +1031,25 @@ function getComponentsContent($lang, $t) {
             'desc' => $t['comp_team_desc'],
             'members' => [
                 [
-                    'image' => ['src' => 'https://i.pravatar.cc/200?img=32', 'alt' => $t['comp_team_1_name']],
+                    'image' => ['src' => '/assets/images/starter/team-1.webp', 'alt' => $t['comp_team_1_name']],
                     'name' => $t['comp_team_1_name'],
                     'role' => $t['comp_team_1_role'],
                     'bio' => $t['comp_team_1_bio'],
                 ],
                 [
-                    'image' => ['src' => 'https://i.pravatar.cc/200?img=47', 'alt' => $t['comp_team_2_name']],
+                    'image' => ['src' => '/assets/images/starter/team-2.webp', 'alt' => $t['comp_team_2_name']],
                     'name' => $t['comp_team_2_name'],
                     'role' => $t['comp_team_2_role'],
                     'bio' => $t['comp_team_2_bio'],
                 ],
                 [
-                    'image' => ['src' => 'https://i.pravatar.cc/200?img=56', 'alt' => $t['comp_team_3_name']],
+                    'image' => ['src' => '/assets/images/starter/team-3.webp', 'alt' => $t['comp_team_3_name']],
                     'name' => $t['comp_team_3_name'],
                     'role' => $t['comp_team_3_role'],
                     'bio' => $t['comp_team_3_bio'],
                 ],
                 [
-                    'image' => ['src' => 'https://i.pravatar.cc/200?img=68', 'alt' => $t['comp_team_4_name']],
+                    'image' => ['src' => '/assets/images/starter/team-4.webp', 'alt' => $t['comp_team_4_name']],
                     'name' => $t['comp_team_4_name'],
                     'role' => $t['comp_team_4_role'],
                     'bio' => $t['comp_team_4_bio'],
@@ -1032,6 +1065,10 @@ function getComponentsContent($lang, $t) {
                 ['question' => $t['comp_faq_3_q'], 'answer' => $t['comp_faq_3_a']],
                 ['question' => $t['comp_faq_4_q'], 'answer' => $t['comp_faq_4_a']],
             ],
+        ],
+        'events' => [
+            'heading' => $t['comp_events_heading'],
+            'empty' => $t['comp_events_empty'],
         ],
         'timeline' => [
             'heading' => $t['comp_timeline_heading'],
@@ -1127,9 +1164,9 @@ $_p = $contentPage;
                 <?php
                 $upcoming = getUpcomingEvents(4);
                 if (!empty($upcoming)) {
-                    echo renderEventList($upcoming, $currentLang, false, true);
+                    echo renderEventList($upcoming, $currentLang, true, true);
                 } else {
-                    echo '<p style="color: var(--color-text-secondary); font-style: italic;">No upcoming events. Add events in the admin dashboard.</p>';
+                    echo '<p style="color: var(--color-text-secondary); font-style: italic;">' . editableText($_p, 'events.empty', 'No upcoming events.') . '</p>';
                 }
                 ?>
             </section>
@@ -1193,40 +1230,99 @@ PHPTPL;
 /**
  * Returns demo news posts for a language.
  */
-function getNewsPosts($lang, $t) {
+function getNewsPosts($lang, $t, $primaryLang) {
     $today = date('Y-m-d');
     $yesterday = date('Y-m-d', strtotime('-1 day'));
+    // Post ids follow the news API: date-slug, plus -lang for non-primary languages
+    $suffix = $lang === $primaryLang ? '' : '-' . $lang;
 
     return [
         [
-            'filename' => $today . '-demo-welcome-' . $lang . '.json',
+            'filename' => $today . '-demo-welcome' . $suffix . '.json',
             'data' => [
-                'id' => 'demo-welcome-' . $lang,
+                'id' => $today . '-demo-welcome' . $suffix,
                 'slug' => 'demo-welcome',
                 'lang' => $lang,
                 'title' => $t['news_post_1_title'],
                 'date' => $today,
                 'author' => $t['news_post_1_author'],
                 'excerpt' => $t['news_post_1_excerpt'],
-                'image' => 'https://picsum.photos/1200/600?random=9',
+                'image' => '/assets/images/starter/news-welcome.webp',
                 'content' => $t['news_post_1_content'],
                 'hidden' => false,
             ],
         ],
         [
-            'filename' => $yesterday . '-demo-getting-started-' . $lang . '.json',
+            'filename' => $yesterday . '-demo-getting-started' . $suffix . '.json',
             'data' => [
-                'id' => 'demo-getting-started-' . $lang,
+                'id' => $yesterday . '-demo-getting-started' . $suffix,
                 'slug' => 'demo-getting-started',
                 'lang' => $lang,
                 'title' => $t['news_post_2_title'],
                 'date' => $yesterday,
                 'author' => $t['news_post_2_author'],
                 'excerpt' => $t['news_post_2_excerpt'],
-                'image' => 'https://picsum.photos/1200/600?random=10',
+                'image' => '/assets/images/starter/news-getting-started.webp',
                 'content' => $t['news_post_2_content'],
                 'hidden' => false,
             ],
+        ],
+    ];
+}
+
+/**
+ * Media metadata for the bundled starter images (assets/images/starter/).
+ * They were generated with AI, so they carry the 'generated' disclosure label
+ * (EU AI Act, Art. 50). Merged into content/media-meta.json by setup.php.
+ */
+function getStarterMediaMeta($root) {
+    $meta = ['image' => []];
+    foreach (glob($root . '/assets/images/starter/*.webp') ?: [] as $file) {
+        $meta['image']['starter/' . basename($file)] = ['ai' => 'generated'];
+    }
+    return $meta;
+}
+
+/**
+ * Starter contact form (content/forms/contact.json) with its texts in the
+ * installed languages (English, German, Spanish; other languages fall back to
+ * English). Texts are {lang: text} maps, see includes/forms.php.
+ */
+function getStarterContactForm($languages) {
+    $texts = [
+        'label'       => ['en' => 'Contact form', 'de' => 'Kontaktformular', 'es' => 'Formulario de contacto'],
+        'successText' => ['en' => 'Thank you for your message.', 'de' => 'Vielen Dank für deine Nachricht.', 'es' => 'Gracias por tu mensaje.'],
+        'name'        => ['en' => 'Name', 'de' => 'Name', 'es' => 'Nombre'],
+        'email'       => ['en' => 'Email', 'de' => 'E-Mail', 'es' => 'Correo electrónico'],
+        'phone'       => ['en' => 'Phone', 'de' => 'Telefon', 'es' => 'Teléfono'],
+        'message'     => ['en' => 'Message', 'de' => 'Nachricht', 'es' => 'Mensaje'],
+    ];
+    $pick = function ($map) use ($languages) {
+        $out = [];
+        foreach ($languages as $lang) {
+            $out[$lang] = $map[$lang] ?? $map['en'];
+        }
+        return $out;
+    };
+    $field = function ($key, $type, $required, $width) use ($texts, $pick) {
+        return ['key' => $key, 'type' => $type, 'label' => $pick($texts[$key]), 'placeholder' => '', 'help' => '', 'required' => $required, 'width' => $width, 'options' => []];
+    };
+    return [
+        'id' => 'contact',
+        'label' => $pick($texts['label']),
+        'description' => '',
+        'enabled' => true,
+        'submit' => [
+            'store' => true,
+            'email' => true,
+            'subject' => 'Kontaktanfrage: {name}',
+            'successText' => $pick($texts['successText']),
+        ],
+        'fields' => [
+            $field('name', 'text', true, 6),
+            $field('email', 'email', true, 6),
+            $field('phone', 'tel', false, 12),
+            $field('message', 'textarea', true, 12),
         ],
     ];
 }
@@ -1337,7 +1433,7 @@ function getStarterEvents($languages) {
             'Evento de marcador de posición. Bórralo o edítalo en el panel de administración, en Eventos.'
         ),
         'admission' => buildLangMap($languages, 'Free', 'Kostenlos', 'Gratis'),
-        'image' => '',
+        'image' => '/assets/images/starter/event-beaver.webp',
     ];
 
     // Event 2: ~6 weeks from now
@@ -1362,7 +1458,7 @@ function getStarterEvents($languages) {
             'Evento de marcador de posición. Bórralo o edítalo en el panel de administración, en Eventos.'
         ),
         'admission' => buildLangMap($languages, 'Ticket required', 'Ticket erforderlich', 'Entrada con ticket'),
-        'image' => '',
+        'image' => '/assets/images/starter/event-symposium.webp',
     ];
 
     // Event 3: ~10 weeks from now
@@ -1386,7 +1482,7 @@ function getStarterEvents($languages) {
             'Evento de marcador de posición. Bórralo o edítalo en el panel de administración, en Eventos.'
         ),
         'admission' => buildLangMap($languages, 'Free registration', 'Kostenlose Registrierung', 'Registro gratuito'),
-        'image' => '',
+        'image' => '/assets/images/starter/event-festival.webp',
     ];
 
     // Event 4: ~14 weeks from now
@@ -1411,7 +1507,7 @@ function getStarterEvents($languages) {
             'Evento de marcador de posición. Bórralo o edítalo en el panel de administración, en Eventos.'
         ),
         'admission' => buildLangMap($languages, 'Ticket required', 'Ticket erforderlich', 'Entrada con ticket'),
-        'image' => '',
+        'image' => '/assets/images/starter/event-playground.webp',
     ];
 
     return [
@@ -1461,6 +1557,62 @@ function getStarterMails() {
 /**
  * Helper: build a language map from up to 3 language values.
  */
+/**
+ * Demo people profiles for the People module, shown by the Team block on the about page.
+ * Fictional names and origami portraits, like the demo events.
+ */
+function getStarterPeople($languages, $primaryLang) {
+    require_once __DIR__ . '/../includes/people.php';
+    $now = date('c');
+    $profile = function ($name, $photo, array $alt, $order, array $texts, $website = '') use ($languages, $primaryLang, $now) {
+        $translations = [];
+        foreach (['role', 'organization', 'summary', 'biography', 'quote'] as $field) {
+            [$en, $de, $es] = $texts[$field] ?? ['', '', ''];
+            foreach (buildLangMap($languages, $en, $de, $es) as $lang => $value) {
+                $translations[$lang][$field] = $value;
+            }
+        }
+        return [
+            'id' => 'person_' . bin2hex(random_bytes(8)),
+            'name' => $name,
+            'slug' => nibblyPeopleSlugify($name),
+            'status' => 'published',
+            'order' => $order,
+            'groups' => ['Team'],
+            'photo' => $photo,
+            // The alternative text is not translated per language: use the primary language
+            'alt' => buildLangMap([$primaryLang], ...$alt)[$primaryLang],
+            'credit' => '',
+            'website' => $website,
+            'email' => '',
+            'phone' => '',
+            'translations' => $translations,
+            'updatedAt' => $now,
+            'createdAt' => $now,
+        ];
+    };
+    return ['people' => [
+        $profile('Alex Demo', '/assets/images/starter/team-1.webp', ['Origami fox made of paper', 'Origami-Fuchs aus Papier', 'Zorro de origami de papel'], 1, [
+            'role' => ['Development', 'Entwicklung', 'Desarrollo'],
+            'organization' => ['Origami Studio', 'Origami Studio', 'Origami Studio'],
+            'summary' => ['Builds things that work.', 'Baut Dinge, die funktionieren.', 'Construye cosas que funcionan.'],
+            'biography' => ['<p>Prefers flat files over databases.</p>', '<p>Bevorzugt Flat Files gegenüber Datenbanken.</p>', '<p>Prefiere archivos planos a bases de datos.</p>'],
+            'quote' => ['Simple is hard enough.', 'Einfach ist schwer genug.', 'Lo simple ya es bastante difícil.'],
+        ]),
+        $profile('Jordan Beispiel', '/assets/images/starter/team-2.webp', ['Origami owl made of paper', 'Origami-Eule aus Papier', 'Búho de origami de papel'], 2, [
+            'role' => ['Design', 'Design', 'Diseño'],
+            'organization' => ['Origami Studio', 'Origami Studio', 'Origami Studio'],
+            'summary' => ['Makes pixels behave.', 'Bringt Pixel in Ordnung.', 'Pone orden en los píxeles.'],
+            'biography' => ['<p>Believes good UI is invisible.</p>', '<p>Glaubt, dass gutes UI unsichtbar ist.</p>', '<p>Cree que la buena interfaz es invisible.</p>'],
+        ]),
+        $profile('Sam Platzhalter', '/assets/images/starter/team-3.webp', ['Origami rabbit made of paper', 'Origami-Hase aus Papier', 'Conejo de origami de papel'], 3, [
+            'role' => ['Documentation', 'Dokumentation', 'Documentación'],
+            'summary' => ['Writes docs people read.', 'Schreibt Doku, die man liest.', 'Escribe documentación que se lee.'],
+            'biography' => ['<p>A rare skill.</p>', '<p>Eine seltene Gabe.</p>', '<p>Un don poco común.</p>'],
+        ], 'https://example.org'),
+    ]];
+}
+
 function buildLangMap($languages, $en, $de = '', $es = '') {
     $map = [];
     foreach ($languages as $lang) {

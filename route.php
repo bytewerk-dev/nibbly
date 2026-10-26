@@ -7,6 +7,7 @@
  * - Primary language root access (/about → /en/about)
  * - Language-prefixed pages (/de/beispiel)
  * - News post URLs (/news/slug, /en/news/slug)
+ * - Event and person pages (/events/id, /people/slug, with language prefix)
  * - JSON-based standard pages (via includes/page.php)
  *
  * Language detection uses SITE_LANG_DEFAULT from admin/config.php,
@@ -115,6 +116,27 @@ if (preg_match('#^news/([a-z0-9-]+)$#', $cleanUri, $m)) {
     nibblyAnalyticsScheduleTrack(null, $currentLang, 'news');
     include __DIR__ . '/includes/news-post.php';
     exit;
+}
+
+// ------------------------------------------------------------------
+// Event and person pages: /{lang}/events/{id}, /events/{id}, /{lang}/people/{slug}, /people/{slug}.
+// Only when the event or published profile exists; otherwise a page at that path still wins.
+// ------------------------------------------------------------------
+if (preg_match('#^(?:([a-z]{2})/)?(events|people)/([a-z0-9-]+)$#', $cleanUri, $m) && ($m[1] === '' || isset($SITE_LANGUAGES[$m[1]]))) {
+    $currentLang = $m[1] !== '' ? $m[1] : $primaryLang;
+    if ($m[2] === 'events') {
+        include_once __DIR__ . '/includes/content-loader.php';
+        $event = nibblyFindEvent($m[3]);
+    } else {
+        require_once __DIR__ . '/includes/people.php';
+        $person = nibblyPersonBySlug($m[3]);
+    }
+    if (!empty($event) || !empty($person)) {
+        $basePath = nibblyPageBasePath($m[2] . '/' . $m[3], $m[1] !== '');
+        nibblyAnalyticsScheduleTrack(null, $currentLang, $m[2]);
+        include __DIR__ . '/includes/' . ($m[2] === 'events' ? 'event-page.php' : 'person-page.php');
+        exit;
+    }
 }
 
 // ------------------------------------------------------------------

@@ -3,6 +3,50 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.4.3 to 2.5.0
+
+Version 2.5.0 adds the People module with Person and Team blocks, a Menus & Footer editor, own
+pages for events and people, trash for news and people, website languages in the dashboard, a
+WordPress-style writing view for pages, news, events and people with a highlighted HTML code view,
+and one language switch in every editor. Two steps need attention: contact pages (step 3) and the
+new content folders (step 4).
+
+1. Deploy the complete core. New files: `admin/api/people.php`,
+   `admin/dashboard/scripts/{languages,menus,page-writing,people}.php`,
+   `includes/{people,person-page,event-page,public-strings,site-languages,menu-store,menu-adapters,block-icons}.php`,
+   `includes/block-renderers/{person,team}.php` and the starter images in
+   `assets/images/starter/`. Changed: the dashboard, `admin/style.css`, `admin/api/*.php`,
+   `includes/content-loader.php`, `includes/header.php`, `includes/footer.php`, `route.php`,
+   `includes/seo-helper.php`, `includes/default-iconset.json`, `css/*.css`, `js/*.js` and
+   `admin/lang/*.json`.
+2. Removed files: `includes/contact-form.php`, `includes/pricing-contact-form.php`,
+   `api/contact.php` and `api/smtp-config.example.php`. Delete them on the server if your
+   deployment does not remove files. A leftover `smtp-config.php` stays blocked by `.htaccess`
+   and the dev router.
+3. Contact pages. Every public form is now a JSON form, and a page no longer gets a form because
+   of its slug (`contact`, `kontakt`, `contacto`). Add `"form": "contact"` (or the id of your form
+   in `content/forms/`) to the JSON of each page that should show a form below its sections.
+   Custom templates that included `includes/contact-form.php` must render a JSON form instead.
+4. New content stores appear on first use and must be writable by the web server and included in
+   backups like the rest of `content/`: `content/people.json` (People module),
+   `content/menus.json` (Menus & Footer, written on the first save) and `content/news-trash/`
+   (deleted news posts). Deleting a news post now moves it there; the API action `delete-news`
+   is replaced by `trash-news`, `list-news-trash`, `restore-news`, `delete-news-permanent` and
+   `empty-news-trash`.
+5. New URLs: `/events/{id}` and `/people/{slug}` (with a language prefix for other languages)
+   show an event or a published profile. They only answer when the event or profile exists, so a
+   page at such a path keeps working. Event card titles and person card names now link there
+   (the external event link stays in the card footer); both appear in `sitemap.xml`. Templates
+   with their own event or person markup can link to `nibblyEventPath()` and `nibblyPersonPath()`.
+6. Dashboard. The People and Menus & Footer items can be switched off under Settings → Modules
+   (`modules.people`, `modules.menus`). Settings → Menus moved to Menus & Footer (old links
+   redirect). The page editor's language and page selects in the top bar are gone; every editor
+   has a language switch top right instead. New news versions in another language start as
+   drafts.
+7. Site CSS. Text sizes, spacing and containers in `css/style.css` and `css/components.css` are now
+   in rem and the root size grows above a 1600 px viewport; `.content-inner` is wider
+   (`--container-content: 60rem`). Check site styles that relied on the old pixel values.
+
 ## Upgrading from 2.4.2 to 2.4.3
 
 Version 2.4.3 is a compatible release: large image uploads get a web version, the image upload

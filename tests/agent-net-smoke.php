@@ -255,21 +255,18 @@ if (!function_exists('curl_init')) {
     exit(0);
 }
 
+require_once __DIR__ . '/server-support.php';
+
 function netStartServer(string $address, string $router, ?string &$error = null) {
-    $workers = ['PHP_CLI_SERVER_WORKERS' => '4'] + getenv();
-    $process = proc_open([PHP_BINARY, '-S', $address, $router], [1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']], $pipes, dirname($router), $workers);
-    if (!is_resource($process)) {
-        $error = 'cannot start php -S';
-        return null;
-    }
+    $process = new NibblyTestServer([PHP_BINARY, '-S', $address, $router], dirname($router));
     [$host, $port] = [substr($address, 0, strrpos($address, ':')), (int)substr($address, strrpos($address, ':') + 1)];
     $stream = null;
-    for ($i = 0; $i < 100 && !$stream; $i++) {
+    for ($i = 0; $i < 100 && !$stream && $process->running(); $i++) {
         $stream = @stream_socket_client('tcp://' . $host . ':' . $port, $errno, $errstr, 0.2);
         if (!$stream) usleep(50000);
     }
     if (!$stream) {
-        proc_terminate($process);
+        $process->close();
         $error = 'server did not start';
         return null;
     }
@@ -358,8 +355,7 @@ try {
     // curl must refuse to talk to anything but the pinned address: a dead mapping fails, it does not fall back to DNS
     netRejects(fn() => nibblyNetSafeFetch('http://public.test:' . $port . '/ok', ['testConnectMap' => [PUBLIC_IP => '127.0.0.2']] + $live), 'transport', 'unreachable pinned address (no fallback to a second lookup)');
 } finally {
-    proc_terminate($server);
-    proc_close($server);
+    $server->close();
 }
 
 // IPv6 pinning (CURLOPT_RESOLVE with a bracketed address) when the host has ::1
@@ -380,8 +376,7 @@ if ($probe) {
             ]);
             netAssert($response['body'] === '<p>ok</p>' && $response['ip'] === $global6, 'IPv6 address pinned and dialled');
         } finally {
-            proc_terminate($server6);
-            proc_close($server6);
+            $server6->close();
         }
     } else {
         echo "SKIP IPv6 pinning: {$startError6}\n";

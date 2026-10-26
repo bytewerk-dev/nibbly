@@ -2,6 +2,12 @@
 if (!defined('NIBBLY_ADMIN_DIR')) { http_response_code(404); exit; }
 
 return [
+    'load-people' => 'people',
+    'save-person' => 'people',
+    'trash-person' => 'people',
+    'restore-person' => 'people',
+    'delete-person' => 'people',
+    'empty-people-trash' => 'people',
     'system-status' => 'dashboard',
     'security-check' => 'dashboard',
     'seo-check' => 'dashboard',
@@ -113,7 +119,11 @@ return [
     'load-news' => 'news',
     'save-news' => 'news',
     'toggle-news-status' => 'news',
-    'delete-news' => 'news',
+    'trash-news' => 'news',
+    'list-news-trash' => 'news',
+    'restore-news' => 'news',
+    'delete-news-permanent' => 'news',
+    'empty-news-trash' => 'news',
     'load-mails' => 'forms',
     'list-forms' => 'forms',
     'load-form' => 'forms',
@@ -134,6 +144,8 @@ return [
     'save-settings' => 'settings',
     'test-email' => 'settings',
     'total-reset' => 'settings',
+    'add-site-language' => 'settings',
+    'reorder-site-languages' => 'settings',
     'create-site-backup' => 'backups',
     'download-site-backup' => 'backups',
     'restore-site-backup' => 'backups',
@@ -160,4 +172,8 @@ return [
     'backup-update-settings' => 'backups',
     'get-menu-items' => 'navigation',
     'save-menu-order' => 'navigation',
+    'load-menus-footer' => 'navigation',
+    'save-menus-footer' => 'navigation',
+    'list-menus-backups' => 'navigation',
+    'restore-menus-backup' => 'navigation',
 ];

@@ -15,7 +15,7 @@
         },
         "type": {
           "type": "string",
-          "enum": ["text", "heading", "quote", "list", "image", "card", "youtube", "soundcloud", "audio", "divider", "spacer"]
+          "enum": ["text", "heading", "quote", "list", "image", "card", "youtube", "soundcloud", "audio", "divider", "spacer", "person", "team"]
         },
         "hidden": {
           "type": "boolean",
@@ -211,6 +211,34 @@
       ]
     },
 
+    "sectionPerson": {
+      "allOf": [
+        { "$ref": "#/$defs/sectionBase" },
+        {
+          "properties": {
+            "type": { "const": "person" },
+            "personId": {
+              "type": "string",
+              "pattern": "^(person_[a-f0-9]{16})?$",
+              "description": "Id of a profile in content/people.json; only published profiles render."
+            }
+          }
+        }
+      ]
+    },
+    "sectionTeam": {
+      "allOf": [
+        { "$ref": "#/$defs/sectionBase" },
+        {
+          "properties": {
+            "type": { "const": "team" },
+            "group": { "type": "string", "default": "", "description": "Show only profiles in this group; empty = all published profiles." },
+            "columns": { "type": "string", "enum": ["2", "3", "4"], "default": "3" },
+            "details": { "type": "string", "enum": ["summary", "full"], "default": "summary" }
+          }
+        }
+      ]
+    },
     "sectionSpacer": {
       "allOf": [
         { "$ref": "#/$defs/sectionBase" },
@@ -244,7 +272,9 @@
         { "$ref": "#/$defs/sectionSoundcloud" },
         { "$ref": "#/$defs/sectionAudio" },
         { "$ref": "#/$defs/sectionDivider" },
-        { "$ref": "#/$defs/sectionSpacer" }
+        { "$ref": "#/$defs/sectionSpacer" },
+        { "$ref": "#/$defs/sectionPerson" },
+        { "$ref": "#/$defs/sectionTeam" }
       ]
     },
 
@@ -385,6 +415,11 @@
         "lastModified": {
           "type": ["string", "null"],
           "format": "date-time"
+        },
+        "form": {
+          "type": "string",
+          "pattern": "^[a-z0-9_-]+$",
+          "description": "Optional JSON form id (content/forms/{id}.json) rendered below the sections, e.g. \"contact\"."
         },
         "sections": {
           "type": "array",

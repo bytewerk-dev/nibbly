@@ -150,8 +150,9 @@ def test_probe_through_proxy(site):
 def test_server_ignoring_htaccess(site):
     # A bare PHP server resembles nginx + PHP-FPM without rules: files and CLI scripts are reachable.
     port = free_port()
-    bare = subprocess.Popen(["php", "-d", "display_errors=0", "-S", f"127.0.0.1:{port}", "-t", str(site.root)],
-                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    from server_process import start_server, stop_server
+    bare = start_server(["php", "-d", "display_errors=0", "-S", f"127.0.0.1:{port}", "-t", str(site.root)],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         for _ in range(100):
             try:
@@ -171,8 +172,7 @@ def test_server_ignoring_htaccess(site):
                 f"cli/{name}.php ran as a web request: {response.status} {body[:200]!r}"
         assert not list((site.root / "backups").glob("*-backup-*.zip")), "Web request created a backup"
     finally:
-        bare.terminate()
-        bare.wait(timeout=10)
+        stop_server(bare)
     assert not leftovers(site.root), leftovers(site.root)
 
 

@@ -9,6 +9,383 @@ Git milestones and the gaps in publication records.
 
 ## Unreleased
 
+## [2.5.0] — 2026-10-26
+
+### Added
+
+- **One language switch in every editor, and language filters in every list.**
+  - **Editors:** pages, news, events and people show the same language choice top right in the
+    (sticky) editor header, level with the heading and ending with the main column (on phones it
+    moves under the heading); a segmented control like the density and font-size options. A language without content
+    reads "+ English". This replaces the language and page selects in the page editor's top bar (and
+    their mobile twins), the language select in the news post settings, the person's language
+    dropdown and the events' tab bar.
+  - **Pages and news** (one version per language): the switch opens the other version, asking first
+    when there are unsaved changes (save and switch, switch without saving, cancel). A missing version
+    is created on click, as a copy and, with AI text generation set up, optionally translated right
+    away; new news versions start as drafts, so untranslated text never goes live. In another
+    language's version, "Translate from German" (the primary language) fills in the translated title,
+    texts and SEO texts as a change still to be saved; page sections are matched by position and type.
+  - **Events and people** (translations inside one entry): the switch changes the fields shown, and
+    "Translate from active language" fills the other languages, as events did before, now for people
+    too. All translate buttons appear only while AI text generation is set up.
+  - **Icons:** "Language" carries a globe-on-a-stand icon in the editors and in all list filters
+    (new icon "language" in the icon set, so it is also available in the Icon Manager), and the
+    people list's "Groups" carries the people icon. The icons sit inline on the text's baseline, so
+    the labels stay level with the links beside them.
+  - **Lists:** news, events and people get "Language: …" in their filter line like pages. News lists
+    the posts of the chosen language with the other languages as columns; events and people show their
+    titles, locations and roles in the chosen language, count the translated entries and mark the
+    others "not translated".
+- **HTML code view with highlighting, line numbers and auto-indent.** The "Code" mode of the text
+  editors (pages, news, person biography) colours tags, attributes, values, comments and entities,
+  numbers the lines and keeps line wrapping: a wrapped line keeps one number beside its start.
+  Enter keeps the indentation and adds a step after an opening tag (and opens `<ul></ul>` onto
+  its own lines), Tab and Shift+Tab indent or outdent the selected lines, and Escape followed by
+  Tab leaves the field. No external library: a small built-in tokenizer draws a layer behind the
+  textarea, which stays the real field, so saving, unsaved-change detection and undo are
+  unchanged. Distinct colours (tag names and their brackets blue and bold, attributes purple,
+  values orange, entities red) meet WCAG contrast in light and dark themes.
+- **Toolbar for the code view, after WordPress's text editor.** Above the code field sits a toolbar
+  as high as the visual one, with buttons that wrap the selection in tags: bold, italic, link (with
+  its own panel for the target and "open in a new tab"; unsafe targets are refused), quote, bulleted
+  and numbered list (several selected lines become list items), list item and inline code. "Close
+  tags" closes every tag still open before the cursor, and "Format" (a standard secondary button) rewrites the code with one block
+  element per line and indentation for nested blocks, leaving inline markup in the text. All
+  insertions can be undone with Cmd/Ctrl+Z.
+- **Trash for news and people.** Deleting a news post now moves it to `content/news-trash/`
+  instead of removing the file; the new news trash view (button in the news list, like events)
+  restores posts, deletes them permanently or empties the trash. A restore is refused while
+  another post uses the same address. In the People module, trashed profiles can now also be
+  deleted permanently or the trash emptied. Events already had a trash.
+- **WordPress-style filter links in all lists.** Pages, news, events and people show their filters
+  as one line of text links with counts above the table, instead of select boxes and a Trash
+  button: pages "All | Published | Private | Trash" plus "Language: …" (replacing the language
+  select), news "All | Published | Draft | Trash", events "All | Upcoming | Past | Hidden | Trash",
+  people "All | Published | Draft | Trash" plus "Groups: …". Only filters with entries appear; the
+  current one is bold. The trash keeps the same title and filter line ("Trash" highlighted) with
+  "Empty trash" on the right, instead of a separate heading and a Back button. Shared helper:
+  `renderFilterLinks()`. In the people list, "Reload" is gone and "Add person" is now "+ New Person".
+- **Own pages for events and people.** Every event has a page at `/events/{id}` and every
+  published profile one at `/people/{slug}` (with a language prefix for other languages), laid
+  out like a news post: image or portrait, date and location or role and organization, the texts,
+  admission and website link, contact details and quote. Event and person cards link to them,
+  "View" in the dashboard opens them, the language switcher stays on the same event or profile,
+  and the back link leads to the page that lists the events or shows the team. Profiles get a
+  stable URL slug from the name on their first save (kept when the name changes). Hidden events
+  are visible to logged-in editors only; drafts and trashed profiles have no page. Both appear in
+  the sitemap.
+- **Demo people in new installations.** The setup creates three published demo profiles (Alex
+  Demo, Jordan Beispiel, Sam Platzhalter with the origami team portraits, texts in English, German
+  and Spanish), and the about page shows them with an "Our Team" heading and a Team block.
+- **"View" keeps unsaved changes.** "View" in the page and news editors opens the page in a new
+  tab, so the editor stays open. With unsaved changes it first asks: save and view, view the last
+  saved version, or cancel.
+
+- **WordPress-style page writing view.** Standard pages place the title and visual HTML
+  editor in the main column, with Save, preview, undo/redo and page settings in a right
+  sidebar. Text blocks offer Visual / HTML modes, paragraph and heading formats, accessible
+  formatting and list icons, and a link editor. Additional block options and fields collapse
+  out of the writing area. Multi-block pages retain block navigation and ordering; custom
+  JSON pages retain the field editor. The layout follows the selected theme and adapts to
+  small screens. Native JSON collection, revision conflict checks and server sanitization
+  remain authoritative; switching views alone does not rewrite stored HTML.
+
+- **News and event editors in the writing view.** Like pages, a news post opens with the title,
+  the Visual / HTML text editor (shared with the page editor) and the excerpt in the main column,
+  and Save, view, trash, the draft switch, post settings (slug, date, author, language) and the
+  cover image in sidebar panels. The event editor keeps its language tabs and texts (title,
+  location, description, admission) in the main column and moves Save, Cancel, trash, date and
+  time, link and image into the sidebar; its labels ("Title", "Location", "Image", "Browse", …)
+  are translated in all nine admin languages instead of fixed English. Both follow the theme and
+  stack on small screens.
+
+- **Shared block-picker icons.** Dashboard “Add section” buttons now use the same monochrome
+  glyphs as the visual inline editor, including the new Person and Team blocks. Labels stay visible.
+
+- **Reusable people profiles and Person / Team blocks.** The new optional People dashboard
+  module manages team members, speakers and contacts with stable ids, names, translated role,
+  organization, short description, formatted biography and quote, portrait from the media
+  library, alternative text, photo credit, public contact details, groups and sort order.
+  Editors can save drafts, publish, move profiles to Trash and restore them as drafts.
+  Person blocks reference one profile; Team blocks show all published profiles or a named
+  group, with 2–4 responsive columns and short or full biographies. Updates apply everywhere;
+  drafts and trashed profiles never render publicly. The store `content/people.json` uses
+  native locked, atomic JSON writes, revision conflicts, CSRF and automatic pre-write backups.
+  Settings → Modules can hide the editor and disable its API without changing published
+  output. `nibblyPeople()`, `nibblyPersonText()` and `nibblyRenderPerson()` support custom
+  templates. Existing site-specific speaker records are not automatically imported.
+
+- **Menus & Footer in the dashboard.** A new sidebar item (administrators, `#menus`) edits every
+  menu and the footer in one place, with the native list style of the dashboard: expandable
+  entries with chevron and visibility switch, reorder by drag and drop, arrow buttons or the
+  keyboard (arrow keys on the handle; right/left change the level), "Add entry" for an existing
+  page or a free link, label, link target, new window and `rel`, sub-entries where the menu
+  allows them, unsaved-changes marker and a save bar that only darkens while pinned.
+  Menus are detected from their real sources and shown with origin and output (`file:line`):
+  until the first save they are derived as before (`$NAV_ITEMS`, page `"nav"` fields, menu
+  order, or a template's own links); saving adopts them into `content/menus.json` →
+  `menus.{id}.items.{lang}` with stable ids and page references by slug, "Reset to source" goes
+  back to the untouched derivation, and every write is backed up (`backups/menus-registry_*`,
+  restorable in the tab). Footer fields are edited in place in `content/pages/footer.json` as
+  text, link, link group, image/logo or contact details; unknown keys and the stored shape stay.
+  Other footer keys and hard-coded `<nav>` blocks in templates are listed with their origin for
+  assignment; nothing rewrites a template, and detecting again never duplicates anything.
+  Custom templates register menus and footer fields in `includes/site-menus.php`
+  (`nibblyRegisterMenu()`, `nibblyRegisterFooterField()`) and render with `nibblyMenuItems()`,
+  `nibblyMenuHref()` and `nibblyMenuLinkAttrs()`. Saves are revision-checked per store (409 on
+  parallel changes), sanitized (no `javascript:` links, known `rel` tokens, rich-text rules for
+  HTML fields) and reach the site through the existing header and footer rendering. New actions
+  `load-menus-footer`, `save-menus-footer`, `list-menus-backups`, `restore-menus-backup`;
+  logic in `includes/menu-store.php`, adapters in `includes/menu-adapters.php`. The item sits
+  between Events and Messages and can be switched off under Settings → Modules
+  (`modules.menus`); the editor and its API are then unavailable, the site keeps its menus. The
+  section titles match the other dashboard pages (pills in Pop), and the save bar, once pinned to
+  the bottom edge, spans the whole content area in a tint of the base colour.
+- **Add website languages in the dashboard.** Settings → Language → Website languages lists the
+  site languages in switcher order, reorders them and adds a new one as a copy of an existing
+  language: pages, news posts, the language templates under `/{code}/`, navigation items and page
+  mapping (appended to `includes/nav-config.php`) and the footer, menu and event texts. Existing
+  files are never overwritten; the new language goes to the end of the switcher. The language
+  list is updated in `admin/config.php` and `includes/nav-config.php`
+  (`includes/site-languages.php`, actions `add-site-language` and `reorder-site-languages`,
+  administrators only). Setup and dashboard share one language catalog.
+- **More than two languages at setup.** The setup wizard takes a list of site languages instead
+  of one primary and one optional additional language: add, remove and reorder languages and mark
+  one as primary. The order of the list is the order of the language switcher (e.g. EN | DE | ES
+  with German as the primary language at the root URL). Setup writes `$SITE_LANGUAGES` in that
+  order and generates starter pages, navigation, news, events and the contact form for every
+  language. The form posts `languages[]` (switcher order) and `primary_lang`; the single
+  `secondary_lang` field and its texts are gone.
+- **Multilingual JSON forms.** Every visitor-facing text of a form in `content/forms/*.json`
+  (label, description, success message, field label, placeholder and help, option labels) can be
+  a map of language codes, e.g. `{"de": "Nachricht", "en": "Message"}`; plain strings still work
+  and apply to every language. Forms render in the page language, falling back to the primary
+  language and then to the first text (`nibblyFormLocalize()`, `nibblyFormText()`). The button,
+  validation and error messages of forms and `api/form-submit.php` follow the page language in
+  English, German and Spanish; stored messages and notification e-mails keep the primary-language
+  field names. The form editor (Settings → Forms) has a language switch on multilingual sites: an
+  empty translation shows the primary text as a hint, options are defined in the primary language
+  and translated by label. Setup writes the starter contact form with its texts in the installed
+  languages.
+
+### Changed
+
+- **Visual / Code switch as tabs.** The text editor's mode switch in the page, news and person
+  editors is a radio group shown as two tabs sitting on the editor box, with "Code" instead of
+  "</>". The chosen tab takes the colour of the box below (the toolbar in Visual, the source field
+  in Code); it no longer turns white on hover.
+- **Settings controls unified.** All option groups in the settings (header display, logo size,
+  frontend login redirect, scheduled backups) use the same segmented control as density and font
+  size; the old radio-button lists and their styles are gone. "Block the site for search engines"
+  is a toggle like the other switches, and rows with a toggle keep the spacing and dividers of the
+  other settings rows ("Show branding in admin" no longer sticks to the line above), in all themes.
+- **No fold arrow for sections without fields.** Dividers (and any other block without fields)
+  show no collapse arrow in the page editor, since there is nothing to fold.
+- **One look for all editors and the People module.** The main column of the page, news,
+  event and person editors no longer wraps its parts in extra boxes: blocks and sections sit
+  directly on the page, divided by a thin line; only the sidebar panels (save, settings, image)
+  stay cards. Title fields have a white background and the same label style everywhere, sidebar
+  fields are white instead of grey, and the event editor gets the "All events" text link in place
+  of the Back button. The People list now uses the page-list layout (search field, filters,
+  table), shows a portrait thumbnail (or initials) per person and small icon links for Edit,
+  Trash and Restore. The person editor follows the writing view with an "All people" link,
+  the name as title, open "More details", the photo in the sidebar and the full Visual / HTML
+  editor (with the eraser icon to remove formatting) for the biography.
+- **Page sections: always collapsible, no Compact mode.** The arrow in each section header now
+  folds and unfolds the section in every view (it only worked in Compact mode before). The
+  Compact button is replaced by an "Expand all" / "Collapse all" text link. All sections start
+  open; the chosen state is remembered per page for the browser session (by section id, so it
+  follows moved sections), and jumping to a collapsed section from the list opens it. Sections
+  are inserted with a round "+" button that opens the same grouped block picker with icons as
+  the visual editor (in dashboard colours, opening upwards near the window bottom, closed with
+  Escape or a click outside). The section list column has a light background, and left accent
+  lines (active section, toasts) are no longer rounded. The visual editor's picker now shows
+  the person icon for Person and Team blocks instead of a plus. The section delete
+  button is a white button with a red trash icon, set slightly apart from the move arrows. The
+  Visual / HTML editor uses the normal border colour. In the sidebar of all editors, "View" is a
+  plain text button and the trash action reads "Move to trash" (news: "Delete post") in red.
+
+- **Settings → Menus moved to Menus & Footer.** The order list in the settings is gone (old
+  `#settings/menus` links open the new tab). `save-menu-order` still works and reorders a managed
+  menu in place. Page Settings → menu checkboxes show and change the managed menus, and a new
+  page joins the managed menus its `"nav"` lists, as auto-discovery did. A copied language takes
+  managed menu items along, with site paths moved to the new language prefix.
+- **Core footer reads its link row and summary from data.** `includes/footer.php` renders the
+  links through the `footer-links` menu (same Docs, GitHub, Privacy and Imprint links until it is
+  edited) and the summary from `footer.json → summary` with the previous text as fallback.
+  Header and footer links render `target`, `rel` (a new window always gets `noopener`) and item
+  classes; absolute and root-relative links no longer get the relative base path prefixed.
+- **Softer hover on the site.** Menu items (header, dropdown, mobile) fade colour and background
+  in over 0.45 s and out over 0.6 s on an even curve (`--transition-soft`,
+  `--transition-soft-out`) instead of a 0.2 s `transition: all`; the hover pill of the header
+  menu stays fully round at any size. The light/dark toggle in the header uses the same round
+  hover, accent tint, fade and focus ring; the mobile theme buttons the same fade.
+  Text links in the content get a hover and focus state: the underline drops from `0.15em` to
+  `0.3em` below the text (about 2-3 px at body size, scaling with the font size), alongside the
+  colour change. No movement with `prefers-reduced-motion`.
+- **Dark footer takes a hint of the accent colour.** In dark mode the footer background mixes 10 %
+  of `--color-primary` into the dark background, and the accent line above it shows at 0.75
+  opacity (before 0.15).
+- **Starter generator takes all site languages.** `generateStarterSite($primaryLang, $languages,
+  …)` in `admin/setup.php` takes the full list in language-switcher order (e.g.
+  `['en', 'de', 'es']`) instead of one secondary language; the switcher follows the order of
+  `$SITE_LANGUAGES`, independent of the primary language.
+- **Pages fill at least the viewport.** `body` is a column of at least `100vh`/`100dvh` and the
+  content grows, so the footer sits at the bottom of short pages instead of halfway up.
+- **Lazy forms hold their place while they load.** Until the spam-protected form arrives, its
+  container shows a skeleton built from the form's own layout (section, heading, rows or grid
+  spans, field boxes, a disabled button with the real label), so the page has its final height
+  from the start and nothing jumps. The skeleton has no `<form>`, no inputs, no field names and no
+  endpoint, so bots still see nothing to fill in. JSON forms get it from their field list
+  (`nibblyFormSkeletonSpec()`), the built-in contact form from its fixed layout, whichever
+  `api/form.php` will serve. The container is `aria-busy` until the form is in, and the "could
+  not be loaded" message follows the page language.
+- **Informal address on the contact page and in form messages.** The German starter contact page
+  and the German messages of `api/contact.php` and `api/form-submit.php` use "du" like the rest
+  of the starter content; the Spanish contact form says "tu mensaje" / "Inténtalo".
+- **The site scales evenly on large screens.** Up to a 1600 px viewport the root size stays at
+  the browser default; above it, it grows with the viewport (`html { font-size: max(100%, 1vw) }`).
+  Type, spacing, sizes and containers in `css/style.css` and `css/components.css` are now in rem
+  (borders, hairlines, shadows and media queries stay in px), so a page at 1920 or 2560 px looks
+  like the 1600 px layout, only larger. The container tokens are rem as well (`--container-max:
+  90rem`, `--container-standard: 80rem`, `--container-narrow: 50rem`, `--header-height: 5rem`).
+- **Wider content column.** `.content-inner` uses the new `--container-content: 60rem` (960 px
+  at the default size, before 800 px); the contact section keeps `--container-narrow`.
+- **The admin bar on the website matches the dashboard.** It takes the dashboard's topbar from
+  Settings → Design: preset, light/dark mode (System follows the operating system), font, text
+  size, density, base colour and sidebar colour overrides, and the dashboard's fluid size. It
+  spans the full width like the topbar: it starts at the left edge with the topbar's inset and
+  ends where the dashboard's content column ends (expanded or collapsed sidebar). Logo,
+  site name and divider sit as in the dashboard, a single-colour logo takes the primary colour,
+  "Visual editor" and "Save & exit" are the dashboard's primary button and the other controls
+  its outlined buttons, with the same hover. The SEO popover is a dashboard card. The tokens
+  are scoped to the bar, so the website around it is unchanged. The unused "always dark"
+  admin-bar tokens are gone from `css/nibbly-admin-tokens.css`.
+- **Bundled starter images.** A fresh installation no longer loads demo images from
+  picsum.photos and team portraits from pravatar.cc. Nibbly ships 21 AI-generated origami images
+  (folded off-white paper with a cobalt accent) as WebP under `assets/images/starter/`, about
+  320 KB in total: homepage, About, Block types, News, the team grid and the four demo events.
+  Setup labels them as AI-generated in `content/media-meta.json`, so the disclosure label
+  (EU AI Act, Art. 50) shows wherever they appear.
+- **Starter content reads more like a site.** The homepage image caption no longer asks to
+  replace a placeholder, the Block types cards carry real titles (The First Fold, Pleats, Facets,
+  The Crane), and the starter images have descriptive alt texts in English, German and Spanish.
+  The Components page shows the demo events with their images.
+
+- **Semantic colours derive entirely from Settings → Design.** Danger, warning and success
+  each have one token family in `css/nibbly-admin-tokens.css` — fill, hover, `-subtle`
+  background, `-border`, `-ring`, `-text` / `-text-strong` (readable on light and on dark
+  surfaces), `--nb-text-on-*` for text on the fill, button gradient (`-btn`, `-btn-hover`) and
+  glow shadow (`-shadow`, `-shadow-hover`) — all computed from `dangerColor`, `warningColor` and
+  `successColor` (OKLCH, with a `color-mix()` tier for browsers without relative colour syntax).
+  The only fixed values left are the three default base colours. Buttons, alerts, badges,
+  status dots, the media library, the Assistant and the inline editor use these tokens instead
+  of fixed reds, greens and ambers; text on a light custom colour (e.g. a yellow warning, a
+  lifted dark-mode fill) switches to dark. With the glow switched off, danger and success
+  buttons drop gradient and shadow in the dashboard, its live preview and the admin bar. The
+  frontend admin bar also puts the saved semantic colours on `:root`, so dialogs opened from
+  the page (media library, confirmations) match the dashboard; the live preview rebuilds the
+  `@supports not` fallback block that the saved page renders.
+
+### Removed
+
+- **The old built-in contact and pricing forms.** `includes/contact-form.php`,
+  `includes/pricing-contact-form.php`, `api/contact.php` and `api/smtp-config.example.php` are
+  gone; every public form is a JSON form. A JSON-only page shows a form below its sections when it
+  names one: `"form": "contact"` (new in the page schema; setup writes it for the contact pages).
+  Pages are no longer given a form because of their slug (`contact`, `kontakt`, `contacto`):
+  existing contact pages need `"form": "contact"` in their JSON. `api/form.php` serves JSON forms
+  only and answers 404 for anything else. `.htaccess` and the dev router still block requests
+  for a leftover `smtp-config.php`.
+
+### Fixed
+
+- **Dashboard traffic chart scaled its text with the panel.** The chart was a fixed 720 × 220
+  drawing stretched to the panel width, so on wide screens dates, numbers, line and points grew to
+  almost twice their size. It is now drawn at the panel's real width (and redrawn when that changes),
+  so labels stay at 11 px. The y-axis numbers no longer touch the line, and bare ISO dates are shown
+  in the admin language's short format ("26. Sept.").
+- **"Auto-wrote 4 missing fields" on the first visit of the components page.** The starter
+  statistics items now include the description field that `renderStats()` asks for, so a new site
+  no longer writes it on the first admin visit. When such default fields are still added (custom
+  templates), the toast is translated and plain ("Added 4 missing fields with their default text,
+  so you can edit them."); file and keys go to the browser console.
+- **AI image hint only when image generation works.** "Need a new image for this field?" with the
+  AI Image Generator button appeared beside image fields even without a usable image service,
+  because its `display: flex` overrode `hidden`. The hint now shows only while AI is on and image
+  generation is set up, in the news editor as well as on pages, and follows changes in the AI settings.
+- **New people profiles could not be saved without a sort order.** The order field of a new
+  profile showed empty instead of 0, and the server refused the empty value; an empty field
+  now counts as 0.
+- **People list row actions** (Edit, Trash, Restore) now appear on hover and keyboard focus,
+  as in the page list.
+- **Deleting a news post from the editor** sent the wrong field and never worked; it now moves
+  the post to the trash.
+
+- **Review of the People module.** Opening the page editor no longer fails when the writing
+  view script is missing; only profiles in Trash can be restored; `content/people.json` is no
+  longer tracked by Git; the content schema knows the Person and Team blocks; the new People,
+  Menus and writing-view texts are translated into all nine admin languages.
+- **Dropdowns on phones.** A dropdown list wider than its button (for example the people
+  status filter) is shifted left so it stays inside the window.
+
+- **Saving a starter news post no longer duplicates it.** The starter posts carried a language
+  suffix also in the primary language and an id without the date, so the news API did not
+  recognise the file and saved a second copy. They now follow the API's ids: date-slug, plus
+  `-lang` for other languages.
+- **The AI notice no longer contradicts itself.** Its title follows the same state as its text:
+  "AI is switched off" (module off), "AI is not configured" (no provider) or "AI is disabled"
+  (provider set, AI switched off). A missing provider is checked first, so the notice no longer
+  claims a provider is configured when none is.
+- **Pop pills sit centred.** The pill labels of the Pop preset (section titles, legends, stat
+  labels) use a line height of `1.4rem` instead of `1.5rem`, so the capitals sit in the middle.
+- **Pop status tiles match their strip.** The dashboard status strip in the Pop preset is a light
+  card like the other sections (surface, subtle border, soft shadow); its tiles sit on the grouped
+  surface used inside Pop cards, with a 27 px radius to match the strip, and their value is
+  indented to line up with the text of the label pill.
+- **Pop pills never wrap.** The stat-card and status-tile labels no longer break onto a second
+  line in a squarer box: like every other Pop pill they stay on one line, fully round, and end in
+  an ellipsis when the label does not fit (longer words in other languages). A truncated pill
+  shows its full text as a tooltip; it disappears again once the pill has room.
+- **Preset cards rounded like the mode choices.** The design preset cards in Settings → Design use
+  the control radius (`--nb-radius-md`) like the light/dark/system choices below them instead of
+  the large card radius; their preview takes a matching inner radius.
+- **Pop settings navigation.** The group titles (Website, Funktionen, …) take the stronger primary
+  tint (`--nb-primary-muted`), so they read apart from the active item, and the items are inset
+  so their pill stays within the width of the group title.
+- **Shorter statistic labels.** The dashboard stat cards read "Views (30 days)", "Visitors
+  (12 months)", "Visits (all years)" and so on instead of "Views in the last 30 days", in all nine
+  admin languages, so they fit their pill; the range labels behind them (`range_label_days`,
+  `range_label_months`, `range_label_years`) are short as well, and the seven languages that
+  still showed English here are translated.
+- **Site logo on secondary-language pages.** The default logo is inlined as SVG so it takes the
+  accent colour in light and dark mode; on pages under `/{lang}/` its `../` path was not found
+  and it fell back to an `<img>`, which stayed black and disappeared in dark mode.
+  `nibblyIconOrImg()` resolves page-relative paths from the project root (staying inside it),
+  and drops an inlined file's own `:root` styles, which applied to the whole page.
+- **The form editor kept field hints.** Saving a form in Settings → Forms no longer drops the
+  `help` text of its fields.
+- **Visitor-facing core strings follow the page language.** The skip link, the "form requires
+  JavaScript" notice, the timeline's "upcoming" badge and the news dates (list and post) were
+  English on every page; they now come from `includes/public-strings.php` in the page language
+  (English, German, Spanish; English for other languages). German news dates read
+  "23. Oktober 2026", like the event dates.
+- **Starter Components page translated.** The events heading and its empty-state text are part
+  of the page content (`events.heading`, `events.empty`) in English, German and Spanish instead of
+  an English template default; the German timeline heading reads "Zeitleiste".
+- **Event card icons sit on the first line.** The calendar and location icons are top-aligned,
+  so a date or place that wraps keeps its icon next to the first line.
+- **Admin bar on phones in edit mode.** Undo, redo, cancel and the save buttons wrap onto
+  their own lines instead of running off the screen.
+- **Card descriptions in the starter content.** The demo cards on the homepage and the Block
+  types page stored their text under `description`, which the card block does not read, so it
+  never appeared; it is now stored under `content`.
+- **Warning texts share one colour.** The remote-backup beta note used the warning fill colour
+  with `!important` while the media library's server-limit note used `--nb-warning-text`; both
+  now use `--nb-warning-text`. The danger button's shadow and the pop preset's stat-tile numbers
+  no longer fall back to fixed reds or to the fill colour as text colour.
+
 ## [2.4.3] — 2026-10-24
 
 ### Added

@@ -362,6 +362,24 @@ function nibblySeoRenderablePages(): array {
             'changefreq' => 'monthly',
         ];
     }
+    // Event and person pages in every site language (their texts fall back to the primary language)
+    $languages = array_keys(is_array($GLOBALS['SITE_LANGUAGES'] ?? null) && $GLOBALS['SITE_LANGUAGES'] ? $GLOBALS['SITE_LANGUAGES'] : [$defaultLang => '']);
+    $events = json_decode((string)@file_get_contents(nibblySeoRoot() . '/content/events.json'), true);
+    foreach (is_array($events['events'] ?? null) ? $events['events'] : [] as $event) {
+        $id = (string)($event['id'] ?? '');
+        if (!is_array($event) || !empty($event['hidden']) || !preg_match('/^[a-z0-9-]+$/', $id)) continue;
+        foreach ($languages as $lang) {
+            $pages[] = ['lang' => $lang, 'slug' => 'events/' . $id, 'url' => rtrim(nibblySeoBaseUrl(), '/') . '/' . ($lang === $defaultLang ? '' : $lang . '/') . 'events/' . $id,
+                'lastmod' => $events['lastModified'] ?? date('c'), 'priority' => '0.4', 'changefreq' => 'monthly'];
+        }
+    }
+    require_once __DIR__ . '/people.php';
+    foreach (nibblyPeople() as $person) {
+        foreach ($languages as $lang) {
+            $pages[] = ['lang' => $lang, 'slug' => 'people/' . nibblyPersonSlug($person), 'url' => rtrim(nibblySeoBaseUrl(), '/') . '/' . nibblyPersonPath($person, $lang),
+                'lastmod' => $person['updatedAt'] ?? date('c'), 'priority' => '0.4', 'changefreq' => 'monthly'];
+        }
+    }
     return $pages;
 }
 

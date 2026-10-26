@@ -2,8 +2,8 @@
 /**
  * Lazy public form renderer.
  *
- * Returns protected form HTML with fresh one-time tokens. The endpoint is
- * intentionally small and whitelisted so arbitrary PHP cannot be included.
+ * Returns the HTML of a JSON form (content/forms/{id}.json) with fresh
+ * one-time tokens.
  */
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
@@ -26,36 +26,19 @@ if (!preg_match('/^[a-z]{2}$/', $lang)) {
 
 $basePath = nibblySafeFormBasePath((string) $incomingBasePath);
 $currentLang = $lang;
-$_cfLazy = false;
-
 define('NIBBLY_RENDER_LAZY_FORM', true);
 
 header('Content-Type: text/html; charset=utf-8');
 header('X-Robots-Tag: noindex, nofollow');
 
-if (nibblyFormExists($form)) {
-    echo nibblyFormRender($form, [
-        'basePath' => $basePath,
-        'lang' => $currentLang,
-        'lazy' => false,
-    ]);
+if (!is_string($form) || !nibblyFormExists($form)) {
+    http_response_code(404);
+    echo 'Form not found';
     exit;
 }
 
-switch ($form) {
-    case 'contact':
-        include __DIR__ . '/../includes/contact-form.php';
-        break;
-
-    case 'pricing-contact':
-        $_selectedPackage = is_string($_GET['package'] ?? null)
-            ? trim((string) $_GET['package'])
-            : '';
-        include __DIR__ . '/../includes/pricing-contact-form.php';
-        break;
-
-    default:
-        http_response_code(404);
-        echo 'Form not found';
-        break;
-}
+echo nibblyFormRender($form, [
+    'basePath' => $basePath,
+    'lang' => $currentLang,
+    'lazy' => false,
+]);

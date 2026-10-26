@@ -10,6 +10,7 @@ import subprocess
 import time
 import urllib.parse
 from http.cookies import SimpleCookie
+from server_process import start_server, stop_server
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -62,6 +63,8 @@ class Site:
 
     def start(self, router="router.php", ini=None):
         """ini: extra php.ini overrides, e.g. {"upload_max_filesize": "1M"}."""
+        # Reusing a Site must close its previous server, including orphan workers.
+        self.close()
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))
             self.port = sock.getsockname()[1]
@@ -69,25 +72,32 @@ class Site:
         flags = ["-d", "display_errors=0"]
         for key, value in (ini or {}).items():
             flags += ["-d", f"{key}={value}"]
-        self.process = subprocess.Popen(
-            ["php", *flags, "-S", f"127.0.0.1:{self.port}", router],
-            cwd=self.root, stdout=self.log, stderr=self.log)
-        for _ in range(100):
-            if self.process.poll() is not None:
-                self.log.seek(0)
-                raise RuntimeError(self.log.read())
-            try:
-                with socket.create_connection(("127.0.0.1", self.port), timeout=.1):
-                    return self
-            except OSError:
-                time.sleep(.05)
-        raise RuntimeError("Test server did not start")
+        try:
+            self.process = start_server(
+                ["php", *flags, "-S", f"127.0.0.1:{self.port}", router],
+                cwd=self.root, stdout=self.log, stderr=self.log)
+            for _ in range(100):
+                if self.process.poll() is not None:
+                    self.log.seek(0)
+                    raise RuntimeError(self.log.read())
+                try:
+                    with socket.create_connection(("127.0.0.1", self.port), timeout=.1):
+                        return self
+                except OSError:
+                    time.sleep(.05)
+            raise RuntimeError("Test server did not start")
+        except BaseException:
+            self.close()
+            raise
 
     def close(self):
-        if self.process:
-            self.process.terminate()
-            self.process.wait(timeout=10)
-            self.log.close()
+        try:
+            if self.process is not None:
+                stop_server(self.process)
+                self.process = None
+        finally:
+            if getattr(self, "log", None) is not None:
+                self.log.close()
 
 
 class Client:

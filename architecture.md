@@ -14,7 +14,11 @@ Nibbly is a flat-file CMS built on PHP with no database dependency. Content is s
    `renderAllSections()`. `/` is encoded as `__`, so
    `/products/vitamin-d` maps to `en_products__vitamin-d.json`.
 5. **News posts**: URLs like `/en/news/my-post` route to `{lang}/news-post.php`
-6. **404**: falls through to `404.php`
+6. **Event and person pages**: `/events/{id}` and `/people/{slug}` (with a language
+   prefix for other languages) route to `includes/event-page.php` and
+   `includes/person-page.php`, but only when the event or published profile exists;
+   otherwise a page at that path is served as usual
+7. **404**: falls through to `404.php`
 
 ### Key Directories
 
@@ -42,7 +46,7 @@ includes/
   block-renderers/    One PHP file per block type
   nav-config.php      Navigation items + page mapping
   page.php            Front controller for JSON-only pages
-  contact-form.php    Contact form partial
+  forms.php           JSON forms: load, localize, render, validate
   sidebar.php         Sidebar partial
 js/
   inline-editor.js    Inline editing system
@@ -206,6 +210,16 @@ mail metadata. Supported `type` values are `text`, `email`, `tel`, `textarea`,
 `select`, `radio`, `checkbox`, `date`, `time`, `hidden`, `heading`, and `note`.
 Supported `width` values are `3`, `4`, `6`, `8`, and `12` on a 12-column grid.
 `select` and `radio` fields use `options[]` entries with `value` and `label`.
+
+Multilingual sites: every visitor-facing text (`label`, `description`,
+`submit.successText`, field `label`/`placeholder`/`help`, option `label`) may be
+a plain string (one text for all languages) or a map of language codes, e.g.
+`"label": { "de": "Nachricht", "en": "Message" }`. The form renders in the page
+language, falling back to the primary language and then to the first text.
+Keys, option `value`s and `submit.subject` stay single. Visitor messages
+(button, validation, errors) come from `includes/public-strings.php`; stored
+messages and notification e-mails use the primary-language texts. The
+dashboard editor switches between the site languages.
 
 `submit.store=false` skips local inbox storage. `submit.email=false` skips email
 notification even if SMTP/sendmail is configured. `submit.subject` supports
@@ -713,6 +727,10 @@ Pages with JSON content files are automatically added to navigation by `header.p
 
 To control which menus a page appears in, set `"nav": ["header", "footer"]` in its JSON file. Use `"nav": []` to hide from all menus. Default (no field): `["header"]`. The title for auto-discovered pages is read from the JSON `title` field, with a fallback to the titlecased slug.
 
+### Menus & Footer (managed menus)
+
+The dashboard item **Menus & Footer** (`admin/dashboard/scripts/menus.php`, API in `admin/api/navigation.php`, logic in `includes/menu-store.php`) shows every menu with its source. Until a menu is saved there, `getMenuItems()` derives it as described above. The first save stores the items per language in `content/menus.json` → `menus.{id}.items.{lang}` (stable `uid`, page references by slug, free links, `target`/`rel`, `hidden`, `children`); from then on that list is the only source for this menu and language, and **Reset to source** goes back to the derivation. Footer fields stay in `content/pages/footer.json`; `menus.json → footer.fields` records only which detected key is edited as which type. Templates with their own markup register menus and footer fields in `includes/site-menus.php` (`nibblyRegisterMenu()`, `nibblyRegisterFooterField()`) and render with `nibblyMenuItems()`; nothing rewrites a template. Writes are revision-checked per store and backed up first (`backups/menus-registry_*.json`, `backups/footer_*.json`).
+
 ### `includes/nav-config.php`
 
 Optional — only needed for explicit ordering, custom labels, or the language switcher's page mapping.
@@ -743,7 +761,7 @@ $NAV_ITEMS = [
 
 `header.php` automatically generates language switch links from `$PAGE_MAPPING`. If the current page exists in the target language (via JSON file), it links there. Otherwise it falls back to the home page of that language.
 
-The primary language (`SITE_LANG_DEFAULT`) serves pages at the root (`/about`). Secondary languages use a prefix (`/de/ueber-uns`).
+The primary language (`SITE_LANG_DEFAULT`) serves pages at the root (`/about`). Secondary languages use a prefix (`/de/ueber-uns`). A site can have any number of languages; the setup wizard takes a list of them with one primary language, and **Settings → Language → Website languages** reorders them and adds new ones later (`includes/site-languages.php`): a new language starts as a copy of an existing one (pages, news posts, language templates, navigation items and page mapping, footer/menu/event texts) and is appended to the switcher. The order of `$SITE_LANGUAGES` (in `admin/config.php` and the generated `includes/nav-config.php`) is the order of the language switcher, independent of which language is primary.
 
 ## Admin API Endpoints
 
@@ -810,7 +828,11 @@ Full-site backups are created by `includes/backup-helper.php` and can be run fro
 | `load-news` | GET | List all news posts |
 | `save-news` | POST | Create or update news post |
 | `toggle-news-status` | POST | Show/hide news post |
-| `delete-news` | POST | Delete news post |
+| `trash-news` | POST | Move a post to `content/news-trash/` |
+| `list-news-trash` | GET | List trashed posts |
+| `restore-news` | POST | Restore a trashed post (refused if the address is taken again) |
+| `delete-news-permanent` | POST | Permanently delete a trashed post |
+| `empty-news-trash` | POST | Empty the news trash |
 
 ### Media
 | Action | Method | Description |
@@ -847,9 +869,8 @@ Public form endpoints live in `api/`:
 
 | Endpoint | Method | Description |
 |---|---|---|
-| `api/form.php?form={id}` | GET | Lazy-render a JSON form when `content/forms/{id}.json` exists, otherwise fall back to whitelisted legacy forms |
+| `api/form.php?form={id}` | GET | Lazy-render the JSON form `content/forms/{id}.json` (404 if there is none) |
 | `api/form-submit.php` | POST | Validate, notify, and store JSON form submissions |
-| `api/contact.php` | POST | Legacy contact form endpoint; still stores compatible `formId` / `formLabel` metadata |
 
 ## Theming
 
@@ -937,14 +958,10 @@ Example fonts are provided in `examples/fonts/`.
 
 ## Form System
 
-Nibbly has two public form paths:
-
-1. **JSON-backed forms** are the current default for simple forms. Definitions
-   live in `content/forms/*.json`, render through `includes/forms.php`, and
-   submit to `api/form-submit.php`.
-2. **Legacy PHP forms** such as `includes/contact-form.php` still submit to
-   `api/contact.php` and remain supported for older templates or highly custom
-   markup.
+Public forms are JSON-backed: definitions live in `content/forms/*.json`,
+render through `includes/forms.php` (lazily via `api/form.php`), and submit to
+`api/form-submit.php`. A JSON-only page shows a form below its sections when it
+names one: `"form": "contact"`.
 
 `includes/forms.php` provides the JSON form API:
 
@@ -1004,7 +1021,34 @@ News posts are individual JSON files in `content/news/`. Each file contains meta
 
 **Single post**: The router maps `/en/news/slug` to `{lang}/news-post.php`, which loads the matching JSON file and renders its sections.
 
-**Admin**: Posts are created and managed via the admin dashboard, which uses the `save-news`, `load-news`, `toggle-news-status`, and `delete-news` API actions.
+**Admin**: Posts are created and managed via the admin dashboard, which uses the `save-news`, `load-news`, `toggle-news-status` and `trash-news` API actions; trashed posts are restored or deleted permanently from the news trash.
+
+## Languages in the Dashboard
+
+Two models: **pages and news** keep one file per language (a version with its own slug); **events and
+people** keep the translations of all languages inside one entry. Every editor shows the same language
+switch top right in its header (`renderLanguageSwitch()`, placed by `placeLanguageSwitch()` in
+`admin/dashboard/scripts/bootstrap.php`): for
+versions it opens or creates the other version (`continueWithUnsaved()`, `chooseVersionCreation()`), for
+entries it switches the fields. AI translation goes through `aiTranslateFields()`; `translatableStrings()`
+collects the texts of a content object and leaves technical values (ids, paths, links, images) out. The
+page editor's language and page selects (`#langSelect`, `#pageSelect`) are kept as hidden state only.
+
+## Event and Person Pages
+
+Events (`content/events.json`) and people profiles (`content/people.json`) have no page file of their own;
+the router renders them from the data:
+
+- **Events**: `/events/{id}` → `includes/event-page.php`. Hidden events are shown to logged-in editors only.
+  Event cards (`renderEvent()`) link their title there; the external `url` stays a separate link.
+- **People**: `/people/{slug}` → `includes/person-page.php`, published profiles only. The slug is created from
+  the name on the first save (`nibblyPersonUniqueSlug()`) and kept when the name changes; older records fall
+  back to the slugified name (`nibblyPersonSlug()`). Person cards link their name there.
+- Both reuse the news article layout (`news-post-page__*`). The back link leads to the first public page of
+  the language that shows the content (`nibblyPublicPageShowing()`): a template calling `renderEventList()`,
+  or a JSON page with the profile's Person block or a Team block of its group. Templates set
+  `$pageLanguagePaths` so the language switcher stays on the same event or profile.
+- Both appear in `sitemap.xml` in every site language; hidden events and drafts do not.
 
 ## File Security
 

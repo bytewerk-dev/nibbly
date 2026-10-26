@@ -21,7 +21,7 @@
     width: 100%;
     border-collapse: collapse;
     font-size: 0.9rem;
-    min-width: 600px;
+    min-width: 37.5rem;
 }
 
 .comparison-table thead th {
@@ -43,7 +43,7 @@
 
 .comparison-table thead th.comparison-table__label-col {
     text-align: left;
-    min-width: 180px;
+    min-width: 11.25rem;
 }
 
 .comparison-table tbody td {
@@ -97,7 +97,7 @@
 }
 
 .faq-accordion {
-    max-width: 800px;
+    max-width: 50rem;
     display: flex;
     flex-direction: column;
     gap: 1px;
@@ -153,8 +153,8 @@
 
 .faq-item__icon {
     flex-shrink: 0;
-    width: 20px;
-    height: 20px;
+    width: 1.25rem;
+    height: 1.25rem;
     color: var(--color-primary-light);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -243,7 +243,7 @@
 
 .pricing-card__badge {
     position: absolute;
-    top: -10px;
+    top: -0.625rem;
     left: 50%;
     transform: translateX(-50%);
     background: var(--gradient-brand);
@@ -252,7 +252,7 @@
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    padding: 3px 14px;
+    padding: 0.1875rem 0.875rem;
     border-radius: 20px;
     white-space: nowrap;
 }
@@ -394,8 +394,8 @@
 }
 
 .testimonial-card__quote-icon {
-    width: 24px;
-    height: 24px;
+    width: 1.5rem;
+    height: 1.5rem;
     color: var(--color-primary);
     opacity: 0.4;
     margin-bottom: var(--spacing-sm);
@@ -454,8 +454,8 @@
 }
 
 .team-card__avatar {
-    width: 80px;
-    height: 80px;
+    width: 5rem;
+    height: 5rem;
     margin: 0 auto var(--spacing-sm);
     border-radius: 50%;
     overflow: hidden;
@@ -516,8 +516,8 @@
 }
 
 .feature-card__icon {
-    width: 40px;
-    height: 40px;
+    width: 2.5rem;
+    height: 2.5rem;
     color: var(--color-primary);
     margin-bottom: var(--spacing-sm);
 }
@@ -550,16 +550,16 @@
 
 .timeline {
     position: relative;
-    max-width: 700px;
+    max-width: 43.75rem;
     padding-left: 2rem;
 }
 
 .timeline::before {
     content: '';
     position: absolute;
-    left: 7px;
-    top: 8px;
-    bottom: 8px;
+    left: 0.4375rem;
+    top: 0.5rem;
+    bottom: 0.5rem;
     width: 2px;
     background: var(--color-border-dark);
 }
@@ -576,9 +576,9 @@
 .timeline-item__marker {
     position: absolute;
     left: -2rem;
-    top: 6px;
-    width: 16px;
-    height: 16px;
+    top: 0.375rem;
+    width: 1rem;
+    height: 1rem;
     border-radius: 50%;
     background: var(--color-bg-dark-card);
     border: 2px solid var(--color-primary);
@@ -618,7 +618,7 @@
     font-weight: 700;
     color: var(--color-primary);
     background: rgba(96, 200, 205, 0.1);
-    padding: 2px 8px;
+    padding: 2px 0.5rem;
     border-radius: 4px;
 }
 
@@ -627,7 +627,7 @@
     font-weight: 600;
     color: #fbbf24;
     background: rgba(251, 191, 36, 0.1);
-    padding: 2px 8px;
+    padding: 2px 0.5rem;
     border-radius: 4px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -747,7 +747,7 @@
 
 
 .news-post-page__hero--empty {
-    min-height: 200px;
+    min-height: 12.5rem;
     border-radius: 8px;
     margin-bottom: var(--spacing-md);
     overflow: hidden;
@@ -855,7 +855,7 @@
 
 /* -- News Single Post Page -- */
 .news-post-page {
-    max-width: 780px;
+    max-width: 48.75rem;
     margin: 0 auto;
     padding: var(--spacing-lg) 0;
 }
@@ -957,7 +957,7 @@
     font-family: 'Geist Mono', ui-monospace, monospace;
     font-size: 0.9em;
     background: rgba(255, 255, 255, 0.06);
-    padding: 2px 6px;
+    padding: 2px 0.375rem;
     border-radius: 4px;
 }
 
@@ -1002,7 +1002,7 @@
 
 .gallery-item__img {
     width: 100%;
-    height: 200px;
+    height: 12.5rem;
     object-fit: cover;
     display: block;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
@@ -1399,7 +1399,7 @@
 
     .pricing-grid {
         grid-template-columns: 1fr;
-        max-width: 360px;
+        max-width: 22.5rem;
         margin: 0 auto;
     }
 
@@ -1428,7 +1428,7 @@
     }
 
     .gallery-item__img {
-        height: 150px;
+        height: 9.375rem;
     }
 }
 
@@ -1538,8 +1538,8 @@
 .nb-ai-label {
     position: absolute;
     z-index: 2;
-    right: var(--nb-ai-label-inset, 20px);
-    bottom: var(--nb-ai-label-inset, 20px);
+    right: var(--nb-ai-label-inset, 1.25rem);
+    bottom: var(--nb-ai-label-inset, 1.25rem);
     line-height: 0;
     opacity: var(--nb-ai-label-rest, 0);
     pointer-events: none;
@@ -1550,7 +1550,7 @@
     display: block;
     width: auto;
     max-width: none;
-    height: var(--nb-ai-label-height, 22px);
+    height: var(--nb-ai-label-height, 1.375rem);
     margin: 0;
     border: 0;
     border-radius: 0;
@@ -1565,3 +1565,25 @@
     opacity: 1;
     transition: opacity 2s ease 0.6s;
 }
+
+/* People / Team: shared profiles, inheriting the site's typography and colour. */
+.people-grid{display:grid;gap:var(--spacing-lg,2rem);grid-template-columns:repeat(3,minmax(0,1fr))}
+.people-grid--2{grid-template-columns:repeat(2,minmax(0,1fr))}.people-grid--4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.person-card{min-width:0;overflow-wrap:anywhere}.person-card__portrait{margin:0 0 1rem}.person-card__portrait img{display:block;width:100%;aspect-ratio:1;object-fit:cover}
+.person-card__portrait figcaption{font-size:.8em;margin-top:.25rem}.person-card__role{font-weight:600}.person-card__contact{display:flex;flex-direction:column;gap:.5rem;margin-top:1rem}
+.person-card__body>h3{margin-top:0}.person-card__biography:empty{display:none}.person-card__body blockquote{margin-inline:0;padding-inline-start:1rem;border-inline-start:2px solid currentColor}
+@media(max-width:800px){.people-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:500px){.people-grid{grid-template-columns:1fr}}
+
+.person-card:has(>.person-card__portrait){display:grid;grid-template-columns:minmax(140px,260px) minmax(0,1fr);gap:var(--spacing-lg,2rem)}
+.people-grid .person-card:has(>.person-card__portrait){display:block}
+@media(max-width:600px){.person-card:has(>.person-card__portrait){display:block}}
+.person-card__body>h3 a{color:inherit;text-decoration:none}.person-card__body>h3 a:hover{text-decoration:underline}
+
+/* Person page (includes/person-page.php): portrait beside the text, stacked on small screens */
+.person-page__layout{display:grid;grid-template-columns:minmax(160px,280px) minmax(0,1fr);gap:var(--spacing-lg,2rem);align-items:start}
+.person-page__layout:not(:has(.person-page__portrait)){grid-template-columns:minmax(0,1fr)}
+.person-page__portrait{margin:0}.person-page__portrait img{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px}
+.person-page__portrait figcaption{font-size:.8rem;margin-top:.35rem;opacity:.75}
+.person-page__summary{font-weight:600}
+.person-page__quote{margin:1.5rem 0;padding-inline-start:1rem;border-inline-start:2px solid currentColor;font-style:italic}
+@media(max-width:640px){.person-page__layout{grid-template-columns:minmax(0,1fr)}.person-page__portrait{max-width:280px}}

@@ -13,9 +13,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 require_once __DIR__ . '/../includes/forms.php';
 
-$lang = $_POST['lang'] ?? 'de';
+$lang = (string)($_POST['lang'] ?? '');
+if (!preg_match('/^[a-z]{2}$/', $lang)) {
+    $lang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'de';
+}
 $formId = nibblyFormIdClean((string)($_POST['form_id'] ?? ''));
-$form = $formId ? nibblyFormLoad($formId) : null;
+$formStored = $formId ? nibblyFormLoad($formId) : null;
+// The visitor gets texts and messages in the page language; the stored message and the
+// notification e-mail use the primary language, so the inbox reads the same for every form
+$form = $formStored ? nibblyFormLocalize($formStored, $lang) : null;
+$formAdmin = $formStored ? nibblyFormLocalize($formStored) : null;
 $clientKey = nibblyFormClientKey();
 
 function nibblyFormSubmitResponse(bool $success, string $message, array $extra = [], int $status = 200): void
@@ -29,11 +36,11 @@ function nibblyFormSubmitResponse(bool $success, string $message, array $extra =
 }
 
 if (!$form || empty($form['enabled'])) {
-    nibblyFormSubmitResponse(false, $lang === 'de' ? 'Formular nicht gefunden.' : 'Form not found.', [], 404);
+    nibblyFormSubmitResponse(false, nibblyPublicString('form_not_found', $lang), [], 404);
 }
 
 if (!nibblyFormReserveRequest($clientKey)) {
-    nibblyFormSubmitResponse(false, $lang === 'de' ? 'Zu viele Versuche. Bitte versuchen Sie es später erneut.' : 'Too many attempts. Please try again later.', [], 429);
+    nibblyFormSubmitResponse(false, nibblyPublicString('form_too_many', $lang), [], 429);
 }
 
 if (!empty($_POST['website'])) {
@@ -44,9 +51,7 @@ if (!empty($_POST['website'])) {
 $tokenResult = nibblyValidateFormToken($_POST['form_token'] ?? null, $form['id']);
 if (empty($tokenResult['valid'])) {
     nibblyFormRecordAttempt($clientKey, false);
-    nibblyFormSubmitResponse(false, $lang === 'de'
-        ? 'Das Formular ist abgelaufen oder wurde zu schnell gesendet. Bitte versuchen Sie es erneut.'
-        : 'The form expired or was submitted too quickly. Please try again.', [
+    nibblyFormSubmitResponse(false, nibblyPublicString('form_expired', $lang), [
             'formToken' => nibblyCreateFormToken($form['id']),
         ], 400);
 }
@@ -61,25 +66,23 @@ if ($errors) {
 
 if (nibblyFormLooksLikeSpam($values)) {
     nibblyFormRecordAttempt($clientKey, false);
-    nibblyFormSubmitResponse(false, $lang === 'de'
-        ? 'Die Nachricht konnte nicht gesendet werden. Bitte prüfen Sie Ihre Eingaben.'
-        : 'The message could not be sent. Please check your input.', [
+    nibblyFormSubmitResponse(false, nibblyPublicString('form_check_input', $lang), [
             'formToken' => nibblyCreateFormToken($form['id']),
         ]);
 }
 
-$subject = nibblyFormsApplySubjectTemplate((string)($form['submit']['subject'] ?? ''), $form, $values);
-$body = nibblyFormsBuildBody($form, $values);
+$subject = nibblyFormsApplySubjectTemplate((string)($formAdmin['submit']['subject'] ?? ''), $formAdmin, $values);
+$body = nibblyFormsBuildBody($formAdmin, $values);
 $sent = false;
 if (!empty($form['submit']['email'])) {
-    $sent = nibblyFormsSendNotification($form, $values, $subject, $body);
+    $sent = nibblyFormsSendNotification($formAdmin, $values, $subject, $body);
 }
 
 $store = !array_key_exists('store', $form['submit']) || !empty($form['submit']['store']);
 $saved = true;
 if ($store) {
     $fieldRows = [];
-    foreach ($form['fields'] as $field) {
+    foreach ($formAdmin['fields'] as $field) {
         if (in_array(($field['type'] ?? ''), ['heading', 'note', 'hidden'], true)) {
             continue;
         }
@@ -93,8 +96,8 @@ if ($store) {
     $saved = nibblyFormsSaveSubmission([
         'id' => uniqid('mail_', true),
         'formId' => $form['id'],
-        'formLabel' => $form['label'],
-        'name' => $values['name'] ?? ($values['email'] ?? $form['label']),
+        'formLabel' => $formAdmin['label'],
+        'name' => $values['name'] ?? ($values['email'] ?? $formAdmin['label']),
         'email' => $values['email'] ?? '',
         'phone' => $values['phone'] ?? '',
         'occasion' => $subject,
@@ -109,9 +112,7 @@ if ($store) {
 
 if (!$saved) {
     nibblyFormRecordAttempt($clientKey, false);
-    nibblyFormSubmitResponse(false, $lang === 'de'
-        ? 'Die Nachricht konnte nicht gespeichert werden. Bitte versuchen Sie es später erneut.'
-        : 'The message could not be saved. Please try again later.', [
+    nibblyFormSubmitResponse(false, nibblyPublicString('form_save_failed', $lang), [
             'formToken' => nibblyCreateFormToken($form['id']),
         ], 500);
 }
@@ -119,9 +120,7 @@ if (!$saved) {
 // A successful response requires at least one actual delivery channel.
 if (!$store && !$sent) {
     nibblyFormRecordAttempt($clientKey, false);
-    nibblyFormSubmitResponse(false, $lang === 'de'
-        ? 'Die Nachricht konnte nicht gesendet werden. Bitte versuchen Sie es später erneut.'
-        : 'The message could not be sent. Please try again later.', [
+    nibblyFormSubmitResponse(false, nibblyPublicString('form_send_failed', $lang), [
             'formToken' => nibblyCreateFormToken($form['id']),
         ], 503);
 }

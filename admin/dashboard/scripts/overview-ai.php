@@ -268,7 +268,7 @@
     function getNewsImagePrompt() {
         var title = document.getElementById('newsTitle')?.value.trim() || '';
         var excerpt = document.getElementById('newsExcerpt')?.value.trim() || '';
-        var content = document.getElementById('newsContentWysiwyg')?.innerText.trim() || '';
+        var content = document.querySelector('#newsContentField .nb-page-rich-editor')?.innerText.trim() || '';
         var language = document.getElementById('newsLang')?.value.trim() || '';
         var parts = [title, excerpt, content].filter(Boolean).join('\n\n').slice(0, 900);
         return [
@@ -468,15 +468,27 @@
         }).join('');
     }
 
+    // Drawn at the panel's real width, so text, line and points keep their size instead of scaling with the SVG
+    var dashboardTrafficSeries = [];
+    var dashboardTrafficObserver = null;
     function renderDashboardTrafficChart(series) {
         var target = document.getElementById('dashboardTrafficChart');
         if (!target) return;
+        dashboardTrafficSeries = series;
+        if (!dashboardTrafficObserver && typeof ResizeObserver === 'function') {
+            var lastWidth = 0;
+            dashboardTrafficObserver = new ResizeObserver(function() {
+                var widthNow = Math.round(target.clientWidth);
+                if (widthNow && widthNow !== lastWidth) { lastWidth = widthNow; renderDashboardTrafficChart(dashboardTrafficSeries); }
+            });
+            dashboardTrafficObserver.observe(target);
+        }
         if (!series.length) {
             target.innerHTML = '<p class="dashboard-empty">' + t('dashboard_home.no_views') + '</p>';
             return;
         }
 
-        var width = 720;
+        var width = Math.max(280, Math.round(target.clientWidth || 720));
         var height = 220;
         var pad = { top: 16, right: 18, bottom: 34, left: 42 };
         var chartWidth = width - pad.left - pad.right;
@@ -506,14 +518,16 @@
             var yy = pad.top + chartHeight - chartHeight * factor;
             var label = Math.round(yMax * factor);
             return '<g><line x1="' + pad.left + '" y1="' + yy.toFixed(2) + '" x2="' + (width - pad.right) + '" y2="' + yy.toFixed(2) + '"></line>' +
-                '<text x="' + (pad.left - 10) + '" y="' + (yy + 4).toFixed(2) + '">' + label + '</text></g>';
+                '<text x="' + (pad.left - 8) + '" y="' + (yy + 4).toFixed(2) + '" text-anchor="end">' + label + '</text></g>';
         }).join('');
         var labelIndexes = [0, Math.floor((series.length - 1) / 2), series.length - 1].filter(function(value, index, arr) {
             return arr.indexOf(value) === index;
         });
         var xLabels = labelIndexes.map(function(index) {
             var label = series[index].label || '';
-            if (!label) {
+            // A bare ISO date ("2026-09-26") is shown in the admin language's short format
+            if (!label || /^\d{4}-\d{2}-\d{2}$/.test(label)) {
+                if (label && !series[index].date) series[index].date = label;
                 var date = new Date((series[index].date || '') + 'T00:00:00');
                 label = isNaN(date.getTime()) ? (series[index].date || '') : nbFormatDate(date, 'short');
             }
@@ -639,6 +653,8 @@
         var imageJobsPanel = document.getElementById('aiImageJobsPanel');
 
         dashboardAiImageUsable = imageReady;
+        dashboardAiTextUsable = usable && aiFeatureEnabled(settings, 'seoTextGeneration');
+        if (typeof syncAiImageHints === 'function') syncAiImageHints();
         if (window.NbImageManager && typeof NbImageManager.refresh === 'function') {
             NbImageManager.refresh();
         }
@@ -650,13 +666,19 @@
         if (banner) {
             banner.hidden = usable;
         }
+        // Title and text name the same state: module off, no provider, or provider set but AI switched off
+        var bannerTitle = document.getElementById('aiUnavailableTitle');
+        var bannerState = !AI_FEATURES_ENABLED ? 'module' : (!configured ? 'missing' : 'disabled');
+        if (bannerTitle) {
+            bannerTitle.textContent = t({ module: 'ai.module_disabled_title', missing: 'ai.not_configured_title', disabled: 'ai.disabled_title' }[bannerState]);
+        }
         if (bannerText) {
-            if (!AI_FEATURES_ENABLED) {
+            if (bannerState === 'module') {
                 bannerText.textContent = t('ai.module_disabled_status');
-            } else if (!serviceEnabled) {
-                bannerText.textContent = t('ai.disabled_status');
-            } else {
+            } else if (bannerState === 'missing') {
                 bannerText.textContent = t('ai.not_configured_text');
+            } else {
+                bannerText.textContent = t('ai.disabled_status');
             }
         }
 
@@ -1751,6 +1773,8 @@
         var textUsable = usable && aiFeatureEnabled(settings, 'seoTextGeneration');
         var imageUsable = usable && aiFeatureEnabled(settings, 'imageGeneration') && aiImageServiceUsable(settings);
         dashboardAiImageUsable = imageUsable;
+        dashboardAiTextUsable = textUsable;
+        if (typeof syncAiImageHints === 'function') syncAiImageHints();
         var status = document.getElementById('aiProviderStatus');
         if (status) {
             status.className = 'ai-status-box ' + (usable ? 'ai-status-box--ok' : 'ai-status-box--warning');

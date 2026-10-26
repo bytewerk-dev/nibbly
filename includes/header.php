@@ -72,7 +72,10 @@ $currentPageKey = $currentPage ?? 'home';
 $langLinks = [];
 $_contentPath = __DIR__ . '/../content/pages/';
 foreach ($SITE_LANGUAGES as $code => $name) {
-    if (isset($PAGE_MAPPING[$currentPageKey][$code])) {
+    if (isset($pageLanguagePaths[$code])) {
+        // Set by templates of content without a page of its own (event and person pages)
+        $langLinks[$code] = $basePath . $pageLanguagePaths[$code];
+    } elseif (isset($PAGE_MAPPING[$currentPageKey][$code])) {
         $langLinks[$code] = $basePath . $PAGE_MAPPING[$currentPageKey][$code];
     } elseif ($currentPageKey !== 'home' && is_file($_contentPath . nibblyPageContentKey($code, $currentPageKey) . '.json')) {
         // Dynamic fallback: same slug exists in target language
@@ -109,7 +112,7 @@ $_buildNavHref = function (array $item) use ($basePath, $isHomepage, $_headerMen
     if ($_headerMenuType === 'one-page' && str_starts_with($href, '#') && $href !== '#') {
         return ($isHomepage ? '' : $basePath . $_homeHref) . $href;
     }
-    return $basePath . $href;
+    return nibblyMenuHref($item, $basePath);
 };
 $_navLinkAttrs = function (array $item, bool $isActive) use ($_headerMenuType) {
     $href = (string)($item['href'] ?? '');
@@ -119,10 +122,8 @@ $_navLinkAttrs = function (array $item, bool $isActive) use ($_headerMenuType) {
     if ($_headerMenuType === 'one-page' && str_starts_with($href, '#') && $href !== '#') {
         $attrs .= ' data-nav-hash="' . htmlspecialchars(substr($href, 1), ENT_QUOTES, 'UTF-8') . '"';
     }
-    if ($classes) {
-        $attrs .= ' class="' . htmlspecialchars(implode(' ', $classes), ENT_QUOTES, 'UTF-8') . '"';
-    }
-    return $attrs;
+    // target, rel and the item's own classes (Menus & Footer) keep their markup
+    return $attrs . nibblyMenuLinkAttrs($item, $classes);
 };
 
 // Load site settings (used for favicon, theme colors, editor button style)
@@ -271,7 +272,7 @@ nibblyStartEmailObfuscation();
 </head>
 <body class="<?php echo $isHomepage ? 'page-home' : 'page-subpage'; ?><?php echo isset($pageClass) ? ' ' . $pageClass : ''; ?><?php echo $_nibblyDevLogin ? ' has-dev-login' : ''; ?>"<?php echo $_nibblyDevLogin ? ' data-dev-login="true"' : ''; ?>>
     <?php if (!empty($GLOBALS['nibblyAgentPreview']['active'])) echo nibblyAgentPreviewBanner(); ?>
-    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <a class="skip-link" href="#main-content"><?php require_once __DIR__ . '/public-strings.php'; echo htmlspecialchars(nibblyPublicString('skip_to_content', $currentLang ?? null)); ?></a>
 
     <!-- Fixed Header -->
     <header class="site-header" id="siteHeader">

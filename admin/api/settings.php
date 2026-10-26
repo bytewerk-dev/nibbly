@@ -55,7 +55,9 @@ switch ($action) {
                 'ai' => true,
                 'news' => true,
                 'events' => true,
+                'people' => true,
                 'messages' => true,
+                'menus' => true,
                 'iconManager' => true
             ],
             'dashboard' => [
@@ -596,6 +598,21 @@ switch ($action) {
         session_destroy();
 
         jsonResponse(true, null, 'Installation reset');
+        break;
+
+    // ─── Site languages (Settings → Language) ───────────────────────
+
+    case 'add-site-language':
+        require_once NIBBLY_ADMIN_DIR . '/../includes/site-languages.php';
+        $result = nibblyAddSiteLanguage(dirname(NIBBLY_ADMIN_DIR), (string)($_POST['code'] ?? ''), (string)($_POST['from'] ?? ''));
+        jsonResponse($result['ok'], $result['copied'] ?? null, $result['message']);
+        break;
+
+    case 'reorder-site-languages':
+        require_once NIBBLY_ADMIN_DIR . '/../includes/site-languages.php';
+        $order = json_decode((string)($_POST['order'] ?? ''), true);
+        $result = nibblyReorderSiteLanguages(dirname(NIBBLY_ADMIN_DIR), is_array($order) ? $order : []);
+        jsonResponse($result['ok'], null, $result['message']);
         break;
 
     // ─── Site Backup ────────────────────────────────────────────────

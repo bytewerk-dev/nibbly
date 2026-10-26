@@ -34,7 +34,7 @@ $isAdminUser = ($userRole === 'admin');
 
 // Load settings for theme
 $_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg';
-$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => ['adminTheme' => 'light', 'preset' => 'soft', 'density' => 'auto', 'font' => 'system', 'fontSize' => 'default', 'primaryColor' => '#3858e9', 'accentColor' => '', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'dangerColor' => '', 'warningColor' => '', 'successColor' => '', 'buttonGlow' => true, 'buttonRadius' => 6], 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'messages' => true, 'iconManager' => true], 'dashboard' => ['itemsPerPage' => 50, 'iconManagerItemsPerPage' => 50, 'mediaItemsPerPage' => 25]];
+$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => ['adminTheme' => 'light', 'preset' => 'soft', 'density' => 'auto', 'font' => 'system', 'fontSize' => 'default', 'primaryColor' => '#3858e9', 'accentColor' => '', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'dangerColor' => '', 'warningColor' => '', 'successColor' => '', 'buttonGlow' => true, 'buttonRadius' => 6], 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'people' => true, 'messages' => true, 'menus' => true, 'iconManager' => true], 'dashboard' => ['itemsPerPage' => 50, 'iconManagerItemsPerPage' => 50, 'mediaItemsPerPage' => 25]];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     $loadedSettings = json_decode(file_get_contents(SETTINGS_PATH), true);
     if (is_array($loadedSettings)) {
@@ -49,7 +49,7 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     }
 }
 $adminTheme = $siteSettings['theme']['adminTheme'] ?? 'light';
-$dashboardModules = array_replace(['news' => true, 'events' => true, 'messages' => true, 'iconManager' => true, 'ai' => true], is_array($siteSettings['modules'] ?? null) ? $siteSettings['modules'] : []);
+$dashboardModules = array_replace(['news' => true, 'events' => true, 'people' => true, 'messages' => true, 'menus' => true, 'iconManager' => true, 'ai' => true], is_array($siteSettings['modules'] ?? null) ? $siteSettings['modules'] : []);
 $aiFeaturesEnabled = !empty($dashboardModules['ai']);
 $aiDashboardVisible = $aiFeaturesEnabled;
 $_aiDashboardPublicSettings = $aiFeaturesEnabled && function_exists('nibblyAiLoadSettings') ? nibblyAiLoadSettings(true) : [];
@@ -61,7 +61,9 @@ $_aiDashboardCopilotAvailable = $aiFeaturesEnabled
 $validDashboardTabs = ['home', 'content', 'settings'];
 if (!empty($dashboardModules['news'])) $validDashboardTabs[] = 'news';
 if (!empty($dashboardModules['events'])) $validDashboardTabs[] = 'events';
+if (!empty($dashboardModules['people'])) $validDashboardTabs[] = 'people';
 if (!empty($dashboardModules['messages'])) $validDashboardTabs[] = 'mails';
+if ($isAdminUser && !empty($dashboardModules['menus'])) $validDashboardTabs[] = 'menus';
 if ($isAdminUser) $validDashboardTabs[] = 'media';
 if ($isAdminUser && !empty($dashboardModules['iconManager'])) $validDashboardTabs[] = 'icons';
 if ($isAdminUser) $validDashboardTabs[] = 'backup';
@@ -71,6 +73,8 @@ if ($isAdminUser) $validDashboardTabs[] = 'system';
 function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): string {
     static $paths = [
         'hamburger' => '<path d="M3 12h18M3 6h18M3 18h18"/>',
+        'chevron-up'   => '<path d="M18 15l-6-6-6 6"/>',
+        'chevron-down' => '<path d="M6 9l6 6 6-6"/>',
         'collapse'  => '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>',
         'home'      => '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/>',
         'edit'      => '<path d="M12 20h9M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4L16.5 3.5z"/>',
@@ -90,6 +94,8 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         'upload'    => '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
         'alert'     => '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
         'refresh'   => '<path d="M21 12a9 9 0 11-2.64-6.36"/><path d="M21 3v6h-6"/>',
+        'users' => '<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a7 7 0 0 1 14 0v2M17 4a4 4 0 0 1 0 8M22 21v-2a7 7 0 0 0-4-6"/>',
+        'menu-dropdown' => '<rect x="3" y="3" width="18" height="7" rx="2"/><path d="M15 6l2 2 2-2M6 14h12M6 19h8"/>',
         'ai'        => '<path d="M12 2l1.6 5.2L19 9l-5.4 1.8L12 16l-1.6-5.2L5 9l5.4-1.8L12 2z"/><path d="M19 14l.8 2.7L22 17.5l-2.2.8L19 21l-.8-2.7-2.2-.8 2.2-.8L19 14z"/><path d="M5 13l.7 2.1L8 16l-2.3.9L5 19l-.7-2.1L2 16l2.3-.9L5 13z"/>',
     ];
     $p = $paths[$name] ?? '';
@@ -147,7 +153,11 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
     // The saved base colour and the optional overrides reach the stylesheet as
     // custom properties on :root; css/nibbly-admin-tokens.css derives everything
     // else per preset. Browsers without relative colour syntax get the older
-    // color-mix() derivation inside @supports not (...).
+    // color-mix() derivation inside @supports not (...); the semantic shades
+    // (danger, warning, success) mix from --nb-*-base in the token file's
+    // static block, so the saved colours reach those browsers as well.
+    // admin/dashboard/scripts/settings.php → themeFallbackCss() mirrors this
+    // block for the live preview.
     $_t = $siteSettings['theme'];
     $_pcLight = preg_match('/^#[0-9a-fA-F]{6}$/', (string)$_t['primaryColor']) ? strtolower((string)$_t['primaryColor']) : '#3858e9';
     $_acRaw = strtolower((string)($_t['accentColor'] ?? ''));
@@ -239,7 +249,8 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
             <span class="topbar-dashboard"><?php echo htmlspecialchars($_siteLabel !== '' ? $_siteLabel : t('dashboard')); ?></span>
         </div>
         <h1 class="topbar-title" id="topbarTitle"><?php echo t('pages.title'); ?></h1>
-        <div class="topbar-selectors" id="topbarSelectors" style="display: none;">
+        <!-- Language and page of the page editor: kept as state only; the editor's language switch replaces them -->
+        <div class="topbar-selectors" id="topbarSelectors" hidden>
             <select id="langSelect" class="topbar-select">
                 <?php
                 $siteLanguages = isset($SITE_LANGUAGES) ? $SITE_LANGUAGES : ['de' => 'Deutsch', 'en' => 'English'];
@@ -282,6 +293,17 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                 <button class="sidebar-nav-item" onclick="switchTab('events')" data-tab="events">
                     <?php echo nbIcon('calendar'); ?>
                     <span><?php echo t('nav.events'); ?></span>
+                </button>
+                <?php endif; ?>
+                <?php if (!empty($dashboardModules['people'])): ?>
+                <button class="sidebar-nav-item" onclick="switchTab('people')" data-tab="people" type="button">
+                    <?php echo nbIcon('users'); ?><span><?php echo t('people.title'); ?></span>
+                </button>
+                <?php endif; ?>
+                <?php if ($isAdminUser && !empty($dashboardModules['menus'])): ?>
+                <button class="sidebar-nav-item" onclick="switchTab('menus')" data-tab="menus" type="button">
+                    <?php echo nbIcon('menu-dropdown'); ?>
+                    <span><?php echo t('nav.menus_footer'); ?></span>
                 </button>
                 <?php endif; ?>
                 <?php if (!empty($dashboardModules['messages'])): ?>
@@ -412,7 +434,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
     <!-- Content Tab -->
     <div class="admin-container" id="contentTab" style="display: none;">
         <!-- Mobile Page Selector (hidden on desktop) -->
-        <div class="mobile-selectors" id="mobileSelectors">
+        <div class="mobile-selectors" id="mobileSelectors" hidden>
             <select id="langSelectMobile" class="topbar-select" onchange="syncSelect('langSelect', this.value)">
                 <?php foreach ($siteLanguages as $code => $name): ?>
                 <option value="<?php echo htmlspecialchars($code); ?>"><?php echo htmlspecialchars($name); ?></option>
@@ -431,27 +453,18 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                     <h2><?php echo t('pages.title'); ?></h2>
                 </div>
                 <div class="page-list-header-actions">
+                    <button class="btn btn-primary btn-sm" onclick="showNewPageModal()"><?php echo t('pages.new_page'); ?></button>
+                </div>
+            </div>
+            <!-- Status and language as filter links; the view language is kept in #pageListLang -->
+            <div class="nb-filter-bar">
+                <div class="nb-filter-bar__links" id="pageFilterLinks"></div>
+                <div class="nb-filter-bar__actions">
+                    <input type="hidden" id="pageListLang" value="<?php echo htmlspecialchars(SITE_LANG_DEFAULT); ?>">
                     <label class="page-list-search" for="pageListSearch">
                         <span class="sr-only"><?php echo t('pages.search_title'); ?></span>
-                        <input
-                            type="search"
-                            id="pageListSearch"
-                            class="page-list-search-input"
-                            placeholder="Seitentitel suchen..."
-                            autocomplete="off"
-                            oninput="handlePageListSearch(this.value)"
-                        >
+                        <input type="search" id="pageListSearch" class="page-list-search-input" placeholder="<?php echo htmlspecialchars(t('pages.search_title')); ?>…" autocomplete="off" oninput="handlePageListSearch(this.value)">
                     </label>
-                    <select id="pageListLang" class="topbar-select" onchange="renderPageListForLang(this.value)">
-                        <?php foreach ($siteLanguages as $code => $name): ?>
-                        <option value="<?php echo htmlspecialchars($code); ?>"<?php if ($code === SITE_LANG_DEFAULT) echo ' selected'; ?>><?php echo htmlspecialchars($name); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <button class="btn btn-secondary btn-sm page-list-trash-btn" onclick="showTrash()" id="trashToggle">
-                        <?php echo nbIcon('trash', 14); ?>
-                        <?php echo t('pages.trash'); ?>
-                    </button>
-                    <button class="btn btn-primary btn-sm" onclick="showNewPageModal()"><?php echo t('pages.new_page'); ?></button>
                 </div>
             </div>
             <div class="admin-list-footer admin-list-footer--top" id="pageListFooterTop"></div>
@@ -476,13 +489,15 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
         <div class="page-list-container" id="trashContainer" style="display: none;">
             <div class="page-list-header">
                 <div class="page-list-header-left">
-                    <h2><?php echo t('trash.title'); ?></h2>
+                    <h2><?php echo t('pages.title'); ?></h2>
                 </div>
                 <div class="page-list-header-actions">
-                    <button class="btn btn-secondary btn-sm" onclick="showPageList()">
-                        <?php echo nbIcon('back', 14); ?>
-                        <?php echo t('pages.back_to_pages'); ?>
-                    </button>
+                    <button class="btn btn-primary btn-sm" onclick="showNewPageModal()"><?php echo t('pages.new_page'); ?></button>
+                </div>
+            </div>
+            <div class="nb-filter-bar">
+                <div class="nb-filter-bar__links" id="trashFilterLinks"></div>
+                <div class="nb-filter-bar__actions">
                     <button class="btn btn-danger btn-sm" onclick="emptyTrash()" id="emptyTrashBtn" style="display:none;"><?php echo t('trash.empty_trash'); ?></button>
                 </div>
             </div>
@@ -526,8 +541,8 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                         <button class="btn btn-secondary btn-sm" id="redoBtn" onclick="editorRedo()" title="<?php echo t('editor.redo'); ?>" disabled><?php echo nbIcon('redo', 14); ?></button>
                     </div>
                     <button class="btn btn-primary btn-sm" onclick="saveContent()"><?php echo t('btn.save'); ?></button>
-                    <a class="btn btn-secondary btn-sm" id="editorViewBtn" href="#" title="<?php echo t('pages.view'); ?>"><?php echo nbIcon('eye', 14); ?></a>
-                    <button class="btn btn-secondary btn-sm editor-trash-btn" id="editorTrashBtn" onclick="trashCurrentPage()" title="<?php echo t('editor.move_to_trash'); ?>"><?php echo nbIcon('trash', 14); ?></button>
+                    <a class="btn btn-secondary btn-sm" id="editorViewBtn" href="#" target="_blank" rel="noopener"><?php echo t('pages.view'); ?></a>
+                    <button class="btn btn-secondary btn-sm editor-trash-btn" id="editorTrashBtn" onclick="trashCurrentPage()"><?php echo nbIcon('trash', 14); ?> <span><?php echo t('editor.move_to_trash'); ?></span></button>
                 </div>
             </div>
 
@@ -535,7 +550,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                 <!-- Sections inserted via JS -->
             </div>
 
-            <div style="margin-top: 20px;">
+            <div class="editor-save-footer">
                 <button class="btn btn-primary" onclick="saveContent()"><?php echo t('btn.save'); ?></button>
             </div>
         </div>
@@ -558,13 +573,10 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                     <span class="last-modified" id="eventsLastModified"></span>
                 </div>
                 <div class="page-list-header-actions">
-                    <button class="btn btn-secondary btn-sm page-list-trash-btn" onclick="showEventsTrash()">
-                        <?php echo nbIcon('trash', 14); ?>
-                        <?php echo t('pages.trash'); ?>
-                    </button>
                     <button class="btn btn-primary btn-sm" onclick="addNewEvent()"><?php echo t('events.new_event'); ?></button>
                 </div>
             </div>
+            <div class="nb-filter-bar"><div class="nb-filter-bar__links" id="eventsFilterLinks"></div></div>
             <div class="admin-list-footer admin-list-footer--top" id="eventsListFooterTop"></div>
             <div class="page-list-table-wrap">
                 <table class="page-list-table" id="eventsListTable">
@@ -588,11 +600,15 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
         <div class="page-list-container" id="eventsTrashView" style="display: none;">
             <div class="page-list-header">
                 <div class="page-list-header-left">
-                    <h2><?php echo t('trash.title'); ?></h2>
-                    <button class="btn btn-secondary btn-sm" onclick="closeEventsTrash()">
-                        <?php echo nbIcon('back', 14); ?>
-                        <?php echo t('events.back_to_events'); ?>
-                    </button>
+                    <h2><?php echo t('events.title'); ?></h2>
+                </div>
+                <div class="page-list-header-actions">
+                    <button class="btn btn-primary btn-sm" onclick="addNewEvent()"><?php echo t('events.new_event'); ?></button>
+                </div>
+            </div>
+            <div class="nb-filter-bar">
+                <div class="nb-filter-bar__links" id="eventsTrashFilterLinks"></div>
+                <div class="nb-filter-bar__actions">
                     <button class="btn btn-danger btn-sm" onclick="emptyEventsTrash()" id="emptyEventsTrashBtn" style="display:none;"><?php echo t('trash.empty_trash'); ?></button>
                 </div>
             </div>
@@ -617,17 +633,19 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
 
         <!-- Events Tab — single-event editor view -->
         <div class="editor-container" id="eventsEditorView" style="display: none;">
+            <div class="editor-back">
+                <a href="#" class="editor-back-link" onclick="closeEventEditor(); return false;">
+                    <?php echo nbIcon('back'); ?>
+                    <?php echo t('events.all_events'); ?>
+                </a>
+            </div>
             <div class="editor-header">
                 <div class="editor-header-left">
-                    <button class="btn btn-secondary btn-sm" onclick="closeEventEditor()" title="<?php echo t('btn.back'); ?>">
-                        <?php echo nbIcon('back', 16); ?>
-                        <span><?php echo t('btn.back'); ?></span>
-                    </button>
                     <h2 id="eventEditorTitle"></h2>
                 </div>
                 <div class="editor-header-right">
-                    <button class="btn btn-secondary btn-sm" id="eventEditorDeleteBtn" onclick="deleteCurrentEvent()" title="<?php echo t('editor.move_to_trash'); ?>">
-                        <?php echo nbIcon('trash', 14); ?>
+                    <button class="btn btn-secondary btn-sm editor-trash-btn" id="eventEditorDeleteBtn" onclick="deleteCurrentEvent()">
+                        <?php echo nbIcon('trash', 14); ?> <span><?php echo t('editor.move_to_trash'); ?></span>
                     </button>
                     <button class="btn btn-secondary btn-sm" onclick="closeEventEditor()"><?php echo t('btn.cancel'); ?></button>
                     <button class="btn btn-primary btn-sm" onclick="saveCurrentEvent()"><?php echo t('btn.save'); ?></button>
@@ -651,6 +669,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                     <button class="btn btn-primary btn-sm" onclick="addNewPost()"><?php echo t('news.new_post'); ?></button>
                 </div>
             </div>
+            <div class="nb-filter-bar"><div class="nb-filter-bar__links" id="newsFilterLinks"></div></div>
             <div class="admin-list-footer admin-list-footer--top" id="newsListFooterTop"></div>
             <div class="page-list-table-wrap">
                 <table class="page-list-table" id="newsListTable">
@@ -674,6 +693,38 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
             <div class="admin-list-footer" id="newsListFooter"></div>
         </div>
 
+        <!-- News Tab — trash view -->
+        <div class="page-list-container" id="newsTrashView" style="display: none;">
+            <div class="page-list-header">
+                <div class="page-list-header-left">
+                    <h2><?php echo t('news.title'); ?></h2>
+                </div>
+                <div class="page-list-header-actions">
+                    <button class="btn btn-primary btn-sm" onclick="addNewPost()"><?php echo t('news.new_post'); ?></button>
+                </div>
+            </div>
+            <div class="nb-filter-bar">
+                <div class="nb-filter-bar__links" id="newsTrashFilterLinks"></div>
+                <div class="nb-filter-bar__actions">
+                    <button class="btn btn-danger btn-sm" onclick="emptyNewsTrash()" id="emptyNewsTrashBtn" style="display:none;"><?php echo t('trash.empty_trash'); ?></button>
+                </div>
+            </div>
+            <div class="page-list-table-wrap">
+                <table class="page-list-table" id="newsTrashTable">
+                    <thead>
+                        <tr>
+                            <th class="page-list-col-title"><?php echo t('pages.col_title'); ?></th>
+                            <th class="page-list-col-date"><?php echo t('news.post_date'); ?></th>
+                            <th class="page-list-col-date"><?php echo t('trash.col_deleted'); ?></th>
+                            <th class="page-list-col-actions"><?php echo t('trash.col_actions'); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody id="newsTrashBody"></tbody>
+                </table>
+            </div>
+            <p class="trash-empty-msg" id="newsTrashEmptyMsg" style="display:none;"><?php echo t('trash.empty'); ?></p>
+        </div>
+
         <!-- News Post Editor -->
         <div class="editor-container" id="newsEditorContainer" style="display: none;">
             <div class="editor-back">
@@ -689,8 +740,8 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                 <div class="editor-header-right">
                     <span class="last-modified" id="newsLastModified"></span>
                     <button class="btn btn-primary btn-sm" onclick="savePost()"><?php echo t('btn.save'); ?></button>
-                    <a class="btn btn-secondary btn-sm" id="newsViewBtn" href="#" style="display:none;" title="<?php echo t('news.view'); ?>"><?php echo nbIcon('eye', 14); ?></a>
-                    <button class="btn btn-secondary btn-sm editor-trash-btn" id="newsTrashBtn" onclick="deleteCurrentPost()" style="display:none;" title="<?php echo t('news.delete'); ?>"><?php echo nbIcon('trash', 14); ?></button>
+                    <a class="btn btn-secondary btn-sm" id="newsViewBtn" href="#" target="_blank" rel="noopener" style="display:none;"><?php echo t('news.view'); ?></a>
+                    <button class="btn btn-secondary btn-sm editor-trash-btn" id="newsTrashBtn" onclick="trashCurrentPost()" style="display:none;"><?php echo nbIcon('trash', 14); ?> <span><?php echo t('editor.move_to_trash'); ?></span></button>
                 </div>
             </div>
             <div id="newsEditorForm">
@@ -835,7 +886,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
 
                 <div class="info-banner info-banner--warning info-banner--contained" id="aiUnavailableBanner">
                     <div class="info-banner__inner">
-                        <strong class="info-banner__title"><?php echo nbIcon('alert'); ?> <?php echo t('ai.not_configured_title'); ?></strong>
+                        <strong class="info-banner__title"><?php echo nbIcon('alert'); ?> <span id="aiUnavailableTitle"><?php echo t('ai.not_configured_title'); ?></span></strong>
                         <span class="info-banner__body">
                             <span id="aiUnavailableText"><?php echo t('ai.not_configured_text'); ?></span>
                             <?php if ($isAdminUser): ?>
@@ -1139,6 +1190,44 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
 
     <?php if ($isAdminUser): ?>
     <!-- Icon Manager Tab -->
+    <?php if ($isAdminUser && !empty($dashboardModules['menus'])): ?>
+    <div class="admin-container" id="peopleTab" style="display:none"><div id="peopleMount"></div></div>
+    <div class="admin-container" id="menusTab" style="display: none;">
+        <div class="page-list-header mf-header">
+            <div class="page-list-header-left">
+                <h2><?php echo t('menus.title'); ?></h2>
+            </div>
+            <div class="page-list-header-actions mf-header-actions">
+                <?php if (count($siteLanguages) > 1): ?>
+                <label class="mf-lang" for="mfLang"><span><?php echo t('menus.language'); ?></span>
+                    <select id="mfLang">
+                        <?php foreach ($siteLanguages as $code => $name): ?>
+                        <option value="<?php echo htmlspecialchars($code); ?>"><?php echo htmlspecialchars($name); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <?php endif; ?>
+                <button type="button" class="btn btn-secondary" id="mfRescan"><?php echo nbIcon('refresh'); ?> <span><?php echo t('menus.rescan'); ?></span></button>
+            </div>
+        </div>
+        <p class="mf-intro"><?php echo t('menus.intro'); ?></p>
+        <p class="mf-status" id="mfStatus" role="status" aria-live="polite"></p>
+        <p class="sr-only" id="mfGripHelp"><?php echo t('menus.grip_help'); ?></p>
+        <form id="mfForm" class="mf-form" novalidate>
+            <div id="mfMenus"></div>
+            <div id="mfFooter"></div>
+            <div id="mfTemplates"></div>
+            <div id="mfBackups"></div>
+            <div class="mf-save-sentinel" aria-hidden="true"></div>
+            <div class="mf-save-bar">
+                <span class="mf-save-note" id="mfSaveNote"></span>
+                <button type="button" class="btn btn-secondary" id="mfDiscard" disabled><?php echo t('menus.discard'); ?></button>
+                <button type="submit" class="btn btn-primary" id="mfSave" disabled><?php echo t('menus.save'); ?></button>
+            </div>
+        </form>
+    </div>
+    <?php endif; ?>
+
     <div class="admin-container" id="iconsTab" style="display: none;">
         <div class="page-list-container">
             <div class="page-list-header">
@@ -1184,7 +1273,6 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                 <h3><?php echo t('settings.group_site'); ?></h3>
                 <button class="settings-tab-btn active" data-settings-tab="branding"><?php echo t('settings.branding'); ?></button>
                 <button class="settings-tab-btn" data-settings-tab="theme"><?php echo t('settings.dashboard_design'); ?></button>
-                <button class="settings-tab-btn" data-settings-tab="menus"><?php echo t('settings.menus'); ?></button>
                 <button class="settings-tab-btn" data-settings-tab="modules"><?php echo t('settings.modules_nav'); ?></button>
                 <button class="settings-tab-btn" data-settings-tab="language"><?php echo t('settings.language'); ?></button>
             </section>
@@ -1314,21 +1402,21 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                                     </div>
                                 </div>
                                 <div class="form-group" id="logoDisplayGroup">
-                                    <label><?php echo t('settings.header_display'); ?></label>
+                                    <label id="settingsLogoDisplayLabel"><?php echo t('settings.header_display'); ?></label>
                                     <small class="form-hint"><?php echo t('settings.header_display_hint'); ?></small>
-                                    <div class="radio-group">
-                                        <label class="radio-option"><input type="radio" name="settingsLogoDisplay" value="favicon"> <span><?php echo t('settings.logo_display_favicon'); ?></span></label>
-                                        <label class="radio-option"><input type="radio" name="settingsLogoDisplay" value="text"> <span><?php echo t('settings.logo_display_text'); ?></span></label>
-                                        <label class="radio-option"><input type="radio" name="settingsLogoDisplay" value="both" checked> <span><?php echo t('settings.logo_display_both'); ?></span></label>
+                                    <div class="segmented" role="radiogroup" aria-labelledby="settingsLogoDisplayLabel">
+                                        <label><input type="radio" name="settingsLogoDisplay" value="favicon"><span><?php echo t('settings.logo_display_favicon'); ?></span></label>
+                                        <label><input type="radio" name="settingsLogoDisplay" value="text"><span><?php echo t('settings.logo_display_text'); ?></span></label>
+                                        <label><input type="radio" name="settingsLogoDisplay" value="both" checked><span><?php echo t('settings.logo_display_both'); ?></span></label>
                                     </div>
                                 </div>
                                 <div class="form-group" id="logoSizeGroup">
-                                    <label><?php echo t('settings.logo_size'); ?></label>
+                                    <label id="settingsLogoSizeLabel"><?php echo t('settings.logo_size'); ?></label>
                                     <small class="form-hint"><?php echo t('settings.logo_size_hint'); ?></small>
-                                    <div class="radio-group radio-group--segmented">
-                                        <label class="radio-option"><input type="radio" name="settingsLogoSize" value="small"> <span><?php echo t('settings.logo_size_small'); ?></span></label>
-                                        <label class="radio-option"><input type="radio" name="settingsLogoSize" value="medium" checked> <span><?php echo t('settings.logo_size_medium'); ?></span></label>
-                                        <label class="radio-option"><input type="radio" name="settingsLogoSize" value="large"> <span><?php echo t('settings.logo_size_large'); ?></span></label>
+                                    <div class="segmented" role="radiogroup" aria-labelledby="settingsLogoSizeLabel">
+                                        <label><input type="radio" name="settingsLogoSize" value="small"><span><?php echo t('settings.logo_size_small'); ?></span></label>
+                                        <label><input type="radio" name="settingsLogoSize" value="medium" checked><span><?php echo t('settings.logo_size_medium'); ?></span></label>
+                                        <label><input type="radio" name="settingsLogoSize" value="large"><span><?php echo t('settings.logo_size_large'); ?></span></label>
                                     </div>
                                 </div>
                                 <div class="form-group">
@@ -1355,7 +1443,13 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                     <fieldset class="settings-section">
                         <legend><?php echo t('settings.search_engines'); ?></legend>
                         <div class="form-group">
-                            <label class="checkbox-label"><input type="checkbox" id="settingsNoindexSite"> <span><?php echo t('settings.noindex_site'); ?></span></label>
+                            <label class="toggle-label">
+                                <span><?php echo t('settings.noindex_site'); ?></span>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="settingsNoindexSite">
+                                    <span class="toggle-slider"></span>
+                                </div>
+                            </label>
                             <small class="form-hint"><?php echo t('settings.noindex_site_hint'); ?></small>
                         </div>
                         <div class="form-group">
@@ -1631,6 +1725,60 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                         <button type="submit" class="btn btn-primary" id="saveLanguageBtn"><?php echo t('settings.save_language'); ?></button>
                     </div>
                 </form>
+
+                <?php
+                require_once __DIR__ . '/../includes/site-languages.php';
+                $_slAll = nibblyCurrentSiteLanguages(dirname(__DIR__)) ?: $siteLanguages;
+                $_slPrimary = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
+                ?>
+                <div class="settings-form site-languages" id="siteLanguages">
+                    <fieldset class="settings-section">
+                        <legend><?php echo t('languages.title'); ?></legend>
+                        <p class="form-hint site-languages__intro"><?php echo t('languages.intro'); ?></p>
+                        <ol class="site-lang-list" id="siteLangList">
+                            <?php foreach ($_slAll as $_slCode => $_slName): ?>
+                            <li class="site-lang-item" data-code="<?php echo htmlspecialchars($_slCode); ?>">
+                                <span class="site-lang-item__name"><?php echo htmlspecialchars($_slName); ?></span>
+                                <code class="site-lang-item__path"><?php echo $_slCode === $_slPrimary ? '/' : '/' . htmlspecialchars($_slCode) . '/'; ?></code>
+                                <?php if ($_slCode === $_slPrimary): ?><span class="site-lang-item__badge"><?php echo t('languages.primary'); ?></span><?php endif; ?>
+                                <span class="site-lang-item__actions">
+                                    <button type="button" class="btn-icon" data-site-lang-move="up" title="<?php echo htmlspecialchars(t('languages.move_up')); ?>" aria-label="<?php echo htmlspecialchars(t('languages.move_up') . ': ' . $_slName); ?>"><?php echo nbIcon('chevron-up', 14, '2'); ?></button>
+                                    <button type="button" class="btn-icon" data-site-lang-move="down" title="<?php echo htmlspecialchars(t('languages.move_down')); ?>" aria-label="<?php echo htmlspecialchars(t('languages.move_down') . ': ' . $_slName); ?>"><?php echo nbIcon('chevron-down', 14, '2'); ?></button>
+                                </span>
+                            </li>
+                            <?php endforeach; ?>
+                        </ol>
+                        <div class="settings-actions">
+                            <button type="button" class="btn btn-secondary" id="saveSiteLangOrderBtn" disabled><?php echo t('languages.save_order'); ?></button>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="settings-section">
+                        <legend><?php echo t('languages.add_title'); ?></legend>
+                        <div class="form-row-inline">
+                            <div class="form-group">
+                                <label for="newSiteLang"><?php echo t('languages.new'); ?></label>
+                                <select id="newSiteLang" class="topbar-select">
+                                    <?php foreach (nibblySiteLanguageCatalog() as $_slCode => $_slName): if (isset($_slAll[$_slCode])) continue; ?>
+                                    <option value="<?php echo htmlspecialchars($_slCode); ?>"><?php echo htmlspecialchars($_slName); ?> (<?php echo htmlspecialchars($_slCode); ?>)</option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="newSiteLangFrom"><?php echo t('languages.copy_from'); ?></label>
+                                <select id="newSiteLangFrom" class="topbar-select">
+                                    <?php foreach ($_slAll as $_slCode => $_slName): ?>
+                                    <option value="<?php echo htmlspecialchars($_slCode); ?>"<?php echo $_slCode === $_slPrimary ? ' selected' : ''; ?>><?php echo htmlspecialchars($_slName); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <small class="form-hint"><?php echo t('languages.add_hint'); ?></small>
+                        <div class="settings-actions">
+                            <button type="button" class="btn btn-primary" id="addSiteLangBtn"><?php echo t('languages.add'); ?></button>
+                        </div>
+                    </fieldset>
+                </div>
             </div>
 
             <!-- Login Panel -->
@@ -1639,15 +1787,13 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                 <p class="settings-description"><?php echo t('settings.frontend_login_redirect_hint'); ?></p>
                 <form id="loginForm" class="settings-form">
                     <div class="form-group">
-                        <span class="form-group-label"><?php echo t('settings.frontend_login_redirect'); ?></span>
-                        <div class="radio-group">
-                            <label class="radio-option">
-                                <input type="radio" name="frontendLoginRedirect" value="auto" id="frontendLoginRedirectAuto">
-                                <span><?php echo t('settings.frontend_login_redirect_auto'); ?></span>
+                        <span class="form-group-label" id="frontendLoginRedirectLabel"><?php echo t('settings.frontend_login_redirect'); ?></span>
+                        <div class="segmented" role="radiogroup" aria-labelledby="frontendLoginRedirectLabel">
+                            <label>
+                                <input type="radio" name="frontendLoginRedirect" value="auto" id="frontendLoginRedirectAuto"><span><?php echo t('settings.frontend_login_redirect_auto'); ?></span>
                             </label>
-                            <label class="radio-option">
-                                <input type="radio" name="frontendLoginRedirect" value="dashboard" id="frontendLoginRedirectDashboard">
-                                <span><?php echo t('settings.frontend_login_redirect_dashboard'); ?></span>
+                            <label>
+                                <input type="radio" name="frontendLoginRedirect" value="dashboard" id="frontendLoginRedirectDashboard"><span><?php echo t('settings.frontend_login_redirect_dashboard'); ?></span>
                             </label>
                         </div>
                     </div>
@@ -1985,6 +2131,17 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                     </aside>
 
                     <form id="formsAdminForm" class="settings-form forms-admin-editor">
+                        <?php if (count($siteLanguages ?? []) > 1): ?>
+                        <div class="form-group forms-text-lang">
+                            <label id="formTextLangLabel"><?php echo t('forms.text_language'); ?></label>
+                            <div class="segmented" role="radiogroup" aria-labelledby="formTextLangLabel">
+                                <?php foreach ($siteLanguages as $_ftCode => $_ftName): ?>
+                                <label><input type="radio" name="formTextLang" value="<?php echo htmlspecialchars($_ftCode); ?>"<?php if ($_ftCode === (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en')) echo ' checked'; ?>><span><?php echo htmlspecialchars($_ftName); ?></span></label>
+                                <?php endforeach; ?>
+                            </div>
+                            <small class="form-hint"><?php echo t('forms.text_language_hint'); ?></small>
+                        </div>
+                        <?php endif; ?>
                         <fieldset class="settings-section">
                             <legend><?php echo t('forms.base_data'); ?></legend>
                             <div class="form-row-inline">
@@ -2437,36 +2594,6 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                 </div>
             </div>
 
-            <!-- Menus Panel -->
-            <div class="settings-panel" id="settingsPanel-menus">
-                <h2><?php echo t('settings.menus'); ?></h2>
-                <p class="settings-description"><?php echo t('settings.menus_desc'); ?></p>
-
-                <div class="form-group">
-                    <label for="menuOrderSelect"><?php echo t('settings.menu_select'); ?></label>
-                    <select id="menuOrderSelect" class="form-control" style="max-width: 300px;">
-                        <?php
-                        require_once __DIR__ . '/../includes/menu-helpers.php';
-                        $defaultLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
-                        foreach (getRegisteredMenuIds() as $mid):
-                            $mlabel = getMenuLabel($mid, $adminLang ?? $defaultLang);
-                        ?>
-                        <option value="<?php echo htmlspecialchars($mid); ?>"><?php echo htmlspecialchars($mlabel); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <div id="menuOrderList" class="menu-order-list"></div>
-                <div id="menuOrderEmpty" class="menu-order-empty" style="display:none;">
-                    <p><?php echo t('settings.menu_order_empty'); ?></p>
-                </div>
-
-                <div class="settings-actions">
-                    <button type="button" class="btn btn-primary" id="saveMenuOrderBtn" disabled><?php echo t('settings.save_menus'); ?></button>
-                </div>
-
-            </div>
-
             <!-- Dashboard Modules Panel -->
             <div class="settings-panel" id="settingsPanel-modules">
                 <h2><?php echo t('settings.modules'); ?></h2>
@@ -2475,6 +2602,15 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                     <fieldset class="settings-section settings-section--compact">
                         <legend><?php echo t('settings.modules'); ?></legend>
                         <div class="settings-toggle-grid settings-toggle-grid--modules">
+                            <div class="form-group access-toggle-row access-toggle-row--module">
+                                <label class="toggle-label">
+                                    <span><?php echo t('people.title'); ?></span>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" id="modulePeople" checked>
+                                        <span class="toggle-slider"></span>
+                                    </div>
+                                </label>
+                            </div>
                             <div class="form-group access-toggle-row access-toggle-row--module">
                                 <label class="toggle-label">
                                     <span><?php echo t('settings.module_news'); ?></span>
@@ -2489,6 +2625,15 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                                     <span><?php echo t('settings.module_events'); ?></span>
                                     <div class="toggle-switch">
                                         <input type="checkbox" id="moduleEvents" checked>
+                                        <span class="toggle-slider"></span>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="form-group access-toggle-row access-toggle-row--module">
+                                <label class="toggle-label">
+                                    <span><?php echo t('settings.module_menus'); ?></span>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" id="moduleMenus" checked>
                                         <span class="toggle-slider"></span>
                                     </div>
                                 </label>
@@ -2745,15 +2890,13 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                 <p class="scheduled-form__hint"><?php echo t('settings.scheduled_enabled_hint'); ?></p>
 
                 <div class="scheduled-form__mode">
-                    <label><?php echo t('settings.cron_mode'); ?></label>
-                    <div class="radio-group radio-group--segmented">
-                        <label class="radio-option">
-                            <input type="radio" name="scheduledCronMode" value="server" checked>
-                            <span><?php echo t('settings.cron_mode_server'); ?></span>
+                    <label id="scheduledCronModeLabel"><?php echo t('settings.cron_mode'); ?></label>
+                    <div class="segmented" role="radiogroup" aria-labelledby="scheduledCronModeLabel">
+                        <label>
+                            <input type="radio" name="scheduledCronMode" value="server" checked><span><?php echo t('settings.cron_mode_server'); ?></span>
                         </label>
-                        <label class="radio-option">
-                            <input type="radio" name="scheduledCronMode" value="web">
-                            <span><?php echo t('settings.cron_mode_web'); ?></span>
+                        <label>
+                            <input type="radio" name="scheduledCronMode" value="web"><span><?php echo t('settings.cron_mode_web'); ?></span>
                         </label>
                     </div>
                     <p class="scheduled-form__hint"><?php echo t('settings.cron_mode_hint'); ?></p>
@@ -2890,7 +3033,8 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
             <h3 id="modalTitle"><?php echo t('btn.confirm'); ?></h3>
             <div id="modalText" class="modal-text"></div>
             <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeModal()"><?php echo t('btn.cancel'); ?></button>
+                <button class="btn btn-secondary" id="modalCancel" onclick="closeModal()"><?php echo t('btn.cancel'); ?></button>
+                <button class="btn btn-secondary" id="modalAlt" style="display: none;"></button>
                 <button class="btn btn-danger" id="modalConfirm"><?php echo t('btn.confirm'); ?></button>
             </div>
         </div>
@@ -3070,20 +3214,24 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
     <script src="../js/image-manager.js?v=<?php echo @filemtime(__DIR__ . '/../js/image-manager.js') ?: time(); ?>"></script>
     <script>
     <?php require __DIR__ . '/dashboard/scripts/bootstrap.php'; ?>
+    <?php require __DIR__ . '/dashboard/scripts/page-writing.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/pages.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/media.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/page-actions.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/navigation.php'; ?>
+    <?php require __DIR__ . '/dashboard/scripts/menus.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/icons.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/messages.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/news.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/overview-ai.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/forms.php'; ?>
+    <?php require __DIR__ . '/dashboard/scripts/languages.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/settings.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/password.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/backups.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/reset.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/events.php'; ?>
+    <?php require __DIR__ . '/dashboard/scripts/people.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/users-navigation.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/system.php'; ?>
     </script>

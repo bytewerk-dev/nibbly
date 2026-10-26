@@ -7,6 +7,13 @@
     let currentAiSettings = null;
     let aiChatMessages = [];
     let dashboardAiImageUsable = false;
+    // "Need a new image?" hints beside image fields: only while image generation is set up and on
+    function syncAiImageHints() {
+        document.querySelectorAll('.ai-field-hint').forEach(hint => { hint.hidden = !dashboardAiImageUsable; });
+        document.querySelectorAll('.nb-ai-translate').forEach(button => { button.hidden = !dashboardAiTextUsable; });
+    }
+    // "Translate from active language": only while AI text generation is set up and on
+    let dashboardAiTextUsable = false;
     let currentDashboardAnalyticsRange = { period: 'days', count: 30 };
     let formsAdminLoaded = false;
 
@@ -75,6 +82,8 @@
         const raw = (window.location.hash || '').replace(/^#/, '');
         if (!raw) return { tab: 'home', subtab: '' };
         const parts = raw.split('/').filter(Boolean);
+        // The menu order moved from Settings → Menus to its own tab.
+        if (parts[0] === 'settings' && parts[1] === 'menus') return { tab: VALID_DASHBOARD_TABS.indexOf('menus') !== -1 ? 'menus' : 'home', subtab: '' };
         const first = parts[0] || 'home';
         const tab = DASHBOARD_HASH_ALIASES[first] || first;
         return {
@@ -231,6 +240,17 @@
         if (tab !== 'content') {
             dismissFrontendEditBanner();
         }
+        // Unsaved menu or footer changes stay unless the user lets them go.
+        if (tab !== 'people' && window.NbPeople && !window.NbPeople.canLeave()) {
+            history.replaceState({view:'dashboard',tab:'people',subtab:''}, '', DASHBOARD_PATH + '#people');
+            return;
+        }
+        if (tab !== 'menus' && window.NbMenusEditor && !window.NbMenusEditor.canLeave()) {
+            if (window.location.hash.replace(/^#/, '').split('/')[0] !== 'menus') {
+                history.replaceState({ view: 'dashboard', tab: 'menus', subtab: '' }, '', DASHBOARD_PATH + '#menus');
+            }
+            return;
+        }
 
         const systemTab = document.getElementById('systemTab');
         if (systemTab) systemTab.style.display = tab === 'system' ? 'block' : 'none';
@@ -238,25 +258,18 @@
         document.getElementById('homeTab').style.display = tab === 'home' ? 'block' : 'none';
         document.getElementById('contentTab').style.display = tab === 'content' ? 'block' : 'none';
         document.getElementById('newsTab').style.display = tab === 'news' ? 'block' : 'none';
+        document.getElementById('peopleTab').style.display = tab === 'people' ? 'block' : 'none';
         document.getElementById('eventsTab').style.display = tab === 'events' ? 'block' : 'none';
         document.getElementById('mailsTab').style.display = tab === 'mails' ? 'block' : 'none';
         const mediaTab = document.getElementById('mediaTab');
         if (mediaTab) mediaTab.style.display = tab === 'media' ? 'block' : 'none';
+        const menusTab = document.getElementById('menusTab');
+        if (menusTab) menusTab.style.display = tab === 'menus' ? 'block' : 'none';
         const iconsTab = document.getElementById('iconsTab');
         if (iconsTab) iconsTab.style.display = tab === 'icons' ? 'block' : 'none';
         document.getElementById('settingsTab').style.display = tab === 'settings' ? 'block' : 'none';
         document.getElementById('backupTab').style.display = tab === 'backup' ? 'block' : 'none';
         if (typeof syncAssistantEmbed === 'function') syncAssistantEmbed();
-
-        // Show/hide topbar selectors — only when editing a page (not on page list)
-        const topbarSelectors = document.getElementById('topbarSelectors');
-        if (topbarSelectors) {
-            if (tab === 'content' && currentPage) {
-                topbarSelectors.style.display = 'flex';
-            } else {
-                topbarSelectors.style.display = 'none';
-            }
-        }
 
         // When switching to content tab, always show page list
         if (tab === 'content') {
@@ -269,7 +282,7 @@
         if (activeNavItem) activeNavItem.classList.add('active');
 
         // Update topbar title
-        const titles = { system: t('system.title'), home: t('dashboard_home.title'), content: currentPage ? t('editor.title') : t('pages.title'), news: t('news.title'), mails: t('mails.title'), events: t('events.title'), media: t('nav.media_library'), icons: t('icons.title'), settings: t('settings.title'), backup: t('settings.backup') };
+        const titles = { system: t('system.title'), home: t('dashboard_home.title'), content: currentPage ? t('editor.title') : t('pages.title'), news: t('news.title'), mails: t('mails.title'), events: t('events.title'), people: t('people.title'), media: t('nav.media_library'), menus: t('menus.title'), icons: t('icons.title'), settings: t('settings.title'), backup: t('settings.backup') };
         nbSetTopbarTitle([titles[tab] || 'Dashboard']);
 
         // Close sidebar on mobile after tab switch
@@ -314,6 +327,10 @@
                 loadEventsEditor();
             }
         }
+        if (tab === 'people' && window.NbPeople) window.NbPeople.open();
+        if (tab === 'menus' && window.NbMenusEditor) {
+            window.NbMenusEditor.open();
+        }
         if (tab === 'icons' && typeof loadIconManager === 'function') {
             loadIconManager();
         }
@@ -327,3 +344,44 @@
 
         updateDashboardHash(tab, tab === 'settings' ? (options.settingsTab || getActiveSettingsTab()) : '', !!options.replace);
     }
+
+    // ---- Truncated pill labels (Pop preset) ------------------------------------
+    // Pop pills stay on one line and end in an ellipsis when the label does not fit
+    // (other languages run longer). A truncated pill shows its full text as a
+    // tooltip; one that fits again loses the tooltip it was given here.
+    (function markTruncatedPills() {
+        // Browser only (script sandboxes in the tests have no timers or observers)
+        if (typeof setTimeout !== 'function' || typeof MutationObserver === 'undefined') return;
+        const PILL_SELECTOR = [
+            '.settings-section > legend', '.dashboard-panel h3', '.dashboard-section-title',
+            '.dashboard-section-header h3', '.ai-card > h3', '.backup-site-card__info h3',
+            '.scheduled-list__header h4', '.backup-remote__header h4', '.dashboard-stat-card span',
+            '.dashboard-status-chip__label', '.settings-panel h3.settings-subheading',
+            '.frontend-logos-block__title', '.scheduled-form__fieldset legend',
+            '.ai-image-jobs-panel__copy h4', '.ai-image-history__header h4', '.mf-section-title'
+        ].join(',');
+        let timer = null;
+        const update = () => {
+            timer = null;
+            const pop = document.documentElement.dataset.themePreset === 'pop';
+            document.querySelectorAll(PILL_SELECTOR).forEach(pill => {
+                const truncated = pop && pill.offsetParent !== null && pill.scrollWidth > pill.clientWidth + 1;
+                if (truncated) {
+                    pill.title = pill.textContent.trim();
+                    pill.dataset.pillTitle = '1';
+                } else if (pill.dataset.pillTitle) {
+                    pill.removeAttribute('title');
+                    delete pill.dataset.pillTitle;
+                }
+            });
+        };
+        const schedule = () => { if (!timer) timer = setTimeout(update, 150); };
+        if (typeof window.addEventListener === 'function') window.addEventListener('resize', schedule);
+        const main = (document.getElementById && document.getElementById('adminMain')) || document.body;
+        if (!main) return;
+        if (typeof ResizeObserver !== 'undefined') new ResizeObserver(schedule).observe(main);
+        new MutationObserver(schedule).observe(main, { childList: true, subtree: true, characterData: true });
+        new MutationObserver(schedule).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme-preset', 'data-font-size'] });
+        schedule();
+    })();
+

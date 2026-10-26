@@ -475,11 +475,13 @@
                 <div class="section-actions">
                     <button class="btn btn-sm btn-secondary" onclick="moveSection(${index}, -1)">&#8593;</button>
                     <button class="btn btn-sm btn-secondary" onclick="moveSection(${index}, 1)">&#8595;</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteSection(${index})">${icon('trash', 14)}</button>
+                    <button type="button" class="btn btn-sm btn-secondary section-delete-btn" onclick="deleteSection(${index})" title="${t('section.delete')}" aria-label="${t('section.delete')}">${icon('trash', 14)}</button>
                 </div>
             </div>
             <div class="section-fields">${content}</div>
         `;
+        // A section without fields (e.g. a divider) has nothing to fold
+        if (!content.trim()) div.querySelector('.section-toggle-btn')?.remove();
 
         container.appendChild(div);
         div.addEventListener('dragstart', e => {

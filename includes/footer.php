@@ -6,6 +6,7 @@ $defaultLang = $defaultLang ?? (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT
 $PAGE_MAPPING = $PAGE_MAPPING ?? [];
 $langLinks = $langLinks ?? [];
 require_once __DIR__ . '/page-path.php';
+require_once __DIR__ . '/menu-helpers.php';
 
 // Check if admin is logged in
 require_once __DIR__ . '/access-guard.php';
@@ -65,29 +66,21 @@ if (!function_exists('parseFooterShortcodes')) {
 }
 
 $copyrightHtml = parseFooterShortcodes($copyrightRaw);
-$_footerGithub = 'https://github.com/bytewerk-dev/nibbly';
 $_adminAccessBase = ($basePath === '' ? '/admin/' : rtrim($basePath, '/') . '/admin/');
 $_adminAccessBaseJson = json_encode($_adminAccessBase, JSON_UNESCAPED_SLASHES);
 $_footerLabels = [
-    'docs' => ['en' => 'Docs', 'de' => 'Dokumentation', 'es' => 'Docs'],
-    'privacy' => ['en' => 'Privacy', 'de' => 'Datenschutz', 'es' => 'Privacidad'],
-    'imprint' => ['en' => 'Imprint', 'de' => 'Impressum', 'es' => 'Aviso legal'],
     'language' => ['en' => 'Language selection', 'de' => 'Sprachauswahl', 'es' => 'Selección de idioma'],
 ];
-$_footerPageHref = function (string $page) use ($basePath, $currentLang, $PAGE_MAPPING, $defaultLang): string {
-    if (isset($PAGE_MAPPING[$page][$currentLang])) {
-        return $basePath . $PAGE_MAPPING[$page][$currentLang];
-    }
-    if (isset($PAGE_MAPPING[$page][$defaultLang])) {
-        return $basePath . $PAGE_MAPPING[$page][$defaultLang];
-    }
-    return $basePath . $page;
-};
-$_footerSummary = [
-    'en' => 'nibbly is a flat-file CMS written in PHP.<br>Small. Friendly. Open source.',
-    'de' => 'nibbly ist ein Flat-File-CMS in PHP.<br>Klein. Freundlich. Open Source.',
-    'es' => 'nibbly es un CMS flat-file escrito en PHP.<br>Pequeño. Amable. Open source.',
-];
+// Editable under Menus & Footer (footer.json → summary); the core text until then.
+$_footerSummaryVal = $footerData['summary'] ?? null;
+$_footerSummaryHtml = is_array($_footerSummaryVal) ? (string)($_footerSummaryVal[$currentLang] ?? '') : (string)($_footerSummaryVal ?? '');
+if (trim($_footerSummaryHtml) === '') {
+    $_footerSummaryHtml = nibblyCoreFooterSummary($currentLang);
+} else {
+    // footer.json can also be written outside the dashboard editor; print rich-text rules only.
+    require_once __DIR__ . '/html-sanitizer.php';
+    $_footerSummaryHtml = nibblySanitizeRichHtml($_footerSummaryHtml);
+}
 ?>
     <!-- Footer -->
     <footer class="footer"<?php if ($isAdminLoggedIn): ?> data-content-page="footer"<?php endif; ?>>
@@ -102,15 +95,15 @@ $_footerSummary = [
             </div>
 
             <div class="footer-summary">
-                <p><?php echo $_footerSummary[$currentLang] ?? $_footerSummary['en']; ?></p>
+                <p><?php echo $_footerSummaryHtml; ?></p>
             </div>
 
             <div class="footer-actions">
                 <nav class="footer-links" aria-label="Footer">
-                    <a href="<?php echo htmlspecialchars($_footerPageHref('docs')); ?>"><?php echo htmlspecialchars($_footerLabels['docs'][$currentLang] ?? $_footerLabels['docs']['en']); ?></a>
-                    <a href="<?php echo htmlspecialchars($_footerGithub); ?>" target="_blank" rel="noopener">GitHub</a>
-                    <a href="<?php echo htmlspecialchars($_footerPageHref('privacy')); ?>"><?php echo htmlspecialchars($_footerLabels['privacy'][$currentLang] ?? $_footerLabels['privacy']['en']); ?></a>
-                    <a href="<?php echo htmlspecialchars($_footerPageHref('legal-notice')); ?>"><?php echo htmlspecialchars($_footerLabels['imprint'][$currentLang] ?? $_footerLabels['imprint']['en']); ?></a>
+                    <?php /* Menus & Footer → "Footer-Links"; until edited: the links registered in includes/menu-adapters.php */ ?>
+                    <?php foreach (nibblyMenuItems('footer-links', $currentLang) as $_footerLink): ?>
+                    <a href="<?php echo htmlspecialchars(nibblyMenuHref($_footerLink, $basePath)); ?>"<?php echo nibblyMenuLinkAttrs($_footerLink); ?>><?php echo htmlspecialchars($_footerLink['label']); ?></a>
+                    <?php endforeach; ?>
                 </nav>
 
                 <?php if (!empty($langLinks) && count($langLinks) > 1): ?>
@@ -626,10 +619,13 @@ $_footerSummary = [
                 runInsertedScripts(container);
                 container.querySelectorAll('form.contact-form').forEach(bindContactForm);
                 container.dataset.loaded = 'true';
+                container.removeAttribute('aria-busy');
                 container.dispatchEvent(new CustomEvent('nibbly:lazy-form-loaded', { bubbles: true }));
             })
             .catch(function() {
-                container.innerHTML = '<p class="form-feedback error">This form could not be loaded. Please try again later.</p>';
+                container.innerHTML = '<p class="form-feedback error"></p>';
+                container.firstChild.textContent = container.dataset.loadError || '';
+                container.removeAttribute('aria-busy');
             })
             .finally(function() {
                 delete container.dataset.loading;
@@ -728,6 +724,57 @@ $_footerSummary = [
     <?php if (!empty($_editorVars)): ?>
     <style>:root{<?php echo implode(';', $_editorVars); ?>}</style>
     <?php endif; ?>
+    <?php
+    // Admin bar = the dashboard's topbar: the same preset, mode, font and colours
+    // (Settings → Design). js/inline-editor.js puts the attributes on #admin-bar;
+    // the base colours and sidebar overrides are scoped to the bar here, so the
+    // tokens in css/nibbly-admin-tokens.css derive the topbar for the bar alone.
+    $_abTheme = is_array($_settings['theme'] ?? null) ? $_settings['theme'] : [];
+    $_abHex = static function ($value): string {
+        return (is_string($value) && preg_match('/^#[0-9a-fA-F]{6}$/', $value)) ? strtolower($value) : '';
+    };
+    $_abPick = static function ($value, array $allowed, string $fallback): string {
+        return in_array($value, $allowed, true) ? $value : $fallback;
+    };
+    $_abBase = $_abHex($_abTheme['primaryColor'] ?? '') ?: '#3858e9';
+    $_abAccent = $_abHex($_abTheme['accentColor'] ?? '');
+    if ($_abAccent === '') $_abAccent = $_abBase;
+    $_abFontRaw = $_abTheme['font'] ?? 'system';
+    if ($_abFontRaw === 'geist') $_abFontRaw = 'plex';
+    $_abConfig = [
+        'mode' => $_abPick($_abTheme['adminTheme'] ?? 'light', ['light', 'dark', 'system'], 'light'),
+        'preset' => $_abPick($_abTheme['preset'] ?? 'soft', ['soft', 'classic', 'paper', 'studio', 'console', 'pop'], 'soft'),
+        'density' => $_abPick($_abTheme['density'] ?? 'auto', ['auto', 'compact', 'comfortable'], 'auto'),
+        'font' => $_abPick($_abFontRaw, ['system', 'inter', 'plex', 'atkinson', 'public', 'geist-mono'], 'system'),
+        'fontSize' => $_abPick($_abTheme['fontSize'] ?? 'default', ['small', 'default', 'large'], 'default'),
+    ];
+    $_abVars = ['--nb-base:' . $_abBase, '--nb-accent-base:' . $_abAccent];
+    $_abSemantic = [];
+    foreach (['dangerColor' => '--nb-danger-base', 'warningColor' => '--nb-warning-base', 'successColor' => '--nb-success-base'] as $_abKey => $_abVar) {
+        $_abColor = $_abHex($_abTheme[$_abKey] ?? '');
+        if ($_abColor !== '') $_abSemantic[] = $_abVar . ':' . $_abColor;
+    }
+    // The semantic colours also go on :root, so dialogs the editor opens
+    // outside the bar (media library, confirmations, copilot) match the dashboard.
+    // :root has no --nb-base of its own, so success without an override takes
+    // the colour it follows in the dashboard (the accent in Studio, else the base).
+    $_abRootSemantic = $_abSemantic;
+    if ($_abHex($_abTheme['successColor'] ?? '') === '') {
+        $_abRootSemantic[] = '--nb-success-base:' . ($_abConfig['preset'] === 'studio' ? $_abAccent : $_abBase);
+    }
+    $_abCss = ':root{' . implode(';', $_abRootSemantic) . '}';
+    $_abCss .= '#admin-bar{' . implode(';', array_merge($_abVars, $_abSemantic)) . '}';
+    if (($_abSidebar = $_abHex($_abTheme['sidebarBg'] ?? '')) !== '') {
+        $_abCss .= '#admin-bar[data-site-theme="light"]{--nb-sidebar-bg:' . $_abSidebar . ';--nb-topbar-bg:' . $_abSidebar . '}';
+    }
+    if (($_abSidebarDark = $_abHex($_abTheme['darkSidebarBg'] ?? '')) !== '') {
+        $_abCss .= '#admin-bar[data-site-theme="dark"]{--nb-sidebar-bg:' . $_abSidebarDark . ';--nb-topbar-bg:' . $_abSidebarDark . '}';
+    }
+    ?>
+    <?php if ($_abConfig['font'] !== 'system'): ?>
+    <link rel="stylesheet" href="<?php echo $_v('admin/fonts.css'); ?>">
+    <?php endif; ?>
+    <style id="nb-admin-bar-theme"><?php echo $_abCss; ?></style>
     <script>
     window.BlockTypeRegistry = <?php echo json_encode(getBlockTypes(), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT); ?>;
     <?php
@@ -737,6 +784,7 @@ $_footerSummary = [
     window.NB_LANG = <?php echo json_encode(array_merge(tAll(), tEditorAll()), JSON_UNESCAPED_UNICODE); ?>;
     window.NB_MENUS = <?php echo json_encode(getMenuRegistry()['menus'] ?? [], JSON_UNESCAPED_UNICODE); ?>;
     window.NB_AVAILABLE_ICONS = <?php echo json_encode(function_exists('getAvailableIcons') ? getAvailableIcons() : [], JSON_UNESCAPED_UNICODE); ?>;
+    window.NB_ADMIN_BAR_THEME = <?php echo json_encode($_abConfig); ?>;
     window.NB_SEO_HEALTH = <?php echo json_encode($_seoHealth ?? ['status' => 'yellow', 'score' => 0, 'label' => 'SEO prüfen', 'issues' => ['SEO-Daten konnten nicht berechnet werden.']], JSON_UNESCAPED_UNICODE); ?>;
     window.NB_AI_FEATURES_ENABLED = <?php echo json_encode($_aiModuleEnabled); ?>;
     window.NB_AI_COPILOT_AVAILABLE = <?php echo json_encode($_aiCopilotAvailable); ?>;

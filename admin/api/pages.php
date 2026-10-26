@@ -76,6 +76,10 @@ switch ($action) {
             jsonResponse(false, null, 'Error creating page');
         }
 
+        // Managed menus (Menus & Footer) take the new page like the derived ones always did.
+        require_once NIBBLY_ADMIN_DIR . '/../includes/menu-helpers.php';
+        nibblyMenusSyncPageNav($lang, $slug, [], getNavLocations($content));
+
         jsonResponse(true, ['page' => $pageName, 'pageList' => buildPageList()], 'Page created');
         break;
 
@@ -383,6 +387,15 @@ switch ($action) {
 
         if ($result === false) {
             jsonResponse(false, null, 'Error saving');
+        }
+
+        // Page settings → menu checkboxes reach managed menus (Menus & Footer).
+        // The dashboard form sends nav_sync=1: its checkboxes show the managed
+        // state, so they decide; other savers only pass on a changed "nav".
+        if (array_key_exists('nav', $contentData) && ($pageParts = nibblyPageParseContentKey($page)) !== null) {
+            require_once NIBBLY_ADMIN_DIR . '/../includes/menu-helpers.php';
+            nibblyMenusSyncPageNav($pageParts['lang'], $pageParts['path'],
+                $existingData ? getNavLocations($existingData) : [], (array)$contentData['nav'], !empty($_POST['nav_sync']));
         }
 
         $responseData = ['lastModified' => $contentData['lastModified']];

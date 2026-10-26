@@ -76,13 +76,14 @@
     /* --transition-slow: 0.5s ease; */
 
     /* Header */
-    /* --header-height: 80px; */
+    /* --header-height: 5rem; */
     /* --header-bg: rgba(255, 255, 255, 0.95); */
 
-    /* Container */
-    /* --container-max: 1440px; */
-    /* --container-standard: 1280px; */
-    /* --container-narrow: 800px; */
+    /* Container (rem, so they grow with the fluid root size above 1600px) */
+    /* --container-max: 90rem; */
+    /* --container-standard: 80rem; */
+    /* --container-narrow: 50rem; */
+    /* --container-content: 60rem; */
 }
 
 /* ============================================

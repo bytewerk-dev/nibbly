@@ -39,8 +39,38 @@
     // ============================================================
 
     /**
-     * Dark single-colour logos (like the default Nibbly icon) turn white on the dark admin bar
-     * (.admin-bar-logo-icon--default); multi-coloured site icons keep their colours. Decided from
+     * Admin bar = the dashboard's topbar. Copies the saved design settings
+     * (window.NB_ADMIN_BAR_THEME from includes/footer.php) onto the bar as the
+     * data attributes the dashboard sets on <html>, so css/nibbly-admin-tokens.css
+     * derives the topbar colours, font and sizes for the bar alone. "System"
+     * follows the operating system's light/dark setting, live.
+     */
+    function applyAdminBarTheme(bar) {
+        const theme = window.NB_ADMIN_BAR_THEME || {};
+        bar.dataset.themePreset = theme.preset || 'soft';
+        bar.dataset.density = theme.density || 'auto';
+        bar.dataset.font = theme.font || 'system';
+        bar.dataset.fontSize = theme.fontSize || 'default';
+        // The bar's right end lines up with the dashboard's content, which depends on its sidebar
+        try {
+            if (window.localStorage.getItem('nibblySidebarCollapsed') === '1') bar.dataset.sidebar = 'collapsed';
+        } catch (e) { /* storage blocked: expanded sidebar */ }
+        const mode = theme.mode || 'light';
+        if (mode !== 'system' || !window.matchMedia) {
+            bar.dataset.siteTheme = mode === 'dark' ? 'dark' : 'light';
+            return;
+        }
+        const query = window.matchMedia('(prefers-color-scheme: dark)');
+        const sync = () => { bar.dataset.siteTheme = query.matches ? 'dark' : 'light'; };
+        sync();
+        if (query.addEventListener) query.addEventListener('change', sync);
+    }
+
+    /**
+     * Single-colour logos (like the default Nibbly icon) are drawn in the primary colour, as the
+     * dashboard's topbar draws them (.admin-bar-logo-icon--default, the logo becomes a mask over
+     * the colour), so they read on light and dark bars alike; multi-coloured site icons keep
+     * their colours. Decided from
      * the rendered pixels: sites often replace the default file at assets/images/favicon.svg, so
      * the path alone says nothing. Without pixel access (cross-origin logo) the path is used.
      */
@@ -56,7 +86,6 @@
                 const min = [255, 255, 255];
                 const max = [0, 0, 0];
                 let opaque = 0;
-                let luminance = 0;
                 for (let i = 0; i < data.length; i += 4) {
                     if (data[i + 3] < 200) continue;
                     opaque++;
@@ -64,14 +93,13 @@
                         min[c] = Math.min(min[c], data[i + c]);
                         max[c] = Math.max(max[c], data[i + c]);
                     }
-                    luminance += (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255;
                 }
-                const singleColour = opaque > 0 && max.every((value, c) => value - min[c] <= 24);
-                mono = singleColour && luminance / opaque < 0.5;
+                mono = opaque > 0 && max.every((value, c) => value - min[c] <= 24);
             } catch (e) {
                 // Pixels not readable: keep the path-based guess
             }
             img.classList.toggle('admin-bar-logo-icon--default', mono);
+            if (mono) img.style.setProperty('--ab-logo-mask', 'url("' + String(img.currentSrc || src).replace(/["\\\n]/g, encodeURIComponent) + '")');
         };
         if (img.complete && img.naturalWidth) decide();
         else img.addEventListener('load', decide, { once: true });
@@ -694,10 +722,9 @@
             // Notify admin about auto-generated content fields
             if (window.NB_AUTO_GENERATED && window.NB_AUTO_GENERATED.length > 0) {
                 const count = window.NB_AUTO_GENERATED.length;
-                const pages = [...new Set(window.NB_AUTO_GENERATED.map(f => f.page))];
-                const msg = count === 1
-                    ? `Auto-wrote 1 missing field to ${pages[0]}.json`
-                    : `Auto-wrote ${count} missing fields to ${pages.join(', ')}.json`;
+                // The technical detail (which file and keys) goes to the console, the toast stays plain
+                console.info('nibbly: added missing fields with their default text', window.NB_AUTO_GENERATED);
+                const msg = tFallback('auto_generated_fields', 'Added {count} missing field(s) with their default text, so you can edit them.').replace('{count}', count);
                 setTimeout(() => showToast(msg, 'info'), 500);
             }
 
@@ -975,9 +1002,11 @@
 
         const bar = document.createElement('div');
         bar.id = 'admin-bar';
+        applyAdminBarTheme(bar);
         // Monochrome treatment (--default) is decided from the rendered logo, see markAdminBarLogo()
+        // Same order as the dashboard's topbar: logo, site name, divider, then the way back
         const logoHtml = showBranding
-            ? `<img src="${escHtml(brandLogo)}" alt="${escHtml(brandName)}" width="24" height="24" class="admin-bar-logo-icon">`
+            ? `<img src="${escHtml(brandLogo)}" alt="" width="24" height="24" class="admin-bar-logo-icon"><span class="admin-bar-brand">${escHtml(brandName)}</span><span class="admin-bar-divider" aria-hidden="true"></span>`
             : '';
         const seoHealth = window.NB_SEO_HEALTH || { status: 'yellow', score: 0, label: 'SEO prüfen', issues: ['Keine SEO-Prüfung verfügbar.'] };
         const seoIssues = Array.isArray(seoHealth.issues) ? seoHealth.issues : [];
@@ -2648,7 +2677,10 @@
     // ============================================================
 
     function getBlockIcon(type) {
+        if (BlockTypes[type]?.iconSvg) return BlockTypes[type].iconSvg;
         const iconMap = {
+            person: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-8 8v-2c0-3 4-5 8-5s8 2 8 5v2z"/></svg>',
+            team: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-8 8v-2c0-3 4-5 8-5s8 2 8 5v2z"/></svg>',
             text: Icons.text,
             heading: Icons.heading,
             quote: Icons.quote,
@@ -2957,7 +2989,7 @@
             const label = CategoryLabels[cat] || cat;
             markup += `<div class="section-type-picker__category"><span class="section-type-picker__category-label">${label}</span><div class="section-type-picker__grid">`;
             for (const { type, def } of grouped[cat]) {
-                const icon = Icons[def.icon] || Icons[type] || Icons.plus;
+                const icon = def.iconSvg || Icons[def.icon] || Icons[type] || Icons.plus;
                 const labelText = def.label || type;
                 markup += `<button type="button" class="section-type-picker__item" data-type="${type}" title="${labelText}"><span class="section-type-picker__icon">${icon}</span><span class="section-type-picker__label">${labelText}</span></button>`;
             }

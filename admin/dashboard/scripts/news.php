@@ -6,12 +6,20 @@
     let newsLoaded = false;
     let newsData = [];
     let editingPostId = null;
-    let newsHtmlMode = false;
+    let newsStatusFilter = 'all';
+    // View language of the list: its posts are the rows, the other languages are columns (as on pages)
+    let newsViewLang = '<?php echo SITE_LANG_DEFAULT; ?>';
+    let newsTrashCount = 0;
 
     async function loadNews() {
         try {
-            const response = await fetch('api.php?action=load-news');
+            // The trash only contributes its count to the filter links
+            const [response, trash] = await Promise.all([
+                fetch('api.php?action=load-news'),
+                fetch('api.php?action=list-news-trash&_=' + Date.now()).then(r => r.json()).catch(() => null)
+            ]);
             const result = await response.json();
+            if (trash?.success) newsTrashCount = (trash.data || []).length;
 
             if (result.success) {
                 newsData = result.data;
@@ -27,9 +35,12 @@
     function renderNewsList() {
         const tbody = document.getElementById('newsListBody');
         const defaultLang = '<?php echo SITE_LANG_DEFAULT; ?>';
-        const otherLangs = <?php $defLang = SITE_LANG_DEFAULT; echo json_encode(array_values(array_filter(array_keys($siteLanguages), function($c) use ($defLang) { return $c !== $defLang; }))); ?>;
+        const otherLangs = Object.keys(SITE_LANGUAGES).filter(lang => lang !== newsViewLang);
         const colCount = 2 + otherLangs.length;
+        document.querySelector('#newsListTable thead tr').innerHTML = `<th class="page-list-col-title">${escapeHtml(t('pages.col_title'))}</th><th class="page-list-col-date">${escapeHtml(t('news.post_date'))}</th>`
+            + otherLangs.map(lang => `<th class="page-list-col-lang">${escapeHtml(SITE_LANGUAGES[lang])}</th>`).join('');
 
+        renderNewsFilterLinks(document.getElementById('newsFilterLinks'), false);
         if (newsData.length === 0) {
             tbody.innerHTML = '';
             nbRenderEmptyRow(tbody, colCount, t('news.no_posts'), { label: t('news.new_post'), onClick: addNewPost });
@@ -47,9 +58,10 @@
         });
 
         // Sort groups by date descending (use primary lang post date, or any available)
-        const sortedSlugs = Object.keys(slugGroups).sort((a, b) => {
-            const aPost = slugGroups[a][defaultLang] || Object.values(slugGroups[a])[0];
-            const bPost = slugGroups[b][defaultLang] || Object.values(slugGroups[b])[0];
+        const primaryPost = slug => slugGroups[slug][newsViewLang];
+        const sortedSlugs = Object.keys(slugGroups).filter(slug => primaryPost(slug) && (newsStatusFilter === 'all' || !!primaryPost(slug).hidden === (newsStatusFilter === 'draft'))).sort((a, b) => {
+            const aPost = primaryPost(a);
+            const bPost = primaryPost(b);
             return (bPost.date || '').localeCompare(aPost.date || '');
         });
 
@@ -60,8 +72,7 @@
 
         paged.items.forEach(slug => {
             const group = slugGroups[slug];
-            // Primary post = default lang or first available
-            const post = group[defaultLang] || Object.values(group)[0];
+            const post = group[newsViewLang];
             const postLang = post.lang || defaultLang;
 
             const tr = document.createElement('tr');
@@ -137,8 +148,8 @@
             const deleteLink = document.createElement('a');
             deleteLink.href = '#';
             deleteLink.className = 'page-list-row-action page-list-row-action--danger';
-            deleteLink.innerHTML = icon('trash', 12, '2') + ' ' + t('btn.delete');
-            deleteLink.onclick = (e) => { e.preventDefault(); deletePost(post.id); };
+            deleteLink.innerHTML = icon('trash', 12, '2') + ' ' + t('pages.trash');
+            deleteLink.onclick = (e) => { e.preventDefault(); trashPost(post.id); };
             actions.appendChild(deleteLink);
 
             tdTitle.appendChild(actions);
@@ -173,7 +184,7 @@
                     createLink.textContent = t('pages.create');
                     createLink.onclick = (e) => {
                         e.preventDefault();
-                        createNewsTranslation(post, lang, createLink);
+                        chooseVersionCreation(SITE_LANGUAGES[lang], withAi => createNewsTranslation(post, lang, createLink, withAi));
                     };
                     td.appendChild(createLink);
                 }
@@ -187,6 +198,7 @@
     function showNewsList() {
         document.getElementById('newsListContainer').style.display = 'block';
         document.getElementById('newsEditorContainer').style.display = 'none';
+        document.getElementById('newsTrashView').style.display = 'none';
     }
 
     function addNewPost() {
@@ -215,7 +227,6 @@
 
     function showPostEditor(post) {
         const isNew = !editingPostId;
-        newsHtmlMode = false;
 
         // Hide list, show editor
         document.getElementById('newsListContainer').style.display = 'none';
@@ -225,92 +236,89 @@
         const editorTitle = document.getElementById('newsEditorTitle');
         if (editorTitle) editorTitle.textContent = isNew ? t('news.new_post') : (post.title || t('news.edit'));
 
-        // Build language options
-        const languages = <?php echo json_encode($siteLanguages); ?>;
-        const langOpts = Object.entries(languages).map(([code, name]) =>
-            `<option value="${code}"${code === (post.lang || '<?php echo SITE_LANG_DEFAULT; ?>') ? ' selected' : ''}>${escapeHtml(name)}</option>`
-        ).join('');
-
+        // Writing view like pages (scripts/page-writing.php): title, content and excerpt in the
+        // main column; save controls and post settings in the sidebar
+        const editorRoot = document.getElementById('newsEditorContainer');
+        editorRoot.classList.add('nb-writing-view', 'nb-news-writing');
+        const imageSrc = post.image ? (post.image.startsWith('/') ? '..' + escapeHtml(post.image) : escapeHtml(post.image)) : '';
         const container = document.getElementById('newsEditorForm');
+        // Bring the header actions back before the form is rebuilt (they live in its sidebar)
+        const headerActions = editorRoot.querySelector('.editor-header-right');
+        if (headerActions) editorRoot.querySelector('.editor-header').append(headerActions);
         container.innerHTML = `
-            <div class="news-editor">
-                <div class="editor-form-grid editor-form-grid--news">
-                    <div class="editor-form-row editor-form-row--span-2">
-                        <label for="newsTitle">${t('news.post_title')}</label>
-                        <input type="text" id="newsTitle" class="editor-input" value="${escapeHtml(post.title)}" placeholder="${t('news.post_title')}">
+            <div class="nb-writing-layout">
+                <div class="nb-news-main">
+                    <input type="hidden" id="newsLang" value="${escapeHtml(post.lang || DEFAULT_LANG)}">
+                    <div class="nb-page-title-field">
+                        <label for="newsTitle" class="ce-field-label">${t('news.post_title')}</label>
+                        <input type="text" id="newsTitle" class="editor-input" value="${escapeHtml(post.title)}" placeholder="${t('news.post_title')}" autocomplete="off">
                     </div>
-                    <div class="editor-form-row-half editor-form-row--span-2">
+                    <div class="section-item nb-news-content">
+                        <div class="section-fields">
+                            <div class="html-editor" id="newsContentField">
+                                <label for="newsContentHtml">${t('news.post_content')}</label>
+                                <textarea id="newsContentHtml" class="editor-textarea section-field" data-key="content" rows="16"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="section-item nb-news-excerpt">
+                        <div class="section-fields">
+                            <label for="newsExcerpt">${t('news.post_excerpt')}</label>
+                            <textarea id="newsExcerpt" class="editor-textarea" rows="3">${escapeHtml(post.excerpt)}</textarea>
+                        </div>
+                    </div>
+                </div>
+                <aside class="nb-page-sidebar" aria-label="${escapeHtml(t('news.writing_actions'))}">
+                    <section class="nb-page-save">
+                        <h3>${escapeHtml(t('news.writing_save'))}</h3>
+                        <div class="nb-page-save-controls"></div>
+                        <label class="editor-checkbox-label nb-news-draft">
+                            <input type="checkbox" id="newsHidden" ${post.hidden ? 'checked' : ''}>
+                            ${t('news.draft')}
+                        </label>
+                    </section>
+                    <section class="nb-page-panel" aria-labelledby="newsSettingsTitle">
+                        <h3 id="newsSettingsTitle">${escapeHtml(t('news.writing_settings'))}</h3>
                         <div class="editor-form-row">
                             <label for="newsSlug">${t('news.post_slug')}</label>
-                            <input type="text" id="newsSlug" class="editor-input" value="${escapeHtml(post.slug)}" placeholder="my-post-slug">
+                            <input type="text" id="newsSlug" class="editor-input" value="${escapeHtml(post.slug)}" placeholder="my-post-slug" autocomplete="off">
                         </div>
                         <div class="editor-form-row">
                             <label for="newsDate">${t('news.post_date')}</label>
                             <input type="date" id="newsDate" class="editor-input" value="${escapeHtml(post.date)}">
                         </div>
-                    </div>
-                    <div class="editor-form-row-half editor-form-row--span-2">
                         <div class="editor-form-row">
                             <label for="newsAuthor">${t('news.post_author')}</label>
                             <input type="text" id="newsAuthor" class="editor-input" value="${escapeHtml(post.author)}">
                         </div>
-                        <div class="editor-form-row">
-                            <label for="newsLang">${t('news.post_language')}</label>
-                            <select id="newsLang" class="editor-input">${langOpts}</select>
+                    </section>
+                    <section class="nb-page-panel" aria-labelledby="newsImageTitle">
+                        <h3 id="newsImageTitle">${t('news.post_image')}</h3>
+                        <div class="ce-image-preview" id="newsImagePreview">
+                            <img src="${imageSrc}" alt="" style="${post.image ? '' : 'display:none;'}">
                         </div>
-                    </div>
-                    <div class="editor-form-row editor-form-row--cover">
-                        <label for="newsImage">${t('news.post_image')}</label>
                         <div class="ce-image-input-row">
-                            <input type="text" id="newsImage" class="editor-input" value="${escapeHtml(post.image)}" placeholder="/assets/images/cover.jpg">
+                            <input type="text" id="newsImage" class="editor-input" value="${escapeHtml(post.image)}" placeholder="/assets/images/cover.jpg" aria-labelledby="newsImageTitle">
                             <button type="button" class="btn btn-secondary btn-sm" onclick="browseNewsImage()">${t('btn.browse')}</button>
                         </div>
-                        ${AI_FEATURES_ENABLED ? `<p class="ai-field-hint">${t('ai.image_field_hint')} <button type="button" class="btn btn-secondary btn-sm" onclick="openAiImageGenerator(getNewsImagePrompt(), '16:9')">${t('ai.open_image_generator')}</button></p>` : ''}
-                        <div class="ce-image-preview" id="newsImagePreview">
-                            <img src="${post.image ? (post.image.startsWith('/') ? '..' + escapeHtml(post.image) : escapeHtml(post.image)) : ''}" alt="" style="${post.image ? '' : 'display:none;'}">
-                        </div>
-                    </div>
-                    <div class="editor-form-row editor-form-row--full">
-                        <label for="newsExcerpt">${t('news.post_excerpt')}</label>
-                        <textarea id="newsExcerpt" class="editor-textarea" rows="3">${escapeHtml(post.excerpt)}</textarea>
-                    </div>
-                    <div class="editor-form-row editor-form-row--full">
-                        <label>${t('news.post_content')}</label>
-                        <div class="news-wysiwyg-toolbar">
-                            <button type="button" onclick="newsExecCmd('bold')" title="Bold"><b>B</b></button>
-                            <button type="button" onclick="newsExecCmd('italic')" title="Italic"><i>I</i></button>
-                            <button type="button" onclick="newsInsertLink()" title="Link">🔗</button>
-                            <button type="button" onclick="newsInsertHeading()" title="Heading">H3</button>
-                            <button type="button" onclick="newsExecCmd('insertUnorderedList')" title="List">☰</button>
-                            <button type="button" onclick="newsCleanHtml()" title="Clean formatting">✕</button>
-                            <span class="news-toolbar-sep"></span>
-                            <label class="news-html-toggle">
-                                <input type="checkbox" id="newsHtmlToggle" onchange="newsToggleHtml()">
-                                <span>HTML</span>
-                            </label>
-                        </div>
-                        <div id="newsContentWysiwyg" class="news-wysiwyg-editor" contenteditable="true"></div>
-                        <textarea id="newsContentHtml" class="editor-textarea editor-textarea-large" style="display:none;" rows="16"></textarea>
-                    </div>
-                    <div class="editor-form-row">
-                        <label class="editor-checkbox-label">
-                            <input type="checkbox" id="newsHidden" ${post.hidden ? 'checked' : ''}>
-                            ${t('news.draft')}
-                        </label>
-                    </div>
-                </div>
-                <div class="editor-form-actions">
-                    <button class="btn btn-secondary" onclick="cancelPostEditor()">${t('btn.cancel')}</button>
-                    <button class="btn btn-primary" onclick="savePost()">${t('btn.save')}</button>
-                </div>
+                        ${AI_FEATURES_ENABLED ? `<p class="ai-field-hint"${dashboardAiImageUsable ? '' : ' hidden'}>${t('ai.image_field_hint')} <button type="button" class="btn btn-secondary btn-sm" onclick="openAiImageGenerator(getNewsImagePrompt(), '16:9')">${t('ai.open_image_generator')}</button></p>` : ''}
+                    </section>
+                </aside>
             </div>
         `;
 
-        // Set WYSIWYG content (not escaped — it's HTML)
-        document.getElementById('newsContentWysiwyg').innerHTML = post.content || '';
+        // Save, view and trash move from the header into the sidebar, as on pages
+        if (headerActions) container.querySelector('.nb-page-save-controls').append(headerActions);
+
+        // Content: the page editor's Visual / HTML editor on the stored HTML
+        document.getElementById('newsContentHtml').value = post.content || '';
+        window.NbPageEditor.richEditor(document.getElementById('newsContentField'), 'news', { markDirty() {}, pushUndoSnapshot() {} });
+
+        mountNewsLanguageSwitch(post);
 
         // Update view + trash buttons (after form is built, so newsSlug/newsLang exist)
         updateNewsEditorButtons();
+        newsSavedState = JSON.stringify(collectNewsPost());
 
         // Auto-generate slug from title for new posts
         document.getElementById('newsTitle').addEventListener('input', function() {
@@ -323,74 +331,6 @@
         });
     }
 
-    // WYSIWYG helpers for news editor
-    function newsExecCmd(cmd) {
-        document.execCommand(cmd, false, null);
-        document.getElementById('newsContentWysiwyg').focus();
-    }
-
-    function newsInsertLink() {
-        showModal(
-            t('insert_link'),
-            '<label class="modal-field-label" for="newsLinkUrlInput">URL</label>' +
-            '<input class="form-control" id="newsLinkUrlInput" type="url" value="https://" placeholder="https://...">',
-            function() {
-                const input = document.getElementById('newsLinkUrlInput');
-                const url = input ? input.value.trim() : '';
-                if (!url) return;
-                closeModal();
-                document.getElementById('newsContentWysiwyg').focus();
-                document.execCommand('createLink', false, url);
-            },
-            {
-                html: true,
-                confirmText: t('btn.insert'),
-                confirmClass: 'btn btn-primary',
-                focusSelector: '#newsLinkUrlInput'
-            }
-        );
-        setTimeout(function() {
-            const input = document.getElementById('newsLinkUrlInput');
-            if (input) {
-                input.addEventListener('keydown', function(event) {
-                    if (event.key === 'Enter') {
-                        event.preventDefault();
-                        document.getElementById('modalConfirm').click();
-                    }
-                });
-                input.select();
-            }
-        }, 0);
-    }
-
-    function newsInsertHeading() {
-        document.execCommand('formatBlock', false, 'h3');
-        document.getElementById('newsContentWysiwyg').focus();
-    }
-
-    function newsCleanHtml() {
-        document.execCommand('removeFormat', false, null);
-        document.getElementById('newsContentWysiwyg').focus();
-    }
-
-    function newsToggleHtml() {
-        const wysiwyg = document.getElementById('newsContentWysiwyg');
-        const html = document.getElementById('newsContentHtml');
-        newsHtmlMode = !newsHtmlMode;
-
-        if (newsHtmlMode) {
-            html.value = wysiwyg.innerHTML;
-            wysiwyg.style.display = 'none';
-            html.style.display = 'block';
-            html.focus();
-        } else {
-            wysiwyg.innerHTML = html.value;
-            html.style.display = 'none';
-            wysiwyg.style.display = 'block';
-            wysiwyg.focus();
-        }
-    }
-
     function updateNewsEditorButtons() {
         const viewBtn = document.getElementById('newsViewBtn');
         const trashBtn = document.getElementById('newsTrashBtn');
@@ -399,7 +339,11 @@
             const lang = document.getElementById('newsLang')?.value || defLang;
             const slug = document.getElementById('newsSlug')?.value || editingPostId;
             const prefix = (lang === defLang) ? '../' : '../' + lang + '/';
-            if (viewBtn) { viewBtn.href = prefix + 'news/' + slug; viewBtn.style.display = ''; }
+            if (viewBtn) {
+                viewBtn.href = prefix + 'news/' + slug;
+                viewBtn.style.display = '';
+                viewBtn.onclick = e => viewWithUnsavedCheck(e, viewBtn, newsHasUnsavedChanges, savePost);
+            }
             if (trashBtn) trashBtn.style.display = '';
         } else {
             if (viewBtn) viewBtn.style.display = 'none';
@@ -407,41 +351,41 @@
         }
     }
 
-    function deleteCurrentPost() {
-        if (!editingPostId) return;
-        const title = document.getElementById('newsTitle')?.value || editingPostId;
-        showModal(
-            t('modal.delete_post'),
-            t('modal.delete_post_confirm', { title }),
-            async function() {
-                closeModal();
-                try {
-                    const formData = new FormData();
-                    formData.append('action', 'delete-news');
-                    formData.append('slug', editingPostId);
-                    formData.append('csrf_token', CSRF_TOKEN);
-                    const response = await fetch('api.php', { method: 'POST', body: formData });
-                    const result = await response.json();
-                    if (result.success) {
-                        showToast(t('toast.news_deleted'), 'success');
-                        editingPostId = null;
-                        showNewsList();
-                        loadNews();
-                    } else {
-                        showToast(result.message, 'error');
-                    }
-                } catch (e) {
-                    showToast(t('toast.error_generic', {message: e.message}), 'error');
-                }
+    // Posts move to the trash without a question, like pages and events; the trash restores them
+    async function trashPost(postId) {
+        try {
+            const formData = new FormData();
+            formData.append('action', 'trash-news');
+            formData.append('post_id', postId);
+            formData.append('csrf_token', CSRF_TOKEN);
+            const response = await fetch('api.php', { method: 'POST', body: formData });
+            const result = await response.json();
+            if (!result.success) {
+                showToast(result.message, 'error');
+                return false;
             }
-        );
+            newsData = newsData.filter(p => p.id !== postId);
+            renderNewsList();
+            showToast(t('toast.news_trashed'), 'success');
+            return true;
+        } catch (error) {
+            showToast(t('toast.error_generic', {message: error.message}), 'error');
+            return false;
+        }
+    }
+
+    async function trashCurrentPost() {
+        if (!editingPostId) return;
+        if (await trashPost(editingPostId)) {
+            editingPostId = null;
+            showNewsList();
+            loadNews();
+        }
     }
 
     function getNewsContent() {
-        if (newsHtmlMode) {
-            return document.getElementById('newsContentHtml').value;
-        }
-        return document.getElementById('newsContentWysiwyg').innerHTML;
+        // The rich editor keeps the textarea in sync in both modes (it renames its id)
+        return document.querySelector('#newsContentField textarea.section-field')?.value || '';
     }
 
     function browseNewsImage() {
@@ -456,27 +400,33 @@
         renderNewsList();
     }
 
-    async function savePost() {
-        const title = document.getElementById('newsTitle').value.trim();
-        const date = document.getElementById('newsDate').value;
-
-        if (!title || !date) {
-            showToast(t('toast.news_date_required'), 'error');
-            return;
-        }
-
-        const post = {
+    // The post as it stands in the editor; also compared with newsSavedState to spot unsaved changes
+    function collectNewsPost() {
+        return {
             id: editingPostId || '',
             lang: document.getElementById('newsLang').value,
-            title: title,
+            title: document.getElementById('newsTitle').value.trim(),
             slug: document.getElementById('newsSlug').value.trim(),
-            date: date,
+            date: document.getElementById('newsDate').value,
             author: document.getElementById('newsAuthor').value.trim(),
             excerpt: document.getElementById('newsExcerpt').value.trim(),
             image: document.getElementById('newsImage').value.trim(),
             content: getNewsContent(),
             hidden: document.getElementById('newsHidden').checked
         };
+    }
+
+    let newsSavedState = '';
+    function newsHasUnsavedChanges() {
+        return !!document.getElementById('newsTitle') && JSON.stringify(collectNewsPost()) !== newsSavedState;
+    }
+
+    async function savePost() {
+        const post = collectNewsPost();
+        if (!post.title || !post.date) {
+            showToast(t('toast.news_date_required'), 'error');
+            return false;
+        }
 
         try {
             const formData = new FormData();
@@ -497,51 +447,173 @@
                 }
                 // Update view + trash buttons
                 updateNewsEditorButtons();
+                newsSavedState = JSON.stringify(collectNewsPost());
                 loadNews();
-            } else {
-                showToast(result.message, 'error');
+                return true;
             }
+            showToast(result.message, 'error');
         } catch (error) {
             showToast(t('toast.error_generic', {message: error.message}), 'error');
         }
+        return false;
     }
 
-    function deletePost(postId) {
-        const post = newsData.find(p => p.id === postId);
-        const title = post ? post.title : postId;
+    // Status filter links (all / published / draft / trash); a post counts by its primary-language version
+    function renderNewsFilterLinks(target, inTrash) {
+        const defaultLang = '<?php echo SITE_LANG_DEFAULT; ?>';
+        const langOf = post => post.lang || defaultLang;
+        const posts = newsData.filter(post => langOf(post) === newsViewLang);
+        const status = (value, label, count) => ({ value, label, count, active: !inTrash && newsStatusFilter === value, onSelect() {
+            newsStatusFilter = value;
+            if (inTrash) closeNewsTrash(); else renderNewsList();
+        } });
+        renderFilterLinks(target, [{ items: [
+            status('all', t('filter.all'), posts.length),
+            status('published', t('filter.published'), posts.filter(p => !p.hidden).length),
+            status('draft', t('filter.draft'), posts.filter(p => p.hidden).length),
+            { value: 'trash', label: t('pages.trash'), count: newsTrashCount, active: inTrash, onSelect: showNewsTrash }
+        ] }, !inTrash && Object.keys(SITE_LANGUAGES).length > 1 && { label: t('filter.language'), icon: 'language', items: Object.keys(SITE_LANGUAGES).map(lang => ({
+            value: lang, label: SITE_LANGUAGES[lang], count: newsData.filter(post => langOf(post) === lang).length,
+            active: lang === newsViewLang, onSelect() { newsViewLang = lang; dashboardListPages.news = 1; renderNewsList(); }
+        })) }]);
+    }
 
-        showModal(t('modal.delete_post'), t('modal.delete_post_confirm', {title: title}), async () => {
-            try {
-                const formData = new FormData();
-                formData.append('action', 'delete-news');
-                formData.append('post_id', postId);
-                formData.append('csrf_token', CSRF_TOKEN);
+    // ===== NEWS TRASH =====
 
-                const response = await fetch('api.php', { method: 'POST', body: formData });
-                const result = await response.json();
+    function showNewsTrash() {
+        document.getElementById('newsListContainer').style.display = 'none';
+        document.getElementById('newsEditorContainer').style.display = 'none';
+        document.getElementById('newsTrashView').style.display = '';
+        loadNewsTrash();
+    }
 
-                if (result.success) {
-                    newsData = newsData.filter(p => p.id !== postId);
-                    renderNewsList();
-                    closeModal();
-                    showToast(t('toast.news_deleted'), 'success');
-                } else {
-                    showToast(result.message, 'error');
-                }
-            } catch (error) {
-                showToast(t('toast.error_generic', {message: error.message}), 'error');
-            }
+    function closeNewsTrash() {
+        showNewsList();
+        loadNews();
+    }
+
+    async function newsTrashRequest(action, filename) {
+        const fd = new FormData();
+        fd.append('action', action);
+        fd.append('csrf_token', CSRF_TOKEN);
+        if (filename) fd.append('filename', filename);
+        try {
+            const res = await (await fetch('api.php', { method: 'POST', body: fd })).json();
+            if (!res.success) showToast(res.message || 'Error', 'error');
+            return res.success;
+        } catch (err) {
+            showToast(err.message, 'error');
+            return false;
+        }
+    }
+
+    async function loadNewsTrash() {
+        try {
+            const result = await (await fetch('api.php?action=list-news-trash&_=' + Date.now())).json();
+            if (result.success) renderNewsTrash(result.data);
+        } catch (error) {
+            console.error('Error loading news trash:', error);
+        }
+    }
+
+    function renderNewsTrash(items) {
+        newsTrashCount = (items || []).length;
+        renderNewsFilterLinks(document.getElementById('newsTrashFilterLinks'), true);
+        const tbody = document.getElementById('newsTrashBody');
+        const empty = !items || items.length === 0;
+        document.getElementById('newsTrashTable').style.display = empty ? 'none' : '';
+        document.getElementById('newsTrashEmptyMsg').style.display = empty ? 'block' : 'none';
+        document.getElementById('emptyNewsTrashBtn').style.display = empty ? 'none' : '';
+        tbody.innerHTML = '';
+        (items || []).forEach(item => {
+            const title = item.title || t('news.untitled');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td class="page-list-cell-title"></td>
+                <td class="page-list-cell-date">${item.date ? escapeHtml(nbFormatDate(item.date, 'date')) : '—'}</td>
+                <td class="page-list-cell-date">${escapeHtml(nbFormatDate(new Date(item.deletedAt), 'datetime'))}</td>
+                <td class="page-list-cell-actions"></td>`;
+            tr.querySelector('.page-list-cell-title').textContent = title;
+
+            const restoreBtn = document.createElement('button');
+            restoreBtn.className = 'btn btn-primary btn-sm';
+            restoreBtn.textContent = t('btn.restore');
+            restoreBtn.onclick = async () => {
+                restoreBtn.disabled = true;
+                if (await newsTrashRequest('restore-news', item.filename)) showToast(t('toast.news_restored'), 'success');
+                loadNewsTrash();
+            };
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'btn btn-danger btn-sm';
+            delBtn.textContent = t('btn.delete');
+            delBtn.onclick = () => showModal(t('modal.delete_permanently'), t('news.confirm_delete_permanent', {title}), async () => {
+                closeModal();
+                if (await newsTrashRequest('delete-news-permanent', item.filename)) showToast(t('toast.news_deleted'), 'success');
+                loadNewsTrash();
+            });
+
+            tr.querySelector('.page-list-cell-actions').append(restoreBtn, delBtn);
+            tbody.appendChild(tr);
         });
     }
 
-    async function createNewsTranslation(sourcePost, targetLang, linkEl) {
-        linkEl.classList.add('disabled');
-        linkEl.textContent = '...';
+    function emptyNewsTrash() {
+        showModal(t('modal.empty_trash'), t('modal.empty_trash_confirm'), async () => {
+            closeModal();
+            if (await newsTrashRequest('empty-news-trash')) showToast(t('toast.trash_emptied'), 'success');
+            loadNewsTrash();
+        });
+    }
+
+    // Language choice top right in the header. Each language is its own post (same slug): the choice opens
+    // that version or creates it; a new post just takes the chosen language.
+    function mountNewsLanguageSwitch(post) {
+        const root = document.getElementById('newsEditorContainer');
+        const languages = Object.keys(SITE_LANGUAGES);
+        if (languages.length < 2) return placeLanguageSwitch(root, null);
+        const postLang = post.lang || DEFAULT_LANG;
+        const slug = post.slug || post.id;
+        const versions = {};
+        if (editingPostId) newsData.forEach(p => { if ((p.slug || p.id) === slug) versions[p.lang || DEFAULT_LANG] = p; });
+        const source = versions[DEFAULT_LANG];
+        placeLanguageSwitch(root, renderLanguageSwitch({
+            name: 'news',
+            current: postLang,
+            languages: languages.map(code => ({ code, label: SITE_LANGUAGES[code], exists: !editingPostId || !!versions[code] })),
+            onSelect(code, exists) {
+                if (!editingPostId) { document.getElementById('newsLang').value = code; return true; }
+                continueWithUnsaved(newsHasUnsavedChanges, savePost, () => {
+                    if (exists) editPost(versions[code].id);
+                    else chooseVersionCreation(SITE_LANGUAGES[code], withAi => createNewsTranslation(newsData.find(p => p.id === editingPostId), code, null, withAi));
+                });
+                return false;
+            },
+            // In another language's version: take the primary language's texts, translated (not saved yet)
+            onTranslate: editingPostId && source && postLang !== DEFAULT_LANG ? button => translateNewsFrom(source, button) : null,
+            translateLabel: t('editor.translate_from', { lang: SITE_LANGUAGES[DEFAULT_LANG] })
+        }));
+    }
+
+    async function translateNewsFrom(source, button) {
+        const target = document.getElementById('newsLang').value;
+        const fields = translatableStrings({ title: source.title || '', excerpt: source.excerpt || '', content: source.content || '' });
+        const translations = await aiTranslateFields(source.lang || DEFAULT_LANG, [target], fields, button, 8000);
+        if (!translations?.[target]) return;
+        const before = collectNewsPost();
+        const translated = Object.assign({}, newsData.find(p => p.id === editingPostId), before, translations[target]);
+        showPostEditor(translated);
+        newsSavedState = JSON.stringify(before); // the translation is a change still to be saved
+        showToast(t('editor.translate_review'), 'success');
+    }
+
+    // A new language version of a post: a copy as draft (so untranslated text never goes live), opened at once
+    async function createNewsTranslation(sourcePost, targetLang, linkEl, withAi = false) {
+        if (linkEl) { linkEl.classList.add('disabled'); linkEl.textContent = '...'; }
         try {
-            // Clone the source post with the new language
             const newPost = Object.assign({}, sourcePost, {
                 id: '',
                 lang: targetLang,
+                hidden: true,
                 lastModified: new Date().toISOString()
             });
 
@@ -557,16 +629,14 @@
                 showToast(t('toast.news_created'), 'success');
                 await loadNews();
                 editPost(result.data.id);
-            } else {
-                showToast(result.message, 'error');
-                linkEl.classList.remove('disabled');
-                linkEl.textContent = t('pages.create');
+                if (withAi) await translateNewsFrom(sourcePost, document.querySelector('#newsEditorForm .nb-ai-translate'));
+                return;
             }
+            showToast(result.message, 'error');
         } catch (error) {
             showToast(t('toast.error_generic', {message: error.message}), 'error');
-            linkEl.classList.remove('disabled');
-            linkEl.textContent = t('pages.create');
         }
+        if (linkEl) { linkEl.classList.remove('disabled'); linkEl.textContent = t('pages.create'); }
     }
 
     async function toggleNewsStatus(postId) {

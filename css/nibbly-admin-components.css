@@ -203,7 +203,7 @@
 /* Danger */
 .nb-btn--danger {
     background: var(--nb-danger);
-    color: #ffffff;
+    color: var(--nb-text-on-danger);
 }
 
 .nb-btn--danger:hover {
@@ -213,11 +213,11 @@
 /* Success */
 .nb-btn--success {
     background: var(--nb-success);
-    color: #ffffff;
+    color: var(--nb-text-on-success);
 }
 
 .nb-btn--success:hover {
-    background: #15803d;
+    background: var(--nb-success-hover);
 }
 
 /* Icon-only button */
@@ -331,7 +331,7 @@
     margin-top: var(--nb-space-1);
     font-family: var(--nb-font-sans);
     font-size: 0.8125rem;
-    color: var(--nb-danger);
+    color: var(--nb-danger-text);
     line-height: 1.4;
 }
 
@@ -558,7 +558,8 @@
     background: var(--nb-bg-elevated);
     border: 1px solid var(--nb-border);
     border-left: 4px solid var(--nb-primary);
-    border-radius: var(--nb-radius-md);
+    /* Accent lines stay straight: no rounding on the accent side */
+    border-radius: 0 var(--nb-radius-md) var(--nb-radius-md) 0;
     box-shadow: var(--nb-shadow-lg);
     color: var(--nb-text);
     font-family: var(--nb-font-sans);
@@ -594,20 +595,20 @@
 
 .nb-alert--error {
     background: var(--nb-danger-subtle);
-    color: var(--nb-danger);
-    border: 1px solid rgba(220, 38, 38, 0.15);
+    color: var(--nb-danger-text);
+    border: 1px solid var(--nb-danger-border);
 }
 
 .nb-alert--success {
     background: var(--nb-success-subtle);
-    color: var(--nb-success);
-    border: 1px solid rgba(22, 163, 74, 0.15);
+    color: var(--nb-success-text);
+    border: 1px solid var(--nb-success-border);
 }
 
 .nb-alert--warning {
     background: var(--nb-warning-subtle);
-    color: var(--nb-warning);
-    border: 1px solid rgba(217, 119, 6, 0.15);
+    color: var(--nb-warning-text);
+    border: 1px solid var(--nb-warning-border);
 }
 
 

@@ -84,6 +84,19 @@ def test_news(site):
     (site.root / "content/news/2026-09-04-unwritable.json").mkdir()
     result = editor.api("save-news", post=json.dumps({**post, "id": news_id, "slug": "unwritable"}))[1]
     assert not result["success"] and path.read_bytes() == saved, "Failed save removed the original news post"
+    # Deleting moves the post to the trash; it can be restored, deleted permanently or emptied.
+    assert not editor.api("trash-news", post_id="../users")[1]["success"]
+    assert editor.api("trash-news", post_id=news_id)[1]["success"] and not path.exists()
+    trash = json.loads(editor.request("/admin/api.php?action=list-news-trash")[2])["data"]
+    assert [item["id"] for item in trash] == [news_id], trash
+    assert not editor.api("restore-news", filename="../users.json")[1]["success"]
+    assert editor.api("restore-news", filename=trash[0]["filename"])[1]["success"] and path.read_bytes() == saved
+    assert editor.api("trash-news", post_id=news_id)[1]["success"]
+    filename = json.loads(editor.request("/admin/api.php?action=list-news-trash")[2])["data"][0]["filename"]
+    assert editor.api("delete-news-permanent", filename=filename)[1]["success"]
+    assert not list((site.root / "content/news-trash").glob("*.json")) and not path.exists()
+    assert editor.api("save-news", post=json.dumps(post))[1]["success"] and editor.api("trash-news", post_id=news_id)[1]["success"]
+    assert editor.api("empty-news-trash")[1]["success"] and not list((site.root / "content/news-trash").glob("*.json"))
 
 
 def test_routing(site):
@@ -114,7 +127,16 @@ def test_routing(site):
     private["visibility"]["passwordHash"] = "changed-private-password"
     write_json(site.root / "content/pages/en_private.json", private)
     assert guest.request("/private")[0] == 403, "Changed private password did not revoke the old grant"
+    # Event pages: /events/{id} in each language; hidden events and unknown ids are not found
+    write_json(site.root / "content/events.json", {"events": [
+        {"id": "2030-01-01-smoke-event", "date": "2030-01-01", "title": {"en": "Smoke Event"}, "description": {"en": "Plain <b>text</b>"}},
+        {"id": "2030-01-02-hidden-event", "date": "2030-01-02", "hidden": True, "title": {"en": "Hidden Event"}}]})
+    status, _, html = guest.request("/events/2030-01-01-smoke-event")
+    assert status == 200 and b"Smoke Event" in html and b"<b>text</b>" not in html, status
+    assert guest.request("/events/2030-01-02-hidden-event")[0] == 404
+    assert guest.request("/events/no-such-event")[0] == 404
     sitemap = guest.request("/sitemap.xml")[2]
+    assert b"/events/2030-01-01-smoke-event" in sitemap and b"hidden-event" not in sitemap
     assert b"/private/" not in sitemap
     write_json(site.root / "content/settings.json", {"modules": {"ai": False}, "access": {"maintenance": {"enabled": True}}})
     assert Client(site).request("/services/test")[0] == 503

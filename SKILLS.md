@@ -265,14 +265,18 @@ rename, re-label, or slightly adjust in the dashboard without editing PHP.
 2. Use supported field types only: `text`, `email`, `tel`, `textarea`,
    `select`, `radio`, `checkbox`, `date`, `time`, `hidden`, `heading`, `note`.
 3. Use supported widths only: `3`, `4`, `6`, `8`, `12`.
-4. For `select` and `radio`, add `options`:
+4. On multilingual sites, give texts per language as maps, e.g.
+   `"label": { "de": "Nachricht", "en": "Message", "es": "Mensaje" }`
+   (label, description, successText, field label/placeholder/help, option
+   labels). Plain strings still work and apply to every language.
+5. For `select` and `radio`, add `options`:
    ```json
    "options": [
      { "value": "private", "label": "Private" },
      { "value": "business", "label": "Business" }
    ]
    ```
-5. Render it in a template:
+6. Render it in a template:
    ```php
    <?php
    require_once __DIR__ . '/../includes/forms.php';
@@ -292,6 +296,47 @@ rename, re-label, or slightly adjust in the dashboard without editing PHP.
 - The dashboard messages view can filter by the form.
 - The form appears in **Dashboard -> Settings -> Forms** and reloads with all
   fields intact.
+
+---
+
+## Skill: connect-menus-and-footer
+
+### Description
+Make a site's navigation and footer editable under **Dashboard → Menus & Footer**
+without rewriting its templates or creating a second copy of the content.
+
+### Prerequisites
+- Read `AI-AGENT-GUIDE.md` -> "Menus & Footer"
+- Open the dashboard tab once (or `api.php?action=load-menus-footer`) and read
+  what it detected: each menu's source and output (`file:line`), footer fields,
+  findings in `footer.json`, and hard-coded `<nav>` blocks in templates.
+
+### Steps
+1. Menus that a template already renders with `getMenuItems()` need nothing:
+   they are editable as they are and become managed on the first save.
+2. For a hard-coded `<nav>` in a site template: keep its wrapper, classes and
+   IDs; replace only the repeated `<a>` with a loop over
+   `nibblyMenuItems('{id}', $currentLang)`, using `nibblyMenuHref()` and
+   `nibblyMenuLinkAttrs($item, ['existing-link-class'])`.
+3. Register the menu in `includes/site-menus.php` with `nibblyRegisterMenu()`
+   and a `fallback` that returns exactly the links the template showed before,
+   so the output is unchanged until someone edits the menu.
+4. Footer texts, links, link groups, images and contact details that the footer
+   template reads from `content/pages/footer.json`: register them with
+   `nibblyRegisterFooterField()` (type, label, `html`, `supports`), or let the
+   administrator assign the detected keys in the dashboard. Keep the JSON keys
+   the template already reads; never move the values to another file.
+5. Link groups with `supports.hidden`: make the template skip entries with
+   `"hidden": true`.
+
+### Validation
+- The page HTML is identical before and after the change (compare the nav and
+  footer markup) until something is edited.
+- The dashboard shows the menu with "Output: {template}:{line}" and no longer
+  lists the `<nav>` under "Navigation in templates without a menu".
+- Editing, hiding, reordering and saving changes the frontend; "Reset to
+  source" restores the previous links.
+- `python3 tests/run-smoke.py` passes (includes `tests/menus-footer-smoke.py`).
 
 ---
 
