@@ -7,7 +7,7 @@ Release dates use Europe/Vienna calendar dates. Historical 1.x dates are retaine
 as originally recorded; see [release history and policy](RELEASES.md) for verified
 Git milestones and the gaps in publication records.
 
-## Unreleased
+## [2.5.1] — 2026-10-26
 
 ### Changed
 
@@ -19,6 +19,27 @@ Git milestones and the gaps in publication records.
   again (also Escape or a tap beside it). On phones the slim bar sits at the left edge. The box with
   the section list in the content area and the select menu on narrow screens are gone, with their
   styles.
+- **Settings sub-navigation refined.** A search field at the top finds sections by their name and by
+  the headings and fields inside them (Enter opens the first hit). In the slim bar a mouse click opens
+  the section directly, with its name as a tooltip; only touch opens the full menu first. On phones a
+  row above the settings shows the current section and opens the menu from the left instead of the
+  slim bar, so the content keeps the full width. While the menu lies over the page, the page behind it
+  is inert and the focus moves into the menu and back. Entering and leaving the settings animates the
+  width of the main sidebar (not with reduced motion). In the Pop theme the group headings are
+  coloured text instead of pills. A second click on the settings button closes the settings and
+  returns to the area they were opened from.
+- **Total reset moved to the backup page.** Backup is no longer listed in the settings (it stays in
+  the main menu), and the rarely needed total reset is no longer a red settings section of its own:
+  it sits folded away at the end of the backup page.
+- **Clearer actions in the user list.** The actions start under their column heading. Other accounts
+  get a "Password" text button instead of a lock icon; your own row links to My account, where the
+  password change asks for the current one. The generate button next to password fields is as tall
+  as the field.
+- **Settings layout details.** In every theme the section line runs above the section heading
+  instead of through it; descriptions inside a section have no divider of their own; segmented
+  controls keep a gap to the hint above them; the SMTP heading is a pill like the other section
+  headings, with one divider above it; the privacy toggles share one row rhythm; a button that stands
+  in for a field keeps its own width. The sidebar label is "Menu/Footer" and Backup has its own icon.
 
 ## [2.5.0] — 2026-10-26
 

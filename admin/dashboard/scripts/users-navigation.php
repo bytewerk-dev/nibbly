@@ -32,7 +32,10 @@
                 '<td>' + (user.lastLogin ? nbFormatDate(user.lastLogin, 'datetime') : '—') + '</td>' +
                 '<td class="users-table__actions">' +
                     '<button type="button" class="btn btn-sm btn-secondary" onclick="editUser(\'' + user.id + '\')" title="' + t('pages.edit') + '">' + t('pages.edit') + '</button> ' +
-                    '<button type="button" class="btn-icon" onclick="resetUserPassword(\'' + user.id + '\', \'' + escapeHtml(user.username) + '\')" title="' + t('settings.reset_password') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button> ' +
+                    // Your own password is changed under My account, which asks for the current one
+                    (isCurrentUser
+                        ? '<button type="button" class="btn btn-sm btn-secondary" onclick="switchTab(\'settings\', {settingsTab: \'my-account\'})">' + t('settings.my_account') + '</button> '
+                        : '<button type="button" class="btn btn-sm btn-secondary" onclick="resetUserPassword(\'' + user.id + '\', \'' + escapeHtml(user.username) + '\')" title="' + t('settings.reset_password') + '">' + t('settings.password') + '</button> ') +
                     (isCurrentUser ? '' : '<button type="button" class="btn-icon btn-icon--danger" onclick="deleteUserConfirm(\'' + user.id + '\', \'' + escapeHtml(user.username) + '\')" title="' + t('btn.delete') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>') +
                 '</td>';
             tbody.appendChild(tr);
@@ -259,16 +262,7 @@
         );
     }
 
-    // Load users when the users panel becomes visible
+    // Users load once their panel is first opened (loadSettingsTabData in scripts/settings.php)
     var _usersLoaded = false;
-    // Watch for settings tab switches to load data on demand
-    document.querySelectorAll('.settings-tab-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            if (this.getAttribute('data-settings-action')) return;
-            var tab = this.getAttribute('data-settings-tab');
-            if (!tab) return;
-            loadSettingsTabData(tab);
-        });
-    });
 
     <?php endif; ?>

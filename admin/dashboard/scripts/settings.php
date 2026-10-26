@@ -1,24 +1,74 @@
 <?php if (!defined('NIBBLY_DASHBOARD')) { http_response_code(404); exit; } ?>
-    // Settings sub-navigation: a second sidebar; below 1100 px a slim icon bar that slides the full
-    // menu out when tapped and closes again once a section is chosen (Escape and the backdrop close it too)
+    // Settings sub-navigation: a second sidebar. Between 769 and 1100 px a slim icon bar: a mouse picks a
+    // section straight from it (its name shows as a tooltip), a touch opens the full menu first. On phones the
+    // section row above the settings opens it as a side menu. Choosing a section, Escape and the backdrop
+    // close it; while it lies over the page, the page behind it is inert.
     const settingsSubnav = document.getElementById('settingsSubnav');
     const settingsSubnavBackdrop = document.getElementById('settingsSubnavBackdrop');
     const settingsSubnavToggle = document.getElementById('settingsSubnavToggle');
-    const settingsSubnavSlim = () => window.matchMedia('(max-width: 1100px)').matches;
-    function setSettingsSubnavOpen(open) {
+    const settingsSubnavFilter = document.getElementById('settingsSubnavFilter');
+    const settingsSubnavEmpty = document.getElementById('settingsSubnavEmpty');
+    const settingsPhoneNav = document.getElementById('settingsPhoneNav');
+    const settingsSlimQuery = window.matchMedia('(min-width: 769px) and (max-width: 1100px)');
+    const settingsPhoneQuery = window.matchMedia('(max-width: 768px)');
+    const settingsMouseQuery = window.matchMedia('(hover: hover) and (pointer: fine)');
+    let settingsSubnavOpener = null;
+    function setSettingsSubnavOpen(open, opener) {
         if (!settingsSubnav) return;
+        const wasOpen = settingsSubnav.classList.contains('is-open');
         settingsSubnav.classList.toggle('is-open', open);
         if (settingsSubnavBackdrop) settingsSubnavBackdrop.hidden = !open;
-        settingsSubnavToggle?.setAttribute('aria-expanded', String(open));
+        [settingsSubnavToggle, settingsPhoneNav].forEach(button => button?.setAttribute('aria-expanded', String(open)));
+        document.querySelectorAll('.admin-sidebar, #adminMain').forEach(el => { el.inert = open; });
+        if (open && !wasOpen) {
+            settingsSubnavOpener = opener || null;
+            (settingsSubnav.querySelector('.settings-tab-btn.active') || settingsSubnavFilter)?.focus();
+        } else if (!open && wasOpen) {
+            if (settingsSubnavFilter?.value) { settingsSubnavFilter.value = ''; filterSettingsSubnav(''); }
+            // Back to the section row on phones; in the slim bar the focus stays where it is
+            if (settingsSubnavOpener && !settingsSubnav.contains(settingsSubnavOpener) && settingsSubnav.contains(document.activeElement)) settingsSubnavOpener.focus();
+            settingsSubnavOpener = null;
+        }
     }
-    settingsSubnavToggle?.addEventListener('click', () => setSettingsSubnavOpen(!settingsSubnav.classList.contains('is-open')));
+    settingsSubnavToggle?.addEventListener('click', () => setSettingsSubnavOpen(!settingsSubnav.classList.contains('is-open'), settingsSubnavToggle));
+    settingsPhoneNav?.addEventListener('click', () => setSettingsSubnavOpen(true, settingsPhoneNav));
     settingsSubnavBackdrop?.addEventListener('click', () => setSettingsSubnavOpen(false));
     document.addEventListener('keydown', event => {
-        if (event.key === 'Escape' && settingsSubnav?.classList.contains('is-open')) { setSettingsSubnavOpen(false); settingsSubnavToggle?.focus(); }
+        if (event.key !== 'Escape' || !settingsSubnav?.classList.contains('is-open')) return;
+        const opener = settingsSubnavOpener;
+        setSettingsSubnavOpen(false);
+        (opener && opener.isConnected ? opener : settingsSubnavToggle)?.focus();
     });
-    window.matchMedia('(max-width: 1100px)').addEventListener?.('change', () => setSettingsSubnavOpen(false));
+    [settingsSlimQuery, settingsPhoneQuery].forEach(query => query.addEventListener?.('change', () => setSettingsSubnavOpen(false)));
     // Icons alone explain themselves on hover in the slim bar
     settingsSubnav?.querySelectorAll('.sidebar-nav-item').forEach(item => { const label = item.querySelector(':scope > span'); if (label) item.title = label.textContent.trim(); });
+
+    // Filter: section names plus the headings and field labels inside each section, read on first use
+    let settingsSubnavIndex = null;
+    function filterSettingsSubnav(query) {
+        if (!settingsSubnav) return;
+        settingsSubnavIndex = settingsSubnavIndex || Array.from(settingsSubnav.querySelectorAll('.settings-tab-btn')).map(btn => {
+            const panel = document.getElementById('settingsPanel-' + btn.dataset.settingsTab);
+            const words = [btn.textContent].concat(panel ? Array.from(panel.querySelectorAll('h2, h3, h4, legend, label')).map(el => el.textContent) : []);
+            return { btn, text: words.join(' ').replace(/\s+/g, ' ').toLowerCase() };
+        });
+        const needle = query.trim().toLowerCase();
+        let found = false;
+        settingsSubnavIndex.forEach(({ btn, text }) => { btn.hidden = needle !== '' && !text.includes(needle); found = found || !btn.hidden; });
+        settingsSubnav.querySelectorAll('.settings-nav-group').forEach(group => { group.hidden = !group.querySelector('.settings-tab-btn:not([hidden])'); });
+        if (settingsSubnavEmpty) settingsSubnavEmpty.hidden = found;
+    }
+    settingsSubnavFilter?.addEventListener('input', () => filterSettingsSubnav(settingsSubnavFilter.value));
+    settingsSubnavFilter?.addEventListener('keydown', event => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            settingsSubnav.querySelector('.settings-tab-btn:not([hidden])')?.click();
+        } else if (event.key === 'Escape' && settingsSubnavFilter.value) {
+            event.stopPropagation();
+            settingsSubnavFilter.value = '';
+            filterSettingsSubnav('');
+        }
+    });
     function loadSettingsTabData(tab) {
         if (tab === 'users' && typeof loadUsers === 'function' && typeof _usersLoaded !== 'undefined' && !_usersLoaded) {
             _usersLoaded = true;
@@ -40,6 +90,8 @@
         document.querySelectorAll('.settings-tab-btn').forEach(function(b) { b.classList.remove('active'); });
         document.querySelectorAll('.settings-panel').forEach(function(p) { p.classList.remove('active'); });
         btn.classList.add('active');
+        var phoneLabel = document.getElementById('settingsPhoneNavLabel');
+        if (phoneLabel) phoneLabel.textContent = btn.textContent.trim();
         if (typeof window.nbSetTopbarTitle === 'function') {
             window.nbSetTopbarTitle([t('settings.title'), btn.textContent.trim()]);
         }
@@ -51,14 +103,9 @@
 
     document.querySelectorAll('.settings-tab-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
-            // In the slim bar the first tap opens the menu; choosing a section closes it again
-            if (settingsSubnavSlim() && !settingsSubnav.classList.contains('is-open')) { setSettingsSubnavOpen(true); this.focus(); return; }
+            // A touch on the slim bar opens the full menu first; choosing a section closes it again
+            if (settingsSlimQuery.matches && !settingsMouseQuery.matches && !settingsSubnav.classList.contains('is-open')) { setSettingsSubnavOpen(true, this); return; }
             setSettingsSubnavOpen(false);
-            var action = this.getAttribute('data-settings-action');
-            if (action === 'backup') {
-                switchTab('backup');
-                return;
-            }
             var tab = this.getAttribute('data-settings-tab');
             if (!tab) return;
             activateSettingsTab(tab);
