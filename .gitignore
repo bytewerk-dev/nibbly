@@ -54,6 +54,8 @@ nl/
 pt/
 ja/
 zh/
+# The guide's screenshots are core files, one folder per language
+!/includes/handbook/img/*/
 
 # CSS overlay (copied by deploy script)
 css/website.css
