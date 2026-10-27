@@ -12,6 +12,7 @@ require_once __DIR__ . '/../includes/version.php';
 require_once __DIR__ . '/lang/i18n.php';
 require_once __DIR__ . '/users.php';
 require_once __DIR__ . '/../includes/asset-helpers.php';
+require_once __DIR__ . '/../includes/theme-defaults.php';
 require_once __DIR__ . '/../includes/ai/ai-helper.php';
 ensureUsersFile();
 
@@ -34,7 +35,7 @@ $isAdminUser = ($userRole === 'admin');
 
 // Load settings for theme
 $_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg';
-$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => ['adminTheme' => 'light', 'preset' => 'soft', 'density' => 'auto', 'font' => 'system', 'fontSize' => 'default', 'primaryColor' => '#3858e9', 'accentColor' => '', 'sidebarBg' => '', 'darkPrimaryColor' => '', 'darkAccentColor' => '', 'darkSidebarBg' => '', 'dangerColor' => '', 'warningColor' => '', 'successColor' => '', 'buttonGlow' => true, 'buttonRadius' => 6], 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'people' => true, 'messages' => true, 'menus' => true, 'iconManager' => true], 'dashboard' => ['itemsPerPage' => 50, 'iconManagerItemsPerPage' => 50, 'mediaItemsPerPage' => 25]];
+$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => nibblyThemeDefaults(), 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'people' => true, 'messages' => true, 'menus' => true, 'iconManager' => true, 'handbook' => true], 'dashboard' => ['itemsPerPage' => 50, 'iconManagerItemsPerPage' => 50, 'mediaItemsPerPage' => 25]];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     $loadedSettings = json_decode(file_get_contents(SETTINGS_PATH), true);
     if (is_array($loadedSettings)) {
@@ -43,13 +44,15 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
                 $siteSettings[$key] = array_replace($defaults, $loadedSettings[$key]);
             }
         }
+        // A theme saved without a preset keeps Soft (see includes/theme-defaults.php)
+        $siteSettings['theme'] = nibblyThemeSettings($loadedSettings['theme'] ?? []);
         // Preserve top-level keys (favicon, favicon_png)
         if (!empty($loadedSettings['favicon'])) $siteSettings['favicon'] = $loadedSettings['favicon'];
         if (!empty($loadedSettings['favicon_png'])) $siteSettings['favicon_png'] = $loadedSettings['favicon_png'];
     }
 }
 $adminTheme = $siteSettings['theme']['adminTheme'] ?? 'light';
-$dashboardModules = array_replace(['news' => true, 'events' => true, 'people' => true, 'messages' => true, 'menus' => true, 'iconManager' => true, 'ai' => true], is_array($siteSettings['modules'] ?? null) ? $siteSettings['modules'] : []);
+$dashboardModules = array_replace(['news' => true, 'events' => true, 'people' => true, 'messages' => true, 'menus' => true, 'iconManager' => true, 'ai' => true, 'handbook' => true], is_array($siteSettings['modules'] ?? null) ? $siteSettings['modules'] : []);
 $aiFeaturesEnabled = !empty($dashboardModules['ai']);
 $aiDashboardVisible = $aiFeaturesEnabled;
 $_aiDashboardPublicSettings = $aiFeaturesEnabled && function_exists('nibblyAiLoadSettings') ? nibblyAiLoadSettings(true) : [];
@@ -116,7 +119,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
 ?>
 <!DOCTYPE html>
 <?php
-$_themePreset = in_array($siteSettings['theme']['preset'] ?? '', ['soft', 'classic', 'paper', 'studio', 'console', 'pop'], true) ? $siteSettings['theme']['preset'] : 'soft';
+$_themePreset = nibblyThemePreset($siteSettings['theme']['preset'] ?? '');
 $_themeDensity = in_array($siteSettings['theme']['density'] ?? '', ['auto', 'compact', 'comfortable'], true) ? $siteSettings['theme']['density'] : 'auto';
 $_themeFontRaw = $siteSettings['theme']['font'] ?? '';
 if ($_themeFontRaw === 'geist') $_themeFontRaw = 'plex'; // Geist Sans was retired in 2.4.2; Plex is its closest successor
@@ -165,86 +168,9 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
     </script>
     <?php
     // The saved base colour and the optional overrides reach the stylesheet as
-    // custom properties on :root; css/nibbly-admin-tokens.css derives everything
-    // else per preset. Browsers without relative colour syntax get the older
-    // color-mix() derivation inside @supports not (...); the semantic shades
-    // (danger, warning, success) mix from --nb-*-base in the token file's
-    // static block, so the saved colours reach those browsers as well.
-    // admin/dashboard/scripts/settings.php → themeFallbackCss() mirrors this
-    // block for the live preview.
-    $_t = $siteSettings['theme'];
-    $_pcLight = preg_match('/^#[0-9a-fA-F]{6}$/', (string)$_t['primaryColor']) ? strtolower((string)$_t['primaryColor']) : '#3858e9';
-    $_acRaw = strtolower((string)($_t['accentColor'] ?? ''));
-    // An accent equal to the base colour is the old default, not a deliberate override
-    $_acLight = (preg_match('/^#[0-9a-fA-F]{6}$/', $_acRaw) && $_acRaw !== $_pcLight) ? $_acRaw : $_pcLight;
-    $_sbLightOverride = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($_t['sidebarBg'] ?? '')) ? strtolower((string)$_t['sidebarBg']) : '';
-    $_sbDarkOverride = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($_t['darkSidebarBg'] ?? '')) ? strtolower((string)$_t['darkSidebarBg']) : '';
-    $_pcDark = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($_t['darkPrimaryColor'] ?? '')) ? strtolower((string)$_t['darkPrimaryColor']) : $_pcLight;
-    $_acDark = preg_match('/^#[0-9a-fA-F]{6}$/', (string)($_t['darkAccentColor'] ?? '')) ? strtolower((string)$_t['darkAccentColor']) : $_acLight;
-    $_semantic = [];
-    foreach (['dangerColor' => '--nb-danger-base', 'warningColor' => '--nb-warning-base', 'successColor' => '--nb-success-base'] as $_semKey => $_semVar) {
-        $_semRaw = strtolower((string)($_t[$_semKey] ?? ''));
-        if (preg_match('/^#[0-9a-f]{6}$/', $_semRaw)) $_semantic[$_semVar] = $_semRaw;
-    }
-    $_sbLight = $_sbLightOverride !== '' ? $_sbLightOverride : "color-mix(in srgb, {$_pcLight} 12%, white)";
-    $_sbDark = $_sbDarkOverride !== '' ? $_sbDarkOverride : "color-mix(in srgb, {$_pcDark} 10%, #0b0d12)";
+    // custom properties (includes/theme-defaults.php → nibblyThemeServerStyle()).
+    echo nibblyThemeServerStyle($siteSettings['theme']);
     ?>
-    <style id="nb-theme-server">
-    :root {
-        --nb-base: <?php echo $_pcLight; ?>;
-        --nb-accent-base: <?php echo $_acLight; ?>;
-<?php foreach ($_semantic as $_semVar => $_semHex): ?>
-        <?php echo $_semVar; ?>: <?php echo $_semHex; ?>;
-<?php endforeach; ?>
-    }
-    <?php if ($_sbLightOverride !== ''): ?>
-    :root, [data-site-theme="light"] { --nb-sidebar-bg: <?php echo $_sbLightOverride; ?>; --nb-topbar-bg: <?php echo $_sbLightOverride; ?>; }
-    <?php endif; ?>
-    <?php if ($_sbDarkOverride !== ''): ?>
-    [data-site-theme="dark"] { --nb-sidebar-bg: <?php echo $_sbDarkOverride; ?>; --nb-topbar-bg: <?php echo $_sbDarkOverride; ?>; }
-    <?php endif; ?>
-    @supports not (color: oklch(from red l c h)) {
-    :root,
-    [data-site-theme="light"] {
-        --nb-primary: <?php echo $_pcLight; ?>;
-        --nb-primary-subtle: color-mix(in srgb, <?php echo $_pcLight; ?> 8%, transparent);
-        --nb-primary-muted: color-mix(in srgb, <?php echo $_pcLight; ?> 15%, transparent);
-        --nb-primary-medium: color-mix(in srgb, <?php echo $_pcLight; ?> 30%, transparent);
-        --nb-primary-btn: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $_pcLight; ?> 70%, white) 0%, <?php echo $_pcLight; ?> 70%);
-        --nb-primary-btn-hover: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $_pcLight; ?> 50%, white) 0%, <?php echo $_pcLight; ?> 70%);
-        --nb-brand: <?php echo $_acLight; ?>;
-        --nb-brand-light: color-mix(in srgb, <?php echo $_acLight; ?> 65%, white);
-        --nb-brand-dark: color-mix(in srgb, <?php echo $_acLight; ?> 80%, black);
-        --nb-brand-subtle: color-mix(in srgb, <?php echo $_acLight; ?> 12%, transparent);
-        --nb-sidebar-bg: <?php echo $_sbLight; ?>;
-        --nb-bg: color-mix(in srgb, <?php echo $_sbLight; ?> 55%, white);
-        --nb-bg-elevated: color-mix(in srgb, <?php echo $_sbLight; ?> 18%, white);
-        --nb-bg-sunken: color-mix(in srgb, <?php echo $_sbLight; ?> 82%, white);
-        --nb-bg-hover: color-mix(in srgb, <?php echo $_sbLight; ?> 68%, white);
-        --nb-border: color-mix(in srgb, <?php echo $_sbLight; ?> 55%, #9ca3af);
-        --nb-border-strong: color-mix(in srgb, <?php echo $_sbLight; ?> 48%, #7b8492);
-    }
-    [data-site-theme="dark"] {
-        --nb-primary: <?php echo $_pcDark; ?>;
-        --nb-primary-subtle: color-mix(in srgb, <?php echo $_pcDark; ?> 12%, transparent);
-        --nb-primary-muted: color-mix(in srgb, <?php echo $_pcDark; ?> 22%, transparent);
-        --nb-primary-medium: color-mix(in srgb, <?php echo $_pcDark; ?> 38%, transparent);
-        --nb-primary-btn: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $_pcDark; ?> 70%, white) 0%, <?php echo $_pcDark; ?> 70%);
-        --nb-primary-btn-hover: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, <?php echo $_pcDark; ?> 50%, white) 0%, <?php echo $_pcDark; ?> 70%);
-        --nb-brand: <?php echo $_acDark; ?>;
-        --nb-brand-light: color-mix(in srgb, <?php echo $_acDark; ?> 70%, white);
-        --nb-brand-dark: color-mix(in srgb, <?php echo $_acDark; ?> 80%, black);
-        --nb-brand-subtle: color-mix(in srgb, <?php echo $_acDark; ?> 18%, transparent);
-        --nb-sidebar-bg: <?php echo $_sbDark; ?>;
-        --nb-bg: color-mix(in srgb, <?php echo $_sbDark; ?> 78%, #202428);
-        --nb-bg-elevated: color-mix(in srgb, <?php echo $_sbDark; ?> 58%, #2a2d31);
-        --nb-bg-sunken: color-mix(in srgb, <?php echo $_sbDark; ?> 88%, #030405);
-        --nb-bg-hover: color-mix(in srgb, <?php echo $_sbDark; ?> 42%, #34383e);
-        --nb-border: color-mix(in srgb, <?php echo $_sbDark; ?> 55%, #5a6472);
-        --nb-border-strong: color-mix(in srgb, <?php echo $_sbDark; ?> 44%, #717b88);
-    }
-    }
-    </style>
 </head>
 <body>
     <a class="skip-link" href="#adminMain"><?php echo t('nav.skip_content'); ?></a>
@@ -262,6 +188,12 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
             <?php $_siteLabel = trim((string)($siteSettings['branding']['name'] ?? '')) ?: (defined('SITE_NAME') ? (string)SITE_NAME : ''); ?>
             <span class="topbar-dashboard"><?php echo htmlspecialchars($_siteLabel !== '' ? $_siteLabel : t('dashboard')); ?></span>
         </div>
+        <?php if (!empty($dashboardModules['handbook'])): ?>
+        <a href="handbook" class="topbar-handbook" target="_blank" rel="noopener" title="<?php echo htmlspecialchars(t('handbook.link_title')); ?>">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2zM22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg>
+            <span><?php echo htmlspecialchars(t('handbook.link')); ?></span>
+        </a>
+        <?php endif; ?>
         <h1 class="topbar-title" id="topbarTitle"><?php echo t('pages.title'); ?></h1>
         <!-- Language and page of the page editor: kept as state only; the editor's language switch replaces them -->
         <div class="topbar-selectors" id="topbarSelectors" hidden>
@@ -1243,10 +1175,13 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
         </div>
     </div>
 
+    <?php if (!empty($dashboardModules['people'])): ?>
+    <div class="admin-container" id="peopleTab" style="display:none"><div id="peopleMount"></div></div>
+    <?php endif; ?>
+
     <?php if ($isAdminUser): ?>
     <!-- Icon Manager Tab -->
     <?php if ($isAdminUser && !empty($dashboardModules['menus'])): ?>
-    <div class="admin-container" id="peopleTab" style="display:none"><div id="peopleMount"></div></div>
     <div class="admin-container" id="menusTab" style="display: none;">
         <div class="page-list-header mf-header">
             <div class="page-list-header-left">
@@ -1525,7 +1460,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                         <div class="form-group">
                             <label id="settingsThemePresetLabel"><?php echo t('settings.theme_preset'); ?></label>
                             <div class="preset-grid" role="radiogroup" aria-labelledby="settingsThemePresetLabel">
-                                <?php foreach (['soft', 'classic', 'paper', 'studio', 'console', 'pop'] as $_preset): ?>
+                                <?php foreach (NIBBLY_THEME_PRESETS as $_preset): ?>
                                 <button type="button" class="preset-card" role="radio" aria-checked="false" data-preset="<?php echo $_preset; ?>">
                                     <span class="preset-card__preview" aria-hidden="true"><span class="preset-card__stage"><span></span><span></span><span></span></span></span>
                                     <span class="preset-card__name"><?php echo t('settings.preset_' . $_preset); ?></span>
@@ -1533,7 +1468,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                                 </button>
                                 <?php endforeach; ?>
                             </div>
-                            <input type="hidden" id="settingsThemePreset" value="soft">
+                            <input type="hidden" id="settingsThemePreset" value="<?php echo NIBBLY_THEME_DEFAULT_PRESET; ?>">
                             <small class="form-hint"><?php echo t('settings.theme_preset_hint'); ?></small>
                         </div>
 
@@ -2688,6 +2623,15 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                                     <span><?php echo t('settings.module_ai'); ?></span>
                                     <div class="toggle-switch">
                                         <input type="checkbox" id="moduleAi" checked>
+                                        <span class="toggle-slider"></span>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="form-group access-toggle-row access-toggle-row--module">
+                                <label class="toggle-label">
+                                    <span><?php echo t('settings.module_handbook'); ?></span>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" id="moduleHandbook" checked>
                                         <span class="toggle-slider"></span>
                                     </div>
                                 </label>

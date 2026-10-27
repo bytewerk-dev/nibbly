@@ -22,6 +22,11 @@
         var select = document.getElementById('pageSelect');
         return select && select.value ? select.value : '';
     };
+    // Binds a listener only when the element is there: admin-only parts of the settings are not rendered for editors
+    function onElement(id, type, handler) {
+        const element = document.getElementById(id);
+        if (element) element.addEventListener(type, handler);
+    }
     // Menu registry for Page Settings nav checkboxes
     window.NB_MENUS = <?php echo json_encode(getMenuRegistry()['menus'] ?? [], JSON_UNESCAPED_UNICODE); ?>;
     const DASHBOARD_MODULES = <?php echo json_encode($dashboardModules, JSON_UNESCAPED_UNICODE); ?>;

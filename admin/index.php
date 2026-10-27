@@ -14,6 +14,7 @@ require_once __DIR__ . '/../includes/version.php';
 require_once __DIR__ . '/lang/i18n.php';
 require_once __DIR__ . '/users.php';
 require_once __DIR__ . '/../includes/asset-helpers.php';
+require_once __DIR__ . '/../includes/theme-defaults.php';
 ensureUsersFile();
 
 require_once __DIR__ . '/../includes/session-helper.php';
@@ -490,7 +491,7 @@ $_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : 
 $siteSettings = [
     'favicon' => $_defaultFavicon,
     'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both'],
-    'theme' => ['adminTheme' => 'light', 'preset' => 'soft', 'density' => 'auto', 'font' => 'system', 'primaryColor' => '#3858e9', 'accentColor' => '', 'sidebarBg' => '', 'darkSidebarBg' => ''],
+    'theme' => nibblyThemeDefaults(),
     'login' => ['brandAsset' => 'favicon', 'image' => '', 'imageLayout' => 'none', 'overlayColor' => '', 'overlayOpacity' => 86, 'boxStyle' => 'card', 'boxColor' => '', 'boxTextColor' => '']
 ];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
@@ -502,15 +503,16 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
                 $siteSettings[$key] = array_replace($defaults, $loadedSettings[$key]);
             }
         }
+        $siteSettings['theme'] = nibblyThemeSettings(is_array($loadedSettings['theme'] ?? null) ? $loadedSettings['theme'] : []);
         if (!empty($loadedSettings['favicon'])) $siteSettings['favicon'] = $loadedSettings['favicon'];
     }
 }
 $adminTheme = $siteSettings['theme']['adminTheme'] ?? 'light';
-$_themePreset = in_array($siteSettings['theme']['preset'] ?? '', ['soft', 'classic', 'paper', 'studio', 'console', 'pop'], true) ? $siteSettings['theme']['preset'] : 'soft';
+$_themePreset = nibblyThemePreset($siteSettings['theme']['preset'] ?? '');
 $_themeFontRaw = $siteSettings['theme']['font'] ?? '';
 if ($_themeFontRaw === 'geist') $_themeFontRaw = 'plex';
 $_themeFont = in_array($_themeFontRaw, ['system', 'inter', 'plex', 'atkinson', 'public', 'geist-mono'], true) ? $_themeFontRaw : 'system';
-$_loginBase = preg_match('/^#[0-9a-fA-F]{6}$/', (string)$siteSettings['theme']['primaryColor']) ? strtolower((string)$siteSettings['theme']['primaryColor']) : '#3858e9';
+$_loginBase = preg_match('/^#[0-9a-fA-F]{6}$/', (string)$siteSettings['theme']['primaryColor']) ? strtolower((string)$siteSettings['theme']['primaryColor']) : nibblyThemeDefaults()['primaryColor'];
 $_loginAccentRaw = strtolower((string)($siteSettings['theme']['accentColor'] ?? ''));
 $_loginAccent = (preg_match('/^#[0-9a-fA-F]{6}$/', $_loginAccentRaw) && $_loginAccentRaw !== $_loginBase) ? $_loginAccentRaw : $_loginBase;
 $showBranding = $siteSettings['branding']['showBranding'] ?? true;
@@ -665,7 +667,7 @@ $loginBoxStyleAttr = $loginBoxVariables
                     <?php echo htmlspecialchars($error); ?>
                     <?php if ($lockoutWait > 0): ?>
                         <div class="lockout-countdown" id="lockoutCountdown">
-                            <span id="countdownSeconds"><?php echo $lockoutWait; ?></span>s remaining
+                            <?php echo str_replace('{time}', '<span id="countdownSeconds">' . (int)$lockoutWait . ' s</span>', htmlspecialchars(t('login.remaining'))); ?>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -736,14 +738,14 @@ $loginBoxStyleAttr = $loginBoxVariables
             if (seconds >= 3600) {
                 var h = Math.floor(seconds / 3600);
                 var m = Math.ceil((seconds % 3600) / 60);
-                return h + labelHour + ' ' + m + labelMin;
+                return h + ' ' + labelHour + ' ' + m + ' ' + labelMin;
             }
             if (seconds >= 60) {
                 var m = Math.floor(seconds / 60);
                 var s = seconds % 60;
-                return m + ':' + (s < 10 ? '0' : '') + s;
+                return m + ':' + (s < 10 ? '0' : '') + s + ' ' + labelMin;
             }
-            return seconds;
+            return seconds + ' s';
         }
 
         function tick() {

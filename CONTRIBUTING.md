@@ -65,6 +65,10 @@ in the PR. The focused local regression command is `python3 tests/system-smoke.p
 With Playwright and Chromium installed locally, run `python3 tests/browser-check.py`.
 This also uses an isolated fixture and reports the location of its screenshots.
 
+After changes to the dashboard or the visual editor, retake the editorial guide's screenshots with
+`python3 tests/handbook-screenshots.py` (both languages, or `de` / `en` and a name filter) and check
+the chapters in `includes/handbook/chapters/` that describe the changed screens.
+
 For shared JSON records use `includes/json-store.php`: `nibblyJsonUpdate()` locks
 the complete read/change/write transaction; `nibblyJsonAtomicWrite()` alone only
 prevents partially written files. Never remove a lock file after releasing it.

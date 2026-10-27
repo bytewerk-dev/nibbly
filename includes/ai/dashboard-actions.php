@@ -223,7 +223,7 @@ function nibblyDashboardActionFromCall(string $name, array $arguments, bool $isA
         case 'accentColor':
             if (!preg_match('/^#[0-9a-fA-F]{6}$/', $value)) return $unusable();
             $value = strtolower($value);
-            $fromLabel = $from !== '' ? $from : '#3858e9';
+            $fromLabel = $from !== '' ? $from : (string)($current['primaryColor'] ?? '');
             $toLabel = $value;
             break;
         default: // adminLanguage
@@ -334,10 +334,12 @@ function nibblyDashboardActionsAvailable(): bool {
 function nibblyDashboardCurrentSettings(): array {
     $stored = defined('SETTINGS_PATH') && is_file(SETTINGS_PATH) ? json_decode((string)file_get_contents(SETTINGS_PATH), true) : [];
     $stored = is_array($stored) ? $stored : [];
+    require_once dirname(__DIR__) . '/theme-defaults.php';
+    $theme = nibblyThemeSettings(is_array($stored['theme'] ?? null) ? $stored['theme'] : []);
     return [
-        'adminTheme' => (string)($stored['theme']['adminTheme'] ?? 'light'),
-        'primaryColor' => strtolower((string)($stored['theme']['primaryColor'] ?? '#3858e9')),
-        'accentColor' => strtolower((string)($stored['theme']['accentColor'] ?? '#3858e9')),
+        'adminTheme' => (string)$theme['adminTheme'],
+        'primaryColor' => strtolower((string)$theme['primaryColor']),
+        'accentColor' => strtolower((string)($stored['theme']['accentColor'] ?? $theme['primaryColor'])),
         'adminLanguage' => (string)($stored['general']['adminLanguage'] ?? '')
     ];
 }

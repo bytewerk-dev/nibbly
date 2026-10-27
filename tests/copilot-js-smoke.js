@@ -9,6 +9,7 @@ const adminStyles = readFileSync(resolve(root, 'admin/style.css'), 'utf8');
 const footer = readFileSync(resolve(root, 'includes/footer.php'), 'utf8');
 const dashboard = dashboardSource();
 const adminApi = apiSource();
+const themeDefaults = readFileSync(resolve(root, 'includes/theme-defaults.php'), 'utf8');
 const adminTokens = readFileSync(resolve(root, 'css/nibbly-admin-tokens.css'), 'utf8');
 const inlineEditor = readFileSync(resolve(root, 'js/inline-editor.js'), 'utf8');
 
@@ -227,9 +228,12 @@ assertContains(dashboard, 'aiAssistantSurfaceVisualEditor', 'AI settings should 
 assertContains(dashboard, 'aiAssistantSurfaceDashboard', 'AI settings should include a Dashboard Assistant visibility toggle.');
 assertContains(dashboard, 'imageGeneration: true', 'AI image generation should be enabled by default once a provider key is configured.');
 assertContains(dashboard, 'function applyAiDefaultsForNewApiKey()', 'AI settings should auto-enable default features when a provider key is first entered.');
-assertContains(dashboard, "primaryColor: '#3858e9'", 'Dashboard theme defaults should use the updated nibbly primary color.');
-assertContains(dashboard, "accentColor: ''", 'Dashboard theme defaults derive the accent from the base colour (empty = auto).');
-assertContains(dashboard, "preset: 'soft'", 'Dashboard theme defaults should start from the Soft preset.');
+assertContains(dashboard, 'var THEME_DEFAULTS = <?php echo json_encode(nibblyThemeDefaults()); ?>;', 'Dashboard theme defaults should come from the shared theme defaults.');
+assertContains(themeDefaults, "'preset' => NIBBLY_THEME_DEFAULT_PRESET", 'Theme defaults should start from the default preset.');
+assertContains(themeDefaults, "const NIBBLY_THEME_DEFAULT_PRESET = 'pop';", 'A new installation should start with the Pop preset.');
+assertContains(themeDefaults, "'primaryColor' => '#3d8ee9'", 'Theme defaults should use the Pop base colour.');
+assertContains(themeDefaults, "'accentColor' => ''", 'Theme defaults derive the accent from the base colour (empty = auto).');
+assertContains(themeDefaults, "'preset' => 'soft',", 'A theme saved without a preset should keep Soft.');
 assertContains(dashboard, 'class="preset-card"', 'Design settings should offer theme presets as cards.');
 assertContains(dashboard, 'data-theme-preset="<?php echo $_themePreset; ?>"', 'Dashboard <html> should carry the saved theme preset.');
 assertContains(dashboard, 'data-font="<?php echo $_themeFont; ?>"', 'Dashboard <html> should carry the saved admin font.');
@@ -271,10 +275,10 @@ assertContains(adminStyles, '[data-theme-preset="paper"] .sidebar-nav-item.activ
 assertContains(adminStyles, 'background: color-mix(in srgb, var(--nb-bg-elevated) 82%, var(--nb-bg));', 'Button style preview should use the lighter preview background.');
 assertMatches(adminStyles, /html\[data-settings-open\] \.settings-subnav\s*\{[\s\S]*?background:\s*var\(--nb-sidebar-bg\);/, 'Settings sub-navigation should be a second sidebar in the sidebar colours.');
 assertMatches(adminStyles, /\.settings-panel\s*\{[\s\S]*?box-shadow:\s*none;/, 'Settings panels should use a border-only container without shadow.');
-assertContains(adminApi, "'primaryColor' => '#3858e9'", 'Settings API defaults should use the updated nibbly primary color.');
-assertContains(adminApi, "'accentColor' => ''", 'Settings API defaults derive the accent from the base colour.');
-assertContains(adminApi, "'preset' => 'soft'", 'Settings API defaults should start from the Soft preset.');
-assertContains(adminApi, "['soft', 'classic', 'paper', 'studio', 'console', 'pop']", 'Settings API should validate the theme preset.');
+assertContains(adminApi, "'theme' => nibblyThemeDefaults(),", 'Settings API defaults should come from the shared theme defaults.');
+assertContains(adminApi, "$merged['theme'] = nibblyThemeSettings(", 'Settings API should keep Soft for a theme saved without a preset.');
+assertContains(adminApi, "in_array($value, NIBBLY_THEME_PRESETS, true)", 'Settings API should validate the theme preset.');
+assertContains(themeDefaults, "const NIBBLY_THEME_PRESETS = ['soft', 'classic', 'paper', 'studio', 'console', 'pop'];", 'Theme defaults should list every preset.');
 assertContains(adminApi, "['system', 'inter', 'plex', 'atkinson', 'public', 'geist-mono']", 'Settings API should validate the admin font.');
 assertContains(adminApi, 'function nibblySanitizeThemeContrast(array $theme): array', 'Settings API should enforce readable theme contrast server-side.');
 assertContains(adminApi, "max(nibblyContrastRatio($hex, '#ffffff'), nibblyContrastRatio($hex, '#111111'))", 'Settings API should accept base colours readable with white or dark text.');

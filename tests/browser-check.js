@@ -40,8 +40,25 @@ const { chromium } = require('playwright');
         const guest = await browser.newPage({ viewport: { width: 390, height: 844 } });
         await guest.goto(base + '/services/test/');
         if (await guest.locator('#admin-bar').count()) throw Error('Guest sees admin bar');
+        // Editors get a smaller dashboard: the script must not stop at fields only admins have
+        const editor = await (await browser.newContext({ viewport: { width: 1440, height: 1000 } })).newPage();
+        editor.on('pageerror', error => errors.push('editor: ' + error.message));
+        await editor.goto(base + '/admin/index.php');
+        await editor.locator('#username').fill('editor');
+        await editor.locator('#password').fill(process.env.REVIEW_PASSWORD);
+        await Promise.all([
+            editor.waitForURL('**/admin/dashboard.php'),
+            editor.locator('form').first().locator('button[type=submit]').click()
+        ]);
+        await editor.waitForLoadState('networkidle');
+        for (const tab of ['people', 'events', 'settings', 'content']) {
+            await editor.locator('.sidebar-nav-item[data-tab="' + tab + '"]').click();
+            await editor.waitForLoadState('networkidle');
+            if (tab === 'people') await editor.waitForSelector('#peopleMount #peopleRows', { timeout: 5000 });
+        }
+        if (await editor.locator('.toast-error, .toast.error').count()) throw Error('Editor dashboard shows an error toast');
         if (errors.length) throw Error(errors.join('\n'));
-        console.log('PASS Chromium login, nine dashboard tabs, integer chart ticks, disabled AI, mobile admin offset, guest page and no JS errors');
+        console.log('PASS Chromium login, nine dashboard tabs, editor dashboard, integer chart ticks, disabled AI, mobile admin offset, guest page and no JS errors');
     } finally {
         await browser.close();
     }

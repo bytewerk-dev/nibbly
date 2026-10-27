@@ -3,6 +3,28 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.5.1 to the next release
+
+The next release adds the editorial guide at `/admin/handbook` and makes Pop the default theme of
+new installations. No manual step is needed; existing sites keep their look.
+
+1. Deploy the complete core. New: `admin/handbook.php`, `includes/handbook.php`,
+   `includes/handbook/` (chapters, styles, screenshots), `includes/theme-defaults.php`. Changed:
+   the dashboard, the login page, the settings API, `admin/setup.php`, `includes/footer.php`,
+   `includes/backup-helper.php`, `js/inline-editor.js`, `css/inline-editor.css`, `admin/style.css`
+   and `admin/lang/*.json`. A site with its own `includes/footer.php` gets the admin-bar link to the
+   guide only once its footer is updated from the core version.
+2. Theme defaults. A saved `theme` with a `preset` key keeps everything it stores. A saved `theme`
+   without `preset` (every installation set up before this release that never saved Settings →
+   Design) keeps Soft and `#3858e9`; the first save under Settings writes `preset: "soft"`
+   explicitly. Only installations without any saved theme now start with Pop.
+3. The guide is on by default. To hide it, switch off Settings → Modules → Handbuch
+   (`modules.handbook: false`). A site that had its own guide at `/admin/handbuch` (for example a
+   site-specific `admin/handbuch.php`) can move its site-specific chapters to
+   `includes/site-handbook/` (see `AI-AGENT-GUIDE.md`, "Editorial Guide") and drop the old files.
+4. Developer tooling: `tests/handbook-screenshots.py` needs Playwright
+   (`cd tests && npm install && npx playwright install chromium`).
+
 ## Upgrading from 2.5.0 to 2.5.1
 
 Version 2.5.1 is a compatible release: the settings get their own second sidebar with a search

@@ -73,7 +73,7 @@
     }
 
     // Open add user modal
-    document.getElementById('addUserBtn').addEventListener('click', function() {
+    onElement('addUserBtn', 'click', function() {
         document.getElementById('userFormId').value = '';
         document.getElementById('userFormUsername').value = '';
         document.getElementById('userFormEmail').value = '';
@@ -92,7 +92,7 @@
     }
 
     // Generate password in user modal
-    document.getElementById('userGenPwBtn').addEventListener('click', function() {
+    onElement('userGenPwBtn', 'click', function() {
         var pw = generatePassword();
         document.getElementById('userFormPassword').value = pw;
         document.getElementById('userFormPassword').type = 'text';
@@ -127,7 +127,7 @@
     }
 
     // Submit user form (add or edit)
-    document.getElementById('userForm').addEventListener('submit', async function(e) {
+    onElement('userForm', 'submit', async function(e) {
         e.preventDefault();
         var userId = document.getElementById('userFormId').value;
         var isEdit = !!userId;
@@ -177,7 +177,7 @@
     }
 
     // Generate password in reset modal
-    document.getElementById('resetPwGenBtn').addEventListener('click', function() {
+    onElement('resetPwGenBtn', 'click', function() {
         var pw = generatePassword();
         document.getElementById('resetPwInput').value = pw;
         document.getElementById('resetPwInput').type = 'text';
@@ -190,7 +190,7 @@
     });
 
     // Live validation for reset password
-    document.getElementById('resetPwInput').addEventListener('input', function() {
+    onElement('resetPwInput', 'input', function() {
         validatePasswordRequirements(this.value, '#resetPwReqs');
     });
 
@@ -211,7 +211,7 @@
     }
 
     // Submit reset password form
-    document.getElementById('resetPwForm').addEventListener('submit', async function(e) {
+    onElement('resetPwForm', 'submit', async function(e) {
         e.preventDefault();
         var userId = document.getElementById('resetPwUserId').value;
         var pw = document.getElementById('resetPwInput').value;

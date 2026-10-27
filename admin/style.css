@@ -1107,6 +1107,38 @@ svg.topbar-logo {
     letter-spacing: -0.02em;
 }
 
+/* Guide link after the brand, set off by a divider (Settings → Modules → Guide) */
+.topbar-handbook {
+    display: flex;
+    align-items: center;
+    gap: var(--nb-space-1);
+    flex-shrink: 0;
+    padding-left: var(--nb-space-4);
+    border-left: 1px solid var(--nb-topbar-divider, var(--nb-border));
+    color: var(--nb-topbar-text-muted);
+    font-size: var(--nb-text-xs);
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color var(--nb-duration-fast) var(--nb-ease);
+}
+
+.topbar-handbook:hover,
+.topbar-handbook:focus-visible {
+    color: var(--nb-primary);
+}
+
+/* Narrow screens: the book icon alone, so the page title keeps its room */
+@media (max-width: 768px) {
+    .topbar-handbook {
+        padding-left: var(--nb-space-3);
+    }
+
+    .topbar-handbook span {
+        display: none;
+    }
+}
+
 .topbar-title {
     margin: 0;
     font-family: var(--nb-font-sans);

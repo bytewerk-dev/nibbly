@@ -119,7 +119,8 @@
 
             if (result.success) {
                 currentSettings = result.data;
-                populateSettings(currentSettings);
+                // Editors only get "My account"; the forms populateSettings() fills are rendered for admins
+                if (USER_ROLE === 'admin') populateSettings(currentSettings);
                 applyTheme(currentSettings.theme || {});
                 settingsLoaded = true;
             } else {
@@ -334,6 +335,8 @@
         if (moduleMenusEl) moduleMenusEl.checked = modules.menus !== false;
         var moduleIconManagerEl = document.getElementById('moduleIconManager');
         if (moduleIconManagerEl) moduleIconManagerEl.checked = modules.iconManager !== false;
+        var moduleHandbookEl = document.getElementById('moduleHandbook');
+        if (moduleHandbookEl) moduleHandbookEl.checked = modules.handbook !== false;
         var media = settings.media || {};
         var mediaMaxUploadEl = document.getElementById('settingsMediaMaxUpload');
         if (mediaMaxUploadEl) mediaMaxUploadEl.value = media.maxUploadMb || 20;
@@ -490,25 +493,8 @@
     // THEME COLORS — auto-derivation, auto-badge, live preview
     // ============================================================
 
-    // Defaults — kept in sync with server-side ($defaults in api.php load-settings)
-    var THEME_DEFAULTS = {
-        adminTheme: 'light',
-        preset: 'soft',
-        density: 'auto',
-        font: 'system',
-        fontSize: 'default',
-        primaryColor: '#3858e9',
-        accentColor: '',
-        sidebarBg: '',
-        darkPrimaryColor: '',
-        darkAccentColor: '',
-        darkSidebarBg: '',
-        dangerColor: '',
-        warningColor: '',
-        successColor: '',
-        buttonGlow: true,
-        buttonRadius: 6
-    };
+    // Defaults of a new installation (includes/theme-defaults.php, shared with the settings API)
+    var THEME_DEFAULTS = <?php echo json_encode(nibblyThemeDefaults()); ?>;
     // Default semantic colours (match css/nibbly-admin-tokens.css); success follows the base colour
     var SEMANTIC_DEFAULTS = { dangerColor: '#dc2626', warningColor: '#d97706' };
 
@@ -525,7 +511,7 @@
         defaultOgImage: ''
     };
 
-    var THEME_PRESETS = ['soft', 'classic', 'paper', 'studio', 'console', 'pop'];
+    var THEME_PRESETS = <?php echo json_encode(NIBBLY_THEME_PRESETS); ?>;
     var THEME_DENSITIES = ['auto', 'compact', 'comfortable'];
     var THEME_FONTS = ['system', 'inter', 'plex', 'atkinson', 'public', 'geist-mono'];
     var THEME_FONT_SIZES = ['small', 'default', 'large'];
@@ -739,7 +725,7 @@
             btn.classList.toggle('selected', btn.dataset.theme === mode);
         });
 
-        var preset = pickOne(theme.preset, THEME_PRESETS, 'soft');
+        var preset = pickOne(theme.preset, THEME_PRESETS, THEME_DEFAULTS.preset);
         document.getElementById('settingsThemePreset').value = preset;
         document.querySelectorAll('.preset-card').forEach(function(card) {
             var on = card.dataset.preset === preset;
@@ -782,7 +768,7 @@
         var fontSizeRadio = document.querySelector('input[name="settingsFontSize"]:checked');
         return {
             adminTheme: document.getElementById('settingsAdminTheme').value,
-            preset: pickOne(document.getElementById('settingsThemePreset').value, THEME_PRESETS, 'soft'),
+            preset: pickOne(document.getElementById('settingsThemePreset').value, THEME_PRESETS, THEME_DEFAULTS.preset),
             density: pickOne(densityRadio ? densityRadio.value : 'auto', THEME_DENSITIES, 'auto'),
             font: pickOne(document.getElementById('settingsFont')?.value, THEME_FONTS, 'system'),
             fontSize: pickOne(fontSizeRadio ? fontSizeRadio.value : 'default', THEME_FONT_SIZES, 'default'),
@@ -860,6 +846,7 @@
 
     // Button preview follows the live tokens, only radius and glow are set here
     function updateBtnStylePreview() {
+        if (!document.getElementById('settingsButtonGlow')) return;
         var glow = document.getElementById('settingsButtonGlow').checked;
         var radius = parseInt(document.getElementById('settingsButtonRadius').value, 10);
         var primary = document.getElementById('settingsPrimaryColor').value;
@@ -881,8 +868,8 @@
     }
 
     // The glow switch applies live to the real buttons too (nb-flat-buttons on <html>), not only to the preview
-    document.getElementById('settingsButtonGlow').addEventListener('change', updateColorPreview);
-    document.getElementById('settingsButtonRadius').addEventListener('input', function() {
+    onElement('settingsButtonGlow', 'change', updateColorPreview);
+    onElement('settingsButtonRadius', 'input', function() {
         document.getElementById('settingsButtonRadiusValue').textContent = this.value + 'px';
         updateBtnStylePreview();
     });
@@ -1100,7 +1087,7 @@
     });
 
     // Reset all colors button — restores defaults (without saving)
-    document.getElementById('resetThemeBtn').addEventListener('click', function() {
+    onElement('resetThemeBtn', 'click', function() {
         populateThemeForm(Object.assign({}, THEME_DEFAULTS, {
             adminTheme: document.getElementById('settingsAdminTheme').value
         }));
@@ -1111,7 +1098,7 @@
     });
 
     // Browse logo button — opens the image manager
-    document.getElementById('browseLogoBtn').addEventListener('click', function() {
+    onElement('browseLogoBtn', 'click', function() {
         var input = document.getElementById('settingsLogo');
         NbImageManager.open(function(path) {
             input.value = path;
@@ -1120,7 +1107,7 @@
     });
 
     // Browse dark-logo button — opens the image manager
-    document.getElementById('browseLogoDarkBtn').addEventListener('click', function() {
+    onElement('browseLogoDarkBtn', 'click', function() {
         var input = document.getElementById('settingsLogoDark');
         NbImageManager.open(function(path) {
             input.value = path;
@@ -1129,7 +1116,7 @@
     });
 
     // Browse admin-logo button — opens the image manager
-    document.getElementById('browseAdminLogoBtn').addEventListener('click', function() {
+    onElement('browseAdminLogoBtn', 'click', function() {
         var input = document.getElementById('settingsAdminLogo');
         NbImageManager.open(function(path) {
             input.value = path;
@@ -1138,7 +1125,7 @@
     });
 
     // Browse favicon button — opens the image manager
-    document.getElementById('browseFaviconBtn').addEventListener('click', function() {
+    onElement('browseFaviconBtn', 'click', function() {
         var input = document.getElementById('settingsFavicon');
         NbImageManager.open(function(path) {
             input.value = path;
@@ -1147,7 +1134,7 @@
     });
 
     // Browse PNG favicon button — opens the image manager
-    document.getElementById('browseFaviconPngBtn').addEventListener('click', function() {
+    onElement('browseFaviconPngBtn', 'click', function() {
         var input = document.getElementById('settingsFaviconPng');
         NbImageManager.open(function(path) {
             input.value = path;
@@ -1155,7 +1142,7 @@
         }, input ? input.value : null, { types: ['image'], type: 'image' });
     });
 
-    document.getElementById('browseDefaultOgBtn').addEventListener('click', function() {
+    onElement('browseDefaultOgBtn', 'click', function() {
         var input = document.getElementById('settingsDefaultOgImage');
         NbImageManager.open(function(path) {
             setOgImageInputValue(input, path);
@@ -1181,27 +1168,27 @@
     });
 
     // Manual edits to the logo path also toggle the 3-way selector
-    document.getElementById('settingsLogo').addEventListener('input', function() {
+    onElement('settingsLogo', 'input', function() {
         updateLogoPreview(this.value.trim());
         updateClearButton(this);
     });
-    document.getElementById('settingsLogoDark').addEventListener('input', function() {
+    onElement('settingsLogoDark', 'input', function() {
         updateLogoDarkPreview(this.value.trim());
         updateClearButton(this);
     });
-    document.getElementById('settingsAdminLogo').addEventListener('input', function() {
+    onElement('settingsAdminLogo', 'input', function() {
         updateAdminLogoPreview(this.value.trim());
         updateClearButton(this);
     });
-    document.getElementById('settingsFavicon').addEventListener('input', function() {
+    onElement('settingsFavicon', 'input', function() {
         updateFaviconPreview(this.value.trim());
         updateClearButton(this);
     });
-    document.getElementById('settingsFaviconPng').addEventListener('input', function() {
+    onElement('settingsFaviconPng', 'input', function() {
         updateFaviconPngPreview(this.value.trim());
         updateClearButton(this);
     });
-    document.getElementById('settingsDefaultOgImage').addEventListener('input', function() {
+    onElement('settingsDefaultOgImage', 'input', function() {
         updateDefaultOgPreview(this.value.trim());
         updateClearButton(this);
     });
@@ -1232,7 +1219,7 @@
         syncOverlayOpacity('maintenanceOverlayOpacity', 'maintenanceOverlayOpacityValue');
     });
 
-    document.getElementById('resetBrandingBtn').addEventListener('click', function() {
+    onElement('resetBrandingBtn', 'click', function() {
         document.getElementById('settingsFavicon').value = BRANDING_DEFAULTS.favicon;
         document.getElementById('settingsFaviconPng').value = BRANDING_DEFAULTS.favicon_png;
         document.getElementById('settingsLogo').value = BRANDING_DEFAULTS.logo;
@@ -1276,7 +1263,7 @@
     });
 
     // Save branding
-    document.getElementById('brandingForm').addEventListener('submit', async function(e) {
+    onElement('brandingForm', 'submit', async function(e) {
         e.preventDefault();
         var btn = document.getElementById('saveBrandingBtn');
         btn.disabled = true;
@@ -1326,7 +1313,7 @@
     });
 
     // Save theme
-    document.getElementById('themeForm').addEventListener('submit', async function(e) {
+    onElement('themeForm', 'submit', async function(e) {
         e.preventDefault();
         var btn = document.getElementById('saveThemeBtn');
         btn.disabled = true;
@@ -1407,7 +1394,7 @@
         }
         root.setAttribute('data-site-theme', themeValue);
         localStorage.setItem('site-admin-theme', theme.adminTheme);
-        root.setAttribute('data-theme-preset', pickOne(theme.preset, THEME_PRESETS, 'soft'));
+        root.setAttribute('data-theme-preset', pickOne(theme.preset, THEME_PRESETS, THEME_DEFAULTS.preset));
         root.setAttribute('data-density', pickOne(theme.density, THEME_DENSITIES, 'auto'));
         root.setAttribute('data-font', pickOne(THEME_FONT_ALIASES[theme.font] || theme.font, THEME_FONTS, 'system'));
         root.setAttribute('data-font-size', pickOne(theme.fontSize, THEME_FONT_SIZES, 'default'));
@@ -2699,7 +2686,7 @@
     // SAVE LANGUAGE
     // ============================================================
 
-    document.getElementById('languageForm').addEventListener('submit', async function(e) {
+    onElement('languageForm', 'submit', async function(e) {
         e.preventDefault();
         var btn = document.getElementById('saveLanguageBtn');
         btn.disabled = true;
@@ -2873,6 +2860,7 @@
                 settings.modules.messages = document.getElementById('moduleMessages').checked;
                 settings.modules.menus = document.getElementById('moduleMenus').checked;
                 settings.modules.iconManager = document.getElementById('moduleIconManager').checked;
+                settings.modules.handbook = document.getElementById('moduleHandbook').checked;
                 var clampInt = function(id, min, max, fallback) {
                     var el = document.getElementById(id);
                     var value = el ? parseInt(el.value, 10) : NaN;
@@ -2979,11 +2967,11 @@
         }
     }
 
-    document.getElementById('settingsEmailMethod').addEventListener('change', function() {
+    onElement('settingsEmailMethod', 'change', function() {
         toggleSmtpFields(this.value);
     });
 
-    document.getElementById('settingsSmtpEncryption').addEventListener('change', function() {
+    onElement('settingsSmtpEncryption', 'change', function() {
         var portField = document.getElementById('settingsSmtpPort');
         if (this.value === 'ssl') portField.value = 465;
         else if (this.value === 'tls') portField.value = 587;
@@ -3005,7 +2993,7 @@
         };
     }
 
-    document.getElementById('emailForm').addEventListener('submit', async function(e) {
+    onElement('emailForm', 'submit', async function(e) {
         e.preventDefault();
         var btn = document.getElementById('saveEmailBtn');
         btn.disabled = true;
@@ -3043,7 +3031,7 @@
         }
     });
 
-    document.getElementById('testEmailBtn').addEventListener('click', async function() {
+    onElement('testEmailBtn', 'click', async function() {
         var btn = this;
         var resultEl = document.getElementById('emailTestResult');
         btn.disabled = true;

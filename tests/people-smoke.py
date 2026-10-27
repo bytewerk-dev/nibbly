@@ -79,7 +79,12 @@ with tempfile.TemporaryDirectory(prefix='nibbly-people-test-') as directory:
         code,res=admin.api('empty-people-trash',revision=load()['revision']);assert code==200,res
         assert [p['name'] for p in res['data']['people']]==['Ada Updated'],res
         code,res=admin.api('save-person',id=pid,person=json.dumps(profile),revision=load()['revision']);assert code==200,res
+        # The dashboard area follows the People module alone, not the role or the Menus module.
+        write_json(root/'content/settings.json',{'modules':{'menus':False,'ai':False}})
+        for client in (admin,editor):
+            assert b'id="peopleTab"' in client.request('/admin/dashboard.php')[2]
         write_json(root/'content/settings.json',{'modules':{'people':False,'ai':False}})
+        assert b'id="peopleTab"' not in admin.request('/admin/dashboard.php')[2]
         assert admin.request('/admin/api.php?action=load-people')[0]==403
         assert editor.api('trash-person',id=pid,revision=res['revision'])[0]==403
         # Disabling management preserves already published website content.
@@ -89,7 +94,7 @@ with tempfile.TemporaryDirectory(prefix='nibbly-people-test-') as directory:
         assert admin.request('/admin/api.php?action=load-people')[0]==503
         assert (root/'content/people.json').read_text()=='{broken'
         (root/'content/people.json').write_text(raw)
-        print('PASS: people CRUD, editor role, CSRF, methods, revisions, sanitization, languages, references, group filtering, trash/restore/permanent delete/empty trash, backups, module flag and damaged storage.',flush=True)
+        print('PASS: people CRUD, editor role, CSRF, methods, revisions, sanitization, languages, references, group filtering, trash/restore/permanent delete/empty trash, backups, module flag, dashboard area for editors and damaged storage.',flush=True)
         if '--serve' in sys.argv:
             Path('/tmp/nibbly-people-browser.json').write_text(json.dumps({'root':str(root),'port':site.port,'password':site.password,'id':pid}))
             print('Browser fixture ready on port '+str(site.port),flush=True)

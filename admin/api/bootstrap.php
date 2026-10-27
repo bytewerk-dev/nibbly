@@ -1213,6 +1213,7 @@ function sanitizeModuleSettings(array $settings): array {
         'messages' => !array_key_exists('messages', $modules) || !empty($modules['messages']),
         'menus' => !array_key_exists('menus', $modules) || !empty($modules['menus']),
         'iconManager' => !array_key_exists('iconManager', $modules) || !empty($modules['iconManager']),
+        'handbook' => !array_key_exists('handbook', $modules) || !empty($modules['handbook']),
     ], $modules);
 }
 

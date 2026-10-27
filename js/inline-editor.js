@@ -47,9 +47,9 @@
      */
     function applyAdminBarTheme(bar) {
         const theme = window.NB_ADMIN_BAR_THEME || {};
-        bar.dataset.themePreset = theme.preset || 'soft';
+        bar.dataset.themePreset = theme.preset || 'pop';
         bar.dataset.density = theme.density || 'auto';
-        bar.dataset.font = theme.font || 'system';
+        bar.dataset.font = theme.font || 'atkinson';
         bar.dataset.fontSize = theme.fontSize || 'default';
         // The bar's right end lines up with the dashboard's content, which depends on its sidebar
         try {
@@ -1019,6 +1019,10 @@
         const logoutUrl = new URL(adminBaseUrl, window.location.origin);
         logoutUrl.searchParams.set('logout', '1');
         logoutUrl.searchParams.set('redirect', window.location.pathname + window.location.search + window.location.hash);
+        // The guide (Settings → Modules → Guide) opens in a new tab next to the page being edited
+        const handbookHtml = window.NB_HANDBOOK_ENABLED === false ? '' : `
+            <span class="admin-bar-divider admin-bar-divider--handbook" aria-hidden="true"></span>
+            <a href="${escHtml(adminBaseUrl)}handbook" class="admin-bar-link admin-bar-link--handbook" target="_blank" rel="noopener" title="${escHtml(t('handbook.link_title'))}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2zM22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg> <span class="admin-bar-link-label">${escHtml(t('handbook.link'))}</span></a>`;
         const seoHtml = `
             <a class="admin-bar-seo admin-bar-seo--${escHtml(seoHealth.status || 'yellow')}" href="${contentEditorHref}" aria-label="${escHtml(seoA11yLabel)}">
                 <span class="admin-bar-seo-dot" aria-hidden="true"></span>
@@ -1035,6 +1039,7 @@
                 <div class="admin-bar-left">
                     ${logoHtml}
                     <a href="/admin/dashboard" class="admin-bar-link"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg> ${t('dashboard')}</a>
+                    ${handbookHtml}
                 </div>
                 <div class="admin-bar-center">
                     <div class="admin-bar-backups" id="admin-page-backups" role="group" aria-label="${escHtml(t('page_backups.label'))}" hidden>
@@ -1151,11 +1156,11 @@
         overlay.className = 'nibbly-editor-confirm';
         overlay.innerHTML =
             '<div class="nibbly-editor-confirm__dialog" role="dialog" aria-modal="true">' +
-                '<h3>Bearbeitungsmodus verlassen?</h3>' +
+                '<h3>' + escHtml(t('nav.leave_title')) + '</h3>' +
                 '<p></p>' +
                 '<div class="nibbly-editor-confirm__actions">' +
-                    '<button type="button" class="nibbly-editor-confirm__btn nibbly-editor-confirm__btn--secondary" data-action="cancel">Abbrechen</button>' +
-                    '<button type="button" class="nibbly-editor-confirm__btn nibbly-editor-confirm__btn--primary" data-action="confirm">Fortfahren</button>' +
+                    '<button type="button" class="nibbly-editor-confirm__btn nibbly-editor-confirm__btn--secondary" data-action="cancel">' + escHtml(t('cancel')) + '</button>' +
+                    '<button type="button" class="nibbly-editor-confirm__btn nibbly-editor-confirm__btn--primary" data-action="confirm">' + escHtml(t('nav.leave_confirm')) + '</button>' +
                 '</div>' +
             '</div>';
         overlay.querySelector('p').textContent = message || '';
@@ -1831,7 +1836,7 @@
                 return `<div class="editor-field" id="${fid}" style="display:none;">
                     <label>${field.label}</label>
                     <div class="editor-image-row">
-                        <input type="text" id="${iid}" placeholder="Path to image..." readonly>
+                        <input type="text" id="${iid}" placeholder="${escHtml(t('image.path_placeholder'))}" readonly>
                         <button type="button" class="editor-btn editor-btn-secondary" onclick="InlineEditor.openImageManager(null, '${iid}')">
                             ${Icons.folder} ${t('image_manager')}
                         </button>
@@ -1842,7 +1847,7 @@
             case 'audio':
                 return `<div class="editor-field" id="${fid}" style="display:none;">
                     <label>${field.label}</label>
-                    <input type="text" id="${iid}" placeholder="Path to audio file..." readonly>
+                    <input type="text" id="${iid}" placeholder="${escHtml(t('audio.path_placeholder'))}" readonly>
                     <div class="editor-audio-buttons">
                         <label class="editor-btn editor-btn-primary editor-btn-inline">
                             <input type="file" id="editor-audio-upload-input" accept=".mp3,.wav,.ogg,.m4a,.aac,.flac,audio/*" style="display:none;">
@@ -2227,7 +2232,7 @@
                             <span class="group-icon-selected-preview" id="group-editor-icon-preview-${index}"></span>
                             <span class="group-icon-selected-label" id="group-editor-icon-label-${index}"></span>
                         </div>
-                        <input type="search" class="group-icon-search" data-group-icon-search="${index}" placeholder="Search icons...">
+                        <input type="search" class="group-icon-search" data-group-icon-search="${index}" placeholder="${escHtml(t('icons.search_placeholder'))}">
                         <div class="group-icon-grid">${iconButtons}</div>
                     </div>
                     ${hint}
@@ -2294,7 +2299,7 @@
                     <div class="group-link-grid">
                         <label class="group-special-control">
                             <span>Text</span>
-                            <input type="text" id="${textId}" placeholder="Link text">
+                            <input type="text" id="${textId}" placeholder="${escHtml(t('footer.link_text'))}">
                         </label>
                         <label class="group-special-control group-special-control--target">
                             <span>Target</span>
@@ -2321,12 +2326,12 @@
                         <div id="group-editor-image-preview-${index}" class="editor-image-preview group-image-preview"></div>
                         <div class="group-image-controls">
                             <div class="editor-image-row group-image-path-row">
-                                <input type="text" id="${srcId}" placeholder="Path to image..." readonly>
+                                <input type="text" id="${srcId}" placeholder="${escHtml(t('image.path_placeholder'))}" readonly>
                                 <button type="button" class="editor-btn editor-btn-secondary" data-group-image-pick="${index}">
                                     ${Icons.folder} ${t('image_manager')}
                                 </button>
                             </div>
-                            <input type="text" id="${altId}" placeholder="Alt text" class="group-image-alt">
+                            <input type="text" id="${altId}" placeholder="${escHtml(t('image.alt_text'))}" class="group-image-alt">
                         </div>
                     </div>
                     ${hint}
@@ -5277,13 +5282,13 @@
                 saveImageField(page, fieldKey, imagePath, currentAlt, imgElement);
             } else if (format === 'split') {
                 // Split-format: src and alt live at two separate keys
-                showPromptDialog('Alt text', 'Alt text', currentAlt, (newAlt) => {
+                showPromptDialog(t('image.alt_text'), t('image.alt_hint'), currentAlt, (newAlt) => {
                     if (newAlt === null) newAlt = currentAlt;
                     saveImageField(page, fieldKey, imagePath, newAlt, imgElement);
                 });
             } else {
                 // Object-format images: ask for alt text, save as {src, alt}
-                showPromptDialog('Alt text', 'Alt text', currentAlt, (newAlt) => {
+                showPromptDialog(t('image.alt_text'), t('image.alt_hint'), currentAlt, (newAlt) => {
                     if (newAlt === null) newAlt = currentAlt;
                     saveImageField(page, fieldKey, imagePath, newAlt, imgElement);
                 });

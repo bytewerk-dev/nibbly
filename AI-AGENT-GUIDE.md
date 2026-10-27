@@ -23,6 +23,9 @@ This is the canonical, tool-neutral guide for AI coding agents. `AGENTS.md` and 
 | Migration redirects | `content/redirects.json` (copy from `content/redirects.example.json`) |
 | Redirect helper | `includes/redirect-helper.php` |
 | Site page hook | `includes/site-page-hook.php` (optional, survives core updates) |
+| Editorial guide | `admin/handbook.php` (route `/admin/handbook`), `includes/handbook.php`, `includes/handbook/` |
+| Site guide chapters | `includes/site-handbook/chapters.php` (optional, site-owned) |
+| Dashboard theme defaults | `includes/theme-defaults.php` (Pop for new installs, Soft for themes saved without a preset) |
 | Block types | `includes/block-types.php` |
 | Template API | `includes/content-loader.php` |
 | Block renderers | `includes/block-renderers/{type}.php` |
@@ -631,8 +634,18 @@ them when adding admin UI:
   file derives hover, subtle and text shades from them in OKLCH, light and
   dark. Success follows the primary colour unless set. Console's and Pop's preset
   defaults set all three along with the base colour.
-- **Presets** (`theme.preset`: `soft` default, `classic`, `paper`, `studio`,
-  `console`, `pop`) set surfaces, borders, radii, control heights and the sidebar/topbar tokens
+- **Default theme.** `includes/theme-defaults.php` holds the defaults every
+  reader shares (dashboard, login, admin bar, settings API, setup wizard, the
+  JS `THEME_DEFAULTS`): a new installation gets **Pop** with its own palette
+  (`#3d8ee9`, danger `#f0625d`, notice `#ef9524`, success `#27b39a`),
+  Atkinson Hyperlegible and a 24 px button radius. A stored `theme` without a
+  `preset` key (setup up to 2.5.1 wrote only the colours) keeps **Soft** with
+  `#3858e9`, the system font and 6 px, so an update never changes a site's
+  look; `nibblyThemeSettings()` applies that rule, `nibblyThemeServerStyle()`
+  emits the `#nb-theme-server` block for the dashboard and the guide. Never
+  hard-code a preset or colour fallback elsewhere.
+- **Presets** (`theme.preset`: `pop` default for new installs, `soft`, `classic`, `paper`, `studio`,
+  `console`) set surfaces, borders, radii, control heights and the sidebar/topbar tokens
   and bring a font (Soft Inter, Classic Public Sans, Paper Atkinson Hyperlegible, Studio IBM
   Plex Sans, Console Geist Mono, Pop Atkinson Hyperlegible)
   (`--nb-sidebar-*`, `--nb-topbar-*`). Admin CSS reads those tokens and never
@@ -1519,8 +1532,10 @@ Custom fonts: place files in `assets/fonts/`, create `css/fonts.css` — `includ
 - `favicon_png` — optional PNG fallback for browsers that don't support SVG favicons; also used as `apple-touch-icon`
 - `branding.logo` — path to logo image (empty = text-only)
 - `branding.name` — site name shown in header and admin
-- `theme.adminTheme` — `"light"` or `"dark"` for admin panel
+- `theme.adminTheme` — `"light"`, `"dark"` or `"system"` for admin panel
 - `theme.primaryColor` / `accentColor` — used by admin dashboard color picker
+- `theme.preset` — dashboard theme; missing = Soft (see Admin UI Conventions → Default theme)
+- `modules.handbook` — the editorial guide at `/admin/handbook` (default `true`)
 
 ## Page Template Variables
 
@@ -1546,6 +1561,71 @@ if (in_array($slug, ['home', 'contact'])) {
 ```
 
 This file survives core updates since it's not part of the Nibbly distribution.
+
+## Editorial Guide (`/admin/handbook`)
+
+Nibbly ships an end-user guide ("Handbuch" / "Handbook") for editors who know
+WordPress but not Nibbly. It is core behaviour; do not copy it into a site.
+
+- **Route.** `admin/handbook.php`, served at the clean URL `/admin/handbook`
+  (`/admin/handbook.php` answers 308). Behind the admin session: signed out, it
+  sets `$_SESSION['redirect_after_login'] = 'handbook'` directly (the
+  `?redirect=` path sends /admin targets home) and sends the user to the login.
+  `noindex` header and meta, the site favicon from settings, the dashboard's
+  stylesheet and theme tokens (preset, colour, font, light/dark), and a
+  sun/moon switch that starts from the admin theme (`system` follows the
+  device) and remembers a choice in `localStorage` (`nibbly-handbook-theme`).
+  Screenshots come from `?img=name.webp`, only plain names from the guide
+  folders.
+- **Switch.** Settings → Modules → Handbuch (`modules.handbook`, default on).
+  Off: the route answers 404, the topbar link (`.topbar-handbook`, after the
+  brand) and the admin-bar link (`.admin-bar-link--handbook`, after
+  Dashboard, `window.NB_HANDBOOK_ENABLED`) disappear.
+- **Chapters.** `includes/handbook/chapters/{id}.{de,en}.php`, listed in
+  `nibblyHandbookCoreChapters()` with the module and role they depend on:
+  module chapters show only while the module is on, admin chapters (menus,
+  icons, users) only to admins. Titles are `handbook.chapter_{id}` in
+  `admin/lang/de.json` / `en.json`; the guide follows the admin language and
+  falls back to English for languages without a guide.
+- **Chapter templates** get `$hb` (`NibblyHandbook`): `shot()`, `pair()` for
+  screenshots; `btn()`, `bar()`, `nav()`, `toggle()`, `icon()`, `key()`,
+  `ui()` draw small interface elements live with the admin CSS, so they follow
+  the real preset, colour and mode; `note()`, `ref()` (link to a chapter, plain
+  text when it is hidden), `module()`, `has()`, `isAdmin`, `siteName`. The
+  text never relies on colours ("Speichern oben rechts", not "the green
+  button") and uses du in German, without gendering with special characters.
+- **Screenshots.** One set per language in Pop with its standard colours,
+  never one per preset: `includes/handbook/img/{de,en}/*.webp`. Retake them
+  all after UI changes with `python3 tests/handbook-screenshots.py` (needs
+  `cd tests && npm install && npx playwright install chromium`); it builds a
+  disposable install with the starter content, drives
+  `tests/handbook-screenshots.js` and converts to WebP with PHP's GD. Add a
+  shot there by name and reference it from the chapter.
+- **Site chapters (hook).** A site adds its own chapters without touching core
+  in the site-owned folder `includes/site-handbook/`:
+
+  ```php
+  <?php // includes/site-handbook/chapters.php
+  return [
+      'chapters' => [
+          ['id' => 'speaker', 'after' => 'people',
+           'title' => ['de' => 'Speaker', 'en' => 'Speakers'],
+           'file' => 'speaker.{lang}.php',   // in includes/site-handbook/
+           'role' => 'all',                  // or 'admin'
+           'module' => null],                // or a settings.modules key
+      ],
+      'hide' => ['icons'],                   // core chapter ids
+      'contact' => ['de' => 'Fragen? Schreib an …', 'en' => 'Questions? Write to …'],
+  ];
+  ```
+
+  Chapter files start with `<?php defined('NIBBLY_HANDBOOK') || exit; ?>` and
+  use `$hb` like core chapters; `{lang}` falls back to English, then German.
+  `after` names a core or site chapter id; without it the chapter goes to the
+  end. Screenshots go to `includes/site-handbook/img/` (optionally per
+  language) and are referenced as `$hb->shot('site/speaker.webp', …)`.
+  `contact` (HTML) closes the last chapter. The folder is restored with
+  "content only" backups.
 
 ## Component CSS Classes
 
@@ -1912,7 +1992,7 @@ CSS file roles:
 
 **Whitelist** (safely overwritable on upgrade):
 - `admin/` except `admin/config.php`
-- `includes/` except `includes/header.php`, `includes/footer.php`, `includes/nav-config.php`, `includes/site-page-hook.php`
+- `includes/` except `includes/header.php`, `includes/footer.php`, `includes/nav-config.php`, `includes/site-page-hook.php`, `includes/site-menus.php`, `includes/site-handbook/`
 - Core JS: `js/inline-editor.js`, `js/image-manager.js`, `js/revision-client.js`, `js/ai-copilot.js`
 - All Nibbly-Core CSS files (see table above)
 - `api/`, `cli/`, `examples/`
@@ -1923,7 +2003,8 @@ CSS file roles:
 - Everything in `assets/` (images, fonts, audio)
 - All language directories (`/de/`, `/en/`, etc.)
 - `admin/config.php`
-- Custom `includes/header.php`, `includes/footer.php`, `includes/nav-config.php`, `includes/site-page-hook.php`
+- Custom `includes/header.php`, `includes/footer.php`, `includes/nav-config.php`, `includes/site-page-hook.php`, `includes/site-menus.php`
+- `includes/site-handbook/` (site chapters for the editorial guide)
 - Site frontend JS (e.g. `js/main.js`, if present)
 - `css/website.css`, `css/fonts.css`, `css/page-*.css`
 
