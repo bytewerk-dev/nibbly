@@ -1088,8 +1088,10 @@
         if (barLogo) markAdminBarLogo(barLogo, brandLogo);
         document.body.classList.add('has-admin-bar');
 
+        // Rounded down: whatever is placed below the bar (sticky headers, body padding) may tuck under
+        // its last fraction of a pixel, but must never leave a gap the content shows through.
         const syncAdminBarHeight = () => {
-            document.documentElement.style.setProperty('--nibbly-admin-bar-height', Math.ceil(bar.getBoundingClientRect().height) + 'px');
+            document.documentElement.style.setProperty('--nibbly-admin-bar-height', Math.floor(bar.getBoundingClientRect().height) + 'px');
         };
         syncAdminBarHeight();
         if (typeof ResizeObserver !== 'undefined') {

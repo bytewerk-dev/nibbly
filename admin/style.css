@@ -12640,7 +12640,8 @@ html[data-settings-open] .settings-subnav {
     background: var(--nb-sidebar-gradient, var(--nb-sidebar-bg));
 }
 
-.settings-subnav .settings-subnav__list { gap: var(--nb-space-4); }
+/* .sidebar-nav in the selector: compact density sets .sidebar-nav's gap to 1px and must not reach the groups */
+.settings-subnav .sidebar-nav.settings-subnav__list { gap: var(--nb-space-4); }
 .settings-subnav .settings-nav-group { display: flex; flex-direction: column; gap: var(--nb-space-1); }
 
 .settings-subnav .settings-nav-group h3 {
