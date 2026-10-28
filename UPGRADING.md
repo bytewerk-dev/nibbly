@@ -3,10 +3,11 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
-## Upgrading from 2.5.1 to the next release
+## Upgrading from 2.5.1 to 2.6.0
 
-The next release adds the editorial guide at `/admin/handbook` and makes Pop the default theme of
-new installations. No manual step is needed; existing sites keep their look.
+Version 2.6.0 adds the editorial guide at `/admin/handbook` and makes Pop the default theme of
+new installations. The Icon Manager gets an icon style and a stroke width (global and per icon);
+existing icons are detected and shown as before. No manual step is needed; existing sites keep their look.
 
 1. Deploy the complete core. New: `admin/handbook.php`, `includes/handbook.php`,
    `includes/handbook/` (chapters, styles, screenshots), `includes/theme-defaults.php`. Changed:
