@@ -6989,7 +6989,7 @@ input.color-hex-input,
 
 .icon-manager-toolbar {
     display: grid;
-    grid-template-columns: minmax(260px, 1fr) minmax(180px, 240px);
+    grid-template-columns: minmax(260px, 1fr) minmax(180px, 240px) minmax(150px, 190px);
     gap: var(--nb-space-3);
     align-items: end;
     margin: 0 0 var(--nb-space-3-5);
@@ -7130,6 +7130,16 @@ input.color-hex-input,
     min-height: 180px;
     font-family: 'Geist Mono', ui-monospace, monospace;
     resize: vertical;
+}
+
+.icon-manager-field-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--nb-space-3);
+}
+
+.icon-manager-field-row + .form-hint {
+    margin-top: calc(-1 * var(--nb-space-2));
 }
 
 .icon-manager-preview-box {
@@ -9378,7 +9388,8 @@ input.color-hex-input,
     }
 
     .icon-manager-toolbar,
-    .iconify-import-controls {
+    .iconify-import-controls,
+    .icon-manager-field-row {
         grid-template-columns: 1fr;
     }
 }

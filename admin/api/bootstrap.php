@@ -1504,6 +1504,15 @@ function writeSiteIconSetRaw(array $iconSet) {
         }
     }
 
+    if (array_key_exists('_settings', $iconSet)) {
+        $settings = array_filter(normalizeIconSetSettings($iconSet['_settings']), 'strlen');
+        if ($settings) {
+            $iconSet['_settings'] = $settings;
+        } else {
+            unset($iconSet['_settings']);
+        }
+    }
+
     ksort($iconSet);
     return file_put_contents(
         $path,
@@ -1642,15 +1651,26 @@ function iconifyIconToDefinition($prefix, $name, array $data, array $setInfo) {
     $top = $icon['top'] ?? 0;
     $viewBox = normalizeIconViewBox($left . ' ' . $top . ' ' . $width . ' ' . $height);
     $label = ucwords(str_replace(['-', '_'], ' ', $name));
-    $style = $setInfo['style'] ?? 'stroke';
+    // Iconify bodies describe themselves: solid variants of an outline set (e.g. Heroicons
+    // "-solid") are filled shapes, so the set-level style is only a fallback.
+    $style = detectIconStyleFromSvg($icon['body']) ?: ($setInfo['style'] ?? 'stroke');
+    // Libraries ship their own stroke width (Heroicons 1.5, Lucide 2, ...). Imports drop a
+    // uniform width so the site-wide setting applies and icons from mixed sets match; the
+    // per-icon field stays available for exceptions.
+    $body = $icon['body'];
+    if ($style === 'stroke') {
+        [$body] = extractUniformIconStrokeWidth($body);
+    }
+    $strokeWidth = '';
 
     $normalized = normalizeIconSet([
         $prefix . '-' . $name => [
             'label' => $label,
             'tags' => [$setInfo['label'], $prefix],
-            'svg' => $icon['body'],
+            'svg' => $body,
             'viewBox' => $viewBox,
             'style' => $style,
+            'strokeWidth' => $strokeWidth,
         ],
     ]);
     $key = array_key_first($normalized);
@@ -1668,6 +1688,7 @@ function iconifyIconToDefinition($prefix, $name, array $data, array $setInfo) {
         'svg' => $normalized[$key]['svg'],
         'viewBox' => $normalized[$key]['viewBox'],
         'style' => $normalized[$key]['style'] ?? $style,
+        'strokeWidth' => $normalized[$key]['strokeWidth'] ?? '',
         'license' => $setInfo['license'],
         'licenseUrl' => $setInfo['licenseUrl'],
         'setLabel' => $setInfo['label'],
@@ -1754,6 +1775,7 @@ function importIconifyIcon($fullName) {
         'svg' => $definition['svg'],
         'viewBox' => $definition['viewBox'],
         'style' => $definition['style'],
+        'strokeWidth' => $definition['strokeWidth'],
         'createdAt' => date('c'),
         'updatedAt' => date('c'),
         'source' => [
@@ -1771,7 +1793,7 @@ function importIconifyIcon($fullName) {
     return [true, iconManagerListData(), ''];
 }
 
-function normalizeIconManagerPayload($key, $label, $tags, $svg, $viewBox = '') {
+function normalizeIconManagerPayload($key, $label, $tags, $svg, $viewBox = '', $style = '', $strokeWidth = '') {
     $key = sanitizeIconKeyInput($key);
     if ($key === '') {
         return [false, null, 'Invalid icon key. Use lowercase letters, numbers, hyphens, and underscores.'];
@@ -1786,14 +1808,27 @@ function normalizeIconManagerPayload($key, $label, $tags, $svg, $viewBox = '') {
 
     $extractedViewBox = extractIconViewBoxFromSvg((string)$svg);
     $rawViewBox = trim((string)$viewBox);
+    $svg = sanitizeIconSvgMarkup((string)$svg);
+    $style = in_array($style, ['fill', 'stroke'], true) ? $style : (detectIconStyleFromSvg($svg) ?: 'stroke');
+    $strokeWidth = normalizeIconStrokeWidth($strokeWidth);
+    if ($style === 'stroke') {
+        // A uniform stroke-width inside the markup would override the wrapper, so it moves
+        // into the per-icon field (unless the editor already chose an explicit width).
+        [$svg, $uniformWidth] = extractUniformIconStrokeWidth($svg);
+        if ($strokeWidth === '' && $uniformWidth !== '') {
+            $strokeWidth = $uniformWidth;
+        }
+    }
 
     $definition = [
         'label' => trim((string)$label) ?: ucwords(str_replace(['-', '_'], ' ', $key)),
         'tags' => $tagsArray,
-        'svg' => (string)$svg,
+        'svg' => $svg,
         'viewBox' => ($extractedViewBox && ($rawViewBox === '' || normalizeIconViewBox($rawViewBox) === '0 0 24 24'))
             ? $extractedViewBox
             : normalizeIconViewBox($rawViewBox),
+        'style' => $style,
+        'strokeWidth' => $strokeWidth,
     ];
     $normalized = normalizeIconSet([$key => $definition]);
     if (empty($normalized[$key])) {
@@ -1828,6 +1863,7 @@ function iconManagerListData() {
             'svg' => $definition['svg'] ?? '',
             'viewBox' => $definition['viewBox'] ?? '0 0 24 24',
             'style' => $definition['style'] ?? 'stroke',
+            'strokeWidth' => $definition['strokeWidth'] ?? '',
             'createdAt' => $definition['createdAt'] ?? '',
             'updatedAt' => $definition['updatedAt'] ?? '',
             'source' => isset($custom[$key]) ? 'custom' : 'core',
@@ -1838,10 +1874,16 @@ function iconManagerListData() {
         return strcasecmp($a['key'], $b['key']);
     });
 
+    $settings = normalizeIconSetSettings($raw['_settings'] ?? null);
+
     return [
         'icons' => $icons,
         'path' => getIconSetPath(),
         'deleted' => $deleted,
+        'settings' => [
+            'strokeWidth' => $settings['strokeWidth'],
+            'defaultStrokeWidth' => '2',
+        ],
     ];
 }
 

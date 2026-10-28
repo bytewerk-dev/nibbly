@@ -34,6 +34,7 @@ return [
     'iconify-import' => 'icons',
     'save-icon' => 'icons',
     'delete-icon' => 'icons',
+    'save-icon-settings' => 'icons',
     'load-ai-settings' => 'ai',
     'ai-image-history' => 'ai',
     'ai-image-jobs' => 'ai',

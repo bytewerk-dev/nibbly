@@ -1241,6 +1241,9 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                         <option value="oldest"><?php echo t('icons.sort_oldest'); ?></option>
                     </select>
                 </label>
+                <label class="modal-label" title="<?php echo htmlspecialchars(t('icons.stroke_width_global_hint'), ENT_QUOTES, 'UTF-8'); ?>"><?php echo t('icons.stroke_width_global'); ?>
+                    <input type="number" id="iconManagerGlobalStrokeWidth" class="modal-input" min="0.25" max="6" step="0.25" placeholder="2" inputmode="decimal">
+                </label>
             </div>
             <p class="icon-manager-path" id="iconManagerPath"></p>
             <div class="admin-list-footer admin-list-footer--top admin-list-footer--grid" id="iconManagerFooterTop"></div>
@@ -3031,6 +3034,18 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                     <label class="modal-label"><?php echo t('icons.viewbox'); ?>
                         <input type="text" id="iconManagerViewBox" class="modal-input" placeholder="0 0 24 24">
                     </label>
+                    <div class="icon-manager-field-row">
+                        <label class="modal-label"><?php echo t('icons.style'); ?>
+                            <select id="iconManagerStyle" class="modal-input">
+                                <option value="stroke"><?php echo t('icons.style_stroke'); ?></option>
+                                <option value="fill"><?php echo t('icons.style_fill'); ?></option>
+                            </select>
+                        </label>
+                        <label class="modal-label"><?php echo t('icons.stroke_width'); ?>
+                            <input type="number" id="iconManagerStrokeWidth" class="modal-input" min="0.25" max="6" step="0.25" placeholder="2" inputmode="decimal">
+                        </label>
+                    </div>
+                    <p class="form-hint"><?php echo t('icons.stroke_width_hint'); ?></p>
                     <div class="icon-manager-svg-field">
                         <label class="modal-label"><?php echo t('icons.svg'); ?>
                             <textarea id="iconManagerSvg" class="modal-input icon-manager-svg-input" required rows="8"></textarea>

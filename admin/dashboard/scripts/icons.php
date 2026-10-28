@@ -10,6 +10,9 @@
     let iconManagerSearchTerm = '';
     let iconManagerHighlightedKeys = new Set();
     let iconManagerHighlightTimer = null;
+    let iconManagerSettings = { strokeWidth: '', defaultStrokeWidth: '2' };
+    // Set once the editor picks a style by hand, so SVG edits stop overriding the choice.
+    let iconManagerStyleTouched = false;
     const ICONIFY_IMPORT_SETS = {
         lucide:   { label: 'Lucide',         license: 'ISC', licenseUrl: 'https://github.com/lucide-icons/lucide/blob/main/LICENSE' },
         tabler:   { label: 'Tabler Icons',   license: 'MIT', licenseUrl: 'https://github.com/tabler/tabler-icons/blob/master/LICENSE' },
@@ -193,10 +196,63 @@
         return icons;
     }
 
-    function iconSvgAttributes(iconItem) {
-        return (iconItem.style || 'stroke') === 'fill'
-            ? 'fill="currentColor"'
-            : 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+    function iconManagerGlobalStrokeWidth() {
+        return iconManagerSettings.strokeWidth || iconManagerSettings.defaultStrokeWidth || '2';
+    }
+
+    function applyIconManagerSettings(settings) {
+        if (settings && typeof settings === 'object') {
+            iconManagerSettings = Object.assign({}, iconManagerSettings, settings);
+        }
+        const input = document.getElementById('iconManagerGlobalStrokeWidth');
+        if (input && document.activeElement !== input) {
+            input.value = iconManagerSettings.strokeWidth || '';
+            input.placeholder = iconManagerSettings.defaultStrokeWidth || '2';
+        }
+        const perIcon = document.getElementById('iconManagerStrokeWidth');
+        if (perIcon) perIcon.placeholder = iconManagerGlobalStrokeWidth();
+    }
+
+    function iconSvgAttributes(iconItem, strokeWidth) {
+        if ((iconItem.style || 'stroke') === 'fill') return 'fill="currentColor"';
+        const width = strokeWidth || iconItem.strokeWidth || iconManagerGlobalStrokeWidth();
+        return 'fill="none" stroke="currentColor" stroke-width="' + escapeHtml(String(width)) + '" stroke-linecap="round" stroke-linejoin="round"';
+    }
+
+    // Mirrors detectIconStyleFromSvg() in includes/content-loader.php.
+    function detectIconStyleClient(svg) {
+        const markup = String(svg || '');
+        if (!markup.trim()) return '';
+        if (/\sstroke\s*=\s*(["'])(?!\s*none\s*\1)[^"']+\1/i.test(markup)) return 'stroke';
+        const shapes = markup.match(/<\s*(path|circle|ellipse|line|polyline|polygon|rect)\b[^>]*>/gi) || [];
+        if (!shapes.length) return '';
+        const groupFill = /<\s*g\b[^>]*\sfill\s*=\s*(["'])(?!\s*none\s*\1)[^"']+\1/i.test(markup);
+        const fillAttr = /\sfill\s*=\s*(["'])(?!\s*none\s*\1)[^"']+\1/i;
+        return shapes.every(shape => fillAttr.test(shape) || groupFill) ? 'fill' : '';
+    }
+
+    function normalizeStrokeWidthClient(value) {
+        const number = parseFloat(String(value ?? '').replace(',', '.'));
+        if (!isFinite(number) || number < 0.25 || number > 6) return '';
+        return String(Math.round(number * 100) / 100);
+    }
+
+    // Mirrors extractUniformIconStrokeWidth() in includes/content-loader.php.
+    function extractUniformStrokeWidthClient(svg) {
+        const markup = String(svg || '');
+        const matches = [...markup.matchAll(/\sstroke-width\s*=\s*(["'])\s*([0-9.]+)(?:px)?\s*\1/gi)];
+        if (!matches.length) return { svg: markup, strokeWidth: '' };
+        const values = new Set(matches.map(m => normalizeStrokeWidthClient(m[2])));
+        if (values.size !== 1 || values.has('')) return { svg: markup, strokeWidth: '' };
+        const shapes = markup.match(/<\s*(path|circle|ellipse|line|polyline|polygon|rect)\b[^>]*>/gi) || [];
+        const shapesWithWidth = shapes.filter(shape => /\sstroke-width\s*=/i.test(shape)).length;
+        const groupsWithWidth = (markup.match(/<\s*g\b[^>]*\sstroke-width\s*=/gi) || []).length;
+        const uniform = (shapes.length > 0 && shapesWithWidth === shapes.length) || (shapesWithWidth === 0 && groupsWithWidth > 0);
+        if (!uniform) return { svg: markup, strokeWidth: '' };
+        return {
+            svg: markup.replace(/\sstroke-width\s*=\s*(["'])[^"']*\1/gi, '').trim(),
+            strokeWidth: [...values][0],
+        };
     }
 
     function iconSvgMarkup(iconItem) {
@@ -226,6 +282,7 @@
         if (data) {
             iconManagerData = data.icons || [];
             iconManagerPath = data.path || iconManagerPath;
+            applyIconManagerSettings(data.settings);
         }
 
         grid.innerHTML = '';
@@ -293,6 +350,10 @@
         document.getElementById('iconManagerTags').value = isEdit ? (iconItem.tags || []).join(', ') : '';
         document.getElementById('iconManagerViewBox').value = isEdit ? (iconItem.viewBox || '0 0 24 24') : '0 0 24 24';
         document.getElementById('iconManagerSvg').value = isEdit ? (iconItem.svg || '') : '';
+        document.getElementById('iconManagerStyle').value = isEdit ? (iconItem.style || 'stroke') : 'stroke';
+        document.getElementById('iconManagerStrokeWidth').value = isEdit ? (iconItem.strokeWidth || '') : '';
+        iconManagerStyleTouched = isEdit;
+        applyIconManagerSettings();
         document.getElementById('iconRenameWarning').hidden = true;
         updateIconManagerPreview();
         closeAllComboboxes();
@@ -488,8 +549,21 @@
         const svgInput = document.getElementById('iconManagerSvg');
         const viewBoxInput = document.getElementById('iconManagerViewBox');
         if (preview) {
+            const style = document.getElementById('iconManagerStyle')?.value || 'stroke';
+            const strokeWidth = normalizeStrokeWidthClient(document.getElementById('iconManagerStrokeWidth')?.value);
+            let markup = sanitizeIconSvgClient(svgInput.value);
+            if (style === 'stroke') {
+                // Same as on save: a uniform stroke-width leaves the markup so the wrapper width applies.
+                markup = extractUniformStrokeWidthClient(markup).svg;
+            }
+            const previewItem = { style: style, strokeWidth: strokeWidth };
             preview.setAttribute('viewBox', normalizeIconViewBoxClient(viewBoxInput?.value || ''));
-            preview.innerHTML = sanitizeIconSvgClient(svgInput.value);
+            ['fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin'].forEach(name => preview.removeAttribute(name));
+            iconSvgAttributes(previewItem, strokeWidth).replace(/([a-z-]+)="([^"]*)"/g, function(match, name, value) {
+                preview.setAttribute(name, value);
+                return match;
+            });
+            preview.innerHTML = iconSvgMarkup(Object.assign({ svg: markup }, previewItem));
         }
         const oldKey = document.getElementById('iconManagerOldKey').value;
         const newKey = document.getElementById('iconManagerKey').value;
@@ -503,9 +577,51 @@
         if (extractedViewBox && viewBoxInput && (!viewBoxInput.value.trim() || normalizeIconViewBoxClient(viewBoxInput.value) === '0 0 24 24')) {
             viewBoxInput.value = extractedViewBox;
         }
+        const styleSelect = document.getElementById('iconManagerStyle');
+        if (styleSelect && !iconManagerStyleTouched) {
+            const detected = detectIconStyleClient(this.value);
+            if (detected) styleSelect.value = detected;
+        }
+        const strokeWidthInput = document.getElementById('iconManagerStrokeWidth');
+        if (strokeWidthInput && !strokeWidthInput.value.trim() && (styleSelect?.value || 'stroke') === 'stroke') {
+            const extracted = extractUniformStrokeWidthClient(this.value).strokeWidth;
+            if (extracted) strokeWidthInput.value = extracted;
+        }
         updateIconManagerPreview();
     });
     document.getElementById('iconManagerViewBox')?.addEventListener('input', updateIconManagerPreview);
+    document.getElementById('iconManagerStrokeWidth')?.addEventListener('input', updateIconManagerPreview);
+    document.getElementById('iconManagerStyle')?.addEventListener('change', function() {
+        iconManagerStyleTouched = true;
+        updateIconManagerPreview();
+    });
+    document.getElementById('iconManagerGlobalStrokeWidth')?.addEventListener('change', async function() {
+        const input = this;
+        const raw = input.value.trim();
+        if (raw !== '' && !normalizeStrokeWidthClient(raw)) {
+            showToast(t('icons.stroke_width_invalid'), 'error');
+            input.value = iconManagerSettings.strokeWidth || '';
+            return;
+        }
+        const formData = new FormData();
+        formData.append('action', 'save-icon-settings');
+        formData.append('csrf_token', CSRF_TOKEN);
+        formData.append('strokeWidth', raw);
+        input.disabled = true;
+        try {
+            const result = await fetchJsonWithTimeout('api.php', { method: 'POST', body: formData }, 15000);
+            if (result.success) {
+                renderIconManager(result.data);
+                showToast(t('icons.settings_saved'), 'success');
+            } else {
+                showToast(result.message, 'error');
+            }
+        } catch (error) {
+            showToast(t('icons.settings_error', {message: error.message}), 'error');
+        } finally {
+            input.disabled = false;
+        }
+    });
     document.getElementById('iconManagerKey')?.addEventListener('input', updateIconManagerPreview);
     document.getElementById('iconManagerCleanupBtn')?.addEventListener('click', function() {
         const input = document.getElementById('iconManagerSvg');
@@ -538,6 +654,8 @@
         formData.append('tags', document.getElementById('iconManagerTags').value);
         formData.append('viewBox', document.getElementById('iconManagerViewBox').value);
         formData.append('svg', document.getElementById('iconManagerSvg').value);
+        formData.append('style', document.getElementById('iconManagerStyle').value);
+        formData.append('strokeWidth', document.getElementById('iconManagerStrokeWidth').value);
 
         try {
             const result = await fetchJsonWithTimeout('api.php', { method: 'POST', body: formData }, 15000);

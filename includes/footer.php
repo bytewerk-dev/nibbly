@@ -784,7 +784,7 @@ if (trim($_footerSummaryHtml) === '') {
     ?>
     window.NB_LANG = <?php echo json_encode(array_merge(tAll(), tEditorAll()), JSON_UNESCAPED_UNICODE); ?>;
     window.NB_MENUS = <?php echo json_encode(getMenuRegistry()['menus'] ?? [], JSON_UNESCAPED_UNICODE); ?>;
-    window.NB_AVAILABLE_ICONS = <?php echo json_encode(function_exists('getAvailableIcons') ? getAvailableIcons() : [], JSON_UNESCAPED_UNICODE); ?>;
+    window.NB_AVAILABLE_ICONS = <?php echo json_encode(function_exists('getAvailableIconsRendered') ? getAvailableIconsRendered() : [], JSON_UNESCAPED_UNICODE); ?>;
     window.NB_ADMIN_BAR_THEME = <?php echo json_encode($_abConfig); ?>;
     window.NB_SEO_HEALTH = <?php echo json_encode($_seoHealth ?? ['status' => 'yellow', 'score' => 0, 'label' => 'SEO prüfen', 'issues' => ['SEO-Daten konnten nicht berechnet werden.']], JSON_UNESCAPED_UNICODE); ?>;
     window.NB_AI_FEATURES_ENABLED = <?php echo json_encode($_aiModuleEnabled); ?>;
