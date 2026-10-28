@@ -2160,6 +2160,14 @@
         }, {});
     }
 
+    // NB_AVAILABLE_ICONS carries fully rendered <svg> markup (viewBox, fill/stroke style and stroke width
+    // resolved server-side); older inner-markup values are still wrapped for compatibility.
+    function iconSvgHtml(markup) {
+        const svg = String(markup || '');
+        if (/^\s*<svg\b/i.test(svg)) return svg;
+        return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${svg}</svg>`;
+    }
+
     function getIconMarkup(iconId) {
         const icons = window.NB_AVAILABLE_ICONS && typeof window.NB_AVAILABLE_ICONS === 'object'
             ? window.NB_AVAILABLE_ICONS
@@ -2192,7 +2200,7 @@
                 const icons = getAvailableIconsForField(normalized);
                 const iconButtons = Object.entries(icons).map(([key, markup]) => `
                     <button type="button" class="group-icon-option" data-group-icon-value="${escHtml(key)}" title="${escHtml(key)}" aria-label="${escHtml(key)}">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${markup}</svg>
+                        ${iconSvgHtml(markup)}
                         <span>${escHtml(key)}</span>
                     </button>
                 `).join('');
@@ -2593,7 +2601,7 @@
         const preview = document.getElementById(`group-editor-icon-preview-${index}`);
         const label = document.getElementById(`group-editor-icon-label-${index}`);
         if (preview) {
-            preview.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${getIconMarkup(iconId)}</svg>`;
+            preview.innerHTML = iconSvgHtml(getIconMarkup(iconId));
         }
         if (label) label.textContent = iconId || '';
     }

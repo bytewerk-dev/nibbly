@@ -56,7 +56,9 @@ switch ($action) {
             $_POST['label'] ?? '',
             $_POST['tags'] ?? '',
             $_POST['svg'] ?? '',
-            $_POST['viewBox'] ?? ''
+            $_POST['viewBox'] ?? '',
+            $_POST['style'] ?? '',
+            $_POST['strokeWidth'] ?? ''
         );
         if (!$validIcon) {
             jsonResponse(false, null, $iconError);
@@ -89,6 +91,10 @@ switch ($action) {
             ? $previousDefinition['createdAt']
             : date('c');
         $definition['updatedAt'] = date('c');
+        // Keep the attribution of imported icons; editing an icon does not change where it came from.
+        if (isset($previousDefinition['source']) && is_array($previousDefinition['source'])) {
+            $definition['source'] = $previousDefinition['source'];
+        }
         $rawIconSet[$newKey] = $definition;
         if (isset($rawIconSet['_deleted']) && is_array($rawIconSet['_deleted'])) {
             $rawIconSet['_deleted'] = array_values(array_filter($rawIconSet['_deleted'], function($key) use ($newKey) {
@@ -101,6 +107,29 @@ switch ($action) {
         }
 
         jsonResponse(true, iconManagerListData(), 'Icon saved.');
+        break;
+
+    case 'save-icon-settings':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $strokeWidthInput = trim((string)($_POST['strokeWidth'] ?? ''));
+        $strokeWidth = normalizeIconStrokeWidth($strokeWidthInput);
+        if ($strokeWidthInput !== '' && $strokeWidth === '') {
+            jsonResponse(false, null, 'Stroke width must be a number between 0.25 and 6.');
+        }
+
+        $rawIconSet = readSiteIconSetRaw();
+        $rawIconSet['_settings'] = ['strokeWidth' => $strokeWidth];
+        if (!writeSiteIconSetRaw($rawIconSet)) {
+            jsonResponse(false, null, 'Could not write icon set.');
+        }
+
+        jsonResponse(true, iconManagerListData(), 'Icon settings saved.');
         break;
 
     case 'delete-icon':

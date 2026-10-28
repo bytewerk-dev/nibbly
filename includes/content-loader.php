@@ -1069,6 +1069,125 @@ function extractIconViewBoxFromSvg($svg) {
 }
 
 /**
+ * Decide whether an icon's inner markup is drawn with strokes or with filled
+ * shapes. Any explicit stroke wins; a fill style is only assumed when every
+ * drawing element carries its own fill, so core icons that mix stroked shapes
+ * with a few filled dots stay stroke icons. Returns '' when undecidable.
+ */
+function detectIconStyleFromSvg($svg) {
+    if (!is_string($svg) || trim($svg) === '') {
+        return '';
+    }
+    if (preg_match('/\sstroke\s*=\s*(["\'])(?!\s*none\s*\1)[^"\']+\1/i', $svg)) {
+        return 'stroke';
+    }
+    if (!preg_match_all('#<\s*(path|circle|ellipse|line|polyline|polygon|rect)\b([^>]*)>#i', $svg, $shapes, PREG_SET_ORDER)) {
+        return '';
+    }
+    $groupFill = preg_match('/<\s*g\b[^>]*\sfill\s*=\s*(["\'])(?!\s*none\s*\1)[^"\']+\1/i', $svg) === 1;
+    foreach ($shapes as $shape) {
+        $hasFill = preg_match('/\sfill\s*=\s*(["\'])(?!\s*none\s*\1)[^"\']+\1/i', $shape[2]) === 1;
+        if (!$hasFill && !$groupFill) {
+            return '';
+        }
+    }
+    return 'fill';
+}
+
+/**
+ * Normalize a stroke width value to a short decimal string, or '' when the
+ * value is empty or out of the sensible 0.25 - 6 range.
+ */
+function normalizeIconStrokeWidth($value) {
+    if (is_string($value)) {
+        $value = str_replace(',', '.', trim($value));
+    }
+    if ($value === '' || $value === null || !is_numeric($value)) {
+        return '';
+    }
+    $number = round((float)$value, 2);
+    if ($number < 0.25 || $number > 6) {
+        return '';
+    }
+    return rtrim(rtrim(number_format($number, 2, '.', ''), '0'), '.');
+}
+
+/**
+ * Site-wide icon rendering defaults stored under "_settings" in iconset.json.
+ *
+ * @return array{strokeWidth:string}
+ */
+function getIconSetSettings() {
+    static $cache = null;
+    if ($cache !== null) return $cache;
+
+    $settings = ['strokeWidth' => '2'];
+    $path = getIconSetPath();
+    if (is_file($path)) {
+        $raw = json_decode(file_get_contents($path), true);
+        $normalized = normalizeIconSetSettings(is_array($raw) ? ($raw['_settings'] ?? null) : null);
+        if ($normalized['strokeWidth'] !== '') {
+            $settings['strokeWidth'] = $normalized['strokeWidth'];
+        }
+    }
+
+    $cache = $settings;
+    return $cache;
+}
+
+/**
+ * Validate the "_settings" block of an icon set. Empty values mean "use the
+ * built-in default".
+ *
+ * @return array{strokeWidth:string}
+ */
+function normalizeIconSetSettings($raw) {
+    $settings = ['strokeWidth' => ''];
+    if (is_array($raw) && array_key_exists('strokeWidth', $raw)) {
+        $settings['strokeWidth'] = normalizeIconStrokeWidth($raw['strokeWidth']);
+    }
+    return $settings;
+}
+
+/**
+ * When every stroked element of an icon shares one stroke-width (either on
+ * each shape or on a wrapping <g>), move that value out of the markup so the
+ * wrapper can control it. Icons with intentionally mixed widths are left
+ * untouched.
+ *
+ * @return array{0:string,1:string} [markup without stroke-width, extracted width or '']
+ */
+function extractUniformIconStrokeWidth($svg) {
+    $svg = (string)$svg;
+    if (!preg_match_all('/\sstroke-width\s*=\s*(["\'])\s*([0-9.]+)(?:px)?\s*\1/i', $svg, $widths)) {
+        return [$svg, ''];
+    }
+    $values = array_unique(array_map(function($value) {
+        return normalizeIconStrokeWidth($value);
+    }, $widths[2]));
+    if (count($values) !== 1 || reset($values) === '') {
+        return [$svg, ''];
+    }
+
+    $shapeCount = preg_match_all('#<\s*(path|circle|ellipse|line|polyline|polygon|rect)\b([^>]*)>#i', $svg, $shapes, PREG_SET_ORDER);
+    $shapesWithWidth = 0;
+    foreach ($shapes as $shape) {
+        if (preg_match('/\sstroke-width\s*=/i', $shape[2])) {
+            $shapesWithWidth++;
+        }
+    }
+    $groupsWithWidth = preg_match_all('/<\s*g\b[^>]*\sstroke-width\s*=/i', $svg);
+    $uniform = ($shapeCount > 0 && $shapesWithWidth === $shapeCount)
+        || ($shapesWithWidth === 0 && $groupsWithWidth > 0);
+    if (!$uniform) {
+        return [$svg, ''];
+    }
+
+    $stripped = preg_replace('/\sstroke-width\s*=\s*(["\'])[^"\']*\1/i', '', $svg);
+    return [trim($stripped), reset($values)];
+}
+
+/**
  * Normalize icon definitions from either the rich format
  * { "key": {"label": "...", "svg": "...", "tags": []} }
  * or the legacy/simple format { "key": "<path .../>" }.
@@ -1078,7 +1197,7 @@ function normalizeIconSet($raw) {
 
     $icons = [];
     foreach ($raw as $key => $value) {
-        if ($key === '_deleted') continue;
+        if ($key === '_deleted' || $key === '_settings') continue;
         if (!is_string($key) || !preg_match('/^[a-zA-Z0-9_-]+$/', $key)) continue;
 
         if (is_string($value)) {
@@ -1087,6 +1206,7 @@ function normalizeIconSet($raw) {
             $svg = $value;
             $viewBox = extractIconViewBoxFromSvg($svg);
             $style = '';
+            $strokeWidth = '';
             $createdAt = '';
             $updatedAt = '';
         } elseif (is_array($value)) {
@@ -1097,6 +1217,7 @@ function normalizeIconSet($raw) {
                 ? normalizeIconViewBox($value['viewBox'])
                 : extractIconViewBoxFromSvg($svg);
             $style = isset($value['style']) && is_string($value['style']) ? $value['style'] : '';
+            $strokeWidth = array_key_exists('strokeWidth', $value) ? normalizeIconStrokeWidth($value['strokeWidth']) : '';
             $createdAt = isset($value['createdAt']) && is_string($value['createdAt']) ? $value['createdAt'] : '';
             $updatedAt = isset($value['updatedAt']) && is_string($value['updatedAt']) ? $value['updatedAt'] : '';
         } else {
@@ -1106,12 +1227,28 @@ function normalizeIconSet($raw) {
         $svg = sanitizeIconSvgMarkup($svg);
         if ($svg === '') continue;
 
+        // The markup decides between line and solid icons whenever it can; a stored style
+        // only breaks ties. Older icon sets carry styles guessed per Iconify set, which
+        // mislabels e.g. Heroicons "-solid" variants, so re-detecting repairs them in place.
+        $detectedStyle = detectIconStyleFromSvg($svg);
+        if ($detectedStyle !== '') {
+            $style = $detectedStyle;
+        } elseif (!in_array($style, ['fill', 'stroke'], true)) {
+            $style = 'stroke';
+        }
+        if ($style === 'stroke' && $strokeWidth === '') {
+            // A uniform width inside the markup would silently override the wrapper; lift it
+            // into the editable field so the rendering stays the same but becomes adjustable.
+            [$svg, $strokeWidth] = extractUniformIconStrokeWidth($svg);
+        }
+
         $icons[$key] = [
             'label' => $label,
             'tags' => $tags,
             'svg' => $svg,
             'viewBox' => $viewBox ?: '0 0 24 24',
-            'style' => in_array($style ?? '', ['fill', 'stroke'], true) ? $style : 'stroke',
+            'style' => $style,
+            'strokeWidth' => $strokeWidth,
             'createdAt' => $createdAt ?? '',
             'updatedAt' => $updatedAt ?? '',
         ];
@@ -1214,6 +1351,7 @@ function getIconDefinition($iconId) {
  */
 function renderIconSvg($iconId, $attributes = '') {
     $icon = getIconDefinition($iconId);
+    $icon['strokeWidth'] = $icon['strokeWidth'] ?? '';
     $viewBox = htmlspecialchars($icon['viewBox'] ?? '0 0 24 24', ENT_QUOTES, 'UTF-8');
     $attributes = trim((string)$attributes);
     $svg = $icon['svg'];
@@ -1222,11 +1360,27 @@ function renderIconSvg($iconId, $attributes = '') {
             $attributes = 'fill="currentColor"';
             $svg = preg_replace('/\s+stroke\s*=\s*(["\'])currentColor\1/i', '', $svg);
         } else {
-            $attributes = 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+            $strokeWidth = $icon['strokeWidth'] !== '' ? $icon['strokeWidth'] : getIconSetSettings()['strokeWidth'];
+            $attributes = 'fill="none" stroke="currentColor" stroke-width="' . htmlspecialchars($strokeWidth, ENT_QUOTES, 'UTF-8') . '" stroke-linecap="round" stroke-linejoin="round"';
         }
     }
 
     return '<svg viewBox="' . $viewBox . '" ' . $attributes . '>' . $svg . '</svg>';
+}
+
+/**
+ * Fully rendered <svg> markup for every available icon, keyed by icon id.
+ * Used by the inline editor's icon picker so fill icons, custom viewBoxes and
+ * stroke widths match the site rendering.
+ *
+ * @return array<string,string>
+ */
+function getAvailableIconsRendered() {
+    $icons = [];
+    foreach (array_keys(getAvailableIconDefinitions()) as $key) {
+        $icons[$key] = renderIconSvg($key);
+    }
+    return $icons;
 }
 
 // ============================================================
