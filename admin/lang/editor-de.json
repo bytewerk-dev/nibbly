@@ -1,6 +1,7 @@
 {
     "dashboard": "Dashboard",
     "cancel": "Abbrechen",
+    "ok": "OK",
     "save": "Speichern",
     "save_exit": "Speichern & Beenden",
     "delete": "Löschen",
@@ -229,6 +230,7 @@
     "copilot.current_field_empty": "Dieses Feld ist derzeit leer.",
     "copilot.current_field_select": "Wähle ein Zielfeld aus, um den aktuellen Inhalt anzuzeigen.",
     "auto_generated_fields": "{count} fehlende Felder mit Standardtext angelegt, damit du sie bearbeiten kannst.",
+    "auto_generated_field": "Ein fehlendes Feld mit Standardtext angelegt, damit du es bearbeiten kannst.",
     "nav.leave_title": "Bearbeitungsmodus verlassen?",
     "nav.leave_confirm": "Fortfahren",
     "image.alt_text": "Alternativtext",

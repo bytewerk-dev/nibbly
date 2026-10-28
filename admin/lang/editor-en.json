@@ -1,6 +1,7 @@
 {
     "dashboard": "Dashboard",
     "cancel": "Cancel",
+    "ok": "OK",
     "save": "Save",
     "save_exit": "Save & Exit",
     "delete": "Delete",
@@ -228,7 +229,8 @@
     "copilot.current_field_content": "Current content",
     "copilot.current_field_empty": "This field is currently empty.",
     "copilot.current_field_select": "Choose a target field to preview its current content.",
-    "auto_generated_fields": "Added {count} missing field(s) with their default text, so you can edit them.",
+    "auto_generated_fields": "Added {count} missing fields with their default text, so you can edit them.",
+    "auto_generated_field": "Added a missing field with its default text, so you can edit it.",
     "nav.leave_title": "Leave edit mode?",
     "nav.leave_confirm": "Continue",
     "image.alt_text": "Alt text",

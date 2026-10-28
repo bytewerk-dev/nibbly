@@ -486,7 +486,7 @@
             <div class="editor-modal-backdrop" aria-hidden="true"></div>
             <div class="editor-modal-content editor-modal-small">
                 <div class="editor-modal-header">
-                    <h3 id="confirm-dialog-title">Confirm</h3>
+                    <h3 id="confirm-dialog-title"></h3>
                     <button type="button" class="editor-close-btn" onclick="InlineEditor.closeConfirmDialog(false)" aria-label="${escHtml(tFallback('close', 'Close'))}">&times;</button>
                 </div>
                 <div class="editor-modal-body">
@@ -559,7 +559,7 @@
             <div class="editor-modal-backdrop" aria-hidden="true"></div>
             <div class="editor-modal-content editor-modal-small">
                 <div class="editor-modal-header">
-                    <h3 id="prompt-dialog-title">Eingabe</h3>
+                    <h3 id="prompt-dialog-title"></h3>
                     <button type="button" class="editor-close-btn" onclick="InlineEditor.closePromptDialog(null)" aria-label="${escHtml(tFallback('close', 'Close'))}">&times;</button>
                 </div>
                 <div class="editor-modal-body">
@@ -569,8 +569,8 @@
                     </div>
                 </div>
                 <div class="editor-modal-footer">
-                    <button type="button" class="editor-btn editor-btn-secondary" onclick="InlineEditor.closePromptDialog(null)">Cancel</button>
-                    <button type="button" class="editor-btn editor-btn-primary" onclick="InlineEditor.submitPromptDialog()">OK</button>
+                    <button type="button" class="editor-btn editor-btn-secondary" onclick="InlineEditor.closePromptDialog(null)">${escHtml(t('cancel'))}</button>
+                    <button type="button" class="editor-btn editor-btn-primary" onclick="InlineEditor.submitPromptDialog()">${escHtml(t('ok'))}</button>
                 </div>
             </div>
         `;
@@ -724,7 +724,9 @@
                 const count = window.NB_AUTO_GENERATED.length;
                 // The technical detail (which file and keys) goes to the console, the toast stays plain
                 console.info('nibbly: added missing fields with their default text', window.NB_AUTO_GENERATED);
-                const msg = tFallback('auto_generated_fields', 'Added {count} missing field(s) with their default text, so you can edit them.').replace('{count}', count);
+                const msg = count === 1
+                    ? tFallback('auto_generated_field', 'Added a missing field with its default text, so you can edit it.')
+                    : tFallback('auto_generated_fields', 'Added {count} missing fields with their default text, so you can edit them.').replace('{count}', count);
                 setTimeout(() => showToast(msg, 'info'), 500);
             }
 
@@ -1151,37 +1153,6 @@
         }
     }
 
-    function showEditorConfirm(message, onConfirm) {
-        const overlay = document.createElement('div');
-        overlay.className = 'nibbly-editor-confirm';
-        overlay.innerHTML =
-            '<div class="nibbly-editor-confirm__dialog" role="dialog" aria-modal="true">' +
-                '<h3>' + escHtml(t('nav.leave_title')) + '</h3>' +
-                '<p></p>' +
-                '<div class="nibbly-editor-confirm__actions">' +
-                    '<button type="button" class="nibbly-editor-confirm__btn nibbly-editor-confirm__btn--secondary" data-action="cancel">' + escHtml(t('cancel')) + '</button>' +
-                    '<button type="button" class="nibbly-editor-confirm__btn nibbly-editor-confirm__btn--primary" data-action="confirm">' + escHtml(t('nav.leave_confirm')) + '</button>' +
-                '</div>' +
-            '</div>';
-        overlay.querySelector('p').textContent = message || '';
-        const style = document.createElement('style');
-        style.textContent = '.nibbly-editor-confirm{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:rgba(17,24,39,.55);padding:20px;font-family:var(--nb-font-sans,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif)}.nibbly-editor-confirm__dialog{width:min(430px,100%);background:#fff;border-radius:10px;box-shadow:0 18px 60px rgba(15,23,42,.25);padding:22px}.nibbly-editor-confirm__dialog h3{margin:0 0 10px;font-family:inherit;font-size:20px;letter-spacing:normal}.nibbly-editor-confirm__dialog p{margin:0 0 18px;color:#374151;line-height:1.45}.nibbly-editor-confirm__actions{display:flex;gap:10px;justify-content:flex-end}.nibbly-editor-confirm__btn{border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font:inherit;padding:9px 14px}.nibbly-editor-confirm__btn--primary{background:#5aa6a6;border-color:#5aa6a6;color:#fff}.nibbly-editor-confirm__btn--secondary{background:#fff;color:#111827}';
-        overlay.appendChild(style);
-        function close() {
-            overlay.remove();
-        }
-        overlay.addEventListener('click', function(event) {
-            const action = event.target && event.target.getAttribute('data-action');
-            if (action === 'cancel' || event.target === overlay) close();
-            if (action === 'confirm') {
-                close();
-                onConfirm();
-            }
-        });
-        document.body.appendChild(overlay);
-        overlay.querySelector('[data-action="confirm"]').focus();
-    }
-
     function navClickGuard(e) {
         if (!EditorConfig.editMode) return;
 
@@ -1228,11 +1199,11 @@
             ? t('nav.unsaved_changes')
             : t('nav.edit_mode_active');
 
-        showEditorConfirm(message, function() {
+        showConfirmDialog(t('nav.leave_title'), message, '', function() {
             window.removeEventListener('beforeunload', beforeUnloadGuard);
             document.removeEventListener('click', navClickGuard, true);
             window.location.href = link.href;
-        });
+        }, t('nav.leave_confirm'), 'editor-btn-primary');
     }
 
     function enterEditMode() {
@@ -4788,7 +4759,7 @@
                 </div>
                 <div class="editor-modal-footer">
                     <button type="button" class="editor-btn editor-btn-secondary" onclick="InlineEditor.closeHtmlSourceDialog(null)">${t('cancel') || 'Cancel'}</button>
-                    <button type="button" class="editor-btn editor-btn-primary" onclick="InlineEditor.submitHtmlSourceDialog()">OK</button>
+                    <button type="button" class="editor-btn editor-btn-primary" onclick="InlineEditor.submitHtmlSourceDialog()">${escHtml(t('ok'))}</button>
                 </div>
             </div>
         `;

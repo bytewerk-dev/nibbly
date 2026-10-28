@@ -60,6 +60,14 @@ Git milestones and the gaps in publication records.
   applies.
 - **`includes/site-menus.php` restores with "content only" backups,** like the other site-owned
   files in `includes/`.
+- **Czech, Spanish, French, Italian, Polish, Portuguese and Turkish are complete.** About 850
+  dashboard texts per language were still English and 184 newer ones were missing (they fell back
+  to English); the website editor had about 70 per language. All are translated now.
+- **The dialog for leaving edit mode follows the theme.** It used its own fixed white and teal
+  styles; it is now the editor's regular confirmation dialog, with the theme's button colour and
+  dark mode. The input dialog (alt text, for example) and the HTML source dialog no longer show
+  "Cancel" and "OK" in English.
+- **"1 missing fields".** The notice about fields added with their default text has a singular now.
 
 ## [2.5.1] — 2026-10-26
 
