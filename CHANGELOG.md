@@ -9,8 +9,18 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+## [2.6.0] — 2026-10-28
+
 ### Added
 
+- **Icon style and stroke width in the Icon Manager.** The style of an icon (line or solid) is
+  detected from its SVG markup and can be set in the edit form ("Style"). A global stroke width
+  (default 2, saved as `_settings` in `content/settings/iconset.json`) sits in the toolbar, and each
+  icon can have its own optional stroke width (empty = global, 0.25 to 6). A uniform stroke width in
+  the SVG code moves into that field on save; icons with deliberately mixed widths stay unchanged.
+  Imports from the icon library use the global stroke width, so icons from different sets look
+  alike. Style and licence source are kept on save. The guide's Icon Manager chapter describes all
+  of this, with a new screenshot.
 - **Editorial guide in the dashboard.** `/admin/handbook` explains editing a nibbly site step by step
   for people who know WordPress: signing in, edit mode, saving and undo, texts, links, images and
   the media library, pages, menus, news, events, people, messages, Icon Manager, AI, settings,
