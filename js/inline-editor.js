@@ -47,9 +47,9 @@
      */
     function applyAdminBarTheme(bar) {
         const theme = window.NB_ADMIN_BAR_THEME || {};
-        bar.dataset.themePreset = theme.preset || 'soft';
+        bar.dataset.themePreset = theme.preset || 'pop';
         bar.dataset.density = theme.density || 'auto';
-        bar.dataset.font = theme.font || 'system';
+        bar.dataset.font = theme.font || 'atkinson';
         bar.dataset.fontSize = theme.fontSize || 'default';
         // The bar's right end lines up with the dashboard's content, which depends on its sidebar
         try {
@@ -486,7 +486,7 @@
             <div class="editor-modal-backdrop" aria-hidden="true"></div>
             <div class="editor-modal-content editor-modal-small">
                 <div class="editor-modal-header">
-                    <h3 id="confirm-dialog-title">Confirm</h3>
+                    <h3 id="confirm-dialog-title"></h3>
                     <button type="button" class="editor-close-btn" onclick="InlineEditor.closeConfirmDialog(false)" aria-label="${escHtml(tFallback('close', 'Close'))}">&times;</button>
                 </div>
                 <div class="editor-modal-body">
@@ -559,7 +559,7 @@
             <div class="editor-modal-backdrop" aria-hidden="true"></div>
             <div class="editor-modal-content editor-modal-small">
                 <div class="editor-modal-header">
-                    <h3 id="prompt-dialog-title">Eingabe</h3>
+                    <h3 id="prompt-dialog-title"></h3>
                     <button type="button" class="editor-close-btn" onclick="InlineEditor.closePromptDialog(null)" aria-label="${escHtml(tFallback('close', 'Close'))}">&times;</button>
                 </div>
                 <div class="editor-modal-body">
@@ -569,8 +569,8 @@
                     </div>
                 </div>
                 <div class="editor-modal-footer">
-                    <button type="button" class="editor-btn editor-btn-secondary" onclick="InlineEditor.closePromptDialog(null)">Cancel</button>
-                    <button type="button" class="editor-btn editor-btn-primary" onclick="InlineEditor.submitPromptDialog()">OK</button>
+                    <button type="button" class="editor-btn editor-btn-secondary" onclick="InlineEditor.closePromptDialog(null)">${escHtml(t('cancel'))}</button>
+                    <button type="button" class="editor-btn editor-btn-primary" onclick="InlineEditor.submitPromptDialog()">${escHtml(t('ok'))}</button>
                 </div>
             </div>
         `;
@@ -724,7 +724,9 @@
                 const count = window.NB_AUTO_GENERATED.length;
                 // The technical detail (which file and keys) goes to the console, the toast stays plain
                 console.info('nibbly: added missing fields with their default text', window.NB_AUTO_GENERATED);
-                const msg = tFallback('auto_generated_fields', 'Added {count} missing field(s) with their default text, so you can edit them.').replace('{count}', count);
+                const msg = count === 1
+                    ? tFallback('auto_generated_field', 'Added a missing field with its default text, so you can edit it.')
+                    : tFallback('auto_generated_fields', 'Added {count} missing fields with their default text, so you can edit them.').replace('{count}', count);
                 setTimeout(() => showToast(msg, 'info'), 500);
             }
 
@@ -1019,6 +1021,10 @@
         const logoutUrl = new URL(adminBaseUrl, window.location.origin);
         logoutUrl.searchParams.set('logout', '1');
         logoutUrl.searchParams.set('redirect', window.location.pathname + window.location.search + window.location.hash);
+        // The guide (Settings → Modules → Guide) opens in a new tab next to the page being edited
+        const handbookHtml = window.NB_HANDBOOK_ENABLED === false ? '' : `
+            <span class="admin-bar-divider admin-bar-divider--handbook" aria-hidden="true"></span>
+            <a href="${escHtml(adminBaseUrl)}handbook" class="admin-bar-link admin-bar-link--handbook" target="_blank" rel="noopener" title="${escHtml(t('handbook.link_title'))}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2zM22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg> <span class="admin-bar-link-label">${escHtml(t('handbook.link'))}</span></a>`;
         const seoHtml = `
             <a class="admin-bar-seo admin-bar-seo--${escHtml(seoHealth.status || 'yellow')}" href="${contentEditorHref}" aria-label="${escHtml(seoA11yLabel)}">
                 <span class="admin-bar-seo-dot" aria-hidden="true"></span>
@@ -1035,6 +1041,7 @@
                 <div class="admin-bar-left">
                     ${logoHtml}
                     <a href="/admin/dashboard" class="admin-bar-link"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg> ${t('dashboard')}</a>
+                    ${handbookHtml}
                 </div>
                 <div class="admin-bar-center">
                     <div class="admin-bar-backups" id="admin-page-backups" role="group" aria-label="${escHtml(t('page_backups.label'))}" hidden>
@@ -1148,37 +1155,6 @@
         }
     }
 
-    function showEditorConfirm(message, onConfirm) {
-        const overlay = document.createElement('div');
-        overlay.className = 'nibbly-editor-confirm';
-        overlay.innerHTML =
-            '<div class="nibbly-editor-confirm__dialog" role="dialog" aria-modal="true">' +
-                '<h3>Bearbeitungsmodus verlassen?</h3>' +
-                '<p></p>' +
-                '<div class="nibbly-editor-confirm__actions">' +
-                    '<button type="button" class="nibbly-editor-confirm__btn nibbly-editor-confirm__btn--secondary" data-action="cancel">Abbrechen</button>' +
-                    '<button type="button" class="nibbly-editor-confirm__btn nibbly-editor-confirm__btn--primary" data-action="confirm">Fortfahren</button>' +
-                '</div>' +
-            '</div>';
-        overlay.querySelector('p').textContent = message || '';
-        const style = document.createElement('style');
-        style.textContent = '.nibbly-editor-confirm{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:rgba(17,24,39,.55);padding:20px;font-family:var(--nb-font-sans,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif)}.nibbly-editor-confirm__dialog{width:min(430px,100%);background:#fff;border-radius:10px;box-shadow:0 18px 60px rgba(15,23,42,.25);padding:22px}.nibbly-editor-confirm__dialog h3{margin:0 0 10px;font-family:inherit;font-size:20px;letter-spacing:normal}.nibbly-editor-confirm__dialog p{margin:0 0 18px;color:#374151;line-height:1.45}.nibbly-editor-confirm__actions{display:flex;gap:10px;justify-content:flex-end}.nibbly-editor-confirm__btn{border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font:inherit;padding:9px 14px}.nibbly-editor-confirm__btn--primary{background:#5aa6a6;border-color:#5aa6a6;color:#fff}.nibbly-editor-confirm__btn--secondary{background:#fff;color:#111827}';
-        overlay.appendChild(style);
-        function close() {
-            overlay.remove();
-        }
-        overlay.addEventListener('click', function(event) {
-            const action = event.target && event.target.getAttribute('data-action');
-            if (action === 'cancel' || event.target === overlay) close();
-            if (action === 'confirm') {
-                close();
-                onConfirm();
-            }
-        });
-        document.body.appendChild(overlay);
-        overlay.querySelector('[data-action="confirm"]').focus();
-    }
-
     function navClickGuard(e) {
         if (!EditorConfig.editMode) return;
 
@@ -1225,11 +1201,11 @@
             ? t('nav.unsaved_changes')
             : t('nav.edit_mode_active');
 
-        showEditorConfirm(message, function() {
+        showConfirmDialog(t('nav.leave_title'), message, '', function() {
             window.removeEventListener('beforeunload', beforeUnloadGuard);
             document.removeEventListener('click', navClickGuard, true);
             window.location.href = link.href;
-        });
+        }, t('nav.leave_confirm'), 'editor-btn-primary');
     }
 
     function enterEditMode() {
@@ -1833,7 +1809,7 @@
                 return `<div class="editor-field" id="${fid}" style="display:none;">
                     <label>${field.label}</label>
                     <div class="editor-image-row">
-                        <input type="text" id="${iid}" placeholder="Path to image..." readonly>
+                        <input type="text" id="${iid}" placeholder="${escHtml(t('image.path_placeholder'))}" readonly>
                         <button type="button" class="editor-btn editor-btn-secondary" onclick="InlineEditor.openImageManager(null, '${iid}')">
                             ${Icons.folder} ${t('image_manager')}
                         </button>
@@ -1844,7 +1820,7 @@
             case 'audio':
                 return `<div class="editor-field" id="${fid}" style="display:none;">
                     <label>${field.label}</label>
-                    <input type="text" id="${iid}" placeholder="Path to audio file..." readonly>
+                    <input type="text" id="${iid}" placeholder="${escHtml(t('audio.path_placeholder'))}" readonly>
                     <div class="editor-audio-buttons">
                         <label class="editor-btn editor-btn-primary editor-btn-inline">
                             <input type="file" id="editor-audio-upload-input" accept=".mp3,.wav,.ogg,.m4a,.aac,.flac,audio/*" style="display:none;">
@@ -2229,7 +2205,7 @@
                             <span class="group-icon-selected-preview" id="group-editor-icon-preview-${index}"></span>
                             <span class="group-icon-selected-label" id="group-editor-icon-label-${index}"></span>
                         </div>
-                        <input type="search" class="group-icon-search" data-group-icon-search="${index}" placeholder="Search icons...">
+                        <input type="search" class="group-icon-search" data-group-icon-search="${index}" placeholder="${escHtml(t('icons.search_placeholder'))}">
                         <div class="group-icon-grid">${iconButtons}</div>
                     </div>
                     ${hint}
@@ -2296,7 +2272,7 @@
                     <div class="group-link-grid">
                         <label class="group-special-control">
                             <span>Text</span>
-                            <input type="text" id="${textId}" placeholder="Link text">
+                            <input type="text" id="${textId}" placeholder="${escHtml(t('footer.link_text'))}">
                         </label>
                         <label class="group-special-control group-special-control--target">
                             <span>Target</span>
@@ -2323,12 +2299,12 @@
                         <div id="group-editor-image-preview-${index}" class="editor-image-preview group-image-preview"></div>
                         <div class="group-image-controls">
                             <div class="editor-image-row group-image-path-row">
-                                <input type="text" id="${srcId}" placeholder="Path to image..." readonly>
+                                <input type="text" id="${srcId}" placeholder="${escHtml(t('image.path_placeholder'))}" readonly>
                                 <button type="button" class="editor-btn editor-btn-secondary" data-group-image-pick="${index}">
                                     ${Icons.folder} ${t('image_manager')}
                                 </button>
                             </div>
-                            <input type="text" id="${altId}" placeholder="Alt text" class="group-image-alt">
+                            <input type="text" id="${altId}" placeholder="${escHtml(t('image.alt_text'))}" class="group-image-alt">
                         </div>
                     </div>
                     ${hint}
@@ -4785,7 +4761,7 @@
                 </div>
                 <div class="editor-modal-footer">
                     <button type="button" class="editor-btn editor-btn-secondary" onclick="InlineEditor.closeHtmlSourceDialog(null)">${t('cancel') || 'Cancel'}</button>
-                    <button type="button" class="editor-btn editor-btn-primary" onclick="InlineEditor.submitHtmlSourceDialog()">OK</button>
+                    <button type="button" class="editor-btn editor-btn-primary" onclick="InlineEditor.submitHtmlSourceDialog()">${escHtml(t('ok'))}</button>
                 </div>
             </div>
         `;
@@ -5279,13 +5255,13 @@
                 saveImageField(page, fieldKey, imagePath, currentAlt, imgElement);
             } else if (format === 'split') {
                 // Split-format: src and alt live at two separate keys
-                showPromptDialog('Alt text', 'Alt text', currentAlt, (newAlt) => {
+                showPromptDialog(t('image.alt_text'), t('image.alt_hint'), currentAlt, (newAlt) => {
                     if (newAlt === null) newAlt = currentAlt;
                     saveImageField(page, fieldKey, imagePath, newAlt, imgElement);
                 });
             } else {
                 // Object-format images: ask for alt text, save as {src, alt}
-                showPromptDialog('Alt text', 'Alt text', currentAlt, (newAlt) => {
+                showPromptDialog(t('image.alt_text'), t('image.alt_hint'), currentAlt, (newAlt) => {
                     if (newAlt === null) newAlt = currentAlt;
                     saveImageField(page, fieldKey, imagePath, newAlt, imgElement);
                 });

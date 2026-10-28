@@ -3391,6 +3391,12 @@ body.edit-mode-active .event-card-hidden .event-hide-btn {
     body.edit-mode-active .admin-bar-divider {
         display: none;
     }
+
+    /* The guide link keeps its book icon while editing; the title names it */
+    body.visual-editing #admin-bar .admin-bar-link--handbook .admin-bar-link-label,
+    body.edit-mode-active #admin-bar .admin-bar-link--handbook .admin-bar-link-label {
+        display: none;
+    }
 }
 
 @media (max-width: 1200px) {
@@ -3423,6 +3429,10 @@ body.edit-mode-active .event-card-hidden .event-hide-btn {
 }
 
 @media (max-width: 768px) {
+    #admin-bar .admin-bar-link--handbook .admin-bar-link-label {
+        display: none;
+    }
+
     .admin-bar-inner {
         flex-wrap: wrap;
         justify-content: center;

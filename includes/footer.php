@@ -729,21 +729,22 @@ if (trim($_footerSummaryHtml) === '') {
     // (Settings → Design). js/inline-editor.js puts the attributes on #admin-bar;
     // the base colours and sidebar overrides are scoped to the bar here, so the
     // tokens in css/nibbly-admin-tokens.css derive the topbar for the bar alone.
-    $_abTheme = is_array($_settings['theme'] ?? null) ? $_settings['theme'] : [];
+    require_once __DIR__ . '/theme-defaults.php';
+    $_abTheme = nibblyThemeSettings(is_array($_settings['theme'] ?? null) ? $_settings['theme'] : []);
     $_abHex = static function ($value): string {
         return (is_string($value) && preg_match('/^#[0-9a-fA-F]{6}$/', $value)) ? strtolower($value) : '';
     };
     $_abPick = static function ($value, array $allowed, string $fallback): string {
         return in_array($value, $allowed, true) ? $value : $fallback;
     };
-    $_abBase = $_abHex($_abTheme['primaryColor'] ?? '') ?: '#3858e9';
+    $_abBase = $_abHex($_abTheme['primaryColor'] ?? '') ?: nibblyThemeDefaults()['primaryColor'];
     $_abAccent = $_abHex($_abTheme['accentColor'] ?? '');
     if ($_abAccent === '') $_abAccent = $_abBase;
-    $_abFontRaw = $_abTheme['font'] ?? 'system';
+    $_abFontRaw = $_abTheme['font'];
     if ($_abFontRaw === 'geist') $_abFontRaw = 'plex';
     $_abConfig = [
         'mode' => $_abPick($_abTheme['adminTheme'] ?? 'light', ['light', 'dark', 'system'], 'light'),
-        'preset' => $_abPick($_abTheme['preset'] ?? 'soft', ['soft', 'classic', 'paper', 'studio', 'console', 'pop'], 'soft'),
+        'preset' => nibblyThemePreset($_abTheme['preset']),
         'density' => $_abPick($_abTheme['density'] ?? 'auto', ['auto', 'compact', 'comfortable'], 'auto'),
         'font' => $_abPick($_abFontRaw, ['system', 'inter', 'plex', 'atkinson', 'public', 'geist-mono'], 'system'),
         'fontSize' => $_abPick($_abTheme['fontSize'] ?? 'default', ['small', 'default', 'large'], 'default'),
@@ -794,6 +795,7 @@ if (trim($_footerSummaryHtml) === '') {
     window.NB_AI_ASSISTANT_LANGUAGE = <?php echo json_encode(function_exists('_nbAdminLang') ? _nbAdminLang() : ($currentLang ?? (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en'))); ?>;
     window.NB_ADMIN_API_URL = <?php echo json_encode($basePath . 'admin/api.php', JSON_UNESCAPED_SLASHES); ?>;
     window.NB_ADMIN_BASE_URL = <?php echo $_adminAccessBaseJson; ?>;
+    window.NB_HANDBOOK_ENABLED = <?php echo json_encode(($_footerModules['handbook'] ?? true) !== false); ?>;
     window.NB_AI_LABELS = <?php echo json_encode(nibblyAiLabelEditorConfig($currentLang ?? null), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG); ?>;
     <?php
     // Build lightweight page list for link picker (slug → title for current language)

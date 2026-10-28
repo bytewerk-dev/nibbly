@@ -67,6 +67,9 @@ foreach ([
     'includes/footer.php',
     'includes/nav-config.php',
     'includes/site-page-hook.php',
+    'includes/site-menus.php',
+    'includes/site-handbook/chapters.php',
+    'includes/site-handbook/img/speaker.webp',
     'css/fonts.css',
     'css/website.css',
     'css/page-home.css',
@@ -78,6 +81,8 @@ foreach ([
 
 foreach ([
     'admin/api.php',
+    'includes/handbook/chapters/pages.de.php',
+    'includes/menu-adapters.php',
     'css/style.css',
     'js/inline-editor.js',
     'backups/site-backup.zip',

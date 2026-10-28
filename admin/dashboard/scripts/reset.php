@@ -6,6 +6,7 @@
     (function() {
         var input = document.getElementById('totalResetConfirm');
         var btn = document.getElementById('totalResetBtn');
+        if (!input || !btn) return;
 
         input.addEventListener('input', function() {
             btn.disabled = (input.value !== 'DELETE');

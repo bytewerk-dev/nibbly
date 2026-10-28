@@ -286,7 +286,8 @@
         document.getElementById('homeTab').style.display = tab === 'home' ? 'block' : 'none';
         document.getElementById('contentTab').style.display = tab === 'content' ? 'block' : 'none';
         document.getElementById('newsTab').style.display = tab === 'news' ? 'block' : 'none';
-        document.getElementById('peopleTab').style.display = tab === 'people' ? 'block' : 'none';
+        const peopleTab = document.getElementById('peopleTab');
+        if (peopleTab) peopleTab.style.display = tab === 'people' ? 'block' : 'none';
         document.getElementById('eventsTab').style.display = tab === 'events' ? 'block' : 'none';
         document.getElementById('mailsTab').style.display = tab === 'mails' ? 'block' : 'none';
         const mediaTab = document.getElementById('mediaTab');

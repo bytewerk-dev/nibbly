@@ -1,5 +1,6 @@
 <?php
 if (!defined('NIBBLY_ADMIN_DIR')) { http_response_code(404); exit; }
+require_once dirname(__DIR__, 2) . '/includes/theme-defaults.php';
 
 // Authenticated dispatcher supplies shared helpers and request context.
 switch ($action) {
@@ -16,24 +17,7 @@ switch ($action) {
                 'logoDisplay' => 'both',
                 'logoSize' => 'medium'
             ],
-            'theme' => [
-                'adminTheme' => 'light',
-                'preset' => 'soft',
-                'density' => 'auto',
-                'fontSize' => 'default',
-                'font' => 'system',
-                'primaryColor' => '#3858e9',
-                'accentColor' => '',
-                'dangerColor' => '',
-                'warningColor' => '',
-                'successColor' => '',
-                'sidebarBg' => '',
-                'darkPrimaryColor' => '',
-                'darkAccentColor' => '',
-                'darkSidebarBg' => '',
-                'buttonGlow' => true,
-                'buttonRadius' => 6
-            ],
+            'theme' => nibblyThemeDefaults(),
             'email' => [
                 'method' => 'inactive',
                 'recipientEmail' => '',
@@ -58,7 +42,8 @@ switch ($action) {
                 'people' => true,
                 'messages' => true,
                 'menus' => true,
-                'iconManager' => true
+                'iconManager' => true,
+                'handbook' => true
             ],
             'dashboard' => [
                 'itemsPerPage' => 50,
@@ -117,6 +102,8 @@ switch ($action) {
 
         // Merge with defaults to ensure all keys exist
         $merged = array_replace_recursive($defaults, $settings);
+        // A theme saved without a preset keeps Soft (see includes/theme-defaults.php)
+        $merged['theme'] = nibblyThemeSettings(is_array($settings['theme'] ?? null) ? $settings['theme'] : []);
         $merged['access']['maintenance']['hasBypassKey'] = !empty($merged['access']['maintenance']['bypassKeyHash']);
         unset($merged['access']['maintenance']['bypassKeyHash']);
         if (!isAdmin()) { unset($merged['email'], $merged['ai'], $merged['backup']); }
@@ -192,7 +179,7 @@ switch ($action) {
                     if (in_array($key, ['adminTheme', 'publicDefault'], true) && !in_array($value, ['light', 'dark', 'system'], true)) {
                         jsonResponse(false, null, 'Invalid theme value');
                     }
-                    if ($key === 'preset' && !in_array($value, ['soft', 'classic', 'paper', 'studio', 'console', 'pop'], true)) {
+                    if ($key === 'preset' && !in_array($value, NIBBLY_THEME_PRESETS, true)) {
                         jsonResponse(false, null, 'Invalid theme preset');
                     }
                     if ($key === 'density' && !in_array($value, ['auto', 'compact', 'comfortable'], true)) {

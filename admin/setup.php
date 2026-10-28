@@ -13,6 +13,7 @@ if (file_exists(__DIR__ . '/config.php')) {
 
 require_once __DIR__ . '/lang/i18n.php';
 require_once __DIR__ . '/../includes/session-helper.php';
+require_once __DIR__ . '/../includes/theme-defaults.php';
 nibblySessionStart();
 $_SESSION['setup_csrf'] ??= bin2hex(random_bytes(32));
 
@@ -224,11 +225,8 @@ PHPTPL;
             'showBranding' => true,
             'logoDisplay' => 'both',
         ],
-        'theme' => [
-            'adminTheme' => 'light',
-            'primaryColor' => '#3858e9',
-            'accentColor' => '#3858e9',
-        ],
+        // The full theme with its preset; a theme without "preset" is an older install and keeps Soft
+        'theme' => nibblyThemeDefaults(),
         'email' => [
             'method' => 'inactive',
             'recipientEmail' => '',

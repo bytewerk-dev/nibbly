@@ -1677,6 +1677,7 @@ function backupRestoreContentEntryAllowed(string $entry): bool {
     if (str_starts_with($entry, 'content/')
         || str_starts_with($entry, 'assets/')
         || str_starts_with($entry, 'templates/')
+        || str_starts_with($entry, 'includes/site-handbook/')
         || backupRestoreIsLanguageEntry($entry)) {
         return true;
     }
@@ -1686,6 +1687,7 @@ function backupRestoreContentEntryAllowed(string $entry): bool {
         'includes/footer.php',
         'includes/nav-config.php',
         'includes/site-page-hook.php',
+        'includes/site-menus.php',
         'css/fonts.css',
         'css/website.css',
         'js/main.js',

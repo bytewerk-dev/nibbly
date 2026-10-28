@@ -141,6 +141,7 @@ after an authorized upload; local Apache cannot verify hosting proxy rules.
 | `/admin/dashboard`, `/admin/dashboard/` | HTTP 308 to `/admin/dashboard.php`; query string preserved |
 | Dashboard request without a session | Redirect to login; no dashboard data exposed |
 | Dashboard request with a valid session | Dashboard HTML, HTTP 200 |
+| `/admin/handbook` without / with a session | 302 to `index.php`, back to the guide after login / guide HTML, HTTP 200; `/admin/handbook.php` and `/admin/handbook/` end at `/admin/handbook` (308); with `modules.handbook` off, HTTP 404 |
 | Actual admin CSS, JS, form/API URLs after navigation | Correct paths and expected content types; authenticated API still works |
 | Form POST to directory URL without slash | HTTP 308; followed request retains method/body and query |
 | Add fragment directory beside an existing PHP endpoint | Both clean aliases resolve to `.php`; HTML and relative CSS still work |

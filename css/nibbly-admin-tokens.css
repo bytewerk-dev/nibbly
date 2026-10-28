@@ -291,7 +291,7 @@
    ------------------------------------------------------------
    Needs relative colour syntax (Chrome 119, Safari 16.4, Firefox 128).
    Older browsers keep the static values above. The <html> element carries
-   data-theme-preset="soft|classic|paper|studio|console|pop" (default soft),
+   data-theme-preset="soft|classic|paper|studio|console|pop" (default pop, includes/theme-defaults.php),
    data-font="system|inter|plex|atkinson|public|geist-mono", data-font-size and data-density; admin/dashboard.php
    sets --nb-base / --nb-accent-base inline from the saved settings.
    ============================================================ */

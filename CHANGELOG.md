@@ -7,6 +7,68 @@ Release dates use Europe/Vienna calendar dates. Historical 1.x dates are retaine
 as originally recorded; see [release history and policy](RELEASES.md) for verified
 Git milestones and the gaps in publication records.
 
+## [Unreleased]
+
+### Added
+
+- **Editorial guide in the dashboard.** `/admin/handbook` explains editing a nibbly site step by step
+  for people who know WordPress: signing in, edit mode, saving and undo, texts, links, images and
+  the media library, pages, menus, news, events, people, messages, Icon Manager, AI, settings,
+  users, backups and security, in German and English (it follows the admin language). Chapters of
+  switched-off modules are left out, and editors do not see chapters about areas only admins can
+  open. Small interface elements in the text (buttons, the admin bar, switches, icons) are drawn
+  live with the dashboard's styles, so they match each installation's theme, colour and light or
+  dark mode; the screenshots are one set per language in Pop. The page has its own light/dark
+  switch, the site's favicon and `noindex`. Signed out, it goes to the login and comes back to the
+  guide afterwards. Links: in the dashboard's top bar after the site name, and in the admin bar on
+  the website after "Dashboard" (new tab). Settings → Modules → Handbuch turns the guide and both
+  links off (`modules.handbook`, on by default); the address then answers 404.
+- **Own chapters for a site.** `includes/site-handbook/chapters.php` (site-owned, kept on updates
+  and restored with "content only" backups) adds chapters at a chosen position, hides core
+  chapters and adds a contact line. See "Editorial Guide" in `AI-AGENT-GUIDE.md`.
+- **Screenshot script.** `python3 tests/handbook-screenshots.py` retakes every screenshot of the
+  guide in a disposable installation with the starter content (Playwright, WebP via PHP's GD).
+
+### Changed
+
+- **Pop is the default dashboard theme for new installations,** with its own colours (base
+  `#3d8ee9`, danger `#f0625d`, notice `#ef9524`, success `#27b39a`), Atkinson Hyperlegible and
+  round buttons (24 px). The setup wizard now writes the full theme. Installations whose saved
+  theme has no preset (set up with an earlier version and never saved under Design) keep Soft,
+  `#3858e9`, the system font and 6 px buttons, so an update changes nothing. All defaults come from
+  one place, `includes/theme-defaults.php`.
+
+### Fixed
+
+- **The dashboard works for editors again.** The settings script bound its listeners to design,
+  branding, language, email, user and reset fields that are only rendered for admins; for editors
+  it stopped there, so People, Events and "My account" never started, and opening the settings
+  showed "Error loading settings". These bindings now skip missing fields, and the admin settings
+  forms are only filled for admins.
+- **People works for editors and without the Menus module.** The People area was only rendered for
+  admins with Menus switched on, so for editors (and for everyone with Menus off) it stayed empty
+  and every later switch between dashboard areas failed. It now follows the People module alone.
+- **Untranslated labels.** The dialog for leaving edit mode (title and buttons), the alt text prompt
+  after choosing an image, the placeholders in the group editor (image and audio path, alt text,
+  link text, icon search), the login countdown ("s remaining"), "Clean up" in the Icon Manager,
+  "AI Features" and "AI Image Generator" now come from the language files; German says
+  "KI-Funktionen" and "KI-Bildgenerator" like the rest of the dashboard. The countdown shows its
+  unit (seconds, minutes, hours).
+- **Image hints in the media library on the website.** They listed only JPG, PNG and WebP with
+  "max. 5 MB", next to the real limit (20 MB by default). The format list now includes GIF and SVG,
+  and the video and document hints no longer repeat a fixed size; the limit shown is the one that
+  applies.
+- **`includes/site-menus.php` restores with "content only" backups,** like the other site-owned
+  files in `includes/`.
+- **Czech, Spanish, French, Italian, Polish, Portuguese and Turkish are complete.** About 850
+  dashboard texts per language were still English and 184 newer ones were missing (they fell back
+  to English); the website editor had about 70 per language. All are translated now.
+- **The dialog for leaving edit mode follows the theme.** It used its own fixed white and teal
+  styles; it is now the editor's regular confirmation dialog, with the theme's button colour and
+  dark mode. The input dialog (alt text, for example) and the HTML source dialog no longer show
+  "Cancel" and "OK" in English.
+- **"1 missing fields".** The notice about fields added with their default text has a singular now.
+
 ## [2.5.1] — 2026-10-26
 
 ### Changed
