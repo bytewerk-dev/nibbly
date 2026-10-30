@@ -280,11 +280,10 @@
     async function loadPageList() {
         try {
             // The trash only contributes its count to the filter links
-            const [response, trash] = await Promise.all([
-                fetch('api.php?action=list-pages&_=' + Date.now()),
+            const [result, trash] = await Promise.all([
+                fetch('api.php?action=list-pages&_=' + Date.now()).then(r => r.json()),
                 fetch('api.php?action=list-trash&_=' + Date.now()).then(r => r.json()).catch(() => null)
             ]);
-            const result = await response.json();
             if (trash?.success) pageTrashCount = (trash.data || []).length;
             if (result.success) {
                 applyPageList(result.data);

@@ -11,7 +11,13 @@
     };
     toolbarIcons.quote = '<svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z"/></svg>';
     toolbarIcons.unlink = toolbarIcons.link.replace('</svg>', '<path d="M4 3 21 20" fill="none" stroke="currentColor" stroke-width="2"/> </svg>');
-    const allowedTags = new Set('p br strong b em i u a ul ol li h1 h2 h3 h4 h5 h6 blockquote span div'.split(' '));
+    // Mirrors includes/html-sanitizer.php (the server's sanitizer remains final)
+    const allowedTags = new Set('p br strong b em i u a ul ol li h1 h2 h3 h4 h5 h6 blockquote span div figure figcaption img table thead tbody tfoot tr th td caption sup sub hr pre code small cite q mark s del ins abbr dl dt dd details summary video audio source'.split(' '));
+    const mediaAttrs = { img: ['src','alt','width','height','loading','decoding'], td: ['colspan','rowspan','scope'], th: ['colspan','rowspan','scope'], video: ['src','controls','preload','poster','playsinline','muted','loop'], audio: ['src','controls','preload','loop'], source: ['src','type'], details: ['open'], abbr: ['title'] };
+    const safeSrc = value => {
+        const probe = value.replace(/[\x00-\x20\x7f]+/g, '');
+        return probe !== '' && !probe.includes('\\') && !probe.startsWith('//') && (!/^[a-z][a-z0-9+.-]*:/i.test(probe) || /^https?:/i.test(probe));
+    };
     const dropTags = new Set('script style iframe object embed svg math template form input button textarea select link meta base'.split(' '));
     const safeHref = value => {
         const probe = value.replace(/[\x00-\x20\x7f]+/g, '');
@@ -38,11 +44,13 @@
                     if (styles.length) node.setAttribute(name, styles.join(';')); else node.removeAttribute(name);
                     return;
                 }
-                if (!['class','title','lang','dir'].includes(name) && !(tag === 'a' && ['href','target','rel'].includes(name)) && !(tag === 'ol' && ['start','reversed'].includes(name))) node.removeAttribute(name);
+                if (!['class','title','lang','dir'].includes(name) && !(name === 'id' && /^[A-Za-z][\w:.-]{0,80}$/.test(value)) && !(tag === 'a' && ['href','target','rel'].includes(name)) && !(tag === 'ol' && ['start','reversed'].includes(name)) && !(mediaAttrs[tag] || []).includes(name)) node.removeAttribute(name);
                 if (name === 'href' && !safeHref(value)) node.setAttribute(name, '#');
+                if (['src','poster'].includes(name) && !safeSrc(value)) node.removeAttribute(name);
                 if (name === 'target' && !['_blank','_self'].includes(value)) node.removeAttribute(name);
             });
             if (tag === 'a' && node.target === '_blank') node.rel = 'noopener noreferrer';
+            if ((tag === 'img' || tag === 'source') && !node.hasAttribute('src')) node.remove();
         });
         clean(template.content);
         return template.innerHTML;

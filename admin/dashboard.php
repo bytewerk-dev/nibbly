@@ -35,7 +35,7 @@ $isAdminUser = ($userRole === 'admin');
 
 // Load settings for theme
 $_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg';
-$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => nibblyThemeDefaults(), 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'people' => true, 'messages' => true, 'menus' => true, 'iconManager' => true, 'handbook' => true], 'dashboard' => ['itemsPerPage' => 50, 'iconManagerItemsPerPage' => 50, 'mediaItemsPerPage' => 25]];
+$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => nibblyThemeDefaults(), 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'people' => true, 'messages' => true, 'comments' => true, 'menus' => true, 'iconManager' => true, 'handbook' => true], 'dashboard' => ['itemsPerPage' => 50, 'iconManagerItemsPerPage' => 50, 'mediaItemsPerPage' => 25]];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     $loadedSettings = json_decode(file_get_contents(SETTINGS_PATH), true);
     if (is_array($loadedSettings)) {
@@ -52,7 +52,7 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     }
 }
 $adminTheme = $siteSettings['theme']['adminTheme'] ?? 'light';
-$dashboardModules = array_replace(['news' => true, 'events' => true, 'people' => true, 'messages' => true, 'menus' => true, 'iconManager' => true, 'ai' => true, 'handbook' => true], is_array($siteSettings['modules'] ?? null) ? $siteSettings['modules'] : []);
+$dashboardModules = array_replace(['news' => true, 'events' => true, 'people' => true, 'messages' => true, 'comments' => true, 'menus' => true, 'iconManager' => true, 'ai' => true, 'handbook' => true], is_array($siteSettings['modules'] ?? null) ? $siteSettings['modules'] : []);
 $aiFeaturesEnabled = !empty($dashboardModules['ai']);
 $aiDashboardVisible = $aiFeaturesEnabled;
 $_aiDashboardPublicSettings = $aiFeaturesEnabled && function_exists('nibblyAiLoadSettings') ? nibblyAiLoadSettings(true) : [];
@@ -66,6 +66,7 @@ if (!empty($dashboardModules['news'])) $validDashboardTabs[] = 'news';
 if (!empty($dashboardModules['events'])) $validDashboardTabs[] = 'events';
 if (!empty($dashboardModules['people'])) $validDashboardTabs[] = 'people';
 if (!empty($dashboardModules['messages'])) $validDashboardTabs[] = 'mails';
+if (!empty($dashboardModules['comments'])) $validDashboardTabs[] = 'comments';
 if ($isAdminUser && !empty($dashboardModules['menus'])) $validDashboardTabs[] = 'menus';
 if ($isAdminUser) $validDashboardTabs[] = 'media';
 if ($isAdminUser && !empty($dashboardModules['iconManager'])) $validDashboardTabs[] = 'icons';
@@ -76,6 +77,7 @@ if ($isAdminUser) $validDashboardTabs[] = 'system';
 function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): string {
     static $paths = [
         'hamburger' => '<path d="M3 12h18M3 6h18M3 18h18"/>',
+        'comment' => '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
         'chevron-up'   => '<path d="M18 15l-6-6-6 6"/>',
         'chevron-down' => '<path d="M6 9l6 6 6-6"/>',
         'search' => '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
@@ -259,6 +261,13 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                     <span class="mail-badge mail-badge--hidden" id="mailBadge">0</span>
                 </button>
                 <?php endif; ?>
+                <?php if (!empty($dashboardModules['comments'])): ?>
+                <button class="sidebar-nav-item" onclick="switchTab('comments')" data-tab="comments">
+                    <?php echo nbIcon('comment'); ?>
+                    <span><?php echo t('nav.comments'); ?></span>
+                    <span class="mail-badge mail-badge--hidden" id="commentsBadge">0</span>
+                </button>
+                <?php endif; ?>
                 <?php if ($isAdminUser): ?>
                 <button class="sidebar-nav-item" onclick="switchTab('media')" data-tab="media" type="button">
                     <?php echo nbIcon('image'); ?>
@@ -319,6 +328,9 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
             <button class="sidebar-nav-item settings-tab-btn" type="button" data-settings-tab="email"><?php echo nbIcon('mail'); ?><span><?php echo t('settings.email'); ?></span></button>
             <button class="sidebar-nav-item settings-tab-btn" type="button" data-settings-tab="privacy"><?php echo nbIcon('shield'); ?><span><?php echo t('settings.privacy'); ?></span></button>
             <button class="sidebar-nav-item settings-tab-btn" type="button" data-settings-tab="forms"><?php echo nbIcon('form'); ?><span><?php echo t('forms.title'); ?></span></button>
+            <?php if (!empty($dashboardModules['news'])): ?>
+            <button class="sidebar-nav-item settings-tab-btn" type="button" data-settings-tab="news"><?php echo nbIcon('news'); ?><span><?php echo t('settings.news'); ?></span></button>
+            <?php endif; ?>
             <?php if ($aiFeaturesEnabled): ?>
             <button class="sidebar-nav-item settings-tab-btn" type="button" data-settings-tab="ai"><?php echo nbIcon('ai'); ?><span><?php echo t('ai.settings'); ?></span></button>
             <?php endif; ?>
@@ -824,6 +836,46 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
             </div>
         </div>
     </div>
+
+    <?php if (!empty($dashboardModules['comments'])): ?>
+    <!-- Comments Tab -->
+    <div class="admin-container" id="commentsTab" style="display: none;">
+        <div class="page-list-container" id="commentsListView">
+            <div class="page-list-header page-list-header--mails">
+                <div class="page-list-header-left">
+                    <div class="page-list-title-stack">
+                        <h2><?php echo t('comments.title'); ?></h2>
+                        <p><?php echo t('comments.source_hint'); ?></p>
+                    </div>
+                </div>
+                <div class="page-list-header-actions">
+                    <select id="commentsStatusFilter" class="topbar-select" onchange="setCommentsFilter(this.value)" aria-label="<?php echo htmlspecialchars(t('comments.filter'), ENT_QUOTES, 'UTF-8'); ?>">
+                        <option value="pending"><?php echo t('comments.status_pending'); ?></option>
+                        <option value="approved"><?php echo t('comments.status_approved'); ?></option>
+                        <option value="spam"><?php echo t('comments.status_spam'); ?></option>
+                        <option value=""><?php echo t('comments.all'); ?></option>
+                    </select>
+                    <button class="btn btn-secondary btn-sm" onclick="loadComments()"><?php echo t('btn.refresh'); ?></button>
+                </div>
+            </div>
+            <div class="admin-list-footer admin-list-footer--top" id="commentsListFooterTop"></div>
+            <div class="page-list-table-wrap">
+                <table class="page-list-table" id="commentsListTable">
+                    <thead>
+                        <tr>
+                            <th class="page-list-col-title"><?php echo t('comments.col_entry'); ?></th>
+                            <th><?php echo t('comments.col_target'); ?></th>
+                            <th><?php echo t('comments.col_status'); ?></th>
+                            <th class="page-list-col-date"><?php echo t('comments.col_date'); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody id="commentsList"></tbody>
+                </table>
+            </div>
+            <div class="admin-list-footer" id="commentsListFooter"></div>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <?php if ($isAdminUser): ?>
     <!-- Media Library Tab -->
@@ -2174,6 +2226,87 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                 </div>
             </div>
 
+            <!-- News Panel: post URL pattern, archive paths, list size, categories -->
+            <?php if (!empty($dashboardModules['news'])): ?>
+            <div class="settings-panel" id="settingsPanel-news">
+                <h2><?php echo t('settings.news'); ?></h2>
+                <p class="settings-description"><?php echo t('settings.news_desc'); ?></p>
+                <form id="newsSettingsForm" class="settings-form">
+                    <fieldset class="settings-section">
+                        <legend><?php echo t('settings.news_urls'); ?></legend>
+                        <div class="form-group">
+                            <label for="newsUrlPattern"><?php echo t('settings.news_url_pattern'); ?></label>
+                            <input type="text" id="newsUrlPattern" list="newsUrlPatternPresets" autocomplete="off" spellcheck="false" placeholder="/news/{slug}">
+                            <datalist id="newsUrlPatternPresets">
+                                <option value="/news/{slug}"></option>
+                                <option value="/blog/{slug}"></option>
+                                <option value="/{yyyy}/{mm}/{dd}/{slug}"></option>
+                                <option value="/{yyyy}/{mm}/{slug}"></option>
+                                <option value="/blog/{yyyy}/{slug}"></option>
+                            </datalist>
+                            <small class="form-hint"><?php echo t('settings.news_url_pattern_hint'); ?> <code id="newsUrlPatternExample"></code></small>
+                        </div>
+                        <div class="form-row-inline">
+                            <div class="form-group">
+                                <label for="newsArchiveBase"><?php echo t('settings.news_archive_base'); ?></label>
+                                <input type="text" id="newsArchiveBase" autocomplete="off" spellcheck="false" placeholder="/news">
+                                <small class="form-hint"><?php echo t('settings.news_archive_base_hint'); ?></small>
+                            </div>
+                            <div class="form-group">
+                                <label for="newsArchiveTag"><?php echo t('settings.news_archive_tag'); ?></label>
+                                <input type="text" id="newsArchiveTag" autocomplete="off" spellcheck="false" placeholder="tag">
+                            </div>
+                            <div class="form-group">
+                                <label for="newsArchiveYear"><?php echo t('settings.news_archive_year'); ?></label>
+                                <input type="text" id="newsArchiveYear" autocomplete="off" spellcheck="false" placeholder="year">
+                            </div>
+                            <div class="form-group">
+                                <label for="newsArchiveDecade"><?php echo t('settings.news_archive_decade'); ?></label>
+                                <input type="text" id="newsArchiveDecade" autocomplete="off" spellcheck="false" placeholder="decade">
+                            </div>
+                        </div>
+                        <small class="form-hint"><?php echo t('settings.news_archive_hint'); ?> <code id="newsArchiveExample"></code></small>
+                    </fieldset>
+                    <fieldset class="settings-section">
+                        <legend><?php echo t('settings.news_lists'); ?></legend>
+                        <div class="form-row-inline">
+                            <div class="form-group">
+                                <label for="newsPerPage"><?php echo t('settings.news_per_page'); ?></label>
+                                <input type="number" id="newsPerPage" min="1" max="200" step="1">
+                            </div>
+                            <div class="form-group">
+                                <label for="newsPageParam"><?php echo t('settings.news_page_param'); ?></label>
+                                <input type="text" id="newsPageParam" autocomplete="off" spellcheck="false" placeholder="page">
+                                <small class="form-hint"><?php echo t('settings.news_page_param_hint'); ?></small>
+                            </div>
+                        </div>
+                    </fieldset>
+                    <fieldset class="settings-section">
+                        <legend><?php echo t('settings.news_categories'); ?></legend>
+                        <p class="form-hint"><?php echo t('settings.news_categories_hint'); ?></p>
+                        <div class="page-list-table-wrap">
+                            <table class="page-list-table news-categories-table" id="newsCategoriesTable">
+                                <thead>
+                                    <tr>
+                                        <th><?php echo t('settings.news_category_name'); ?></th>
+                                        <th><?php echo t('settings.news_category_slug'); ?></th>
+                                        <th><?php echo t('settings.news_category_description'); ?></th>
+                                        <th class="news-categories-table__order"><?php echo t('settings.news_category_order'); ?></th>
+                                        <th class="news-categories-table__actions"><span class="sr-only"><?php echo t('btn.delete'); ?></span></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="newsCategoriesBody"></tbody>
+                            </table>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" id="newsAddCategoryBtn"><?php echo t('settings.news_add_category'); ?></button>
+                    </fieldset>
+                    <div class="settings-actions">
+                        <button type="submit" class="btn btn-primary" id="saveNewsSettingsBtn"><?php echo t('settings.save_news'); ?></button>
+                    </div>
+                </form>
+            </div>
+            <?php endif; ?>
+
             <!-- AI Settings Panel -->
             <?php if ($aiFeaturesEnabled): ?>
             <div class="settings-panel" id="settingsPanel-ai">
@@ -2608,6 +2741,15 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                                     <span><?php echo t('settings.module_messages'); ?></span>
                                     <div class="toggle-switch">
                                         <input type="checkbox" id="moduleMessages" checked>
+                                        <span class="toggle-slider"></span>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="form-group access-toggle-row access-toggle-row--module">
+                                <label class="toggle-label">
+                                    <span><?php echo t('settings.module_comments'); ?></span>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" id="moduleComments" checked>
                                         <span class="toggle-slider"></span>
                                     </div>
                                 </label>
@@ -3206,6 +3348,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
     <?php require __DIR__ . '/dashboard/scripts/menus.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/icons.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/messages.php'; ?>
+    <?php require __DIR__ . '/dashboard/scripts/comments.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/news.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/overview-ai.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/forms.php'; ?>

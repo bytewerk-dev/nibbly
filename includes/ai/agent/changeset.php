@@ -1087,7 +1087,10 @@ function nibblyAgentPreviewLinks(array $cs, array $state): array {
             $doc = $state ? nibblyAgentFinalDoc($state, $target) : null;
             $slug = is_array($doc) ? (string)($doc['slug'] ?? '') : '';
             $lang = is_array($doc) ? (string)($doc['lang'] ?? $default) : $default;
-            if (preg_match('/^[a-z0-9-]+$/', $slug) && preg_match('/^[a-z]{2}$/', $lang)) $url = ($lang === $default ? '' : '/' . $lang) . '/news/' . $slug;
+            if (preg_match('/^[a-z0-9-]+$/', $slug) && preg_match('/^[a-z]{2}$/', $lang)) {
+                require_once dirname(__DIR__, 2) . '/news-helper.php';
+                $url = nibblyNewsUrl(['slug' => $slug, 'date' => (string)($doc['date'] ?? ''), 'lang' => $lang], $lang); // follows settings news.urlPattern
+            }
         }
         if ($url === '') $url = '/';
         $links[$url] ??= ['target' => $target, 'url' => $url];

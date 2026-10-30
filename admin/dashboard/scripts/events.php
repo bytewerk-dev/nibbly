@@ -86,12 +86,11 @@
     async function loadEventsEditor() {
         try {
             // The trash only contributes its count to the filter links
-            const [response, trash] = await Promise.all([
-                fetch('api.php?action=load-events'),
+            const [result, trash] = await Promise.all([
+                fetch('api.php?action=load-events').then(r => r.json()),
                 fetch('api.php?action=list-events-trash&_=' + Date.now()).then(r => r.json()).catch(() => null)
             ]);
             if (trash?.success) eventsTrashCount = (trash.data || []).length;
-            const result = await response.json();
             if (result.success) {
                 eventsData = result.data;
                 renderEventsList();

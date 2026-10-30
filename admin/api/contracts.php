@@ -10,7 +10,7 @@ $readOnly = preg_match('/^(load|list|get)-/', $action) || in_array($action, [
     'load', 'backups', 'preview-backup', 'keepalive', 'dashboard-overview', 'system-status',
     'iconify-search', 'ai-image-history', 'ai-image-jobs', 'ai-copilot-context',
     'ai-copilot-history-list', 'ai-copilot-history-load', 'ai-openrouter-models', 'ai-agent-status', 'ai-agent-changeset', 'ai-agent-media',
-    'media-trash-file', 'image-trash-file', 'unread-mail-count', 'download-site-backup',
+    'media-trash-file', 'image-trash-file', 'unread-mail-count', 'pending-comment-count', 'download-site-backup',
     'backup-status', 'backup-list', 'backup-remote-list'
 ], true);
 $oauthCallback = preg_match('/^backup-(dropbox|google|onedrive)-(oauth|broker)-callback$/', $action);
@@ -20,6 +20,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && !$readOnly && !$oauthCallback) {
 if ($_SERVER['REQUEST_METHOD'] !== 'GET' && !validateCsrfToken()) {
     http_response_code(403);
     jsonResponse(false, null, 'Invalid CSRF token');
+}
+// Read-only GET requests release the session lock once authentication and permissions are settled, so
+// parallel dashboard requests do not queue behind a long response ($_SESSION stays readable; writes made
+// after this point would be lost). Actions that still write to the session keep the lock: the one-time
+// backup download token and the AI endpoints (rate-limit buckets, draft secret).
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && $readOnly && !$oauthCallback
+    && $action !== 'download-site-backup' && !str_starts_with($action, 'ai-')
+    && session_status() === PHP_SESSION_ACTIVE) {
+    session_write_close();
 }
 // Keep editors away from server credentials and installation administration.
 if (in_array($routes[$action], ['backups', 'users', 'settings'], true)

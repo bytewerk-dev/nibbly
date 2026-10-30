@@ -41,6 +41,7 @@ switch ($action) {
                 'events' => true,
                 'people' => true,
                 'messages' => true,
+                'comments' => true,
                 'menus' => true,
                 'iconManager' => true,
                 'handbook' => true
@@ -51,6 +52,8 @@ switch ($action) {
                 'mediaItemsPerPage' => 25
             ],
             'media' => nibblyMediaSettingsDefaults(),
+            'news' => (static function (): array { require_once dirname(__DIR__, 2) . '/includes/news-helper.php'; return nibblyNewsSettingsDefaults() + ['feed' => true, 'feedItems' => 20]; })(),
+            'search' => (static function (): array { require_once dirname(__DIR__, 2) . '/includes/search-helper.php'; return nibblySearchSettingsDefaults(); })(),
             'access' => [
                 'maintenance' => [
                     'enabled' => false,
@@ -386,6 +389,14 @@ switch ($action) {
         $mediaPatch = sanitizeMediaSettings($settings);
         if ($mediaPatch) {
             $sanitized['media'] = $mediaPatch;
+        }
+        $newsPatch = sanitizeNewsSettings($settings, $existing);
+        if ($newsPatch) {
+            $sanitized['news'] = $newsPatch;
+        }
+        $searchPatch = sanitizeSearchSettings($settings, $existing);
+        if ($searchPatch) {
+            $sanitized['search'] = $searchPatch;
         }
         $merged = array_replace_recursive($existing, $sanitized);
         if (isset($sanitized['access']['maintenance']['bypassLinks'])) {

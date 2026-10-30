@@ -27,6 +27,9 @@ RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F,L,NC]
 # Route news detail URLs before Apache can resolve language-local
 # listing templates such as de/news.php or es/news.php.
 RewriteRule ^([a-z]{2}/)?news/[a-z0-9-]+/?$ /route.php [END,QSA]
+# Date-based post URLs (settings news.urlPattern = /{yyyy}/{mm}/{dd}/{slug}) win over
+# physical folders such as /2026/ or uploads mirrored under the same years.
+RewriteRule ^([a-z]{2}/)?[0-9]{4}/[0-9]{2}/[0-9]{2}/[a-z0-9-]+/?$ /route.php [END,QSA]
 
 # ============================================
 # Upload limits (optional)

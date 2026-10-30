@@ -4,21 +4,54 @@
     // ============================================================
 
     let newsLoaded = false;
-    let newsData = [];
+    let newsData = []; // list rows (metadata only, api load-news); the open post is loaded in full
     let editingPostId = null;
+    let editingPost = null; // the complete record of the post in the editor (api load-news-post)
     let newsStatusFilter = 'all';
     // View language of the list: its posts are the rows, the other languages are columns (as on pages)
     let newsViewLang = '<?php echo SITE_LANG_DEFAULT; ?>';
     let newsTrashCount = 0;
+    // URL pattern, archive paths, categories and tag names (api load-news-config); shared with the settings panel
+    let newsConfig = { settings: { urlPattern: '/news/{slug}', perPage: 12, pageParam: 'page', archive: { base: '/news', tag: 'tag', year: 'year', decade: 'decade' } }, categories: [], tagNames: {}, tagCounts: {} };
+
+    async function loadNewsConfig() {
+        try {
+            const result = await (await fetch('api.php?action=load-news-config&_=' + Date.now())).json();
+            if (result.success && result.data) newsConfig = Object.assign(newsConfig, result.data);
+        } catch (error) {
+            console.error('Error loading news config:', error);
+        }
+        return newsConfig;
+    }
+
+    // Public path of a post from the configured pattern (mirrors nibblyNewsUrl() in includes/news-helper.php)
+    function nbNewsUrl(post, pattern) {
+        const date = String(post.date || '');
+        const parts = /^(\d{4})-(\d{2})-(\d{2})/.exec(date) || ['', '0000', '00', '00'];
+        const path = String(pattern || newsConfig.settings.urlPattern || '/news/{slug}')
+            .replace('{yyyy}', parts[1]).replace('{mm}', parts[2]).replace('{dd}', parts[3]).replace('{slug}', post.slug || post.id || '');
+        const lang = post.lang || DEFAULT_LANG;
+        return (lang !== DEFAULT_LANG ? '/' + lang : '') + path;
+    }
+
+    // Language versions of one post share date and slug (their ids differ only in the language suffix)
+    function nbNewsGroupKey(post) {
+        return (post.date || '') + '/' + (post.slug || post.id);
+    }
+
+    function nbNewsTagLabel(slug) {
+        return newsConfig.tagNames[slug] || slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    }
 
     async function loadNews() {
         try {
-            // The trash only contributes its count to the filter links
-            const [response, trash] = await Promise.all([
-                fetch('api.php?action=load-news'),
-                fetch('api.php?action=list-news-trash&_=' + Date.now()).then(r => r.json()).catch(() => null)
+            // The trash only contributes its count to the filter links. Every body is read as soon as it
+            // arrives: a response left unread while a sibling request waits blocks the server and gets cut off.
+            const [result, trash] = await Promise.all([
+                fetch('api.php?action=load-news&_=' + Date.now()).then(r => r.json()),
+                fetch('api.php?action=list-news-trash&_=' + Date.now()).then(r => r.json()).catch(() => null),
+                loadNewsConfig()
             ]);
-            const result = await response.json();
             if (trash?.success) newsTrashCount = (trash.data || []).length;
 
             if (result.success) {
@@ -48,10 +81,11 @@
             return;
         }
 
-        // Group posts by slug — primary language row is the "main" entry
+        // Group the language versions of a post (same date and slug) — primary language row is the "main" entry.
+        // The date is part of the key: two posts may share a slug on different days.
         const slugGroups = {};
         newsData.forEach(post => {
-            const slug = post.slug || post.id;
+            const slug = nbNewsGroupKey(post);
             if (!slugGroups[slug]) slugGroups[slug] = {};
             const lang = post.lang || defaultLang;
             slugGroups[slug][lang] = post;
@@ -84,7 +118,7 @@
 
             const slugSpan = document.createElement('span');
             slugSpan.className = 'page-list-slug';
-            slugSpan.textContent = '/news/' + slug;
+            slugSpan.textContent = post.url || nbNewsUrl(post);
             tdTitle.appendChild(slugSpan);
 
             const titleLink = document.createElement('a');
@@ -118,9 +152,8 @@
             sep1.textContent = '|';
             actions.appendChild(sep1);
 
-            const langPrefix = postLang === defaultLang ? '' : postLang + '/';
             const viewLink = document.createElement('a');
-            viewLink.href = '../' + langPrefix + 'news/' + slug;
+            viewLink.href = '..' + (post.url || nbNewsUrl(post));
             viewLink.target = '_blank';
             viewLink.className = 'page-list-row-action';
             viewLink.innerHTML = icon('eye', 12, '2') + ' ' + t('news.view');
@@ -204,6 +237,7 @@
     function addNewPost() {
         const lang = '<?php echo SITE_LANG_DEFAULT; ?>';
         editingPostId = null;
+        editingPost = null;
         showPostEditor({
             id: '',
             lang: lang,
@@ -214,15 +248,40 @@
             excerpt: '',
             image: '',
             content: '',
+            categories: [],
+            tags: [],
+            flags: [],
             hidden: false
         });
     }
 
-    function editPost(postId) {
-        const post = newsData.find(p => p.id === postId);
-        if (!post) return;
+    // The complete record of a post; the list rows carry only metadata
+    async function loadNewsPost(postId) {
+        try {
+            const result = await (await fetch('api.php?action=load-news-post&id=' + encodeURIComponent(postId) + '&_=' + Date.now())).json();
+            if (result.success && result.data) return result.data;
+            showToast(result.message || t('toast.error_generic', {message: postId}), 'error');
+        } catch (error) {
+            showToast(t('toast.error_generic', {message: error.message}), 'error');
+        }
+        return null;
+    }
+
+    // A post as a copy source: rows without a content field are completed from the server
+    async function newsPostInFull(post) {
+        if (!post) return null;
+        if (Object.prototype.hasOwnProperty.call(post, 'content')) return post;
+        return loadNewsPost(post.id);
+    }
+
+    async function editPost(postId) {
+        if (!newsData.some(p => p.id === postId)) return false;
+        const post = await loadNewsPost(postId);
+        if (!post) return false;
         editingPostId = postId;
+        editingPost = post;
         showPostEditor(post);
+        return true;
     }
 
     function showPostEditor(post) {
@@ -291,6 +350,31 @@
                             <label for="newsAuthor">${t('news.post_author')}</label>
                             <input type="text" id="newsAuthor" class="editor-input" value="${escapeHtml(post.author)}">
                         </div>
+                        <div class="editor-form-row">
+                            <span class="ce-field-label">${t('news.url')}</span>
+                            <code class="nb-news-url" id="newsUrlPreview">${escapeHtml(nbNewsUrl(post))}</code>
+                        </div>
+                    </section>
+                    <section class="nb-page-panel" aria-labelledby="newsTaxonomyTitle">
+                        <h3 id="newsTaxonomyTitle">${escapeHtml(t('news.post_categories'))}</h3>
+                        <div class="nb-news-categories" id="newsCategories">
+                            ${newsConfig.categories.length ? newsConfig.categories.map(category => `
+                            <label class="editor-checkbox-label nb-news-category">
+                                <input type="checkbox" name="newsCategory" value="${escapeHtml(category.slug)}" ${(post.categories || []).includes(category.slug) ? 'checked' : ''}>
+                                ${escapeHtml(category.name)}
+                            </label>`).join('') : `<p class="form-hint">${escapeHtml(t('news.post_categories_hint'))}</p>`}
+                        </div>
+                        <div class="editor-form-row">
+                            <label for="newsTags">${t('news.post_tags')}</label>
+                            <input type="text" id="newsTags" class="editor-input" list="newsTagSuggestions" value="${escapeHtml((post.tags || []).map(nbNewsTagLabel).join(', '))}" placeholder="${escapeHtml(t('news.post_tags_hint'))}" autocomplete="off">
+                            <datalist id="newsTagSuggestions">${Object.keys(newsConfig.tagCounts || {}).map(slug => `<option value="${escapeHtml(nbNewsTagLabel(slug))}"></option>`).join('')}</datalist>
+                            <small class="form-hint">${escapeHtml(t('news.post_tags_hint'))}</small>
+                        </div>
+                        <div class="editor-form-row">
+                            <label for="newsFlags">${t('news.post_flags')}</label>
+                            <input type="text" id="newsFlags" class="editor-input" value="${escapeHtml((post.flags || []).join(', '))}" autocomplete="off">
+                            <small class="form-hint">${escapeHtml(t('news.post_flags_hint'))}</small>
+                        </div>
                     </section>
                     <section class="nb-page-panel" aria-labelledby="newsImageTitle">
                         <h3 id="newsImageTitle">${t('news.post_image')}</h3>
@@ -327,20 +411,37 @@
                     .replace(/[äöüß]/g, m => ({ä:'ae',ö:'oe',ü:'ue',ß:'ss'})[m])
                     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
                 document.getElementById('newsSlug').value = slug;
+                updateNewsUrlPreview();
             }
         });
+        ['newsSlug', 'newsDate'].forEach(id => document.getElementById(id).addEventListener('input', updateNewsUrlPreview));
+    }
+
+    // The address the post will have with the slug and date in the form
+    function updateNewsUrlPreview() {
+        const preview = document.getElementById('newsUrlPreview');
+        if (!preview) return;
+        preview.textContent = nbNewsUrl({
+            slug: document.getElementById('newsSlug')?.value.trim() || '…',
+            date: document.getElementById('newsDate')?.value || '',
+            lang: document.getElementById('newsLang')?.value || DEFAULT_LANG
+        });
+        updateNewsEditorButtons();
     }
 
     function updateNewsEditorButtons() {
         const viewBtn = document.getElementById('newsViewBtn');
         const trashBtn = document.getElementById('newsTrashBtn');
         if (editingPostId) {
-            const defLang = '<?php echo SITE_LANG_DEFAULT; ?>';
-            const lang = document.getElementById('newsLang')?.value || defLang;
-            const slug = document.getElementById('newsSlug')?.value || editingPostId;
-            const prefix = (lang === defLang) ? '../' : '../' + lang + '/';
+            const saved = newsData.find(p => p.id === editingPostId);
+            // The link opens the saved address; after a slug or date change the save updates it
+            const target = saved ? (saved.url || nbNewsUrl(saved)) : nbNewsUrl({
+                slug: document.getElementById('newsSlug')?.value || editingPostId,
+                date: document.getElementById('newsDate')?.value || '',
+                lang: document.getElementById('newsLang')?.value || DEFAULT_LANG
+            });
             if (viewBtn) {
-                viewBtn.href = prefix + 'news/' + slug;
+                viewBtn.href = '..' + target;
                 viewBtn.style.display = '';
                 viewBtn.onclick = e => viewWithUnsavedCheck(e, viewBtn, newsHasUnsavedChanges, savePost);
             }
@@ -378,6 +479,7 @@
         if (!editingPostId) return;
         if (await trashPost(editingPostId)) {
             editingPostId = null;
+            editingPost = null;
             showNewsList();
             loadNews();
         }
@@ -396,6 +498,7 @@
 
     function cancelPostEditor() {
         editingPostId = null;
+        editingPost = null;
         showNewsList();
         renderNewsList();
     }
@@ -412,6 +515,9 @@
             excerpt: document.getElementById('newsExcerpt').value.trim(),
             image: document.getElementById('newsImage').value.trim(),
             content: getNewsContent(),
+            categories: Array.from(document.querySelectorAll('#newsCategories input[name="newsCategory"]:checked')).map(el => el.value),
+            tags: (document.getElementById('newsTags')?.value || '').split(',').map(v => v.trim()).filter(Boolean),
+            flags: (document.getElementById('newsFlags')?.value || '').split(',').map(v => v.trim()).filter(Boolean),
             hidden: document.getElementById('newsHidden').checked
         };
     }
@@ -440,15 +546,18 @@
             if (result.success) {
                 const wasNew = !editingPostId;
                 showToast(wasNew ? t('toast.news_created') : t('toast.news_saved'), 'success');
-                // Stay in editor — update slug reference for subsequent saves
-                if (result.data?.slug) {
-                    editingPostId = result.data.slug;
-                    document.getElementById('newsSlug').value = result.data.slug;
+                // Stay in editor — the saved record has the id (date + slug) that view and trash need
+                if (result.data?.id) {
+                    editingPostId = result.data.id;
+                    editingPost = result.data;
+                    document.getElementById('newsSlug').value = result.data.slug || '';
                 }
+                await loadNews(); // also refreshes the tag names the server just recorded
+                if (result.data?.tags) document.getElementById('newsTags').value = result.data.tags.map(nbNewsTagLabel).join(', ');
                 // Update view + trash buttons
                 updateNewsEditorButtons();
+                updateNewsUrlPreview();
                 newsSavedState = JSON.stringify(collectNewsPost());
-                loadNews();
                 return true;
             }
             showToast(result.message, 'error');
@@ -572,9 +681,9 @@
         const languages = Object.keys(SITE_LANGUAGES);
         if (languages.length < 2) return placeLanguageSwitch(root, null);
         const postLang = post.lang || DEFAULT_LANG;
-        const slug = post.slug || post.id;
+        const key = nbNewsGroupKey(post);
         const versions = {};
-        if (editingPostId) newsData.forEach(p => { if ((p.slug || p.id) === slug) versions[p.lang || DEFAULT_LANG] = p; });
+        if (editingPostId) newsData.forEach(p => { if (nbNewsGroupKey(p) === key) versions[p.lang || DEFAULT_LANG] = p; });
         const source = versions[DEFAULT_LANG];
         placeLanguageSwitch(root, renderLanguageSwitch({
             name: 'news',
@@ -584,7 +693,7 @@
                 if (!editingPostId) { document.getElementById('newsLang').value = code; return true; }
                 continueWithUnsaved(newsHasUnsavedChanges, savePost, () => {
                     if (exists) editPost(versions[code].id);
-                    else chooseVersionCreation(SITE_LANGUAGES[code], withAi => createNewsTranslation(newsData.find(p => p.id === editingPostId), code, null, withAi));
+                    else chooseVersionCreation(SITE_LANGUAGES[code], withAi => createNewsTranslation(editingPost || newsData.find(p => p.id === editingPostId), code, null, withAi));
                 });
                 return false;
             },
@@ -596,11 +705,13 @@
 
     async function translateNewsFrom(source, button) {
         const target = document.getElementById('newsLang').value;
+        source = await newsPostInFull(source); // the list row has neither content nor the full excerpt
+        if (!source) return;
         const fields = translatableStrings({ title: source.title || '', excerpt: source.excerpt || '', content: source.content || '' });
         const translations = await aiTranslateFields(source.lang || DEFAULT_LANG, [target], fields, button, 8000);
         if (!translations?.[target]) return;
         const before = collectNewsPost();
-        const translated = Object.assign({}, newsData.find(p => p.id === editingPostId), before, translations[target]);
+        const translated = Object.assign({}, editingPost || {}, before, translations[target]);
         showPostEditor(translated);
         newsSavedState = JSON.stringify(before); // the translation is a change still to be saved
         showToast(t('editor.translate_review'), 'success');
@@ -610,6 +721,8 @@
     async function createNewsTranslation(sourcePost, targetLang, linkEl, withAi = false) {
         if (linkEl) { linkEl.classList.add('disabled'); linkEl.textContent = '...'; }
         try {
+            sourcePost = await newsPostInFull(sourcePost);
+            if (!sourcePost) throw new Error(t('news.untitled'));
             const newPost = Object.assign({}, sourcePost, {
                 id: '',
                 lang: targetLang,
@@ -628,7 +741,7 @@
             if (result.success) {
                 showToast(t('toast.news_created'), 'success');
                 await loadNews();
-                editPost(result.data.id);
+                await editPost(result.data.id);
                 if (withAi) await translateNewsFrom(sourcePost, document.querySelector('#newsEditorForm .nb-ai-translate'));
                 return;
             }

@@ -1,6 +1,13 @@
 <?php
 if (!defined('NIBBLY_ADMIN_DIR')) { http_response_code(404); exit; }
 
+require_once dirname(__DIR__, 2) . '/includes/search-helper.php';
+
+// The search index follows every change of a page (the response is sent first; the rebuild runs at shutdown)
+if (in_array($action, ['save', 'create-page', 'copy-page', 'delete-page', 'duplicate-page', 'restore-page', 'restore'], true)) {
+    register_shutdown_function(static function (): void { nibblySearchIndexRebuild(); });
+}
+
 // Authenticated dispatcher supplies shared helpers and request context.
 switch ($action) {
     case 'list-pages':

@@ -378,7 +378,7 @@ function nibblyCopilotContentTypes(): array {
             'id' => 'news',
             'label' => 'News post',
             'labelKey' => 'copilot.type_news',
-            'storage' => 'content/news/{slug}.json',
+            'storage' => 'content/news/{date}-{slug}.json',
             'available' => $newsAvailable,
             'canCreate' => !empty($permissions['createNews']),
             'canPublish' => !empty($permissions['publishNews']),

@@ -117,10 +117,11 @@ The JSON file is the single source of truth. Best practice is to populate JSON w
 
 However, **missing fields are auto-generated**: when an admin visits a page, any `editableText`, `editableHtml`, `editableLink`, or `editableImage` call whose key doesn't exist in JSON will automatically create the key using the PHP fallback value. This means an AI agent can write PHP templates freely and the JSON structure wires itself up on first admin visit. The auto-generated values appear in both the Visual Editor and the Content Editor immediately.
 
-### News Post JSON (`content/news/{slug}.json`)
+### News Post JSON (`content/news/{date}-{slug}.json`)
 
 ```json
 {
+  "id": "2026-03-23-my-post",
   "slug": "my-post",
   "lang": "en",
   "title": "Post Title",
@@ -128,10 +129,26 @@ However, **missing fields are auto-generated**: when an admin visits a page, any
   "date": "2026-03-23",
   "author": "Author Name",
   "image": "assets/images/post-cover.webp",
+  "categories": ["blog"],
+  "tags": ["hosi-wien"],
+  "flags": [],
+  "seo": { "title": "", "description": "" },
   "hidden": false,
-  "sections": [
-    { "id": "s1", "type": "text", "title": "", "content": "<p>Post body.</p>" }
-  ]
+  "content": "<p>Post body.</p>"
+}
+```
+
+The post is addressed by `slug` (file name and `id` are storage details). `categories` are slugs of
+`content/news-categories.json`, `tags` free slugs (names in `content/news-tags.json`), `flags` internal
+markers; `seo` is optional. The body is `content` (dashboard) or a `sections` array (converter).
+Settings for URLs, archives and lists live in `content/settings.json` → `news`:
+
+```json
+"news": {
+  "urlPattern": "/{yyyy}/{mm}/{dd}/{slug}",
+  "perPage": 12,
+  "pageParam": "seite",
+  "archive": { "base": "/blog", "tag": "thema", "year": "jahr", "decade": "jahrzehnt" }
 }
 ```
 
@@ -176,6 +193,15 @@ After successful login the behaviour is controlled by the `general.frontendLogin
 The `?redirect=…` parameter is sanitised by `validateRedirectUrl()` in `admin/index.php` — it must be same-origin and may not point inside `/admin/`, so the shortcode cannot be used for open redirects.
 
 To move the trigger somewhere else (e.g. the tagline or a hidden element), simply place the `[id="adminAccess"]…[/id]` shortcode around any other footer text. Removing the shortcode disables the hidden access entirely; admins must then visit `/admin/` directly.
+
+### Comments JSON (`content/comments/{target}.json`)
+
+One file per post (`{post-id}.json`) or page (`page_{page-key}.json`) with
+`{"target": "news:{post-id}" | "page:{page-key}", "comments": [...]}`. Each comment: `id`, `parent`
+(id of the comment it answers, or ""), `author`, `email` (never rendered), `url`, `date`
+(`YYYY-MM-DDTHH:MM:SS`), `content` (sanitized HTML), `status` (`pending`, `approved`, `spam`), `owner`
+(reply by the site owner), `source` (`form`, `wordpress`). Written by `api/comment-submit.php`,
+`admin/api/comments.php` and `cli/import-wxr.php`; read by `includes/comments.php`.
 
 ### Form JSON (`content/forms/{id}.json`)
 
@@ -663,12 +689,17 @@ Render a feature comparison table. Reads `comparison.rows` from JSON. Columns ar
 echo renderComparisonTable('en_showcase');
 ```
 
-#### `renderNewsList(int $limit = 0, string $lang = 'en'): string`
+#### `renderNewsList(int $limit = 0, string $lang = 'en', array $options = []): string`
 Render a grid of news post cards. Reads from `content/news/*.json`. Posts are sorted by date descending.
+Post links follow `news.urlPattern` (see `includes/news-helper.php`). `$options` takes the filters of
+`loadNewsPosts()` (`category`, `tag`, `flag`, `year`, `decade`) and `paginate`, `page`, `perPage`,
+`baseUrl`, `showMeta`.
 
 ```php
 echo renderNewsList(0, 'en'); // All posts in English
 echo renderNewsList(3, 'en'); // Latest 3 posts
+echo renderNewsList(0, 'de', ['category' => 'blog', 'paginate' => true, 'baseUrl' => '/blog/blog']); // page from ?{pageParam}=N
+echo renderNewsList(0, 'de', ['category' => 'lambda-nachrichten', 'flag' => 'ln-weitere']); // sub-list by flag
 ```
 
 ## Custom Layout Pages vs Standard Pages
@@ -693,6 +724,11 @@ php cli/make.php --slug=services --lang=de --type=custom --title="Dienste"  # Cu
 ```
 
 Options: `--slug` (required), `--lang`, `--type` (standard/custom), `--title`, `--description`, `--hide-nav`, `--dry-run`, `--force`.
+
+### `cli/import-wxr.php` — WordPress WXR Importer
+
+Posts, pages, comments and redirect material from a WordPress export (see the file header and
+AI-AGENT-GUIDE.md, "WordPress Import").
 
 ### `cli/convert.php` — HTML to Nibbly Converter
 
@@ -825,7 +861,9 @@ Full-site backups are created by `includes/backup-helper.php` and can be run fro
 ### News/Blog
 | Action | Method | Description |
 |---|---|---|
-| `load-news` | GET | List all news posts |
+| `load-news` | GET | List all news posts (with their public `url`) |
+| `load-news-config` | GET | News settings, categories, tag names and counts |
+| `save-news-categories` | POST | Store the category list (admin) |
 | `save-news` | POST | Create or update news post |
 | `toggle-news-status` | POST | Show/hide news post |
 | `trash-news` | POST | Move a post to `content/news-trash/` |
@@ -1015,13 +1053,67 @@ site-owned templates or scripts.
 
 ## News/Blog System
 
-News posts are individual JSON files in `content/news/`. Each file contains metadata (title, excerpt, date, author, image, slug, lang) and a `sections` array for the post body.
+News posts are individual JSON files in `content/news/` (`{date}-{slug}.json`, plus `-{lang}` for
+non-primary languages). Each file contains metadata (title, excerpt, date, author, image, slug, lang),
+the taxonomy fields `categories`, `tags` and `flags` (arrays of slugs), optional `seo` overrides
+(`title`, `description`, `ogImage`, `canonical`) and the body as `content` (HTML) or a `sections` array.
+A post is always found by its `slug` field, never by the file name.
 
-**Listing**: `renderNewsList($limit, $lang)` renders a card grid of posts. Posts are sorted by date descending and filtered by language.
+**URL pattern** (`news.urlPattern` in `content/settings.json`, default `/news/{slug}`): placeholders
+`{yyyy}`, `{mm}`, `{dd}`, `{slug}`, e.g. `/{yyyy}/{mm}/{dd}/{slug}` for a WordPress-style archive. The
+language prefix of non-primary languages goes in front. `nibblyNewsUrl($post)` is the single place
+that builds post URLs (lists, post page, sitemap, dashboard, Copilot links). Routing is slug-based: a
+URL whose date part differs from the post's date, an old slug from `content/news-aliases.json`
+(`{"old-slug": "current-slug"}`), or a trailing slash answers 301 to the canonical URL. A pattern match
+without a post falls through to page routing, so a page can live at a date-like path.
 
-**Single post**: The router maps `/en/news/slug` to `{lang}/news-post.php`, which loads the matching JSON file and renders its sections.
+**Categories and tags**: `content/news-categories.json` holds `{"categories": [{"slug", "name",
+"description", "order"}]}` (edited under Settings → Posts). Tags are free slugs; the spelling typed in the
+editor is kept in `content/news-tags.json` (`{"tags": {"hosi-wien": "HOSI Wien"}}`) for display.
+`flags` are internal markers for sub-lists (e.g. `"ln-weitere"`) and never get public pages.
 
-**Admin**: Posts are created and managed via the admin dashboard, which uses the `save-news`, `load-news`, `toggle-news-status` and `trash-news` API actions; trashed posts are restored or deleted permanently from the news trash.
+**Archive pages** below `news.archive.base` (default `/news`; empty switches them off):
+`/{base}` (every post, unless a template or JSON page exists there), `/{base}/{category}`,
+`/{base}/{tag}/{slug}`, `/{base}/{year}/2001`, `/{base}/{decade}/1990`; the segment names come from
+`news.archive.tag|year|decade`. `includes/news-archive.php` renders them; a site template
+`{lang}/news-archive.php` replaces it and receives `$newsArchive` (`type`, `value`, `lang`).
+
+**Listing**: `renderNewsList($limit, $lang, $options)` renders a card grid; `loadNewsPosts($limit,
+$lang, $options)` returns the records. Options: filters `category`, `tag`, `flag`, `year`, `decade`
+(a value or a list, any match), `flagNot` (exclude flagged posts), paging `page`, `perPage` (default `news.perPage`, 12), `offset`,
+`withTotal` (returns `['posts' => [], 'total' => n]`). `renderNewsList()` adds `paginate`, `baseUrl`
+and `showMeta`; the page comes from `?{news.pageParam}=N` (default `page`). The pagination markup
+(`nibblyNewsPagination()`) is a `<nav class="pagination">` with `rel="prev"/"next"`, `aria-current`
+and labelled numbers; `nibblyNewsPaginationHeadLinks()` gives the `<link rel="prev|next">` tags, which
+templates pass to the header through `$pageHeadExtra`.
+
+**Single post**: `route.php` resolves the pattern (`nibblyNewsRoute()`) and includes
+`includes/news-post.php`, which renders the post with its category and tag chips and a canonical link
+at the pattern URL.
+
+**Admin**: Posts are created and managed via the admin dashboard, which uses the `save-news`,
+`load-news`, `toggle-news-status` and `trash-news` API actions; trashed posts are restored or deleted
+permanently from the news trash. `load-news` adds the public `url` to every post; `save-news` accepts
+`categories`, `tags` (names or slugs, also comma-separated) and `flags`, and keeps unknown fields such
+as `seo`. `load-news-config` returns the news settings, categories, tag names and tag counts;
+`save-news-categories` (admin) stores the category list; the settings themselves go through
+`save-settings` (`news` section, see `sanitizeNewsSettings()`).
+
+### Search index, feed and timeline
+
+- `includes/search-helper.php`: `content/search-index.json` holds one document per public page and
+  published post (`type`, `id`, `lang`, `url`, `title`, `excerpt`, `text`, `date`, `categories`,
+  `tags`, `labels`). `nibblySearchIndex()` loads it and rebuilds it when missing or older than the
+  newest content file; `admin/api/pages.php` and `admin/api/news.php` rebuild it at shutdown after
+  a change; `cli/search-index.php` rebuilds it by hand. `nibblySearchQuery()` scores every term
+  (title 10–14, excerpt 5+, labels 6, body 1 + hits) with AND semantics and a phrase bonus, pages
+  the result and attaches a highlighted snippet. route.php serves `search.base` (`/search`) with
+  `includes/search.php` or the site's `{lang}/search.php` unless a page exists at that path.
+- `includes/feed.php`: RSS 2.0 of the newest posts at `/feed.xml` (and `/{lang}/feed.xml`);
+  `news.feed` (default true) and `news.feedItems` (default 20). The header links it.
+- `renderNewsTimeline()` in `content-loader.php` renders a filtered post list as `<ol class="news-timeline">`
+  with optional year/decade groups and a sticky jump bar; posts may carry a `gallery` array
+  (`[{src, alt, caption, thumb}]`) that the timeline and the post page show as thumbnails.
 
 ## Languages in the Dashboard
 

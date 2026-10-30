@@ -81,6 +81,9 @@
         if (tab === 'ai' && AI_FEATURES_ENABLED && typeof loadAiSettings === 'function') {
             loadAiSettings();
         }
+        if (tab === 'news' && typeof loadNewsSettings === 'function') {
+            loadNewsSettings();
+        }
     }
 
     function activateSettingsTab(tab, options) {
@@ -331,6 +334,8 @@
         if (moduleEventsEl) moduleEventsEl.checked = modules.events !== false;
         var moduleMessagesEl = document.getElementById('moduleMessages');
         if (moduleMessagesEl) moduleMessagesEl.checked = modules.messages !== false;
+        var moduleCommentsEl = document.getElementById('moduleComments');
+        if (moduleCommentsEl) moduleCommentsEl.checked = modules.comments !== false;
         var moduleMenusEl = document.getElementById('moduleMenus');
         if (moduleMenusEl) moduleMenusEl.checked = modules.menus !== false;
         var moduleIconManagerEl = document.getElementById('moduleIconManager');
@@ -2858,6 +2863,7 @@
                 settings.modules.people = document.getElementById('modulePeople').checked;
                 settings.modules.events = document.getElementById('moduleEvents').checked;
                 settings.modules.messages = document.getElementById('moduleMessages').checked;
+                if (document.getElementById('moduleComments')) settings.modules.comments = document.getElementById('moduleComments').checked;
                 settings.modules.menus = document.getElementById('moduleMenus').checked;
                 settings.modules.iconManager = document.getElementById('moduleIconManager').checked;
                 settings.modules.handbook = document.getElementById('moduleHandbook').checked;
@@ -2896,6 +2902,148 @@
             } finally {
                 btn.disabled = false;
                 btn.textContent = t('settings.save_modules');
+            }
+        });
+    }
+
+    // ===== News settings: URL pattern, archive paths, list size, categories =====
+    // The panel saves two files: news.* in settings.json (save-settings) and content/news-categories.json
+    var newsSettingsForm = document.getElementById('newsSettingsForm');
+    var newsCategoryRows = [];
+
+    function newsSettingsValues() {
+        return {
+            urlPattern: (document.getElementById('newsUrlPattern').value || '').trim() || '/news/{slug}',
+            perPage: parseInt(document.getElementById('newsPerPage').value, 10) || 12,
+            pageParam: (document.getElementById('newsPageParam').value || '').trim() || 'page',
+            archive: {
+                base: (document.getElementById('newsArchiveBase').value || '').trim(),
+                tag: (document.getElementById('newsArchiveTag').value || '').trim() || 'tag',
+                year: (document.getElementById('newsArchiveYear').value || '').trim() || 'year',
+                decade: (document.getElementById('newsArchiveDecade').value || '').trim() || 'decade'
+            }
+        };
+    }
+
+    function updateNewsSettingsExamples() {
+        var values = newsSettingsValues();
+        var example = document.getElementById('newsUrlPatternExample');
+        if (example) example.textContent = values.urlPattern.replace('{yyyy}', '2026').replace('{mm}', '08').replace('{dd}', '17').replace('{slug}', 'my-post');
+        var archive = document.getElementById('newsArchiveExample');
+        if (archive) {
+            var base = values.archive.base.replace(/\/+$/, '');
+            archive.textContent = base ? base + '/{category} · ' + base + '/' + values.archive.tag + '/{tag} · ' + base + '/' + values.archive.year + '/2001 · ' + base + '/' + values.archive.decade + '/1990' : '—';
+        }
+    }
+
+    function slugifyNewsCategory(text) {
+        return String(text || '').toLowerCase().trim()
+            .replace(/[äöüß]/g, function(m) { return ({ä:'ae',ö:'oe',ü:'ue',ß:'ss'})[m]; })
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    }
+
+    function renderNewsCategoryRows() {
+        var tbody = document.getElementById('newsCategoriesBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        newsCategoryRows.forEach(function(row, index) {
+            var tr = document.createElement('tr');
+            tr.innerHTML = '<td><input type="text" class="editor-input" data-field="name" autocomplete="off"></td>'
+                + '<td><input type="text" class="editor-input" data-field="slug" autocomplete="off" spellcheck="false"></td>'
+                + '<td><input type="text" class="editor-input" data-field="description" autocomplete="off"></td>'
+                + '<td class="news-categories-table__order"><input type="number" class="editor-input" data-field="order" step="1"></td>'
+                + '<td class="news-categories-table__actions"></td>';
+            tr.querySelectorAll('input[data-field]').forEach(function(input) {
+                var field = input.dataset.field;
+                input.value = row[field] == null ? '' : row[field];
+                input.addEventListener('input', function() {
+                    row[field] = field === 'order' ? (parseInt(input.value, 10) || 0) : input.value;
+                    // A new category takes its slug from the name until the slug is edited by hand
+                    if (field === 'name' && row._fresh) {
+                        row.slug = slugifyNewsCategory(input.value);
+                        tr.querySelector('[data-field="slug"]').value = row.slug;
+                    }
+                    if (field === 'slug') { row._fresh = false; input.value = slugifyNewsCategory(input.value); row.slug = input.value; }
+                });
+            });
+            var remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'btn btn-secondary btn-sm';
+            remove.innerHTML = icon('trash', 12, '2');
+            remove.setAttribute('aria-label', t('btn.delete'));
+            remove.onclick = function() { newsCategoryRows.splice(index, 1); renderNewsCategoryRows(); };
+            tr.querySelector('.news-categories-table__actions').appendChild(remove);
+            tbody.appendChild(tr);
+        });
+    }
+
+    function populateNewsSettings(config) {
+        if (!newsSettingsForm || !config) return;
+        var news = config.settings || {};
+        var archive = news.archive || {};
+        document.getElementById('newsUrlPattern').value = news.urlPattern || '/news/{slug}';
+        document.getElementById('newsPerPage').value = news.perPage || 12;
+        document.getElementById('newsPageParam').value = news.pageParam || 'page';
+        document.getElementById('newsArchiveBase').value = archive.base || '';
+        document.getElementById('newsArchiveTag').value = archive.tag || 'tag';
+        document.getElementById('newsArchiveYear').value = archive.year || 'year';
+        document.getElementById('newsArchiveDecade').value = archive.decade || 'decade';
+        newsCategoryRows = (config.categories || []).map(function(row) { return Object.assign({}, row); });
+        renderNewsCategoryRows();
+        updateNewsSettingsExamples();
+    }
+
+    async function loadNewsSettings() {
+        try {
+            var result = await (await fetch('api.php?action=load-news-config&_=' + Date.now())).json();
+            if (result.success) populateNewsSettings(result.data);
+        } catch (error) {
+            showToast(t('toast.error_generic', {message: error.message}), 'error');
+        }
+    }
+
+    if (newsSettingsForm) {
+        newsSettingsForm.querySelectorAll('input').forEach(function(input) { input.addEventListener('input', updateNewsSettingsExamples); });
+        document.getElementById('newsAddCategoryBtn').addEventListener('click', function() {
+            newsCategoryRows.push({ slug: '', name: '', description: '', order: newsCategoryRows.length + 1, _fresh: true });
+            renderNewsCategoryRows();
+            var inputs = document.querySelectorAll('#newsCategoriesBody [data-field="name"]');
+            if (inputs.length) inputs[inputs.length - 1].focus();
+        });
+        // The panel loads its data when opened (loadSettingsTabData); the general settings do not carry the categories
+        newsSettingsForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var btn = document.getElementById('saveNewsSettingsBtn');
+            btn.disabled = true;
+            btn.textContent = t('btn.saving');
+            try {
+                var settings = Object.assign({}, currentSettings || {});
+                settings.news = newsSettingsValues();
+                var formData = new FormData();
+                formData.append('action', 'save-settings');
+                formData.append('settings', JSON.stringify(settings));
+                formData.append('csrf_token', CSRF_TOKEN);
+                var result = await (await fetch('api.php', { method: 'POST', body: formData })).json();
+                if (!result.success) { showToast(result.message, 'error'); return; }
+                currentSettings = result.data;
+                var categories = newsCategoryRows.filter(function(row) { return (row.slug || row.name); }).map(function(row) {
+                    return { slug: row.slug || slugifyNewsCategory(row.name), name: row.name, description: row.description || '', order: row.order || 0 };
+                });
+                var catData = new FormData();
+                catData.append('action', 'save-news-categories');
+                catData.append('categories', JSON.stringify(categories));
+                catData.append('csrf_token', CSRF_TOKEN);
+                var catResult = await (await fetch('api.php', { method: 'POST', body: catData })).json();
+                if (!catResult.success) { showToast(catResult.message, 'error'); return; }
+                showToast(t('toast.news_settings_saved'), 'success');
+                await loadNewsSettings();
+                if (typeof loadNewsConfig === 'function') loadNewsConfig();
+            } catch (error) {
+                showToast(t('toast.error_generic', {message: error.message}), 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = t('settings.save_news');
             }
         });
     }

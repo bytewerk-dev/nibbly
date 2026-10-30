@@ -9,6 +9,77 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+### Added
+
+- **Post URLs, categories, tags and archive pages for News.** The URL of a post follows the setting
+  `news.urlPattern` (default `/news/{slug}`, for example `/{yyyy}/{mm}/{dd}/{slug}`); a wrong date
+  part, an old slug from `content/news-aliases.json` or a trailing slash redirects (301) to the
+  canonical URL, and a page at a date-like path keeps working. Posts carry `categories` (slugs from
+  `content/news-categories.json`), `tags` (names kept in `content/news-tags.json`) and `flags`
+  (internal markers for sub-lists). Archive pages below `news.archive.base` (default `/news`) list
+  all posts, one category, one tag, one year or one decade, with category chips and pagination
+  (`news.perPage`, `news.pageParam`); a site template `{lang}/news-archive.php` replaces the core
+  page `includes/news-archive.php`. `loadNewsPosts()` and `renderNewsList()` take filter and paging
+  options (`category`, `tag`, `flag`, `flagNot`, `year`, `decade`, `page`, `perPage`, `paginate`,
+  `withTotal`), the post page shows category and tag chips and gets a correct canonical URL, the
+  sitemap lists posts under their pattern URL plus the category archives. Settings → Post settings (shown
+  with the News module) edits the pattern, the archive base and segments, posts per page and the
+  categories; the post editor has panels for categories, tags and flags and shows the address.
+  New helper `includes/news-helper.php`; `sanitizeNewsSettings()` validates the settings.
+- **Full-text search.** `includes/search-helper.php` builds an index of public pages and published
+  posts (`content/search-index.json`, rebuilt after saving and when a content file is newer) and
+  answers queries with ranking (title before excerpt and labels before text, all words required,
+  phrase bonus, umlaut folding), paging and `<mark>` snippets. The search page lives at
+  `search.base` (default `/search`; a template or JSON page at that path wins) with a site override
+  `{lang}/search.php`; the header shows a search form (`nibblySearchForm()`) while `search.enabled`
+  is on. Pages with `seo.searchable: false`, `noindex` or private visibility stay out.
+  `php cli/search-index.php --action=rebuild|status|query` manages the index from the shell.
+- **RSS feed.** `/feed.xml` (and `/{lang}/feed.xml`) lists the latest posts (`news.feed`, default on;
+  `news.feedItems`, default 20) with categories and the post image as enclosure; the header links it
+  as alternate.
+- **Timeline component.** `renderNewsTimeline($lang, $options)` renders posts as an ordered timeline,
+  oldest first, grouped by year or decade with a jump bar, post image with caption or gallery
+  thumbnails from the optional post field `gallery`, excerpt and link.
+- **Site override for the post page.** A template `{lang}/news-post.php` replaces
+  `includes/news-post.php` (it receives `$post`, `$currentLang`, `$basePath`); the inline editor
+  finds the editable parts of such a template through `data-news-field="title|content|author|image"`.
+- **Comments and guestbook module.** `includes/comments.php` stores comments per post or page
+  (`content/comments/`), renders the thread with a reply form (`nibblyCommentsRender()`; pages opt in
+  with the field `"comments": "guestbook"`) and protects the form without an external service:
+  one-time token with minimum age, honeypot, arithmetic question signed with a local secret,
+  heuristics (links, markup, script, word list `content/comments-blocklist.json`, repeats), rate
+  limit and duplicate check. Moderation is the default (`comments.moderation`), known name and
+  e-mail pairs can be approved automatically, the form recipient is notified by e-mail. Public
+  endpoint `api/comment-submit.php` with `js/comments.js` (reply in place, result inline, works
+  without JavaScript). Dashboard tab "Comments & guestbook" with status filter, approve, hold, spam
+  and delete, a badge with the number of waiting entries, and a module switch under Settings →
+  Modules (`modules.comments`, on by default; without a template call nothing is shown).
+- **Template hook `$pageHeadExtra`.** A template can add `<link>` or `<meta>` tags before `</head>`
+  (the archive pages use it for `rel="prev"`/`rel="next"`).
+- **Tests.** `news-routing-smoke.py`, `news-filter-smoke.php`, `search-smoke.php`,
+  `news-timeline-smoke.php`, `search-feed-smoke.py`, `comments-smoke.php`; `nibbly-map-smoke.php`
+  knows the comments module.
+
+### Changed
+
+- **Sanitizer allowlist.** `nibblySanitizeRichHtml()` keeps `figure`, `figcaption`, `img`, tables,
+  `sup`/`sub`, `hr`, `pre`/`code`, `small`, `cite`, `q`, `mark`, `s`/`del`/`ins`, `abbr`, `dl`,
+  `details`/`summary`, `video`/`audio`/`source` and the attributes they need (`id`, image sizes,
+  `colspan`/`rowspan`/`scope`, media controls). Media sources must be http(s) or site-relative
+  (`nibblySanitizeMediaSrc()`); `img` and `source` without a valid `src` are removed, `iframe` stays
+  forbidden. The visual editor's `cleanHtml()` mirrors the list, so posts keep their images when
+  edited.
+- **Lean news list in the dashboard.** `load-news` returns list metadata only (excerpt shortened to
+  160 characters); the new action `load-news-post` loads one post for the editor and for
+  translations. Language versions are grouped by date and slug, so posts that share a slug on
+  different dates no longer disappear from the list.
+- **Session lock released for read actions.** `admin/api/contracts.php` calls `session_write_close()`
+  after authentication and role checks for read-only GET actions (except the backup download, `ai-*`
+  actions and OAuth callbacks), so parallel dashboard requests no longer wait for each other.
+  The dashboard scripts read every response of a `Promise.all` at once.
+- **`.htaccess`.** Date-based post URLs (`/2026/08/17/slug`) are routed before physical year folders.
+  `/news/{slug}/` with a trailing slash answers 301 instead of 200.
+
 ## [2.6.0] — 2026-10-28
 
 ### Added

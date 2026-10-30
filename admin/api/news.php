@@ -1,8 +1,74 @@
 <?php
 if (!defined('NIBBLY_ADMIN_DIR')) { http_response_code(404); exit; }
 
+require_once dirname(__DIR__, 2) . '/includes/news-helper.php';
+require_once dirname(__DIR__, 2) . '/includes/search-helper.php';
+
+// The search index follows every change of a post (the response is sent first; the rebuild runs at shutdown)
+if (in_array($action, ['save-news', 'toggle-news-status', 'trash-news', 'restore-news', 'delete-news-permanent', 'save-news-categories'], true)) {
+    register_shutdown_function(static function (): void { nibblySearchIndexRebuild(); });
+}
+
+// Language default, slug lists and public URL as the dashboard expects them
+function nibblyNewsApiNormalize(array $post): array {
+    if (empty($post['lang'])) {
+        $post['lang'] = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
+    }
+    $post['categories'] = nibblyNewsSlugList($post['categories'] ?? []);
+    $post['tags'] = nibblyNewsSlugList($post['tags'] ?? []);
+    $post['flags'] = nibblyNewsSlugList($post['flags'] ?? []);
+    $post['url'] = nibblyNewsUrl($post);
+    return $post;
+}
+
+// List row for the dashboard: what the table, filters and language columns need, excerpt shortened
+function nibblyNewsApiListItem(array $post): array {
+    $excerpt = trim(preg_replace('/\s+/u', ' ', strip_tags((string)($post['excerpt'] ?? ''))) ?? '');
+    if (mb_strlen($excerpt) > 160) {
+        $excerpt = rtrim(mb_substr($excerpt, 0, 159)) . '…';
+    }
+    $item = [];
+    foreach (['id', 'slug', 'lang', 'title', 'date', 'author', 'image', 'categories', 'tags', 'flags', 'url', 'wpId', 'lastModified'] as $key) {
+        if (array_key_exists($key, $post)) $item[$key] = $post[$key];
+    }
+    $item['excerpt'] = $excerpt;
+    $item['hidden'] = !empty($post['hidden']);
+    return $item;
+}
+
 // Authenticated dispatcher supplies shared helpers and request context.
 switch ($action) {
+    // URL pattern, archive paths, categories and tag names for the editor and the settings panel
+    case 'load-news-config':
+        jsonResponse(true, [
+            'settings' => nibblyNewsSettings(true),
+            'defaults' => nibblyNewsSettingsDefaults(),
+            'categories' => nibblyNewsCategories(true),
+            'tagNames' => nibblyNewsTagNames(true),
+            'tagCounts' => nibblyNewsTagCounts(),
+        ]);
+        break;
+
+    case 'save-news-categories':
+        if (!isAdmin()) {
+            jsonResponse(false, null, 'Forbidden');
+        }
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        $rows = json_decode((string)($_POST['categories'] ?? ''), true);
+        if (!is_array($rows)) {
+            jsonResponse(false, null, 'Invalid JSON format');
+        }
+        $saved = nibblyNewsSaveCategories($rows);
+        if ($saved === false) {
+            jsonResponse(false, null, 'Error saving categories');
+        }
+        jsonResponse(true, $saved, 'Categories saved');
+        break;
+
+    // The list carries metadata only (no content, gallery or SEO): with hundreds of posts the full records
+    // run to several megabytes. The editor loads one post with load-news-post.
     case 'load-news':
         $newsDir = dirname(CONTENT_PATH) . '/news/';
         if (!is_dir($newsDir)) {
@@ -15,16 +81,12 @@ switch ($action) {
         foreach (glob($newsDir . '*.json') as $file) {
             $post = json_decode(file_get_contents($file), true);
             if (!is_array($post)) continue;
-
-            // Posts without lang field default to primary language
-            if (empty($post['lang'])) {
-                $post['lang'] = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
-            }
+            $post = nibblyNewsApiNormalize($post);
 
             // Filter by language if requested
             if ($filterLang && $post['lang'] !== $filterLang) continue;
 
-            $posts[] = $post;
+            $posts[] = nibblyNewsApiListItem($post);
         }
 
         // Sort by date descending
@@ -33,6 +95,21 @@ switch ($action) {
         });
 
         jsonResponse(true, $posts);
+        break;
+
+    // One complete post for the editor (also the source of a translation or copy)
+    case 'load-news-post':
+        $postId = $_GET['id'] ?? '';
+        if (!is_string($postId) || !preg_match('/^[a-z0-9][a-z0-9-]*$/D', $postId)) {
+            jsonResponse(false, null, 'Invalid post ID');
+        }
+        $filepath = dirname(CONTENT_PATH) . '/news/' . $postId . '.json';
+        $post = is_file($filepath) ? json_decode((string)file_get_contents($filepath), true) : null;
+        if (!is_array($post)) {
+            http_response_code(404);
+            jsonResponse(false, null, 'Post not found');
+        }
+        jsonResponse(true, nibblyNewsApiNormalize($post));
         break;
 
     case 'save-news':
@@ -107,9 +184,20 @@ switch ($action) {
             'excerpt' => trim($post['excerpt'] ?? ''),
             'image' => trim($post['image'] ?? ''),
             'content' => sanitizeHtml((string)($post['content'] ?? '')),
+            // Categories are slugs of content/news-categories.json; tags are free (typed names become
+            // slugs, their spelling is kept in content/news-tags.json); flags mark sub-lists (e.g. "column")
+            'categories' => nibblyNewsSlugList($post['categories'] ?? []),
+            'tags' => nibblyNewsRememberTagNames($post['tags'] ?? []),
+            'flags' => nibblyNewsSlugList($post['flags'] ?? [], 20),
             'hidden' => !empty($post['hidden']),
             'lastModified' => date('c'),
         ];
+        // Fields this editor does not know (e.g. "seo" from an import) survive a save
+        foreach ($post as $key => $value) {
+            if (!array_key_exists($key, $sanitized) && !in_array($key, ['url', '_file'], true) && preg_match('/^[a-zA-Z][a-zA-Z0-9_]{0,40}$/', (string)$key)) {
+                $sanitized[$key] = $value;
+            }
+        }
 
         $filepath = $newsDir . $postId . '.json';
         $result = nibblyJsonAtomicWrite($filepath, $sanitized);
@@ -122,6 +210,7 @@ switch ($action) {
             @unlink($newsDir . $oldId . '.json');
         }
 
+        $sanitized['url'] = nibblyNewsUrl($sanitized);
         jsonResponse(true, $sanitized, 'Post saved');
         break;
 

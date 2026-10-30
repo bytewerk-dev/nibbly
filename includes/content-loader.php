@@ -8,6 +8,7 @@ require_once __DIR__ . '/access-guard.php';
 require_once __DIR__ . '/ai-labels.php';
 require_once __DIR__ . '/public-strings.php';
 require_once __DIR__ . '/html-sanitizer.php';
+require_once __DIR__ . '/news-helper.php';
 
 if (!defined('CONTENT_BASE_PATH')) {
     define('CONTENT_BASE_PATH', __DIR__ . '/../content/pages/');
@@ -1814,21 +1815,24 @@ function renderGallery($page) {
 // ============================================================
 
 /**
- * Load all published news posts, sorted by date descending.
+ * Load published news posts, newest first.
  *
- * @param int $limit Max number of posts (0 = all)
- * @return array
+ * @param int    $limit   Max number of posts (0 = all); ignored when $options carries a page.
+ * @param string $lang    Language code ('' = every language)
+ * @param array  $options Filters and paging (all optional):
+ *                        category, tag, flag, year, decade  — a slug / year, or a list (any match)
+ *                        flagNot                            — exclude posts carrying one of these flags
+ *                        page, perPage                       — 1-based page; perPage defaults to news.perPage
+ *                        offset                              — skip this many posts
+ *                        withTotal                           — true returns ['posts' => [...], 'total' => n]
+ * @return array Posts, or ['posts' => [...], 'total' => n] with withTotal.
  */
-function loadNewsPosts($limit = 0, $lang = '') {
-    $newsDir = __DIR__ . '/../content/news/';
-    if (!is_dir($newsDir)) return [];
-
+function loadNewsPosts($limit = 0, $lang = '', array $options = []) {
     $defaultLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
 
     $posts = [];
-    foreach (glob($newsDir . '*.json') as $file) {
-        $post = json_decode(file_get_contents($file), true);
-        if (!is_array($post)) continue;
+    foreach (nibblyNewsAllPosts() as $post) {
+        unset($post['_file']);
         if (!empty($post['hidden'])) continue;
 
         // Posts without lang field default to primary language
@@ -1852,14 +1856,28 @@ function loadNewsPosts($limit = 0, $lang = '') {
         }
     }
 
+    $filters = array_intersect_key($options, array_flip(['category', 'tag', 'flag', 'flagNot', 'year', 'decade']));
+    if ($filters) {
+        $posts = array_values(array_filter($posts, static fn($post) => nibblyNewsPostMatchesFilters($post, $filters)));
+    }
+
     usort($posts, function($a, $b) {
         return strcmp($b['date'] ?? '', $a['date'] ?? '');
     });
 
-    if ($limit > 0) {
-        $posts = array_slice($posts, 0, $limit);
+    $total = count($posts);
+    $offset = max(0, (int)($options['offset'] ?? 0));
+    if (isset($options['page'])) {
+        $perPage = max(1, (int)($options['perPage'] ?? nibblyNewsSettings()['perPage']));
+        $page = max(1, (int)$options['page']);
+        $posts = array_slice($posts, $offset + ($page - 1) * $perPage, $perPage);
+    } elseif ($limit > 0 || $offset > 0) {
+        $posts = array_slice($posts, $offset, $limit > 0 ? $limit : null);
     }
 
+    if (!empty($options['withTotal'])) {
+        return ['posts' => $posts, 'total' => $total];
+    }
     return $posts;
 }
 
@@ -1899,22 +1917,44 @@ function renderBreadcrumb($page, $basePath = '') {
 /**
  * Render a news/blog listing.
  *
- * @param int $limit Max posts to show (0 = all)
- * @param string $lang Language code for date formatting
+ * @param int    $limit   Max posts to show (0 = all)
+ * @param string $lang    Language code for date formatting and post URLs
+ * @param array  $options Filters (category, tag, flag, flagNot, year, decade) as in loadNewsPosts(), plus
+ *                        paginate  — true: pages of news.perPage (or perPage) posts, page from ?{pageParam}=N
+ *                        page      — the page to render (default: from the request)
+ *                        perPage   — posts per page
+ *                        baseUrl   — list URL the page links point to (default: current path)
+ *                        showMeta  — false hides the category chips on the cards
  * @return string HTML
  */
-function renderNewsList($limit = 0, $lang = 'en') {
-    $posts = loadNewsPosts($limit, $lang);
+function renderNewsList($limit = 0, $lang = 'en', array $options = []) {
+    $paginate = !empty($options['paginate']);
+    $query = array_intersect_key($options, array_flip(['category', 'tag', 'flag', 'flagNot', 'year', 'decade']));
+    $page = 1;
+    $perPage = 0;
+    if ($paginate) {
+        $perPage = max(1, (int)($options['perPage'] ?? nibblyNewsSettings()['perPage']));
+        $page = max(1, (int)($options['page'] ?? nibblyNewsCurrentPage()));
+        $query += ['page' => $page, 'perPage' => $perPage, 'withTotal' => true];
+        $result = loadNewsPosts(0, $lang, $query);
+        $posts = $result['posts'];
+        $total = $result['total'];
+        // A page beyond the end shows the last one instead of an empty grid
+        if (!$posts && $total > 0) {
+            $page = (int)ceil($total / $perPage);
+            $query['page'] = $page;
+            $posts = loadNewsPosts(0, $lang, $query)['posts'];
+        }
+    } else {
+        $posts = loadNewsPosts($limit, $lang, $query);
+        $total = count($posts);
+    }
 
     if (empty($posts)) {
         return '<p class="news-empty">' . t('news.no_posts') . '</p>';
     }
 
-    // Build base URL for post links
-    $defaultLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
-    $langPrefix = ($lang === $defaultLang) ? '' : $lang . '/';
-    $postBaseUrl = '/' . $langPrefix . 'news/';
-
+    $showMeta = $options['showMeta'] ?? true;
     $html = '<div class="news-grid">';
     foreach ($posts as $post) {
         $title = htmlspecialchars($post['title'] ?? '');
@@ -1922,8 +1962,7 @@ function renderNewsList($limit = 0, $lang = 'en') {
         $date = $post['date'] ?? '';
         $author = htmlspecialchars($post['author'] ?? '');
         $image = htmlspecialchars($post['image'] ?? '');
-        $slug = htmlspecialchars($post['slug'] ?? '');
-        $postUrl = $postBaseUrl . $slug;
+        $postUrl = htmlspecialchars(nibblyNewsUrl($post, $lang));
 
         // Format date
         try {
@@ -1946,7 +1985,14 @@ function renderNewsList($limit = 0, $lang = 'en') {
             $html .= '</div>';
         }
         $html .= '<div class="news-card__body">';
+        $html .= '<div class="news-card__meta">';
         $html .= '<time class="news-card__date" datetime="' . htmlspecialchars($date) . '">' . $formattedDate . '</time>';
+        if ($showMeta) {
+            foreach (nibblyNewsSlugList($post['categories'] ?? []) as $categorySlug) {
+                $html .= '<span class="news-card__category">' . htmlspecialchars(nibblyNewsCategoryName($categorySlug)) . '</span>';
+            }
+        }
+        $html .= '</div>';
         $html .= '<h3 class="news-card__title">' . $title . '</h3>';
         if ($excerpt || $_isAdmin) {
             $html .= '<p class="news-card__excerpt">' . $excerpt . '</p>';
@@ -1960,6 +2006,137 @@ function renderNewsList($limit = 0, $lang = 'en') {
     }
     $html .= '</div>';
 
+    if ($paginate) {
+        $baseUrl = (string)($options['baseUrl'] ?? (parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/'));
+        $html .= nibblyNewsPagination($total, $page, $perPage, $baseUrl, $lang);
+    }
+
+    return $html;
+}
+
+/**
+ * Render a list of posts as a vertical timeline (one entry per post, oldest first by default).
+ *
+ * @param string $lang    Language of the posts
+ * @param array  $options Filters as in loadNewsPosts() (category, tag, flag, flagNot, year, decade) plus
+ *                        order       — 'asc' (default, oldest first) or 'desc'
+ *                        limit       — max entries (0 = all)
+ *                        jumpBar     — 'year' | 'decade' | 'none' (default: 'year'); a sticky list of links to
+ *                                      the first entry of each year/decade, rendered only with 2+ groups
+ *                        groupBy     — 'year' | 'decade' | 'none' (default: same as jumpBar); group headings
+ *                        showImages  — false hides images and galleries (default true)
+ *                        showContent — true adds the post text (sanitized) below the excerpt (default false)
+ *                        linkLabel   — text of the link to the post (default: "Read the post" in the page language)
+ *                        basePath    — prefix of the post links (default: root-absolute links)
+ *                        id          — id attribute of the timeline (anchor targets are "{id}-{year}")
+ *                        emptyText   — text when no post matches
+ * @return string HTML (.news-timeline)
+ */
+function renderNewsTimeline($lang = 'en', array $options = []) {
+    require_once __DIR__ . '/public-strings.php';
+    $filters = array_intersect_key($options, array_flip(['category', 'tag', 'flag', 'flagNot', 'year', 'decade']));
+    $posts = loadNewsPosts((int)($options['limit'] ?? 0), $lang, $filters + ['order' => 'desc']);
+    if (($options['order'] ?? 'asc') !== 'desc') $posts = array_reverse($posts);
+    $id = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)($options['id'] ?? 'timeline')) ?: 'timeline';
+    if (empty($posts)) {
+        return '<p class="news-timeline__empty">' . htmlspecialchars((string)($options['emptyText'] ?? nibblyPublicString('timeline_empty', $lang))) . '</p>';
+    }
+    $jumpBar = in_array($options['jumpBar'] ?? 'year', ['year', 'decade', 'none'], true) ? ($options['jumpBar'] ?? 'year') : 'year';
+    $groupBy = in_array($options['groupBy'] ?? $jumpBar, ['year', 'decade', 'none'], true) ? ($options['groupBy'] ?? $jumpBar) : 'none';
+    $showImages = $options['showImages'] ?? true;
+    $showContent = !empty($options['showContent']);
+    $basePath = (string)($options['basePath'] ?? '');
+    $linkLabel = (string)($options['linkLabel'] ?? nibblyPublicString('timeline_read_more', $lang));
+    $groupKey = static function (array $post, string $mode): string {
+        $year = substr((string)($post['date'] ?? ''), 0, 4);
+        return $mode === 'decade' ? substr($year, 0, 3) . '0' : $year;
+    };
+    $groupLabel = static fn(string $key, string $mode): string => $mode === 'decade' ? $key . 'er' : $key;
+
+    $html = '';
+    // Jump bar: one link per group, to the group's anchor
+    $groups = [];
+    if ($jumpBar !== 'none') {
+        foreach ($posts as $post) {
+            $key = $groupKey($post, $jumpBar);
+            if ($key !== '' && !isset($groups[$key])) $groups[$key] = $groupLabel($key, $jumpBar);
+        }
+    }
+    if (count($groups) > 1) {
+        $html .= '<nav class="news-timeline__jump" aria-label="' . htmlspecialchars(nibblyPublicString('timeline_jump_label', $lang)) . '"><ul class="news-timeline__jump-list">';
+        foreach ($groups as $key => $label) {
+            $html .= '<li><a class="news-timeline__jump-link" href="#' . htmlspecialchars($id . '-' . $key) . '">' . htmlspecialchars($label) . '</a></li>';
+        }
+        $html .= '</ul></nav>';
+    }
+
+    $html .= '<ol class="news-timeline" id="' . htmlspecialchars($id) . '">';
+    $currentGroup = null;
+    $isAdmin = isAdminLoggedIn();
+    foreach ($posts as $post) {
+        $key = $groupBy !== 'none' ? $groupKey($post, $groupBy) : '';
+        $anchorKey = $jumpBar !== 'none' ? $groupKey($post, $jumpBar) : '';
+        $attrs = '';
+        if ($groupBy !== 'none' && $key !== $currentGroup) {
+            $currentGroup = $key;
+            $html .= '<li class="news-timeline__group" id="' . htmlspecialchars($id . '-' . $key) . '"><h2 class="news-timeline__group-title">' . htmlspecialchars($groupLabel($key, $groupBy)) . '</h2></li>';
+        } elseif ($anchorKey !== '' && $groupBy !== $jumpBar) {
+            static $seenAnchors = [];
+            if (!isset($seenAnchors[$id . $anchorKey])) {
+                $seenAnchors[$id . $anchorKey] = true;
+                $attrs = ' id="' . htmlspecialchars($id . '-' . $anchorKey) . '"';
+            }
+        }
+        $title = htmlspecialchars((string)($post['title'] ?? ''));
+        $url = htmlspecialchars($basePath === '' ? nibblyNewsUrl($post, $lang) : $basePath . ltrim(nibblyNewsUrl($post, $lang), '/'));
+        $date = (string)($post['date'] ?? '');
+        try {
+            $formattedDate = nibblyFormatNewsDate(new DateTime($date), $lang, true);
+        } catch (Exception $e) {
+            $formattedDate = htmlspecialchars($date);
+        }
+        $html .= '<li class="news-timeline__item"' . $attrs . ' data-news-post="' . htmlspecialchars((string)($post['id'] ?? '')) . '">';
+        $html .= '<div class="news-timeline__marker" aria-hidden="true"></div>';
+        $html .= '<article class="news-timeline__entry">';
+        $html .= '<time class="news-timeline__date" datetime="' . htmlspecialchars($date) . '">' . $formattedDate . '</time>';
+        $html .= '<h3 class="news-timeline__title"><a href="' . $url . '">' . $title . '</a></h3>';
+        if ($showImages) {
+            $gallery = [];
+            foreach (is_array($post['gallery'] ?? null) ? $post['gallery'] : [] as $image) {
+                if (is_array($image) && !empty($image['src'])) $gallery[] = $image;
+            }
+            if (!empty($post['image'])) {
+                $html .= '<figure class="news-timeline__figure"><a href="' . $url . '" class="news-timeline__image-link" tabindex="-1" aria-hidden="true">';
+                $html .= '<img class="news-timeline__image" src="' . htmlspecialchars((string)$post['image']) . '" alt="' . htmlspecialchars((string)($post['imageAlt'] ?? $post['title'] ?? '')) . '" loading="lazy">' . nibblyAiLabelHtml((string)$post['image']);
+                $html .= '</a>';
+                if (!empty($post['imageCaption'])) $html .= '<figcaption class="news-timeline__caption">' . htmlspecialchars((string)$post['imageCaption']) . '</figcaption>';
+                $html .= '</figure>';
+            }
+            if ($gallery) {
+                $html .= '<div class="news-timeline__gallery">';
+                foreach ($gallery as $image) {
+                    $html .= '<figure class="news-timeline__gallery-item">';
+                    $html .= '<a href="' . htmlspecialchars((string)$image['src']) . '" class="news-timeline__gallery-link" data-lightbox="' . htmlspecialchars($id . '-' . (string)($post['id'] ?? '')) . '">';
+                    $html .= '<img src="' . htmlspecialchars((string)($image['thumb'] ?? $image['src'])) . '" alt="' . htmlspecialchars((string)($image['alt'] ?? '')) . '" loading="lazy">';
+                    $html .= '</a>';
+                    if (!empty($image['caption'])) $html .= '<figcaption>' . htmlspecialchars((string)$image['caption']) . '</figcaption>';
+                    $html .= '</figure>';
+                }
+                $html .= '</div>';
+            }
+        }
+        $excerpt = trim((string)($post['excerpt'] ?? ''));
+        if ($excerpt !== '') {
+            // Excerpts may carry simple inline markup (links, emphasis) from imports; print rules apply
+            $html .= '<div class="news-timeline__text">' . (strip_tags($excerpt) === $excerpt ? '<p>' . htmlspecialchars($excerpt) . '</p>' : sanitizeHtml($excerpt)) . '</div>';
+        }
+        if ($showContent && is_string($post['content'] ?? null) && trim($post['content']) !== '') {
+            $html .= '<div class="news-timeline__content">' . sanitizeHtml($post['content']) . '</div>';
+        }
+        $html .= '<a class="news-timeline__link" href="' . $url . '">' . htmlspecialchars($linkLabel) . '<span class="visually-hidden">: ' . $title . '</span></a>';
+        $html .= '</article></li>';
+    }
+    $html .= '</ol>';
     return $html;
 }
 
