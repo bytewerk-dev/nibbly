@@ -80,6 +80,13 @@ Git milestones and the gaps in publication records.
 - **`.htaccess`.** Date-based post URLs (`/2026/08/17/slug`) are routed before physical year folders.
   `/news/{slug}/` with a trailing slash answers 301 instead of 200.
 
+### Fixed
+
+- **Empty band below the header for signed-in users.** With the admin bar shown, the page was moved
+  down by the bar's height twice: once through the body padding and once more in the content
+  area's top padding. Signed-in editors saw a large gap between header and content, most visibly on
+  phones where the bar wraps to several lines. The content padding no longer adds the bar height.
+
 ## [2.6.0] — 2026-10-28
 
 ### Added

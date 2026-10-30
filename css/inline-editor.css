@@ -426,12 +426,10 @@ body.has-admin-bar .mobile-nav-overlay {
     top: var(--nibbly-admin-bar-height, 40px);
 }
 
-/* Site templates set .main-content padding-top based on --header-height.
-   When the admin bar is present, it pushes .site-header down by its height,
-   so the scroll-start of the content area needs the same extra offset. */
-body.has-admin-bar .main-content {
-    padding-top: calc(var(--header-height, 80px) + var(--spacing-lg, 4rem) + var(--nibbly-admin-bar-height, 40px));
-}
+/* The body padding above already moves the whole page down by the bar's height, and the fixed
+   .site-header follows through its top offset. Templates keep their own .main-content padding
+   (based on --header-height); adding the bar height there as well counted it twice, which showed
+   as a large empty band between header and content, most visibly on phones where the bar wraps. */
 
 /* ============================================================
    EDITIERBARE SECTIONS
