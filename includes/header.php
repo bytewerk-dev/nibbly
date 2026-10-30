@@ -269,6 +269,8 @@ nibblyStartEmailObfuscation();
     <script>
     (function(){var remember=<?php echo $_rememberPublicTheme ? 'true' : 'false'; ?>;var fallback=<?php echo json_encode($_publicThemeDefault); ?>;try{var t=remember?localStorage.getItem('site-theme'):null;if(t==='system')t=null;if(t!=='dark'&&t!=='light')t=(fallback==='dark'||fallback==='light')?fallback:(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme',(fallback==='dark'||fallback==='light')?fallback:'light');}})();
     </script>
+    <?php if (!empty($pageHeadExtra)) echo $pageHeadExtra; // extra <link>/<meta> tags of the template (e.g. rel="prev"/"next" of paginated lists) ?>
+    <?php require_once __DIR__ . '/feed.php'; echo nibblyNewsFeedHeadLink($currentLang, $basePath); ?>
 </head>
 <body class="<?php echo $isHomepage ? 'page-home' : 'page-subpage'; ?><?php echo isset($pageClass) ? ' ' . $pageClass : ''; ?><?php echo $_nibblyDevLogin ? ' has-dev-login' : ''; ?>"<?php echo $_nibblyDevLogin ? ' data-dev-login="true"' : ''; ?>>
     <?php if (!empty($GLOBALS['nibblyAgentPreview']['active'])) echo nibblyAgentPreviewBanner(); ?>
@@ -358,6 +360,11 @@ nibblyStartEmailObfuscation();
                 </div>
                 <?php endif; ?>
 
+                <?php require_once __DIR__ . '/search-helper.php'; if (nibblySearchEnabled()): ?>
+                <!-- Site search (settings search.*) -->
+                <?php echo nibblySearchForm(['class' => 'search-form--header', 'id' => 'header-search', 'lang' => $currentLang, 'basePath' => $basePath]); ?>
+                <?php endif; ?>
+
                 <!-- Theme Toggle -->
                 <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" title="Toggle theme">
                     <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -410,6 +417,12 @@ nibblyStartEmailObfuscation();
                 </li>
                 <?php endforeach; ?>
             </ul>
+
+            <?php if (nibblySearchEnabled()): ?>
+            <div class="mobile-nav-search">
+                <?php echo nibblySearchForm(['class' => 'search-form--mobile', 'id' => 'mobile-search', 'lang' => $currentLang, 'basePath' => $basePath]); ?>
+            </div>
+            <?php endif; ?>
 
             <?php if (count($SITE_LANGUAGES) > 1): ?>
             <div class="mobile-nav-lang">

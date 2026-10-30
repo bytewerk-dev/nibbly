@@ -12840,3 +12840,34 @@ html[data-theme-preset="pop"] .settings-subnav .settings-nav-group h3 {
     html[data-settings-open] .settings-subnav,
     html.nb-sidebar-animating .admin-sidebar { transition: none; }
 }
+
+/* News settings: category table and the post address in the editor sidebar */
+.news-categories-table input.editor-input {
+    width: 100%;
+    min-width: 6rem;
+}
+
+.news-categories-table__order {
+    width: 6rem;
+}
+
+.news-categories-table__actions {
+    width: 3rem;
+    text-align: right;
+}
+
+.nb-news-url {
+    display: block;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.8rem;
+    word-break: break-all;
+    background: var(--admin-bg-subtle, rgba(0, 0, 0, 0.04));
+    border-radius: 6px;
+}
+
+.nb-news-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin-bottom: 0.75rem;
+}

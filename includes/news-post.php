@@ -23,18 +23,10 @@ $currentPage = 'news';
 $basePath = $basePath ?? ($currentLang === (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en') ? '../' : '../../');
 
 $_defaultLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
-$_newsPath = $currentLang === $_defaultLang ? 'news' : $currentLang . '/news';
-$_backLabels = [
-    'de' => '&larr; Zurück zu Neuigkeiten',
-    'es' => '&larr; Volver a noticias',
-    'fr' => '&larr; Retour aux actualités',
-    'it' => '&larr; Torna alle news',
-    'pt' => '&larr; Voltar às notícias',
-    'tr' => '&larr; Haberlere dön',
-    'cs' => '&larr; Zpět na novinky',
-    'pl' => '&larr; Wróć do aktualności',
-];
-$_backLabel = $_backLabels[$currentLang] ?? '&larr; Back to News';
+// The listing the back links point to (archive base, or /news); the post URL itself follows news.urlPattern
+$_newsPath = ltrim(nibblyNewsListUrl($currentLang), '/');
+require_once __DIR__ . '/public-strings.php';
+$_backLabel = nibblyPublicString('news_back', $currentLang);
 
 $slug = $_GET['slug'] ?? '';
 if (empty($slug) || !preg_match('/^[a-z0-9-]+$/', $slug)) {
@@ -42,28 +34,8 @@ if (empty($slug) || !preg_match('/^[a-z0-9-]+$/', $slug)) {
     exit;
 }
 
-$post = null;
-$newsDir = $_includeBase . 'content/news/';
-if (is_dir($newsDir)) {
-    foreach (glob($newsDir . '*.json') as $file) {
-        $p = json_decode(file_get_contents($file), true);
-        if (!is_array($p)) continue;
-        if (($p['slug'] ?? '') !== $slug) continue;
-        if (!empty($p['hidden'])) continue;
-        $postLang = $p['lang'] ?? $_defaultLang;
-        if ($postLang !== $currentLang) continue;
-        $post = $p;
-        break;
-    }
-}
-
-// Preview of an unapplied change set: its posts replace the stored ones (shown even when hidden).
-foreach (function_exists('nibblyNewsOverlay') ? nibblyNewsOverlay() : [] as $_overlayPost) {
-    if (is_array($_overlayPost) && ($_overlayPost['slug'] ?? '') === $slug && ($_overlayPost['lang'] ?? $_defaultLang) === $currentLang) {
-        $_overlayPost['hidden'] = false;
-        $post = $_overlayPost;
-    }
-}
+// Found by the "slug" field (never the file name); an unapplied preview change set overlays the stored post.
+$post = $post ?? nibblyNewsFindPost($slug, $currentLang);
 
 if (!$post) {
     http_response_code(404);
@@ -77,6 +49,16 @@ if (!$post) {
 
 $pageTitle = (string)($post['title'] ?? '');
 $pageDescription = (string)($post['excerpt'] ?? '');
+// SEO context of the post: canonical at its pattern URL (the date part is tolerant, so every variant
+// names the same address), optional "seo" overrides from the record (title, description, ogImage)
+$_postSeo = is_array($post['seo'] ?? null) ? $post['seo'] : [];
+require_once __DIR__ . '/seo-helper.php';
+$data = [
+    'lang' => $currentLang,
+    'title' => $pageTitle,
+    'description' => $pageDescription,
+    'seo' => $_postSeo + ['canonical' => rtrim(nibblySeoBaseUrl(), '/') . nibblyNewsUrl($post, $currentLang), 'ogImage' => (string)($post['image'] ?? '')],
+];
 
 $_isAdmin = isAdminLoggedIn();
 $newsPostJson = $_isAdmin ? json_encode($post, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) : '';
@@ -90,7 +72,6 @@ if ($_dateRaw !== '') {
     try {
         $_dateObj = new DateTime($_dateRaw);
         $_dateMachine = $_dateObj->format('Y-m-d');
-        require_once __DIR__ . '/public-strings.php';
         $_formattedDate = nibblyFormatNewsDate($_dateObj, $currentLang, true);
     } catch (Exception $e) {
         $_dateMachine = '';
@@ -128,6 +109,13 @@ if (isset($post['content']) && is_string($post['content'])) {
                     <?php if (!empty($post['author'])): ?>
                     <span class="news-post-page__author"><?php echo htmlspecialchars($post['author']); ?></span>
                     <?php endif; ?>
+                    <?php $_categories = nibblyNewsSlugList($post['categories'] ?? []); if ($_categories): ?>
+                    <ul class="news-post-page__categories" aria-label="<?php echo htmlspecialchars(nibblyPublicString('news_categories', $currentLang)); ?>">
+                        <?php foreach ($_categories as $_category): ?>
+                        <li><a class="news-chip news-chip--category" href="<?php echo htmlspecialchars($basePath . ltrim(nibblyNewsArchiveUrl('category', $_category, $currentLang), '/')); ?>"><?php echo htmlspecialchars(nibblyNewsCategoryName($_category)); ?></a></li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <?php endif; ?>
                 </header>
 
                 <div class="news-post-page__content">
@@ -135,6 +123,13 @@ if (isset($post['content']) && is_string($post['content'])) {
                 </div>
 
                 <footer class="news-post-page__footer">
+                    <?php $_tags = nibblyNewsSlugList($post['tags'] ?? []); if ($_tags): ?>
+                    <ul class="news-post-page__tags" aria-label="<?php echo htmlspecialchars(nibblyPublicString('news_tags', $currentLang)); ?>">
+                        <?php foreach ($_tags as $_tag): ?>
+                        <li><a class="news-chip news-chip--tag" href="<?php echo htmlspecialchars($basePath . ltrim(nibblyNewsArchiveUrl('tag', $_tag, $currentLang), '/')); ?>"><?php echo htmlspecialchars(nibblyNewsTagName($_tag)); ?></a></li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <?php endif; ?>
                     <a href="<?php echo htmlspecialchars($basePath . $_newsPath); ?>" class="news-post-page__back"><?php echo $_backLabel; ?></a>
                 </footer>
             </article>

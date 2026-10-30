@@ -1307,9 +1307,9 @@
             if (hasNewsChanges && EditorConfig.newsPostData) {
                 const postEl = document.querySelector('[data-news-post]');
                 if (postEl) {
-                    const titleEl = postEl.querySelector('.news-post-page__title');
-                    const contentEl = postEl.querySelector('.news-post-page__content');
-                    const authorEl = postEl.querySelector('.news-post-page__author');
+                    const titleEl = newsPostField(postEl, 'title');
+                    const contentEl = newsPostField(postEl, 'content');
+                    const authorEl = newsPostField(postEl, 'author');
                     if (titleEl) EditorConfig.newsPostData.title = titleEl.textContent.trim();
                     if (contentEl) EditorConfig.newsPostData.content = contentEl.innerHTML.trim();
                     if (authorEl) {
@@ -6731,14 +6731,22 @@
     // NEWS POST INLINE EDITING
     // ============================================================
 
+    // Editable parts of a post page. A site template marks them with data-news-field="title|content|author|image"
+    // (on the image itself or its figure); without the attribute the classes of includes/news-post.php apply.
+    function newsPostField(postEl, name) {
+        const marked = postEl.querySelector('[data-news-field="' + name + '"]');
+        if (marked) return name === 'image' && marked.tagName !== 'IMG' ? marked.querySelector('img') : marked;
+        return postEl.querySelector(name === 'image' ? '.news-post-page__hero img' : '.news-post-page__' + name);
+    }
+
     function enableNewsPostEditing() {
         const postEl = document.querySelector('[data-news-post]');
         if (!postEl) return;
 
-        const titleEl = postEl.querySelector('.news-post-page__title');
-        const contentEl = postEl.querySelector('.news-post-page__content');
-        const authorEl = postEl.querySelector('.news-post-page__author');
-        const heroEl = postEl.querySelector('.news-post-page__hero img');
+        const titleEl = newsPostField(postEl, 'title');
+        const contentEl = newsPostField(postEl, 'content');
+        const authorEl = newsPostField(postEl, 'author');
+        const heroEl = newsPostField(postEl, 'image');
 
         if (titleEl) {
             titleEl.contentEditable = 'true';
@@ -6779,10 +6787,10 @@
         const postEl = document.querySelector('[data-news-post]');
         if (!postEl) return;
 
-        const titleEl = postEl.querySelector('.news-post-page__title');
-        const contentEl = postEl.querySelector('.news-post-page__content');
-        const authorEl = postEl.querySelector('.news-post-page__author');
-        const heroEl = postEl.querySelector('.news-post-page__hero img');
+        const titleEl = newsPostField(postEl, 'title');
+        const contentEl = newsPostField(postEl, 'content');
+        const authorEl = newsPostField(postEl, 'author');
+        const heroEl = newsPostField(postEl, 'image');
 
         if (titleEl) {
             titleEl.contentEditable = 'false';

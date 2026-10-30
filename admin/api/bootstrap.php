@@ -299,10 +299,12 @@ function dashboardCopilotNewsUrl(string $id, string $lang): string {
     if (!preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $id) || !preg_match('/^[a-z]{2}$/', $lang)) {
         return '';
     }
-    $base = nibblySeoBaseUrl();
-    $defaultLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
-    $path = $lang === $defaultLang ? '/news/' . $id : '/' . $lang . '/news/' . $id;
-    return $base . $path;
+    require_once dirname(__DIR__, 2) . '/includes/news-helper.php';
+    // The post URL follows settings news.urlPattern; the record is found by id, else the id is taken as slug
+    foreach (nibblyNewsAllPosts() as $post) {
+        if (($post['id'] ?? '') === $id) return nibblySeoBaseUrl() . nibblyNewsUrl($post, $lang);
+    }
+    return nibblySeoBaseUrl() . nibblyNewsUrl(['slug' => $id, 'date' => '', 'lang' => $lang], $lang);
 }
 
 function dashboardCopilotCreatePageBackup(string $contentPage, bool $cleanup = true): string {
@@ -1211,10 +1213,82 @@ function sanitizeModuleSettings(array $settings): array {
         'people' => !array_key_exists('people', $modules) || !empty($modules['people']),
         'events' => !array_key_exists('events', $modules) || !empty($modules['events']),
         'messages' => !array_key_exists('messages', $modules) || !empty($modules['messages']),
+        'comments' => !array_key_exists('comments', $modules) || !empty($modules['comments']),
         'menus' => !array_key_exists('menus', $modules) || !empty($modules['menus']),
         'iconManager' => !array_key_exists('iconManager', $modules) || !empty($modules['iconManager']),
         'handbook' => !array_key_exists('handbook', $modules) || !empty($modules['handbook']),
     ], $modules);
+}
+
+/** The "news" section: URL pattern, list size, page parameter and archive paths (see includes/news-helper.php). */
+function sanitizeNewsSettings(array $settings, array $existing = []): array {
+    if (!isset($settings['news']) || !is_array($settings['news'])) {
+        return [];
+    }
+    require_once dirname(__DIR__, 2) . '/includes/news-helper.php';
+    $input = $settings['news'];
+    $defaults = nibblyNewsSettingsDefaults();
+    $current = array_replace_recursive($defaults, is_array($existing['news'] ?? null) ? $existing['news'] : []);
+    $patch = [];
+    if (array_key_exists('urlPattern', $input)) {
+        $patch['urlPattern'] = nibblyNewsNormalizeUrlPattern((string)$input['urlPattern']) ?? $current['urlPattern'];
+    }
+    if (array_key_exists('perPage', $input)) {
+        $patch['perPage'] = is_numeric($input['perPage']) ? max(1, min(200, (int)$input['perPage'])) : $current['perPage'];
+    }
+    if (array_key_exists('pageParam', $input)) {
+        $param = strtolower(trim((string)$input['pageParam']));
+        $patch['pageParam'] = preg_match('/^[a-z][a-z0-9_-]{0,30}$/', $param) ? $param : $current['pageParam'];
+    }
+    if (array_key_exists('feed', $input)) {
+        $patch['feed'] = !empty($input['feed']) && $input['feed'] !== 'false' && $input['feed'] !== '0';
+    }
+    if (array_key_exists('feedItems', $input)) {
+        $patch['feedItems'] = is_numeric($input['feedItems']) ? max(1, min(100, (int)$input['feedItems'])) : ($current['feedItems'] ?? 20);
+    }
+    if (isset($input['archive']) && is_array($input['archive'])) {
+        $archive = [];
+        if (array_key_exists('base', $input['archive'])) {
+            $base = '/' . trim(preg_replace('#[^a-z0-9/-]#', '', strtolower((string)$input['archive']['base'])), '/');
+            $archive['base'] = $base === '/' ? '' : $base;
+        }
+        foreach (['tag', 'year', 'decade'] as $key) {
+            if (!array_key_exists($key, $input['archive'])) continue;
+            $value = strtolower(trim((string)$input['archive'][$key]));
+            $archive[$key] = preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $value) ? $value : $current['archive'][$key];
+        }
+        if ($archive) $patch['archive'] = $archive;
+    }
+    return $patch;
+}
+
+/** Settings → "search": enabled, base path, query parameter, results per page, minimum query length. */
+function sanitizeSearchSettings(array $settings, array $existing = []): array {
+    if (!isset($settings['search']) || !is_array($settings['search'])) {
+        return [];
+    }
+    require_once dirname(__DIR__, 2) . '/includes/search-helper.php';
+    $input = $settings['search'];
+    $current = array_replace(nibblySearchSettingsDefaults(), is_array($existing['search'] ?? null) ? $existing['search'] : []);
+    $patch = [];
+    if (array_key_exists('enabled', $input)) {
+        $patch['enabled'] = !empty($input['enabled']) && $input['enabled'] !== 'false' && $input['enabled'] !== '0';
+    }
+    if (array_key_exists('base', $input)) {
+        $base = '/' . trim(preg_replace('#[^a-z0-9/-]#', '', strtolower((string)$input['base'])), '/');
+        $patch['base'] = ($base !== '/' && preg_match('#^/' . nibblyPagePathPattern() . '$#', $base)) ? $base : $current['base'];
+    }
+    if (array_key_exists('param', $input)) {
+        $param = strtolower(trim((string)$input['param']));
+        $patch['param'] = preg_match('/^[a-z][a-z0-9_-]{0,30}$/', $param) ? $param : $current['param'];
+    }
+    if (array_key_exists('perPage', $input)) {
+        $patch['perPage'] = is_numeric($input['perPage']) ? max(1, min(200, (int)$input['perPage'])) : $current['perPage'];
+    }
+    if (array_key_exists('minLength', $input)) {
+        $patch['minLength'] = is_numeric($input['minLength']) ? max(1, min(10, (int)$input['minLength'])) : $current['minLength'];
+    }
+    return $patch;
 }
 
 function sanitizeMediaSettings(array $settings): array {

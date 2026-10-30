@@ -346,21 +346,34 @@ function nibblySeoRenderablePages(): array {
             'changefreq' => $seo['changefreq'] ?? 'monthly',
         ];
     }
-    foreach (glob(nibblySeoRoot() . '/content/news/*.json') ?: [] as $file) {
-        $post = json_decode((string)file_get_contents($file), true);
-        if (!is_array($post) || !empty($post['hidden'])) continue;
-        $slug = trim((string)($post['slug'] ?? basename($file, '.json')));
+    // News posts at their configured URL (news.urlPattern), plus one entry per category archive
+    require_once __DIR__ . '/news-helper.php';
+    $newsLanguages = [];
+    foreach (nibblyNewsAllPosts() as $post) {
+        if (!empty($post['hidden'])) continue;
+        $slug = trim((string)($post['slug'] ?? ''));
         if ($slug === '') continue;
         $lang = trim((string)($post['lang'] ?? $defaultLang));
-        $path = $lang === $defaultLang ? '/news/' . $slug : '/' . $lang . '/news/' . $slug;
+        $newsLanguages[$lang] = true;
         $pages[] = [
             'lang' => $lang,
-            'slug' => 'news/' . $slug,
-            'url' => rtrim(nibblySeoBaseUrl(), '/') . $path,
-            'lastmod' => $post['lastModified'] ?? ($post['date'] ?? date('c', filemtime($file))),
+            'slug' => ltrim(nibblyNewsUrl($post, $lang), '/'),
+            'url' => rtrim(nibblySeoBaseUrl(), '/') . nibblyNewsUrl($post, $lang),
+            'lastmod' => $post['lastModified'] ?? ($post['date'] ?? date('c', filemtime(nibblySeoRoot() . '/content/news/' . $post['_file']))),
             'priority' => '0.5',
             'changefreq' => 'monthly',
         ];
+    }
+    if (nibblyNewsSettings()['archive']['base'] !== '') {
+        foreach (array_keys($newsLanguages) as $lang) {
+            foreach (nibblyNewsCategories() as $category) {
+                $used = array_filter(nibblyNewsAllPosts(), static fn($post) => empty($post['hidden']) && ($post['lang'] ?? $defaultLang) === $lang && nibblyNewsPostMatchesFilters($post, ['category' => $category['slug']]));
+                if (!$used) continue;
+                $pages[] = ['lang' => $lang, 'slug' => ltrim(nibblyNewsArchiveUrl('category', $category['slug'], $lang), '/'),
+                    'url' => rtrim(nibblySeoBaseUrl(), '/') . nibblyNewsArchiveUrl('category', $category['slug'], $lang),
+                    'lastmod' => date('c'), 'priority' => '0.4', 'changefreq' => 'weekly'];
+            }
+        }
     }
     // Event and person pages in every site language (their texts fall back to the primary language)
     $languages = array_keys(is_array($GLOBALS['SITE_LANGUAGES'] ?? null) && $GLOBALS['SITE_LANGUAGES'] ? $GLOBALS['SITE_LANGUAGES'] : [$defaultLang => '']);

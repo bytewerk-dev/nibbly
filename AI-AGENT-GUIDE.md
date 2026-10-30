@@ -10,7 +10,9 @@ This is the canonical, tool-neutral guide for AI coding agents. `AGENTS.md` and 
 |---|---|
 | Page templates | `{lang}/page-slug.php` (e.g. `en/about.php`) |
 | Content JSON | `content/pages/{lang}_{slug}.json` (e.g. `content/pages/en_about.json`) |
-| News posts | `content/news/{slug}.json` |
+| News posts | `content/news/{date}-{slug}.json` (found by the `slug` field) |
+| News URLs, categories, tags, archives, pagination | `includes/news-helper.php`; settings `news.*`; `content/news-categories.json`, `content/news-tags.json`, `content/news-aliases.json` |
+| News archive page | `includes/news-archive.php` (site override: `{lang}/news-archive.php`) |
 | Footer content | `content/pages/footer.json` |
 | Form definitions | `content/forms/*.json` |
 | Site settings | `content/settings.json` |
@@ -28,6 +30,8 @@ This is the canonical, tool-neutral guide for AI coding agents. `AGENTS.md` and 
 | Dashboard theme defaults | `includes/theme-defaults.php` (Pop for new installs, Soft for themes saved without a preset) |
 | Block types | `includes/block-types.php` |
 | Template API | `includes/content-loader.php` |
+| Search | `includes/search-helper.php`, `includes/search.php`, `cli/search-index.php` |
+| RSS feed | `includes/feed.php` (`/feed.xml`) |
 | Block renderers | `includes/block-renderers/{type}.php` |
 | Base stylesheet | `css/style.css` (custom properties at top) |
 | Component styles | `css/components.css` |
@@ -1435,7 +1439,7 @@ renderTimeline($page)            // timeline.entries — changelog/roadmap
 renderStats($page)               // stats.items — key figures
 renderTestimonials($page)        // testimonials.items — quote cards
 renderComparisonTable($page)     // comparison.rows — feature comparison table
-renderNewsList($limit, $lang)    // News posts from content/news/
+renderNewsList($limit, $lang, $options) // News posts from content/news/; options: category, tag, flag, year, decade, paginate, page, perPage, baseUrl
 renderBreadcrumb($page, $basePath) // Breadcrumb trail from JSON "breadcrumb" field
 ```
 
@@ -1444,7 +1448,11 @@ renderBreadcrumb($page, $basePath) // Breadcrumb trail from JSON "breadcrumb" fi
 ```php
 loadContent($page)               // Returns full JSON array for a page
 getContentValue($page, $key)     // Returns a single top-level value
-loadNewsPosts($limit, $lang)     // Returns sorted news post array
+loadNewsPosts($limit, $lang, $options) // Sorted news posts; filters category/tag/flag/flagNot/year/decade, paging page/perPage/offset, withTotal
+nibblyNewsUrl($post)             // Public post URL from settings news.urlPattern (never build "/news/{slug}" by hand)
+nibblyNewsArchiveUrl($type, $value) // Archive URL: category, tag, year, decade (settings news.archive)
+nibblyNewsCategories()           // Category definitions (content/news-categories.json), nibblyNewsCategoryName($slug)
+nibblyNewsPagination($total, $page, $perPage, $baseUrl, $lang) // Accessible pagination nav; nibblyNewsCurrentPage()
 ```
 
 ## Theming
@@ -1524,9 +1532,24 @@ Custom fonts: place files in `assets/fonts/`, create `css/fonts.css` — `includ
         "adminTheme": "light",
         "primaryColor": "#2563eb",
         "accentColor": "#60a5fa"
-    }
+    },
+    "news": {
+        "urlPattern": "/news/{slug}",
+        "perPage": 12,
+        "pageParam": "page",
+        "archive": { "base": "/news", "tag": "tag", "year": "year", "decade": "decade" },
+        "feed": true,
+        "feedItems": 20
+    },
+    "search": { "enabled": true, "base": "/search", "param": "q", "perPage": 20, "minLength": 2 }
 }
 ```
+
+`news` (optional, defaults shown; edited under Settings → Posts): `urlPattern` is the public post
+address with `{yyyy}`, `{mm}`, `{dd}`, `{slug}` (`{slug}` once, as its own segment); `perPage` and
+`pageParam` drive list pagination; `archive.base` is the path of the post archives (empty switches
+category, tag, year and decade pages off) and the other keys name their URL segments; `feed` and
+`feedItems` control `/feed.xml`. `search` (optional, defaults shown) configures the site search page.
 
 - `favicon` — path to primary favicon (SVG or PNG); `type` attribute is set automatically
 - `favicon_png` — optional PNG fallback for browsers that don't support SVG favicons; also used as `apple-touch-icon`
@@ -1861,6 +1884,29 @@ For SEO-preserving migrations from another CMS, drop URL → URL mappings into `
 
 A starter file lives at `content/redirects.example.json`. Copy it to `content/redirects.json` to activate; the live file is gitignored so site owners can edit it without polluting the repo.
 
+## WordPress Import (`cli/import-wxr.php`)
+
+Imports a WordPress WXR export: published posts (drafts as hidden posts) into `content/news/`, pages into
+`content/pages/`, approved comments into `content/comments/`, old slugs into `content/news-aliases.json`.
+Shortcodes (`[image-box]`, `[gallery]`, `[button]`, `[text-box]`, `[embed]`, `[video]`) become figures,
+gallery grids, buttons, text boxes and click-to-load embeds; Divi/Breakdance remains and block comments
+are removed; links to the old site become relative and archive links point to the news archive pages.
+Pages built with Breakdance come from the rendered HTML of the live site (`--live-dir`). Run it with
+`--dry-run` first and read the report (`--report=file`): unresolved links, missing attachments, slug changes.
+Category mapping: `--category-map=wp-slug:site-slug[+flag]`, `--drop-categories=template`. The options are
+listed in the file header. Re-running overwrites only what the importer wrote.
+
+## Comments and Guestbook (`includes/comments.php`)
+
+Moderated visitor entries on posts and pages, stored flat-file in `content/comments/`. Render with
+`nibblyCommentsRender('news', $post['id'], ['lang' => $lang, 'basePath' => $basePath])` on a post page or
+`nibblyCommentsRender('page', $contentPage, [...])` on a page whose JSON has `"comments": "guestbook"`.
+The form posts to `api/comment-submit.php`; `js/comments.js` (added by the renderer) handles replies and
+inline feedback. Protection: one-time token with minimum age, honeypot, signed arithmetic question,
+link/character heuristics, optional word blocklist (`content/comments-blocklist.json`), rate limit,
+moderation by default (`comments.moderation`), optional auto-approval of known name + e-mail pairs.
+Moderation lives in the dashboard tab "Comments" (module `comments`). Settings keys: see the file header.
+
 ## HTML-to-Nibbly Converter
 
 Automatically convert a static HTML page into an editable Nibbly template + JSON + CSS:
@@ -2070,9 +2116,50 @@ Visitor traffic never populates the JSON. After creating a new page, an admin mu
 
 Unlike `editableText()`/`editableImage()`/`editableLink()`, `editableListItems()` returns `[]` for missing keys without creating them in JSON. Editable list **structures** (with at least one item) must exist in the JSON file.
 
-### `renderNewsList()` signature is `($limit, $lang)`
+### `renderNewsList()` signature is `($limit, $lang, $options = [])`
 
-Not `($lang, $basePath)`. Use `renderNewsList(0, $currentLang)` for all posts.
+Not `($lang, $basePath)`. Use `renderNewsList(0, $currentLang)` for all posts,
+`renderNewsList(0, $currentLang, ['category' => 'blog', 'paginate' => true])` for a paginated category list.
+
+### Post URLs come from `nibblyNewsUrl($post)`
+
+The public address follows `news.urlPattern` in `content/settings.json` (default `/news/{slug}`,
+WordPress archives use `/{yyyy}/{mm}/{dd}/{slug}`). Never write `'/news/' . $slug` in a template,
+the dashboard or a tool; call `nibblyNewsUrl($post)` (root-absolute) and prefix `$basePath` when a
+relative link is needed. Routing is slug-based and tolerant: a wrong date part, an old slug from
+`content/news-aliases.json` and a trailing slash all redirect (301) to the canonical URL.
+
+### Categories, tags, flags and archive pages
+
+Posts carry `categories` (slugs defined in `content/news-categories.json`, managed under
+Settings → Posts), `tags` (free slugs; display names in `content/news-tags.json`) and `flags`
+(internal markers for sub-lists such as `ln-weitere`, no public page). Archive pages live below
+`news.archive.base` (default `/news`): `/{base}/{category}`, `/{base}/{tag}/{slug}`,
+`/{base}/{year}/2001`, `/{base}/{decade}/1990`. `includes/news-archive.php` renders them; a site
+puts its own `{lang}/news-archive.php` next to it to restyle them (it receives `$newsArchive`,
+`$currentLang`, `$basePath`). Lists paginate with `?{news.pageParam}=N` and `news.perPage`; pass
+`nibblyNewsPaginationHeadLinks()` to the header through `$pageHeadExtra` for `rel="prev|next"`.
+
+### Search, feed and timeline
+
+- **Search**: `includes/search-helper.php` keeps a flat index (`content/search-index.json`) of public
+  pages and published posts. It is rebuilt after every dashboard save (pages and posts), by
+  `php cli/search-index.php --action=rebuild`, and on demand when it is missing or older than the
+  content. `nibblySearchQuery($q, ['lang' => 'de', 'page' => 1])` ranks title hits before excerpt,
+  tag and body hits; umlauts match in both spellings ("Jörg", "Joerg", "Jorg"). The search page is
+  `includes/search.php` at `search.base` (default `/search`, `?q=`), overridden by `{lang}/search.php`;
+  `nibblySearchForm()` renders the form (the core header shows it when search is enabled). Settings:
+  `search.enabled|base|param|perPage|minLength`. A page stays out of the index with
+  `"seo": {"searchable": false}` or a `noindex` robots value.
+- **RSS**: `/feed.xml` (`includes/feed.php`, `nibblyNewsFeedXml()`), switched off with
+  `news.feed: false`; `news.feedItems` caps the items. `nibblyNewsFeedHeadLink()` is printed in the
+  core header.
+- **Timeline**: `renderNewsTimeline($lang, $options)` prints posts as a vertical timeline (oldest first,
+  year or decade groups with a jump bar, post image or `gallery` thumbnails, excerpt, link). Options are
+  the `loadNewsPosts()` filters plus `order`, `limit`, `jumpBar`, `groupBy`, `showImages`,
+  `showContent`, `basePath`, `id`. Styles live in `css/components.css` (`.news-timeline*`).
+- **Post page override**: a site file `{lang}/news-post.php` replaces `includes/news-post.php`
+  (route.php passes `$post`, `$currentLang`, `$basePath`).
 
 ### Always use `$contentPage` variable, not hardcoded page names
 
