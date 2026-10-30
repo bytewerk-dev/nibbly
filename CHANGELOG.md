@@ -9,6 +9,8 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+## [2.7.0] — 2026-10-30
+
 ### Added
 
 - **Post URLs, categories, tags and archive pages for News.** The URL of a post follows the setting

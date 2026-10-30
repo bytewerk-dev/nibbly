@@ -3,6 +3,43 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.6.0 to 2.7.0
+
+Version 2.7.0 extends the News module (URL patterns, categories, tags, archive pages), adds full-text
+search, an RSS feed, a timeline component and a comments and guestbook module, and widens the HTML
+sanitizer's allowlist. All defaults reproduce the previous behaviour; existing sites need no data
+migration and no configuration.
+
+1. Deploy the complete core. New: `includes/news-helper.php`, `includes/news-archive.php`,
+   `includes/search-helper.php`, `includes/search.php`, `includes/feed.php`, `includes/comments.php`,
+   `api/comment-submit.php`, `js/comments.js`, `admin/api/comments.php`,
+   `admin/dashboard/scripts/comments.php`, `cli/search-index.php`. Changed, among others: `route.php`,
+   `.htaccess`, `includes/header.php`, `includes/content-loader.php`, `includes/news-post.php`,
+   `includes/seo-helper.php`, `includes/html-sanitizer.php`, `includes/public-strings.php`,
+   `admin/dashboard.php`, `admin/api/*.php`, `admin/dashboard/scripts/*.php`, `admin/lang/de.json`,
+   `admin/lang/en.json`, `css/components.css`, `css/inline-editor.css`, `js/inline-editor.js`.
+2. Sites with their own `includes/header.php`: the core header gained three lines, the template hook
+   `$pageHeadExtra` before `</head>`, the feed link `nibblyNewsFeedHeadLink()` and the search form
+   `nibblySearchForm()` (desktop navigation and mobile overlay, shown while `search.enabled` is on).
+   Copy what you want from the core version; without the search form the search page still answers
+   at `/search`.
+3. `.htaccess`: one new rule routes date-based post URLs (`/2026/08/17/slug`) to `route.php` before
+   physical year folders. Apache installations verify the routing as described in `ROUTING.md`
+   (`python3 tests/routing-smoke.py --apache` and `python3 tests/news-routing-smoke.py --apache`).
+4. Visible without configuration: `/news/{slug}/` with a trailing slash answers 301 instead of 200;
+   `/feed.xml` and `/search` are active (switch off with `news.feed: false` and
+   `search.enabled: false` in `content/settings.json`; a template or JSON page at the same path
+   wins); `/news/{category}` lists an archive once `content/news-categories.json` exists;
+   `/news/tag/…`, `/news/year/…` and `/news/decade/…` are reserved below the archive base. The
+   comments module is on (`modules.comments`) but renders nothing until a template calls
+   `nibblyCommentsRender()`; `search.*` and `comments.*` have no settings panel yet and are edited
+   in `content/settings.json`.
+5. Generated files: `content/search-index.json` (rebuilt after saving and on demand) and
+   `content/comments-secret.json` (created once) are not to be versioned; both are in `.gitignore`.
+   `content/comments/` holds the comments and is covered by backups like the rest of `content/`.
+6. The dashboard's news list no longer carries the post text (`load-news` returns metadata only).
+   Site scripts that read `newsData[i].content` load the post through `load-news-post&id=…`.
+
 ## Upgrading from 2.5.1 to 2.6.0
 
 Version 2.6.0 adds the editorial guide at `/admin/handbook` and makes Pop the default theme of
