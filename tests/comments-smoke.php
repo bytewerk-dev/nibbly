@@ -53,15 +53,21 @@ commentsAssert(preg_match('/data-reply-to="wp2"/', $html) === 1, 'render: reply 
 // Submission: honeypot pretends success, wrong answer and too-fast token are rejected, a valid one is pending
 preg_match('/name="form_token" value="([^"]+)"/', $html, $tokenMatch);
 preg_match('/name="qcheck" value="([^"]+)"/', $html, $checkMatch);
-preg_match('/Was ergibt (\d+) \+ (\d+)\?/', $html, $q);
-$token = $tokenMatch[1];
-$answer = (string)((int)$q[1] + (int)$q[2]);
-$base = ['target_type' => 'news', 'target_id' => '2026-01-02-test-beitrag', 'author' => 'Berta', 'email' => 'berta@example.org', 'content' => "Ein freundlicher Kommentar.\n\nMit zwei Absätzen.", 'form_token' => $token, 'qcheck' => $checkMatch[1], 'answer' => $answer, 'parent' => 'wp1'];
+preg_match('/Was ergibt (\d+ \+ \d+)\?/', $html, $q);
+// Every request is built from the form it answers (token, signed question, its correct answer), so no case
+// inherits the answer of an earlier question. Overrides go through array_replace: with "+" the left value wins.
+$fields = ['target_type' => 'news', 'target_id' => '2026-01-02-test-beitrag', 'author' => 'Berta', 'email' => 'berta@example.org', 'content' => "Ein freundlicher Kommentar.\n\nMit zwei Absätzen.", 'parent' => 'wp1'];
+$sumOf = static fn(string $question): string => (string)array_sum(array_map('intval', explode('+', $question)));
+$formFrom = static fn(array $result): array => ['token' => $result['formToken'], 'qcheck' => $result['qcheck'], 'answer' => $sumOf($result['question'])];
+$request = static fn(array $form, array $overrides = []): array => array_replace($fields, ['form_token' => $form['token'], 'qcheck' => $form['qcheck'], 'answer' => $form['answer']], $overrides);
+$wrongAnswer = '99'; // never the sum of two digits 1-9
+$stillThree = static fn(): bool => count(nibblyCommentsLoad('news', '2026-01-02-test-beitrag')) === 3;
+$form = ['token' => $tokenMatch[1], 'qcheck' => $checkMatch[1], 'answer' => $sumOf($q[1])];
 
-$result = nibblyCommentsSubmit($base + ['website' => 'http://spam.invalid'], 'de');
-commentsAssert($result['success'] && $result['status'] === 'pending' && count(nibblyCommentsLoad('news', '2026-01-02-test-beitrag')) === 3, 'honeypot: pretended success, nothing stored');
+$result = nibblyCommentsSubmit($request($form, ['website' => 'http://spam.invalid']), 'de');
+commentsAssert($result['success'] && $result['status'] === 'pending' && $stillThree(), 'honeypot: pretended success, nothing stored');
 
-$result = nibblyCommentsSubmit($base, 'de');
+$result = nibblyCommentsSubmit($request($form), 'de');
 commentsAssert(!$result['success'] && str_contains($result['message'], 'schnell'), 'token younger than the minimum age is rejected: ' . $result['message']);
 // Every answer carries a fresh token and question (the token was consumed); age it past the minimum
 $ageTokens = static function () use ($work): void {
@@ -70,19 +76,26 @@ $ageTokens = static function () use ($work): void {
     unset($entry);
     file_put_contents($work . '/content/form-tokens.json', json_encode($tokens));
 };
-$base['form_token'] = $result['formToken'];
-$base['qcheck'] = $result['qcheck'];
+$form = $formFrom($result);
 $ageTokens();
-$result = nibblyCommentsSubmit($base + ['answer' => '99'], 'de');
-commentsAssert(!$result['success'] && str_contains($result['message'], 'Rechenfrage'), 'wrong answer rejected: ' . $result['message']);
-// The token was consumed; use the fresh one from the answer
-$fresh = $base;
-$fresh['form_token'] = $result['formToken'];
-$fresh['qcheck'] = $result['qcheck'];
-$fresh['answer'] = (string)array_sum(array_map('intval', explode('+', $result['question'])));
+$result = nibblyCommentsSubmit($request($form, ['answer' => $wrongAnswer]), 'de');
+commentsAssert(!$result['success'] && str_contains($result['message'], 'Rechenfrage') && $stillThree(), 'wrong answer rejected: ' . $result['message']);
+
+// Regression (CI flake in 2.7.0): the next question has the same sum as the previous one. The random
+// questions collide in about 7 % of runs, so the collision is forced here with a token signed for that sum.
+$previousAnswer = $form['answer'];
+$sameSumToken = nibblyCreateFormToken('comments');
+$form = ['token' => $sameSumToken, 'qcheck' => nibblyCommentsSign($sameSumToken, $previousAnswer), 'answer' => $previousAnswer];
+commentsAssert($request($form, ['answer' => $wrongAnswer])['answer'] === $wrongAnswer, 'same sum: the override replaces the answer of the form');
 $ageTokens();
-$result = nibblyCommentsSubmit($fresh, 'de');
-commentsAssert($result['success'] && $result['status'] === 'pending', 'valid submission is pending: ' . $result['message']);
+$result = nibblyCommentsSubmit($request($form, ['answer' => $wrongAnswer]), 'de');
+commentsAssert(!$result['success'] && str_contains($result['message'], 'Rechenfrage') && $stillThree(), 'same sum: wrong answer rejected: ' . $result['message']);
+
+// The token was consumed; answer the fresh question with its own correct answer
+$form = $formFrom($result);
+$ageTokens();
+$result = nibblyCommentsSubmit($request($form), 'de');
+commentsAssert($result['success'] && $result['status'] === 'pending' && count(nibblyCommentsLoad('news', '2026-01-02-test-beitrag')) === 4, 'valid submission is pending: ' . $result['message']);
 $stored = nibblyCommentsLoad('news', '2026-01-02-test-beitrag');
 $new = end($stored);
 commentsAssert($new['author'] === 'Berta' && $new['parent'] === 'wp1' && $new['status'] === 'pending' && str_contains($new['content'], '<p>Ein freundlicher Kommentar.</p>') && isset($new['content_raw']), 'stored comment: parent, status, paragraphs');
