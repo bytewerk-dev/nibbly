@@ -3643,7 +3643,11 @@
 
         const toolbar = document.createElement('div');
         toolbar.className = 'floating-toolbar';
+        const formats = [['p', t('format_paragraph')], ['h2', t('format_heading') + ' 2'], ['h3', t('format_heading') + ' 3'], ['h4', t('format_heading') + ' 4'], ['blockquote', t('format_quote')]];
         toolbar.innerHTML = `
+            <button type="button" class="floating-toolbar-format" data-action="format-menu" aria-haspopup="menu" aria-expanded="false" data-editor-tooltip="${escHtml(t('format_block'))}" aria-label="${escHtml(t('format_block'))}"><span class="floating-toolbar-format-label">${escHtml(formats[0][1])}</span><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="floating-toolbar-menu" role="menu" hidden>${formats.map(([v, l]) => `<button type="button" role="menuitemradio" aria-checked="false" data-format="${v}"><${v === 'blockquote' ? 'em' : v}>${escHtml(l)}</${v === 'blockquote' ? 'em' : v}></button>`).join('')}</div>
+            <span class="floating-toolbar-separator"></span>
             <button type="button" data-command="bold" data-editor-tooltip="${escHtml(t('bold'))} (Ctrl+B)" aria-label="${escHtml(t('bold'))} (Ctrl+B)"><b>B</b></button>
             <button type="button" data-command="italic" data-editor-tooltip="${escHtml(t('italic'))} (Ctrl+I)" aria-label="${escHtml(t('italic'))} (Ctrl+I)"><i>I</i></button>
             <button type="button" data-action="link" data-editor-tooltip="${escHtml(t('insert_link'))}" aria-label="${escHtml(t('insert_link'))}"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg></button>
@@ -3656,6 +3660,53 @@
         toolbar.addEventListener('mousedown', (e) => {
             e.preventDefault();
         });
+
+        // Block format (paragraph, heading, quote) of the element at the caret: own menu,
+        // because a native <select> is painted by the browser and ignores the dark toolbar
+        const formatButton = toolbar.querySelector('.floating-toolbar-format');
+        const formatLabel = toolbar.querySelector('.floating-toolbar-format-label');
+        const formatMenu = toolbar.querySelector('.floating-toolbar-menu');
+        let currentFormat = 'p';
+        const setFormatState = (value) => {
+            currentFormat = formats.some(([v]) => v === value) ? value : 'p';
+            formatLabel.textContent = formats.find(([v]) => v === currentFormat)[1];
+            formatMenu.querySelectorAll('[data-format]').forEach(item => item.setAttribute('aria-checked', String(item.dataset.format === currentFormat)));
+        };
+        const closeFormatMenu = () => {
+            formatMenu.hidden = true;
+            formatButton.setAttribute('aria-expanded', 'false');
+        };
+        document.addEventListener('selectionchange', () => {
+            if (!activeHtmlField) return;
+            const sel = window.getSelection();
+            if (!sel.rangeCount || !activeHtmlField.contains(sel.anchorNode)) return;
+            setFormatState(String(document.queryCommandValue('formatBlock') || '').replace(/[<>]/g, '').toLowerCase());
+        });
+        formatButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            formatMenu.hidden = !formatMenu.hidden;
+            formatButton.setAttribute('aria-expanded', String(!formatMenu.hidden));
+        });
+        formatMenu.addEventListener('click', (e) => {
+            const item = e.target.closest('[data-format]');
+            if (!item) return;
+            e.preventDefault();
+            e.stopPropagation();
+            closeFormatMenu();
+            if (!activeHtmlField) return;
+            activeHtmlField.focus();
+            document.execCommand('formatBlock', false, '<' + item.dataset.format + '>');
+            setFormatState(item.dataset.format);
+            activeHtmlField.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        document.addEventListener('click', (e) => {
+            if (!formatMenu.hidden && !toolbar.contains(e.target)) closeFormatMenu();
+        }, true);
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !formatMenu.hidden) { e.stopPropagation(); closeFormatMenu(); }
+        }, true);
+        toolbar._closeFormatMenu = closeFormatMenu;
 
         // Handle button clicks
         toolbar.addEventListener('click', (e) => {
@@ -3748,6 +3799,7 @@
     function hideFloatingToolbar() {
         if (floatingToolbar) {
             floatingToolbar.style.display = 'none';
+            if (floatingToolbar._closeFormatMenu) floatingToolbar._closeFormatMenu();
         }
         if (activeHtmlField && activeHtmlField._scrollHandler) {
             window.removeEventListener('scroll', activeHtmlField._scrollHandler, true);

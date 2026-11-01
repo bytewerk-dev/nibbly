@@ -1209,6 +1209,10 @@ dialog.editor-mode-hint .editor-btn:focus-visible { outline: 2px solid var(--edi
     }
 }
 
+.floating-toolbar [hidden] {
+    display: none !important;
+}
+
 .floating-toolbar button {
     position: relative;
     display: flex;
@@ -1290,6 +1294,64 @@ dialog.editor-mode-hint .editor-btn:focus-visible { outline: 2px solid var(--edi
     background: rgba(255, 255, 255, 0.15);
     margin: 0 4px;
 }
+
+.floating-toolbar button.floating-toolbar-format {
+    width: auto;
+    gap: 6px;
+    padding: 0 8px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.floating-toolbar-format[aria-expanded="true"] {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+.floating-toolbar-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    min-width: 170px;
+    padding: 4px;
+    background: rgba(35, 40, 45, 0.97);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.floating-toolbar .floating-toolbar-menu button {
+    width: 100%;
+    height: auto;
+    justify-content: flex-start;
+    padding: 6px 10px;
+    text-align: left;
+    color: #ddd;
+}
+
+.floating-toolbar-menu button[aria-checked="true"] {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.floating-toolbar-menu button h2,
+.floating-toolbar-menu button h3,
+.floating-toolbar-menu button h4,
+.floating-toolbar-menu button p,
+.floating-toolbar-menu button em {
+    margin: 0;
+    color: inherit;
+    font-family: inherit;
+    line-height: 1.2;
+}
+
+.floating-toolbar-menu button h2 { font-size: 17px; font-weight: 700; }
+.floating-toolbar-menu button h3 { font-size: 15px; font-weight: 700; }
+.floating-toolbar-menu button h4 { font-size: 14px; font-weight: 700; }
+.floating-toolbar-menu button p { font-size: 13px; }
+.floating-toolbar-menu button em { font-size: 13px; }
+
 
 /* ============================================================
    WYSIWYG TOOLBAR & EDITOR
