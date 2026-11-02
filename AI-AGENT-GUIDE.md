@@ -993,17 +993,43 @@ These types are available in `sections[]` arrays for standard pages:
 
 | Type | Category | Key Fields |
 |---|---|---|
-| `text` | content | `title`, `content` (HTML), `titleTag`, `style` |
+| `text` | content | `title`, `content` (HTML), `titleTag`, `style` (key from the text style registry) |
 | `heading` | content | `text`, `level` (h1-h6), `subtitle` |
 | `quote` | content | `text`, `attribution`, `style` (default/large) |
 | `list` | content | `title`, `style` (bullet/numbered), `content` (HTML) |
-| `image` | media | `src`, `alt`, `caption`, `width` (full/medium/small) |
+| `image` | media | `src`, `alt`, `caption`, `credit`, `width` (full/half/medium/small), `align` (right/left/center), `lightbox` |
+| `gallery` | media | `images[]` (src, alt, caption, credit), `layout` (column/grid/full) |
 | `card` | cards | `title`, `content`, `image` |
 | `youtube` | media | `title`, `videoId` |
 | `soundcloud` | media | `title`, `trackId` |
 | `audio` | media | `title`, `src` |
 | `divider` | layout | *(no fields)* |
 | `spacer` | layout | `height` (sm/md/lg/xl) |
+
+Posts use the same block types for their body (`sections`) and sidebar (`aside`); see
+"Posts built from blocks" below.
+
+### Text block styles (`includes/text-styles.php`)
+
+The `style` of a text block is a key of the style registry: `includes/text-styles.php` lists the core
+styles (`highlight` → `.content-highlight`), a site adds or overrides styles in
+`content/text-styles.json` without touching the core:
+
+```json
+{ "callout": { "label": { "de": "Kasten", "en": "Callout" }, "class": "my-callout" } }
+```
+
+`getTextStyles()` merges both, `textStyleClass($key)` returns the CSS class (empty for unknown
+keys), `textStyleOptions()` feeds the select of the block editor and the style menu in the inline
+editor's floating toolbar. The CSS of a site class belongs in `css/website.css`.
+
+### Footnotes
+
+`<span class="footnote">text</span>` in running text becomes a numbered mark with a tooltip
+(`js/footnotes.js`, styles in `css/components.css`); while edit mode is on the plain span is
+restored so the text can be edited in place. Both editors have a toolbar button that wraps the
+selection or unwraps an existing footnote. The inline sanitizer keeps `class`, `title`, `lang` and
+`dir` on inline elements, so hand-written footnotes survive a save.
 
 ## How Inline Editing Works
 
@@ -1228,6 +1254,14 @@ nibblyAiLabelHtml($src, $lang = null)
 // is not labelled. editableImage(), editableImageSplit() and the core blocks add it
 // automatically; call it yourself only next to plain <img> output.
 ```
+
+### Media Folders
+
+Folders below `assets/images/`, `assets/audio/` and the other media roots may be nested up to
+`NIBBLY_MEDIA_MAX_DEPTH` (5) levels (`2000/10/photo.webp`). `validateMediaFolderName()` accepts a
+path of segments, `listMediaFolders()` returns paths with parents before children, and the API
+actions `create-media-folder`, `delete-media-folder` (empty folders only) and `move-media` take folder
+paths. The media library shows the tree collapsible and creates a new folder inside the selected one.
 
 ### Image Uploads and Web Versions
 
@@ -1906,6 +1940,8 @@ inline feedback. Protection: one-time token with minimum age, honeypot, signed a
 link/character heuristics, optional word blocklist (`content/comments-blocklist.json`), rate limit,
 moderation by default (`comments.moderation`), optional auto-approval of known name + e-mail pairs.
 Moderation lives in the dashboard tab "Comments" (module `comments`). Settings keys: see the file header.
+A post with `"comments": false` accepts no submissions; the core post template renders no comment
+form of its own, a site template calls `nibblyCommentsRender()` where it wants it.
 
 ## HTML-to-Nibbly Converter
 
@@ -2160,6 +2196,31 @@ puts its own `{lang}/news-archive.php` next to it to restyle them (it receives `
   `showContent`, `basePath`, `id`. Styles live in `css/components.css` (`.news-timeline*`).
 - **Post page override**: a site file `{lang}/news-post.php` replaces `includes/news-post.php`
   (route.php passes `$post`, `$currentLang`, `$basePath`).
+
+### Posts built from blocks
+
+A post stores its body either as one HTML string `content` (older posts) or as a block list
+`sections` plus an optional `aside` for the sidebar; both use the block types above (text, image,
+gallery, youtube, audio, divider, spacer). Further fields: `subtitle` (kicker above the title, also
+in cards and the timeline), `cover` (`{src, alt, label}`, shown in the sidebar, opens in the
+lightbox), `sidebar` (show the sidebar without a cover), `imageLayout` (`column`, `full`, `hidden`
+for the title image) and `comments: false` (closes the comments of this post; `includes/comments.php`
+refuses submissions). Helpers in `includes/news-helper.php`:
+
+- `nibblyNewsRenderBlocks(array $blocks, string $field = '')` renders a block list; with `$field`
+  (`sections` or `aside`) each block gets the Visual Editor hooks `data-news-block="{i}"` and
+  `data-block-type`. Image and gallery blocks receive them through the internal key `_attrs`, which
+  the renderers print on their container and which is never stored.
+- `nibblyNewsBodyHtml($post)` returns the body of either form; feed, search index and timeline use it.
+- `nibblyNewsSanitizeBlocks($blocks)` cleans a saved block list (known types only, sanitized HTML).
+
+`includes/news-post.php` marks editable fields with `data-news-field` (`title`, `subtitle`,
+`excerpt`, `cover`, `author`, legacy `content`) and block lists with `data-news-blocks="sections|aside"`;
+a site's `{lang}/news-post.php` keeps those hooks to stay editable. Every save of a post keeps the
+previous JSON in `backups/` (`list-news-backups`, `load-news-backup`, `restore-news-backup`,
+`delete-news-backup`); the dashboard shows them in the backups panel at the bottom of the sidebar.
+Category pages can live below their own base with `news.archive.categoryBase` (for example
+`/rubrik`); link them with `nibblyNewsCategoryBaseUrl()`.
 
 ### Always use `$contentPage` variable, not hardcoded page names
 

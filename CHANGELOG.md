@@ -14,6 +14,50 @@ Git milestones and the gaps in publication records.
 - **Block format in the floating text toolbar.** The toolbar of an inline-edited HTML field starts
   with a format menu (Paragraph, Heading 2–4, Quote) that shows the element at the caret and
   switches it; it is a custom dark menu, since a native `<select>` is painted by the browser.
+- **Posts built from blocks.** A post stores its body as `sections` (text, image, gallery, YouTube,
+  audio, divider, spacer) and an optional `aside` for the sidebar; `content` remains for older posts.
+  The dashboard editor and the Visual Editor both edit the blocks, the Visual Editor with a floating
+  toolbar per block. `nibblyNewsRenderBlocks()` renders a block list, `nibblyNewsBodyHtml()` either
+  form; `nibblyNewsSanitizeBlocks()` cleans saved blocks.
+- **Gallery block and image options.** The new `gallery` block holds `images[]` (src, alt, caption,
+  credit) in the layouts `column` (a column the text flows around, a swipeable strip on phones),
+  `grid` and `full`. The image block gains `width` `half`, `align` (right, left, center), `credit`
+  and `lightbox`; `js/lightbox.js` opens links marked `data-lightbox` in an overlay with previous
+  and next.
+- **Text block styles as a registry.** `includes/text-styles.php` lists the core styles; a site adds
+  its own in `content/text-styles.json` (label per language, CSS class) without touching the core.
+  `getTextStyles()`, `textStyleClass()` and `textStyleOptions()` resolve them for the renderer and
+  both editors; in the Visual Editor a post's text block picks its style from the floating toolbar.
+- **Post kicker, cover and sidebar.** A post carries a `subtitle` (kicker above the title, shown in
+  cards and the timeline), a `cover` image for the sidebar (with a label, opens in the lightbox), a
+  `sidebar` flag, an `imageLayout` for the hero image (`column`, `full`, `hidden`) and a `comments`
+  flag that switches comments off for a single post. Excerpts keep inline markup, but links are
+  stripped in cards and lists.
+- **Category pages at their own base.** `news.archive.categoryBase` (for example `/rubrik`) serves
+  category pages below a path of their own; `nibblyNewsCategoryBaseUrl()` builds the links.
+- **Footnotes as tooltips.** `<span class="footnote">` in running text becomes a numbered mark with
+  a tooltip (hover, focus, tap); both editors insert and remove it with a toolbar button. The
+  inline sanitizer keeps `class`, `title`, `lang` and `dir` on inline elements.
+- **Backups per post.** Every save of a post keeps the previous JSON in `backups/` (API actions
+  `list-news-backups`, `load-news-backup`, `restore-news-backup`, `delete-news-backup`). Pages and
+  posts share one backups panel at the bottom of the dashboard sidebar and the Visual Editor's
+  history menu.
+- **Nested folders in the media library.** Folders may contain folders (up to five levels, for
+  example `2000/10`); the tree collapses and expands, a new folder is created inside the selected
+  one, and move and rename accept paths.
+
+### Changed
+
+- **Monochrome stroke icons.** Block pickers, dashboard actions, the AI copilot and the menu editor
+  use one set of line icons instead of emoji and mixed glyphs; the YouTube block shows the
+  play-button logo.
+
+### Fixed
+
+- Dashboard sidebar keeps its width when a panel holds long content; sub-page deep links
+  (`parent__child`) resolve in the page tree; the people tab only binds its click handler when
+  its mount point exists; the local development login (loopback only) comes prefilled; `.mjs`
+  files are served with the JavaScript MIME type.
 
 ## [2.7.0] — 2026-10-30
 
