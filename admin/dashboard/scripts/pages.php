@@ -916,7 +916,36 @@
         });
     }
 
-    // New page modal
+    // Parent choice for the new-page and move dialogs: every page of the language, indented by depth.
+    // The home page and (when moving) the page itself with its subpages are left out.
+    function parentPageOptions(lang, selected = '', exclude = '') {
+        const pages = (pageListCache?.pages || [])
+            .filter(p => p.languages?.[lang]?.exists)
+            .map(p => ({ path: pageVersionSlug(p, lang), title: p.languages[lang].title || p.title || '' }))
+            .filter(p => p.path && p.path !== 'home' && !(exclude && (p.path === exclude || p.path.startsWith(exclude + '/'))))
+            .sort((a, b) => a.path.localeCompare(b.path));
+        let html = `<option value=""${selected === '' ? ' selected' : ''}>${escapeHtml(t('modal.page_parent_none'))}</option>`;
+        for (const p of pages) {
+            const depth = p.path.split('/').length - 1;
+            html += `<option value="${escapeHtml(p.path)}"${p.path === selected ? ' selected' : ''}>${'   '.repeat(depth)}${escapeHtml(p.title)} (/${escapeHtml(p.path)})</option>`;
+        }
+        return html;
+    }
+
+    function slugifyPageTitle(text) {
+        return String(text || '').toLowerCase()
+            .replace(/[äöüß]/g, m => ({ä:'ae',ö:'oe',ü:'ue',ß:'ss'})[m])
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '');
+    }
+
+    const PAGE_SEGMENT_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+    function joinPagePath(parent, segment) {
+        return (parent ? parent + '/' : '') + segment;
+    }
+
+    // New page modal: title, parent page and the last part of the address
     function showNewPageModal() {
         const lang = document.getElementById('pageListLang').value;
         const overlay = document.getElementById('modalOverlay');
@@ -928,7 +957,9 @@
         text.innerHTML =
             '<div class="modal-form">' +
                 '<label class="modal-label">' + t('modal.new_page_title') + '<input type="text" id="newPageTitle" class="modal-input" placeholder="' + t('modal.new_page_title_placeholder') + '" autofocus></label>' +
+                '<label class="modal-label">' + t('modal.page_parent') + '<select id="newPageParent" class="modal-input">' + parentPageOptions(lang) + '</select></label>' +
                 '<label class="modal-label">' + t('modal.new_page_slug') + '<input type="text" id="newPageSlug" class="modal-input" placeholder="' + t('modal.new_page_slug_placeholder') + '"><span class="modal-hint">' + t('modal.new_page_slug_hint') + '</span></label>' +
+                '<p class="modal-hint modal-address">' + t('modal.page_address') + ': <code id="newPageAddress">/</code></p>' +
             '</div>';
 
         confirmBtn.textContent = t('modal.create_page');
@@ -938,28 +969,28 @@
         overlay.setAttribute('aria-hidden', 'false');
 
         const titleInput = document.getElementById('newPageTitle');
+        const parentSelect = document.getElementById('newPageParent');
         const slugInput = document.getElementById('newPageSlug');
+        const address = document.getElementById('newPageAddress');
         let slugManuallyEdited = false;
+        const updateAddress = () => { address.textContent = '/' + joinPagePath(parentSelect.value, slugInput.value.trim()); };
 
         titleInput.addEventListener('input', () => {
-            if (!slugManuallyEdited) {
-                slugInput.value = titleInput.value
-                    .toLowerCase()
-                    .replace(/[äöüß]/g, m => ({ä:'ae',ö:'oe',ü:'ue',ß:'ss'})[m])
-                    .replace(/[^a-z0-9]+/g, '-')
-                    .replace(/^-|-$/g, '');
-            }
+            if (!slugManuallyEdited) slugInput.value = slugifyPageTitle(titleInput.value);
+            updateAddress();
         });
-        slugInput.addEventListener('input', () => { slugManuallyEdited = true; });
+        slugInput.addEventListener('input', () => { slugManuallyEdited = true; updateAddress(); });
+        parentSelect.addEventListener('change', updateAddress);
 
         confirmBtn.onclick = async () => {
             const pageTitle = titleInput.value.trim();
-            const pageSlug = slugInput.value.trim();
+            const segment = slugInput.value.trim();
             if (!pageTitle) { titleInput.focus(); return; }
-            if (!pageSlug || !/^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*$/.test(pageSlug)) {
+            if (!PAGE_SEGMENT_PATTERN.test(segment)) {
                 slugInput.focus();
                 return;
             }
+            const pageSlug = joinPagePath(parentSelect.value, segment);
 
             confirmBtn.disabled = true;
             confirmBtn.textContent = '...';
@@ -976,6 +1007,58 @@
         };
 
         setTimeout(() => titleInput.focus(), 100);
+    }
+
+    // Move dialog (Basics → "Move / rename …"): new parent and last segment; the API renames the page
+    // and its subpages, rewrites links, redirects the old address and updates the menus
+    function showMovePageModal() {
+        if (!currentPage) return;
+        if (isDirty) { showToast(t('editor.page_move_save_first'), 'error'); return; }
+        const lang = currentPage.slice(0, 2);
+        const path = currentPage.slice(3).replace(/__/g, '/');
+        const parent = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
+        const segment = path.split('/').pop();
+        const html =
+            '<div class="modal-form">' +
+                '<p class="modal-hint">' + escapeHtml(t('modal.move_page_hint')) + '</p>' +
+                '<label class="modal-label">' + t('modal.page_parent') + '<select id="movePageParent" class="modal-input">' + parentPageOptions(lang, parent, path) + '</select></label>' +
+                '<label class="modal-label">' + t('modal.new_page_slug') + '<input type="text" id="movePageSlug" class="modal-input" value="' + escapeHtml(segment) + '"></label>' +
+                '<p class="modal-hint modal-address">' + t('modal.page_address') + ': <code id="movePageAddress">/' + escapeHtml(path) + '</code></p>' +
+            '</div>';
+        showModal(t('modal.move_page'), html, async () => {
+            const parentSelect = document.getElementById('movePageParent');
+            const slugInput = document.getElementById('movePageSlug');
+            const confirmBtn = document.getElementById('modalConfirm');
+            const seg = slugInput.value.trim();
+            if (!PAGE_SEGMENT_PATTERN.test(seg)) { slugInput.focus(); return; }
+            const newPath = joinPagePath(parentSelect.value, seg);
+            if (newPath === path) { closeModal(); return; }
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = '...';
+            try {
+                const formData = new FormData();
+                formData.append('action', 'move-page');
+                formData.append('csrf_token', CSRF_TOKEN);
+                formData.append('page', currentPage);
+                formData.append('slug', newPath);
+                const result = await fetch('api.php', { method: 'POST', body: formData }).then(r => r.json());
+                if (!result.success) throw new Error(result.message || 'Error moving page');
+                closeModal();
+                showToast(t('toast.page_moved', {url: '/' + newPath}), 'success');
+                if (result.data?.pageList) applyPageList(result.data.pageList);
+                await openPageFromList(lang, newPath);
+            } catch (err) {
+                showToast(err.message, 'error');
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = t('modal.move_page_confirm');
+            }
+        }, { html: true, confirmText: t('modal.move_page_confirm'), confirmClass: 'btn btn-primary', focusSelector: '#movePageSlug' });
+        const parentSelect = document.getElementById('movePageParent');
+        const slugInput = document.getElementById('movePageSlug');
+        const address = document.getElementById('movePageAddress');
+        const updateAddress = () => { address.textContent = '/' + joinPagePath(parentSelect.value, slugInput.value.trim()); };
+        parentSelect.addEventListener('change', updateAddress);
+        slugInput.addEventListener('input', updateAddress);
     }
 
     async function createPage(lang, title, slug) {
@@ -1047,7 +1130,7 @@
     // Keys that get their own special renderer
     const SPECIAL_KEYS = new Set(['sections']);
     // Keys rendered in the dedicated "Page Settings" panel
-    const PAGE_SETTINGS_KEYS = new Set(['title', 'description', 'nav', 'breadcrumb', 'visibility', 'seo']);
+    const PAGE_SETTINGS_KEYS = new Set(['title', 'description', 'image', 'imageAlt', 'nav', 'breadcrumb', 'visibility', 'seo']);
 
     function isEditableTopLevelContentKey(key) {
         return !META_KEYS.has(key) && !PAGE_SETTINGS_KEYS.has(key) && !SPECIAL_KEYS.has(key);
@@ -1146,6 +1229,62 @@
         descInput.addEventListener('input', () => markDirty());
         descField.appendChild(descInput);
         basicsBody.appendChild(descField);
+
+        // Address of this language version, with the move dialog (not for the home page)
+        const pagePath = currentPage.slice(3).replace(/__/g, '/');
+        const addressField = document.createElement('div');
+        addressField.className = 'ce-field';
+        addressField.innerHTML = `<label class="ce-field-label">${t('editor.page_address')}</label>
+            <div class="ce-address-row"><code class="ce-address">/${escapeHtml(pagePath === 'home' ? '' : pagePath)}</code>${pagePath !== 'home' ? `<button type="button" class="btn btn-secondary btn-sm" onclick="showMovePageModal()">${t('editor.page_address_change')}</button>` : ''}</div>`;
+        basicsBody.appendChild(addressField);
+
+        // Page image: title image of the page and the image on overview cards of the parent page
+        const imageValue = String(currentContent.image || '');
+        const imageField = document.createElement('div');
+        imageField.className = 'ce-field';
+        imageField.innerHTML = `<label class="ce-field-label">${t('editor.page_image')}</label>`;
+        const imagePreview = document.createElement('div');
+        imagePreview.className = 'ce-image-preview';
+        imagePreview.innerHTML = `<img src="${escapeHtml(imageValue.startsWith('/') ? '..' + imageValue : imageValue)}" alt="" onerror="this.style.display='none'"${imageValue ? '' : ' style="display:none"'}>`;
+        imageField.appendChild(imagePreview);
+        const imageRow = document.createElement('div');
+        imageRow.className = 'ce-image-input-row';
+        const imageInput = document.createElement('input');
+        imageInput.type = 'text';
+        imageInput.className = 'ce-input';
+        imageInput.value = imageValue;
+        imageInput.placeholder = '/assets/images/...';
+        imageInput.dataset.path = 'image';
+        imageInput.addEventListener('input', () => {
+            markDirty();
+            const img = imagePreview.querySelector('img');
+            if (img) { img.src = imageInput.value.startsWith('/') ? '..' + imageInput.value : imageInput.value; img.style.display = imageInput.value ? '' : 'none'; }
+        });
+        imageRow.appendChild(imageInput);
+        const imageBrowse = document.createElement('button');
+        imageBrowse.type = 'button';
+        imageBrowse.className = 'btn btn-secondary btn-sm';
+        imageBrowse.textContent = t('btn.browse');
+        imageBrowse.addEventListener('click', () => browseImageForField(imageInput, imagePreview));
+        imageRow.appendChild(imageBrowse);
+        imageField.appendChild(imageRow);
+        const imageHint = document.createElement('small');
+        imageHint.className = 'form-hint';
+        imageHint.textContent = t('editor.page_image_hint');
+        imageField.appendChild(imageHint);
+        basicsBody.appendChild(imageField);
+
+        const imageAltField = document.createElement('div');
+        imageAltField.className = 'ce-field';
+        imageAltField.innerHTML = `<label class="ce-field-label">${t('editor.page_image_alt')}</label>`;
+        const imageAltInput = document.createElement('input');
+        imageAltInput.type = 'text';
+        imageAltInput.className = 'ce-input';
+        imageAltInput.value = currentContent.imageAlt || '';
+        imageAltInput.dataset.path = 'imageAlt';
+        imageAltInput.addEventListener('input', () => markDirty());
+        imageAltField.appendChild(imageAltInput);
+        basicsBody.appendChild(imageAltField);
 
         const seo = currentContent.seo || {};
         const seoField = document.createElement('div');

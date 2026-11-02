@@ -2116,10 +2116,11 @@ svg.topbar-logo {
     display: block;
 }
 
+/* Settings cards stacked in one column (the two-column grid left the description field too narrow) */
 .ce-editor-panel[data-editor-panel="settings"] {
     display: none;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: var(--nb-space-3);
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--nb-space-4);
 }
 
 .ce-editor-panel[data-editor-panel="settings"].active {
@@ -2559,6 +2560,53 @@ svg.topbar-logo {
 
 .ce-settings-card__body .ce-field:last-child {
     margin-bottom: 0;
+}
+
+/* Fields inside a settings card: label above a full-width control, no right-aligned label column */
+.ce-settings-card__body .ce-field {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--nb-space-1-5);
+}
+
+.ce-settings-card__body .ce-field > .ce-field-label {
+    flex: none;
+    padding-top: 0;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.ce-settings-card__body .ce-field > .ce-textarea,
+.ce-settings-card__body .ce-field > .ce-input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.ce-settings-card--basics .ce-textarea {
+    min-height: 5.5rem;
+}
+
+/* Address row in Basics: the path as code with the move button; the dialogs show the resulting address */
+.ce-address-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--nb-space-2);
+}
+
+.ce-address {
+    padding: 4px 8px;
+    border-radius: var(--nb-radius-sm);
+    background: var(--nb-bg-muted);
+    font-family: var(--nb-font-mono, ui-monospace, monospace);
+    font-size: 0.8125rem;
+    word-break: break-all;
+}
+
+.modal-address code {
+    font-family: var(--nb-font-mono, ui-monospace, monospace);
+    word-break: break-all;
 }
 
 .ce-field--stacked {
@@ -9310,6 +9358,11 @@ input.color-hex-input,
     background: var(--nb-surface-group, color-mix(in srgb, var(--nb-bg-elevated) 88%, var(--nb-bg)));
 }
 
+/* Settings cards in the page editor use the radius of the section items, not the large panel radius */
+.ce-settings-card {
+    border-radius: var(--nb-radius-md);
+}
+
 .dashboard-panel,
 .dashboard-stat-card,
 .ai-card,
@@ -12463,8 +12516,8 @@ html[data-sidebar="collapsed"] .admin-sidebar .sidebar-nav-item.has-unsaved::aft
 .nb-writing-view .nb-page-rich-head{align-items:flex-end;margin-bottom:0}
 .nb-writing-view .nb-page-rich-head>label{padding-bottom:var(--nb-space-2)}
 .nb-page-modes.segmented{position:relative;z-index:1;gap:2px;margin-bottom:-1px;padding:0;border:0;border-radius:0;background:none}
-.nb-page-modes.segmented label{height:calc(var(--nb-control-h-sm) - 2px);font-size:var(--nb-text-sm);border:1px solid var(--nb-border);border-bottom:0;border-radius:var(--nb-radius-sm) var(--nb-radius-sm) 0 0;background:var(--nb-bg-sunken)}
-.nb-page-modes.segmented label:has(input:checked){height:calc(var(--nb-control-h-sm) - 1px);box-shadow:none;background:color-mix(in srgb,var(--nb-primary) 12%,var(--nb-bg-elevated))}
+.nb-page-modes.segmented label{height:calc(var(--nb-control-h-sm) - 2px);font-size:var(--nb-text-sm);border:1px solid var(--nb-border);border-bottom:0;border-radius:var(--nb-radius-sm) var(--nb-radius-sm) 0 0;background:var(--nb-bg-elevated);color:var(--nb-text-muted)}
+.nb-page-modes.segmented label:has(input:checked){height:calc(var(--nb-control-h-sm) - 1px);box-shadow:none;color:var(--nb-text);background:color-mix(in srgb,var(--nb-primary) 12%,var(--nb-bg-elevated))}
 :is(#editorContainer, #newsEditorContainer, #eventsEditorView, #peopleTab) :is(.nb-page-rich-toolbar, .nb-code-field){border-top-right-radius:0}
 :is(#editorContainer, #newsEditorContainer, #eventsEditorView, #peopleTab) .nb-page-rich-toolbar{display:flex;flex-wrap:wrap;gap:var(--nb-space-1);padding:var(--nb-space-2);background:color-mix(in srgb,var(--nb-primary) 12%,var(--nb-bg-elevated));border:1px solid var(--nb-border);border-radius:var(--nb-radius-sm) var(--nb-radius-sm) 0 0}
 :is(#editorContainer, #newsEditorContainer, #eventsEditorView, #peopleTab) .nb-page-rich-toolbar select{width:auto;max-width:100%;font:inherit;font-size:var(--nb-text-sm);padding:var(--nb-space-2);margin:0}
@@ -12560,6 +12613,68 @@ html[data-sidebar="collapsed"] .admin-sidebar .sidebar-nav-item.has-unsaved::aft
 .nb-writing-view .nb-page-title-field+.section-item,
 .nb-writing-view .nb-page-title-field+.nb-writing-section{border-top:0;padding-top:0;margin-top:0}
 .nb-event-main .ce-lang-panel{padding:var(--nb-space-3) 0 0}
+
+/* ---- Page editor: settings outside the tabs (scripts/page-writing.php placeSettings) --------
+   Sidebar panels for title image, basics and access; navigation and breadcrumb fold out under the
+   title; SEO closes the page behind a divider and uses the width of the main column. */
+.nb-writing-view .nb-page-navigation[hidden]{display:none}
+.nb-page-panel--meta .ce-field{display:grid;gap:var(--nb-space-1-5);margin:0;min-width:0}
+.nb-page-panel--meta .ce-field-label{flex:none;width:auto;text-align:left;padding:0;word-break:normal}
+.nb-page-panel--meta .ce-input,.nb-page-panel--meta .ce-textarea{width:100%;box-sizing:border-box;min-width:0}
+.nb-page-panel--meta .ce-image-input-row{flex-wrap:wrap}
+.nb-page-panel--meta .ce-image-input-row .ce-input{flex:1 1 8rem}
+.nb-page-panel--meta .form-hint{display:block;margin:0}
+.nb-page-panel--meta .ce-address-row{align-items:flex-start}
+.nb-page-panel--meta .ce-visibility-grid{grid-template-columns:minmax(0,1fr);gap:var(--nb-space-3)}
+.nb-page-panel--meta .ce-visibility-grid>*{grid-column:auto}
+.nb-page-meta{display:flex;flex-wrap:wrap;gap:var(--nb-space-2) var(--nb-space-5);margin:calc(-1 * var(--nb-space-2)) 0 var(--nb-space-5)}
+.nb-page-meta>.nb-page-details{margin:0;border:0;padding:0;min-width:0}
+.nb-page-meta>.nb-page-details[open]{flex-basis:100%}
+.nb-page-meta>.nb-page-details[open]>summary{margin-bottom:var(--nb-space-3)}
+.nb-page-meta>.nb-page-details[open]::details-content{display:block}
+.nb-page-meta .ce-field--stacked{margin:0}
+.nb-writing-view .nb-page-meta+.section-item,.nb-writing-view .nb-page-meta+.nb-writing-section,
+.nb-writing-view .nb-page-meta+.ce-content-layout>.ce-section-editor>.section-item:first-child{border-top:0;padding-top:0;margin-top:0}
+.nb-page-seo{margin-top:var(--nb-space-8);padding-top:var(--nb-space-6);border-top:2px solid var(--nb-border)}
+.nb-page-seo .ce-settings-card{border:0;border-radius:0;background:transparent;overflow:visible}
+.nb-page-seo .ce-settings-card__header{padding:0 0 var(--nb-space-4);border:0;background:transparent}
+.nb-page-seo .ce-settings-card__header h4{font-size:var(--nb-text-lg)}
+.nb-page-seo .ce-settings-card__body{padding:0}
+.nb-page-seo .ce-field--stacked{margin:0}
+/* six tracks: half-width tiles side by side, the short fields in thirds on the last row */
+.nb-page-seo .ce-seo-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:var(--nb-space-4) var(--nb-space-5)}
+.nb-page-seo .ce-seo-grid>*{grid-column:span 3;order:10}
+.nb-page-seo .ce-seo-grid>.ce-ai-seo-actions{grid-column:1 / -1;order:0}
+.nb-page-seo [data-seo-field="seoTitle"]{order:1}
+.nb-page-seo [data-seo-field="seoOgTitle"]{order:2}
+.nb-page-seo [data-seo-field="seoDescription"]{order:3}
+.nb-page-seo [data-seo-field="seoOgDescription"]{order:4}
+.nb-page-seo [data-seo-field="seoAnswerSummary"]{order:5}
+.nb-page-seo [data-seo-field="seoOgImage"]{order:6}
+.nb-page-seo [data-seo-field="seoCanonical"]{order:7;grid-column:span 2}
+.nb-page-seo [data-seo-field="seoRobots"]{order:8;grid-column:span 2}
+.nb-page-seo .ce-seo-grid>.ce-nav-check--standalone{order:9;grid-column:span 2;align-self:end;padding-bottom:var(--nb-space-2)}
+.nb-page-seo .ce-seo-grid .ce-textarea{min-height:5rem}
+@media(max-width:1100px){
+ .nb-page-seo .ce-seo-grid>*,.nb-page-seo [data-seo-field="seoCanonical"],.nb-page-seo [data-seo-field="seoRobots"],.nb-page-seo .ce-seo-grid>.ce-nav-check--standalone{grid-column:1 / -1}
+ .nb-page-seo [data-seo-field="seoCanonical"],.nb-page-seo [data-seo-field="seoRobots"]{grid-column:span 3}
+}
+@media(max-width:768px){.nb-page-seo .ce-seo-grid>*,.nb-page-seo .ce-seo-grid>[data-seo-field]{grid-column:1 / -1}}
+
+/* Teaser fields (post excerpt, page description): one short rich-text line in the frame of the
+   content field (label, Visual / Code tabs, toolbar), see inlineEditor(). The wrapper keeps the
+   parts together where the surrounding form is a grid with gaps. */
+.nb-inline-rich{display:block;min-width:0}
+.nb-inline-rich .nb-page-rich-head>label{flex:none;width:auto;margin:0;padding:0 0 var(--nb-space-2);text-align:left;color:inherit;font-size:inherit;font-weight:600;word-break:normal}
+.nb-inline-rich [hidden]{display:none}
+:is(#editorContainer, #newsEditorContainer) .nb-inline-rich-toolbar{padding:var(--nb-space-1) var(--nb-space-1-5)}
+:is(#editorContainer, #newsEditorContainer) .nb-inline-rich-editor{min-height:4.5rem;max-height:none;padding:var(--nb-space-2) var(--nb-space-3);font-size:var(--nb-text-sm);line-height:1.55}
+:is(#editorContainer, #newsEditorContainer) .nb-inline-rich-editor a{color:var(--nb-primary);text-decoration:underline}
+:is(#editorContainer, #newsEditorContainer) .nb-inline-rich .nb-code-field{min-height:4.5rem;max-height:none}
+:is(#editorContainer, #newsEditorContainer) .nb-inline-rich .nb-code-field>.nb-code-input{min-height:4.5rem}
+/* Page editor: the description sits in the main column between the blocks and the SEO section */
+.nb-page-description{margin-top:var(--nb-space-6)}
+.nb-page-description .ce-field{display:block;margin:0}
 
 /* People list: page-list classes, plus a portrait thumbnail and a status label */
 .people-name-cell{display:flex;align-items:flex-start;gap:var(--nb-space-3)}

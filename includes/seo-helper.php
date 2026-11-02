@@ -163,7 +163,8 @@ function nibblySeoContext(array $args): array {
         if ($page !== null) $slug = $page['path'];
     }
     $title = trim((string)($seo['title'] ?? '')) ?: trim((string)($args['pageTitle'] ?? ($data['title'] ?? '')));
-    $description = trim((string)($seo['description'] ?? '')) ?: trim((string)($args['pageDescription'] ?? ($data['description'] ?? '')));
+    // The page description may carry inline markup (cards render it); meta tags get the plain text
+    $description = nibblySeoTextFromHtml(trim((string)($seo['description'] ?? '')) ?: trim((string)($args['pageDescription'] ?? ($data['description'] ?? ''))));
     $canonical = trim((string)($seo['canonical'] ?? ''));
     if ($canonical === '' && $slug !== '') {
         $canonical = nibblySeoPageUrl((string)$lang, (string)$slug);

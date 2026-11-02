@@ -45,8 +45,24 @@ Git milestones and the gaps in publication records.
 - **Nested folders in the media library.** Folders may contain folders (up to five levels, for
   example `2000/10`); the tree collapses and expands, a new folder is created inside the selected
   one, and move and rename accept paths.
+- **Moving pages.** The dashboard's `New Page` dialog picks the parent page from a list and takes
+  only the last part of the address; the Page Settings show the address with `Move / rename …`,
+  which opens the same choice for an existing page. The API action `move-page` renames the page
+  and its subpages (backups first), rewrites internal links in pages, posts, footer and sidebar,
+  updates managed menus, puts a 301 rule for the old address at the top of `content/redirects.json`
+  and rebuilds the search index. The page image (`image`, `imageAlt`) is edited in the Page
+  Settings and appears in the sidebar of the writing view.
+- **Rich-text teaser fields.** The post excerpt and the page description are one-line rich-text
+  fields (bold, italic, link, Visual / Code view) that keep `strong`, `em`, `a`, `sub` and `sup`
+  and turn block elements into spaces. The meta description takes the plain text of the page
+  description.
 
 ### Changed
+
+- **Page editor without tabs.** The writing view places the page image, address and access in
+  sidebar panels, folds navigation and breadcrumb out under the title, puts the description after
+  the blocks and closes the page with the SEO section behind a divider, two fields per row. The
+  plain editor for custom JSON pages keeps its tabs. Settings cards stack in one column.
 
 - **Monochrome stroke icons.** Block pickers, dashboard actions, the AI copilot and the menu editor
   use one set of line icons instead of emoji and mixed glyphs; the YouTube block shows the

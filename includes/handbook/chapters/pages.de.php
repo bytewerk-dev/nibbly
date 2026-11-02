@@ -14,22 +14,24 @@
 <h3>Neue Seite anlegen</h3>
 <ol class="hb-steps">
   <li><span>Klick oben rechts auf <?php echo $hb->btn('Neue Seite', 'primary', 'plus'); ?>.</span></li>
-  <li><span>Gib einen <b>Titel</b> ein. Den <b>Slug</b>, also den Teil der Adresse, füllt nibbly daraus aus. Ein Schrägstrich macht eine Unterseite, etwa <code>leistungen/beratung</code>.</span></li>
+  <li><span>Gib einen <b>Titel</b> ein. Soll die Seite eine Unterseite werden, wähle die <b>übergeordnete Seite</b>. Den <b>Slug</b>, also den letzten Teil der Adresse, füllt nibbly aus dem Titel aus; die fertige Adresse steht darunter, etwa <code>/leistungen/beratung</code>.</span></li>
   <li><span><?php echo $hb->btn('Seite erstellen', 'primary'); ?>. Die neue Seite ist sofort öffentlich erreichbar. In welchem Menü sie erscheint, legst du im Inhaltseditor unter <b>Navigation</b> fest<?php if ($hb->module('menus') && $hb->isAdmin): ?> oder unter <?php echo $hb->ref('menus'); ?><?php endif; ?>.</span></li>
 </ol>
 <?php echo $hb->note('Entwürfe', 'Seiten haben keinen Entwurfsstatus. Soll eine Seite noch nicht öffentlich sein, stell sie in den Seiteneinstellungen auf „Privat, passwortgeschützt“. Angemeldete Benutzer sehen sie trotzdem ohne Passwort.'); ?>
 
 <h3>Der Inhaltseditor</h3>
 <div class="hb-prose">
-  <p>Der Inhaltseditor zeigt eine Seite als Formular: oben Titel und Text, darunter die Abschnitte zum Aufklappen. Rechts oben stehen <?php echo $hb->btn('Speichern', 'primary'); ?>, <?php echo $hb->ui('Ansehen'); ?> und die Sprachen. Änderungen im Inhaltseditor gelten erst nach dem Speichern.</p>
+  <p>Der Inhaltseditor zeigt eine Seite als Formular: oben Titel und Text, darunter die Abschnitte zum Aufklappen und die Beschreibung, ganz unten, durch eine Linie abgesetzt, die SEO-Felder. Rechts stehen <?php echo $hb->btn('Speichern', 'primary'); ?>, <?php echo $hb->ui('Ansehen'); ?> und die Sprachen, darunter Seitenbild, Seiteneinstellungen, Zugriff und Backups. Änderungen im Inhaltseditor gelten erst nach dem Speichern.</p>
 </div>
 <?php echo $hb->shot('page-editor.webp', 'Inhaltseditor der Startseite mit Titel, Textfeld und Seitenaktionen', '<b>Inhaltseditor.</b> Dieselben Inhalte wie auf der Website, Feld für Feld.'); ?>
 <dl class="hb-fields">
   <div><dt>Abschnitte</dt><dd>Aufklappen zum Bearbeiten, am Griff ziehen zum Sortieren, mit <?php echo $hb->ui('Hier einfügen'); ?> einen neuen Abschnitt an einer Stelle einfügen. Hinweise wie „Alt-Text fehlt“ zeigen, wo etwas fehlt.</dd></div>
-  <div><dt>Basisdaten</dt><dd>Titel und Beschreibung der Seite.</dd></div>
-  <div><dt>Navigation</dt><dd>In welchen Menüs die Seite erscheint, und der Brotkrumenpfad.</dd></div>
-  <div><dt>Zugriff</dt><dd><?php echo $hb->ui('Öffentlich'); ?> oder <?php echo $hb->ui('Privat, passwortgeschützt'); ?> mit eigenem Seitenpasswort und Text für die Passwortseite.</dd></div>
-  <div><dt>SEO / AEO</dt><dd>SEO-Titel, Meta Description (der Text unter dem Link in Google), eine Kurzantwort für KI-Suchen und das Bild für geteilte Links. Die SEO-Bewertung oben zeigt, was noch fehlt.</dd></div>
+  <div><dt>Navigation, Breadcrumb</dt><dd>Zwei aufklappbare Zeilen direkt unter dem Titel: in welchen Menüs die Seite erscheint, und der Brotkrumenpfad.</dd></div>
+  <div><dt>Seitenbild</dt><dd>In der Seitenleiste: das Titelbild der Seite mit Alt-Text. Es erscheint auch auf den Übersichtskarten der übergeordneten Seite.</dd></div>
+  <div><dt>Beschreibung</dt><dd>Unter den Abschnitten, vor SEO / AEO: der Kartentext auf der übergeordneten Seite und zugleich die Meta-Beschreibung. Das Feld kennt Fett, Kursiv und Links, aber keine Absätze; über <?php echo $hb->ui('Code'); ?> siehst du das HTML. In den Meta-Angaben landet der reine Text.</dd></div>
+  <div><dt>Seiteneinstellungen</dt><dd>In der Seitenleiste: die Adresse. Mit <?php echo $hb->ui('Verschieben / umbenennen …'); ?> gibst du der Seite eine neue Adresse oder hängst sie unter eine andere Seite: Unterseiten ziehen mit, interne Links werden umgeschrieben, und die alte Adresse leitet dauerhaft auf die neue weiter.</dd></div>
+  <div><dt>Zugriff</dt><dd>In der Seitenleiste: <?php echo $hb->ui('Öffentlich'); ?> oder <?php echo $hb->ui('Privat, passwortgeschützt'); ?> mit eigenem Seitenpasswort und Text für die Passwortseite.</dd></div>
+  <div><dt>SEO / AEO</dt><dd>Am Ende der Seite, unter den Abschnitten: SEO-Titel, Meta Description (der Text unter dem Link in Google), eine Kurzantwort für KI-Suchen und das Bild für geteilte Links. Die SEO-Bewertung oben zeigt, was noch fehlt.</dd></div>
 </dl>
 
 <h3>SEO-Bewertung</h3>
