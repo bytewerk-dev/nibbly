@@ -87,7 +87,7 @@ function nibblyNewsFeedXml(?string $lang = null): string {
         $plain = static fn(string $html): string => trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8')) ?? '');
         $description = $plain((string)($post['excerpt'] ?? ''));
         if ($description === '') {
-            $description = mb_substr($plain(is_string($post['content'] ?? null) ? $post['content'] : ''), 0, 400);
+            $description = mb_substr($plain(nibblyNewsBodyHtml($post)), 0, 400);
         }
         $xml .= "  <item>\n";
         $xml .= '    <title>' . $x((string)($post['title'] ?? '')) . "</title>\n";

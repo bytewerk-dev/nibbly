@@ -12444,6 +12444,12 @@ html[data-sidebar="collapsed"] .admin-sidebar .sidebar-nav-item.has-unsaved::aft
 .nb-page-details>summary>span{padding-inline-start:var(--nb-space-2)}
 .nb-page-details[open]>summary{margin-bottom:var(--nb-space-4)}
 .nb-page-details>.form-group{margin-bottom:var(--nb-space-3)}
+/* Geöffnet als Raster: Überschrift-Ebene und Stil nebeneinander, alles andere über die volle Breite */
+/* Die Kinder liegen in Chromium im Pseudo-Element ::details-content, daher dort das Raster */
+.nb-page-details[open]::details-content{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:var(--nb-space-4)}
+.nb-page-details[open]>.section-field-group--title,.nb-page-details[open]>.section-field-group--content,.nb-page-details[open]>.section-actions{grid-column:1 / -1}
+.nb-page-details[open]>.section-field-group--titletag,.nb-page-details[open]>.section-field-group--style{grid-column:auto}
+@media(max-width:600px){.nb-page-details[open]::details-content{grid-template-columns:minmax(0,1fr)}}
 .nb-page-details .section-actions{justify-content:flex-end;margin-top:var(--nb-space-3)}
 .nb-page-link-panel{display:flex;gap:var(--nb-space-2);align-items:end;flex-wrap:wrap;padding:var(--nb-space-3);border:1px solid var(--nb-border);background:var(--nb-bg-elevated)}
 .nb-page-link-panel label{flex:1;min-width:10rem;display:grid;gap:var(--nb-space-1)}
@@ -12485,6 +12491,7 @@ html[data-sidebar="collapsed"] .admin-sidebar .sidebar-nav-item.has-unsaved::aft
 .nb-news-main .section-item .section-fields>label{display:block;margin:0 0 var(--nb-space-2);font-weight:600}
 .nb-news-main .section-item textarea.editor-textarea{width:100%}
 .nb-news-draft{margin-top:var(--nb-space-3)}
+.nb-news-comments{margin-top:var(--nb-space-2)}
 .nb-event-main .ce-lang-section{padding:var(--nb-space-4);background:var(--nb-bg-elevated);border:1px solid var(--nb-border);border-radius:var(--nb-radius-md)}
 .nb-event-main .ce-field{margin-bottom:var(--nb-space-4)}
 .nb-event-main .ce-field .ce-textarea{width:100%}
@@ -12534,6 +12541,7 @@ html[data-sidebar="collapsed"] .admin-sidebar .sidebar-nav-item.has-unsaved::aft
 :is(.nb-page-sidebar,.nb-news-main) :is(input:not([type=checkbox]):not([type=radio]):not([readonly]),select,textarea){background:var(--nb-bg-elevated)}
 /* Section delete: a quiet button with a red trash icon, set apart from the move arrows */
 .section-actions .section-delete-btn{margin-left:var(--nb-space-3);color:var(--nb-danger)}
+.nb-news-split-picker{display:flex;flex-wrap:wrap;align-items:center;gap:var(--nb-space-2);padding:var(--nb-space-2) var(--nb-space-3);border-bottom:1px solid var(--nb-border)}
 .section-actions .section-delete-btn:hover{color:var(--nb-danger-text);border-color:var(--nb-danger)}
 /* A collapsed section shows only its header row */
 .nb-writing-view .ce-section-list>.section-item:not(.is-open)>:not(.section-header){display:none}
@@ -12870,4 +12878,95 @@ html[data-theme-preset="pop"] .settings-subnav .settings-nav-group h3 {
     flex-wrap: wrap;
     gap: 0.25rem 1rem;
     margin-bottom: 0.75rem;
+}
+
+/* News editor: block lists of a post (scripts/news.php) */
+.nb-news-blocks-add{display:flex;flex-wrap:wrap;align-items:center;gap:var(--nb-space-2);margin:var(--nb-space-4) 0 var(--nb-space-5)}
+.nb-news-blocks-add-label{font-size:var(--nb-text-sm);color:var(--nb-text-muted);margin-right:var(--nb-space-1)}
+.nb-news-blocks-add .btn svg{width:14px;height:14px}
+.nb-news-blocks-empty{margin:0 0 var(--nb-space-3)}
+.nb-news-aside-panel{margin-top:var(--nb-space-5);padding:var(--nb-space-4);background:var(--nb-bg-elevated);border:1px solid var(--nb-border);border-radius:var(--nb-radius-md)}
+.nb-news-aside-panel>summary{cursor:pointer}
+.nb-news-aside-panel[open]>summary{margin-bottom:var(--nb-space-3)}
+.nb-news-aside-panel .nb-news-blocks-add{margin-bottom:0}
+/* Fields of a block with room between the rows; text block: content and title full width, heading level and style side by side */
+.nb-news-blocks .section-item .section-fields{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--nb-space-4) var(--nb-space-4)}
+.nb-news-blocks .section-item[data-type="text"] .section-fields{display:grid;grid-template-columns:minmax(0,16rem) minmax(0,16rem) minmax(0,1fr)}
+.nb-news-blocks .section-item[data-type="text"] .section-field-group--content,.nb-news-blocks .section-item[data-type="text"] .section-field-group--title{grid-column:1 / -1}
+.nb-news-blocks .section-item[data-type="text"] .section-field-group--titletag,.nb-news-blocks .section-item[data-type="text"] .section-field-group--style{grid-column:auto}
+.nb-writing-view .section-item[data-type="image"] .section-fields{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.nb-writing-view .section-item[data-type="image"] .section-field-group--src{grid-row:span 6}
+.nb-writing-view .section-item .section-actions .btn[disabled]{opacity:.4}
+
+/* Dachzeile im Beitragsformular */
+.nb-news-subtitle-field{margin:var(--nb-space-3) 0 var(--nb-space-5)}
+.nb-news-subtitle-field .form-hint{margin:var(--nb-space-1) 0 0}
+
+
+/* Bilder im Rich-Editor: nie breiter als der Editor und in der Höhe gedeckelt; Galerien und
+   Figuren (block-gallery, block-image) in einer schlichten Näherung des Website-Layouts */
+.nb-page-rich-editor img{max-width:100%;height:auto;max-height:18rem;object-fit:contain}
+.nb-page-rich-editor figure{margin:1em 0;max-width:24rem}
+.nb-page-rich-editor figcaption{margin-top:.4em;font-size:.85em;color:var(--nb-text-muted,#6b7280)}
+.nb-page-rich-editor .block-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(10rem,1fr));gap:1rem .875rem;margin:1.5em 0}
+.nb-page-rich-editor .block-gallery figure{margin:0;max-width:none}
+.nb-page-rich-editor .block-gallery figure>a{display:block;aspect-ratio:4/3;overflow:hidden;background:var(--nb-bg-muted,#f3f4f6)}
+.nb-page-rich-editor .block-gallery img{width:100%;height:100%;max-height:none;object-fit:cover}
+
+/* News: gallery block rows (scripts/news.php newsGalleryFieldsHtml) */
+.section-item[data-type="gallery"] .section-fields { display: block; }
+.nb-news-gallery { display: flex; flex-direction: column; gap: var(--nb-space-3); }
+.nb-news-gallery-item {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr) auto;
+    gap: var(--nb-space-3);
+    align-items: start;
+    padding: var(--nb-space-3);
+    border: 1px solid var(--nb-border, #e5e7eb);
+    border-radius: var(--nb-radius-md, 8px);
+    background: var(--nb-surface-2, #fafafa);
+}
+.nb-news-gallery-thumb { aspect-ratio: 4 / 3; overflow: hidden; border-radius: 6px; background: var(--nb-surface-3, #eee); }
+.nb-news-gallery-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.nb-news-gallery-fields { display: flex; flex-direction: column; gap: var(--nb-space-2); min-width: 0; }
+.nb-news-gallery-fields .ce-image-input-row { display: flex; gap: var(--nb-space-2); }
+.nb-news-gallery-fields .ce-image-input-row .ce-input { flex: 1; min-width: 0; }
+.nb-news-gallery-actions { display: flex; flex-direction: column; gap: var(--nb-space-1); }
+.nb-news-gallery-add { display: flex; }
+@media (max-width: 700px) {
+    .nb-news-gallery-item { grid-template-columns: 1fr; }
+    .nb-news-gallery-thumb { max-width: 160px; }
+    .nb-news-gallery-actions { flex-direction: row; }
+}
+
+.nb-news-gallery-layout { display: flex; align-items: center; gap: var(--nb-space-2); font-size: 0.9em; }
+.nb-news-gallery-layout .ce-input { width: auto; }
+
+/* Label above the select: side by side the long option text pushed the sidebar past the editor */
+.nb-news-image-layout { display: grid; gap: var(--nb-space-1); margin-top: var(--nb-space-2); font-size: 0.9em; min-width: 0; }
+.nb-news-image-layout .ce-input, .nb-news-image-layout .nb-select { width: 100%; min-width: 0; }
+.nb-news-image-layout .nb-select__value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Rich text toolbar: every command button is a square of the small control height (the text "B"
+   made the bold button taller than the icon buttons) */
+:is(#editorContainer, #newsEditorContainer, #eventsEditorView, #peopleTab) .nb-page-rich-toolbar > button:is([data-command], [data-action]) {
+    width: var(--nb-control-h-sm);
+    height: var(--nb-control-h-sm);
+    min-height: 0;
+    padding: 0;
+    line-height: 1;
+}
+
+/* Block actions of post blocks and the image rows of a gallery block: square icon buttons */
+[id^="newsBlocks-"] > .section-item > .section-header .section-actions .btn,
+.nb-news-gallery-actions .btn {
+    box-sizing: border-box;
+    width: var(--nb-control-h-sm);
+    height: var(--nb-control-h-sm);
+    min-height: 0;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
 }

@@ -133,6 +133,41 @@ function getBlockTypes() {
     return $blockTypes;
 }
 
+/**
+ * Text block styles: core list (includes/text-styles.php) merged with the site's
+ * content/text-styles.json (same key overrides, "label" may be a map of language codes).
+ * Returns key => ['label' => string, 'class' => string].
+ */
+function getTextStyles() {
+    static $styles = null;
+    if ($styles !== null) return $styles;
+    $styles = require __DIR__ . '/text-styles.php';
+    $sitePath = dirname(__DIR__) . '/content/text-styles.json';
+    $site = file_exists($sitePath) ? json_decode((string)file_get_contents($sitePath), true) : null;
+    $lang = function_exists('_nbAdminLang') ? _nbAdminLang() : (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en');
+    foreach (is_array($site) ? $site : [] as $key => $def) {
+        if (!is_array($def) || !preg_match('/^[a-z][a-z0-9_-]*$/i', (string)$key)) continue;
+        $label = $def['label'] ?? $key;
+        if (is_array($label)) $label = $label[$lang] ?? reset($label);
+        $class = trim(preg_replace('/[^A-Za-z0-9_\- ]+/', '', (string)($def['class'] ?? '')));
+        $styles[$key] = ['label' => (string)$label, 'class' => $class !== '' ? $class : 'text-style--' . $key];
+    }
+    return $styles;
+}
+
+/** CSS class of a text block style; "" for the plain block or an unknown key. */
+function textStyleClass($style) {
+    $styles = getTextStyles();
+    return isset($styles[(string)$style]) ? $styles[(string)$style]['class'] : '';
+}
+
+/** Options of the "style" select of text blocks (plain block first). */
+function textStyleOptions() {
+    $options = [['value' => '', 'label' => t('option.default')]];
+    foreach (getTextStyles() as $key => $def) $options[] = ['value' => $key, 'label' => $def['label']];
+    return $options;
+}
+
 function getSectionTypeName($type) {
     // Legacy alias
     if ($type === 'project') return t('block.card');
@@ -1958,7 +1993,10 @@ function renderNewsList($limit = 0, $lang = 'en', array $options = []) {
     $html = '<div class="news-grid">';
     foreach ($posts as $post) {
         $title = htmlspecialchars($post['title'] ?? '');
-        $excerpt = htmlspecialchars($post['excerpt'] ?? '');
+        // Excerpts may hold inline markup (strong, em, …); block tags are dropped, the card sets its own <p>
+        $excerptRaw = trim((string)($post['excerpt'] ?? ''));
+        // The card is one link: links inside the excerpt would nest <a> in <a> and break the markup
+        $excerpt = strip_tags($excerptRaw) === $excerptRaw ? htmlspecialchars($excerptRaw) : trim(strip_tags(sanitizeHtml($excerptRaw), '<strong><em><b><i><br><span><sub><sup>'));
         $date = $post['date'] ?? '';
         $author = htmlspecialchars($post['author'] ?? '');
         $image = htmlspecialchars($post['image'] ?? '');
@@ -1993,6 +2031,9 @@ function renderNewsList($limit = 0, $lang = 'en', array $options = []) {
             }
         }
         $html .= '</div>';
+        if (trim((string)($post['subtitle'] ?? '')) !== '') {
+            $html .= '<p class="news-kicker">' . htmlspecialchars(trim((string)$post['subtitle'])) . '</p>';
+        }
         $html .= '<h3 class="news-card__title">' . $title . '</h3>';
         if ($excerpt || $_isAdmin) {
             $html .= '<p class="news-card__excerpt">' . $excerpt . '</p>';
@@ -2099,6 +2140,9 @@ function renderNewsTimeline($lang = 'en', array $options = []) {
         $html .= '<div class="news-timeline__marker" aria-hidden="true"></div>';
         $html .= '<article class="news-timeline__entry">';
         $html .= '<time class="news-timeline__date" datetime="' . htmlspecialchars($date) . '">' . $formattedDate . '</time>';
+        if (trim((string)($post['subtitle'] ?? '')) !== '') {
+            $html .= '<p class="news-kicker">' . htmlspecialchars(trim((string)$post['subtitle'])) . '</p>';
+        }
         $html .= '<h3 class="news-timeline__title"><a href="' . $url . '">' . $title . '</a></h3>';
         if ($showImages) {
             $gallery = [];
@@ -2130,8 +2174,8 @@ function renderNewsTimeline($lang = 'en', array $options = []) {
             // Excerpts may carry simple inline markup (links, emphasis) from imports; print rules apply
             $html .= '<div class="news-timeline__text">' . (strip_tags($excerpt) === $excerpt ? '<p>' . htmlspecialchars($excerpt) . '</p>' : sanitizeHtml($excerpt)) . '</div>';
         }
-        if ($showContent && is_string($post['content'] ?? null) && trim($post['content']) !== '') {
-            $html .= '<div class="news-timeline__content">' . sanitizeHtml($post['content']) . '</div>';
+        if ($showContent && trim($timelineBody = nibblyNewsBodyHtml($post)) !== '') {
+            $html .= '<div class="news-timeline__content">' . (is_string($post['content'] ?? null) ? sanitizeHtml($timelineBody) : $timelineBody) . '</div>';
         }
         $html .= '<a class="news-timeline__link" href="' . $url . '">' . htmlspecialchars($linkLabel) . '<span class="visually-hidden">: ' . $title . '</span></a>';
         $html .= '</article></li>';

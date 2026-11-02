@@ -28,7 +28,7 @@ function nibblyNewsApiListItem(array $post): array {
         $excerpt = rtrim(mb_substr($excerpt, 0, 159)) . '…';
     }
     $item = [];
-    foreach (['id', 'slug', 'lang', 'title', 'date', 'author', 'image', 'categories', 'tags', 'flags', 'url', 'wpId', 'lastModified'] as $key) {
+    foreach (['id', 'slug', 'lang', 'title', 'subtitle', 'date', 'author', 'image', 'categories', 'tags', 'flags', 'url', 'wpId', 'lastModified'] as $key) {
         if (array_key_exists($key, $post)) $item[$key] = $post[$key];
     }
     $item['excerpt'] = $excerpt;
@@ -178,11 +178,14 @@ switch ($action) {
             'id' => $postId,
             'lang' => $lang,
             'title' => $title,
+            'subtitle' => trim(strip_tags((string)($post['subtitle'] ?? ''))),
             'slug' => $slug,
             'date' => $date,
             'author' => trim($post['author'] ?? ''),
             'excerpt' => trim($post['excerpt'] ?? ''),
             'image' => trim($post['image'] ?? ''),
+            // Title image inside the post: column (image column), full (full width), hidden (previews only)
+            'imageLayout' => in_array($post['imageLayout'] ?? '', ['full', 'hidden'], true) ? $post['imageLayout'] : 'column',
             'content' => sanitizeHtml((string)($post['content'] ?? '')),
             // Categories are slugs of content/news-categories.json; tags are free (typed names become
             // slugs, their spelling is kept in content/news-tags.json); flags mark sub-lists (e.g. "column")
@@ -192,9 +195,40 @@ switch ($action) {
             'hidden' => !empty($post['hidden']),
             'lastModified' => date('c'),
         ];
+        // Cover image (shown in the sidebar, e.g. the issue of a magazine) and the sidebar switch
+        $cover = is_array($post['cover'] ?? null) ? $post['cover'] : [];
+        $coverSrc = trim((string)($cover['src'] ?? ''));
+        if ($coverSrc !== '' && preg_match('#^/?assets/[^\s"<>]+$#', $coverSrc)) {
+            $sanitized['cover'] = [
+                'src' => '/' . ltrim($coverSrc, '/'),
+                'alt' => trim(strip_tags((string)($cover['alt'] ?? ''))),
+                'label' => trim(strip_tags((string)($cover['label'] ?? ''))),
+            ];
+        }
+        if (!empty($post['sidebar'])) {
+            $sanitized['sidebar'] = true;
+        }
+        // Comments are open by default; "comments": false closes them for this post
+        if (array_key_exists('comments', $post) && ($post['comments'] === false || $post['comments'] === 'false' || $post['comments'] === 0 || $post['comments'] === '0')) {
+            $sanitized['comments'] = false;
+        }
+        // Block lists: "sections" is the body of a post built from blocks (it replaces the "content"
+        // string, in its place), "aside" the sidebar below cover and excerpt
+        if (is_array($post['sections'] ?? null)) {
+            $ordered = [];
+            foreach ($sanitized as $key => $value) {
+                if ($key === 'content') $ordered['sections'] = nibblyNewsSanitizeBlocks($post['sections']);
+                else $ordered[$key] = $value;
+            }
+            $sanitized = $ordered;
+        }
+        $aside = nibblyNewsSanitizeBlocks($post['aside'] ?? null);
+        if ($aside) {
+            $sanitized['aside'] = $aside;
+        }
         // Fields this editor does not know (e.g. "seo" from an import) survive a save
         foreach ($post as $key => $value) {
-            if (!array_key_exists($key, $sanitized) && !in_array($key, ['url', '_file'], true) && preg_match('/^[a-zA-Z][a-zA-Z0-9_]{0,40}$/', (string)$key)) {
+            if (!array_key_exists($key, $sanitized) && !in_array($key, ['url', '_file', 'cover', 'sidebar', 'comments', 'sections', 'aside', 'content'], true) && preg_match('/^[a-zA-Z][a-zA-Z0-9_]{0,40}$/', (string)$key)) {
                 $sanitized[$key] = $value;
             }
         }

@@ -45,6 +45,9 @@ function nibblyNewsSettings(bool $fresh = false): array {
     $archive = is_array($merged['archive'] ?? null) ? $merged['archive'] : [];
     $base = '/' . trim(preg_replace('#[^a-z0-9/-]#', '', strtolower((string)($archive['base'] ?? ''))), '/');
     $merged['archive']['base'] = $base === '/' ? '' : $base;
+    // Optional own base for category pages (e.g. "/category" while the list stays "/news"); empty = under base
+    $categoryBase = '/' . trim(preg_replace('#[^a-z0-9/-]#', '', strtolower((string)($archive['categoryBase'] ?? ''))), '/');
+    $merged['archive']['categoryBase'] = $categoryBase === '/' ? '' : $categoryBase;
     foreach (['tag', 'year', 'decade'] as $key) {
         $value = strtolower(trim((string)($archive[$key] ?? '')));
         $merged['archive'][$key] = preg_match('/^' . nibblyNewsSlugPattern() . '$/', $value) ? $value : $defaults['archive'][$key];
@@ -57,7 +60,7 @@ function nibblyNewsSettingsDefaults(): array {
         'urlPattern' => '/news/{slug}',
         'perPage' => 12,
         'pageParam' => 'page',
-        'archive' => ['base' => '/news', 'tag' => 'tag', 'year' => 'year', 'decade' => 'decade'],
+        'archive' => ['base' => '/news', 'categoryBase' => '', 'tag' => 'tag', 'year' => 'year', 'decade' => 'decade'],
     ];
 }
 
@@ -94,12 +97,21 @@ function nibblyNewsListUrl(?string $lang = null): string {
     return ($lang !== $defaultLang && preg_match('/^[a-z]{2}$/', $lang) ? '/' . $lang : '') . $base;
 }
 
+/** Base path of the category pages: archive.categoryBase when set, else the list base (with language prefix). */
+function nibblyNewsCategoryBaseUrl(?string $lang = null): string {
+    $categoryBase = nibblyNewsSettings()['archive']['categoryBase'];
+    if ($categoryBase === '') return nibblyNewsListUrl($lang);
+    $defaultLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
+    $lang = $lang ?? $defaultLang;
+    return ($lang !== $defaultLang && preg_match('/^[a-z]{2}$/', $lang) ? '/' . $lang : '') . $categoryBase;
+}
+
 /** Archive page path: type "category" (value = category slug), "tag", "year" or "decade". */
 function nibblyNewsArchiveUrl(string $type, string $value, ?string $lang = null): string {
     $settings = nibblyNewsSettings();
     $base = nibblyNewsListUrl($lang);
     switch ($type) {
-        case 'category': return $base . '/' . $value;
+        case 'category': return nibblyNewsCategoryBaseUrl($lang) . '/' . $value;
         case 'tag': return $base . '/' . $settings['archive']['tag'] . '/' . $value;
         case 'year': return $base . '/' . $settings['archive']['year'] . '/' . $value;
         case 'decade': return $base . '/' . $settings['archive']['decade'] . '/' . $value;
@@ -254,9 +266,16 @@ function nibblyNewsMatchArchiveUrl(string $cleanUri): ?array {
         $cleanUri = $m[2];
     }
     if ($cleanUri === $base) return ['type' => 'list', 'value' => '', 'lang' => $lang];
+    $slug = nibblyNewsSlugPattern();
+    $categoryBase = trim($settings['archive']['categoryBase'], '/');
+    if ($categoryBase !== '') {
+        // Category pages under their own base ("/category/{slug}"); under the list base they are no longer served
+        if (preg_match('#^' . preg_quote($categoryBase, '#') . '/(' . $slug . ')$#', $cleanUri, $m) && nibblyNewsCategory($m[1]) !== null) {
+            return ['type' => 'category', 'value' => $m[1], 'lang' => $lang];
+        }
+    }
     if (!str_starts_with($cleanUri, $base . '/')) return null;
     $rest = substr($cleanUri, strlen($base) + 1);
-    $slug = nibblyNewsSlugPattern();
     if (preg_match('#^' . preg_quote($settings['archive']['tag'], '#') . '/(' . $slug . ')$#', $rest, $m)) {
         return ['type' => 'tag', 'value' => $m[1], 'lang' => $lang];
     }
@@ -266,7 +285,7 @@ function nibblyNewsMatchArchiveUrl(string $cleanUri): ?array {
     if (preg_match('#^' . preg_quote($settings['archive']['decade'], '#') . '/(\d{3}0)$#', $rest, $m)) {
         return ['type' => 'decade', 'value' => $m[1], 'lang' => $lang];
     }
-    if (preg_match('#^(' . $slug . ')$#', $rest, $m) && nibblyNewsCategory($m[1]) !== null) {
+    if ($categoryBase === '' && preg_match('#^(' . $slug . ')$#', $rest, $m) && nibblyNewsCategory($m[1]) !== null) {
         return ['type' => 'category', 'value' => $m[1], 'lang' => $lang];
     }
     return null;
@@ -544,4 +563,86 @@ function nibblyNewsArchiveTitle(string $type, string $value, ?string $lang = nul
         case 'decade': return str_replace('{decade}', $value, nibblyPublicString('news_archive_decade', $lang));
     }
     return nibblyPublicString('news_archive_all', $lang);
+}
+
+/**
+ * Body HTML of a post for feed, search and timeline: the "content" string, or the rendered block
+ * list "sections" of a post built from blocks (never editable markup).
+ */
+function nibblyNewsBodyHtml(array $post): string {
+    if (is_string($post['content'] ?? null)) return $post['content'];
+    if (empty($post['sections']) || !is_array($post['sections'])) return '';
+    return nibblyNewsRenderBlocks($post['sections']);
+}
+
+/**
+ * Block list of a post ("sections" or "aside") as HTML for visitors; hidden blocks stay out.
+ * With $field (the list's name, only for logged-in admins) every block gets the hooks of the
+ * visual editor (js/inline-editor.js, enableNewsBlockEditing): data-news-block="field.index" and
+ * data-block-type. Text blocks get them on a wrapper around their content, image and gallery
+ * blocks directly on their root element (so floated figures keep floating); every other type is
+ * wrapped like a text block. Text styles come from includes/text-styles.php (textStyleClass()).
+ */
+function nibblyNewsRenderBlocks(array $blocks, string $field = ''): string {
+    if (!function_exists('renderSection')) require_once __DIR__ . '/content-loader.php';
+    $html = '';
+    foreach ($blocks as $i => $block) {
+        if (!is_array($block) || !empty($block['hidden'])) continue;
+        $type = (string)($block['type'] ?? '');
+        if ($type === 'project') $type = 'card';
+        if ($type === '' || !isset(getBlockTypes()[$type])) continue;
+        $hook = $field !== '' ? ' data-news-block="' . htmlspecialchars($field) . '.' . (int)$i . '" data-block-type="' . htmlspecialchars($type) . '"' : '';
+        if ($type === 'text') {
+            $title = trim((string)($block['title'] ?? ''));
+            $tag = in_array($block['titleTag'] ?? '', ['h2', 'h3', 'h4', 'h5', 'h6'], true) ? $block['titleTag'] : 'h2';
+            $boxClass = textStyleClass($block['style'] ?? '');
+            if ($boxClass !== '') $html .= '<div class="' . htmlspecialchars($boxClass) . '">' . "\n";
+            if ($title !== '') $html .= "<{$tag}>" . htmlspecialchars($title) . "</{$tag}>\n";
+            $text = trim((string)($block['content'] ?? ''));
+            if ($text !== '' && !str_starts_with($text, '<')) $text = '<p>' . $text . '</p>'; // bare text from the editor
+            if ($hook !== '') $html .= '<div class="news-post-page__block"' . $hook . '>' . ($text === '' ? '<p></p>' : sanitizeHtml($text)) . "</div>\n";
+            else $html .= sanitizeHtml($text) . "\n";
+            if ($boxClass !== '') $html .= "</div>\n";
+        } elseif ($type === 'image' || $type === 'gallery') {
+            // the renderer puts the hooks on the <figure> / gallery container itself
+            $block['type'] = $type;
+            if ($hook !== '') $block['_attrs'] = $hook;
+            $html .= renderSection($block, (int)$i, false);
+        } else {
+            $inner = renderSection($block, (int)$i, false);
+            $html .= $hook !== '' ? '<div class="news-post-page__block"' . $hook . '>' . $inner . "</div>\n" : $inner;
+        }
+    }
+    return $html;
+}
+
+/**
+ * Block lists of a post ("sections", "aside") as saved by the editor: only registered block types,
+ * plain keys, "content" as sanitized HTML, other strings without tags, paths local or absolute http(s).
+ */
+function nibblyNewsSanitizeBlocks($blocks): array {
+    if (!is_array($blocks)) return [];
+    if (!function_exists('getBlockTypes')) require_once __DIR__ . '/content-loader.php';
+    $types = getBlockTypes();
+    $clean = [];
+    foreach ($blocks as $index => $block) {
+        if (!is_array($block)) continue;
+        $type = (string)($block['type'] ?? '');
+        if ($type === 'project') $type = 'card';
+        if (!isset($types[$type])) continue;
+        $id = preg_replace('/[^a-zA-Z0-9_-]/', '', (string)($block['id'] ?? ''));
+        $row = ['id' => $id !== '' ? $id : 'block_' . bin2hex(random_bytes(4)), 'type' => $type];
+        foreach ($block as $key => $value) {
+            if (in_array($key, ['id', 'type'], true) || !preg_match('/^[a-zA-Z][a-zA-Z0-9_]{0,40}$/', (string)$key)) continue;
+            if (is_string($value)) {
+                if ($key === 'content') $row[$key] = sanitizeHtml($value);
+                elseif (in_array($key, ['src', 'image', 'file', 'url', 'link'], true)) $row[$key] = preg_match('#^(/|https?://)[^\s"<>]*$#i', trim($value)) ? trim($value) : '';
+                else $row[$key] = trim(strip_tags($value));
+            } elseif (is_bool($value) || is_int($value) || is_float($value) || is_array($value)) {
+                $row[$key] = $value;
+            }
+        }
+        $clean[] = $row;
+    }
+    return $clean;
 }

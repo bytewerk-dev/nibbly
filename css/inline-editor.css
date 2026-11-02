@@ -447,8 +447,10 @@ body.edit-mode-active .editable-section {
     transition: outline-color 0.2s ease;
 }
 
+/* Blockrahmen in Grün, Feldrahmen bleiben im Editor-Blau: so sind Block und Inhalt auf einen Blick
+   zu unterscheiden, auch wenn beide Linien eng beieinander liegen */
 body.edit-mode-active .editable-section:hover {
-    outline-color: var(--editor-primary, #2563eb);
+    outline-color: var(--editor-block, #0d9488);
 }
 
 /* About-Section spezifisch */
@@ -665,6 +667,33 @@ body.edit-mode-active .section-add-buttons:has(.section-add-btn-toggle[aria-expa
     animation: sectionTypePickerIn 0.12s ease-out;
 }
 
+/* Compact picker (few types, e.g. post blocks): one row, no category headings */
+.section-type-picker--compact {
+    min-width: 0;
+    width: max-content;
+    display: flex;
+    gap: 2px;
+}
+
+.section-type-picker--compact .section-type-picker__category {
+    padding: 0;
+}
+
+.section-type-picker--compact .section-type-picker__category + .section-type-picker__category {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.section-type-picker--compact .section-type-picker__grid {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+}
+
+.section-type-picker--compact .section-type-picker__item {
+    min-width: 72px;
+}
+
 @keyframes sectionTypePickerIn {
     from { opacity: 0; transform: translateY(-4px); }
     to { opacity: 1; transform: translateY(0); }
@@ -746,7 +775,7 @@ body.edit-mode-active .section-add-buttons:has(.section-add-btn-toggle[aria-expa
 
 .editable-section.dragging {
     opacity: 0.5;
-    outline: 2px solid var(--editor-primary, #2563eb);
+    outline: 2px solid var(--editor-block, #0d9488);
     outline-offset: 2px;
 }
 
@@ -1213,6 +1242,66 @@ dialog.editor-mode-hint .editor-btn:focus-visible { outline: 2px solid var(--edi
     display: none !important;
 }
 
+.floating-toolbar button.floating-toolbar-format {
+    width: auto;
+    gap: 6px;
+    padding: 0 8px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.floating-toolbar-format[aria-expanded="true"] {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+.floating-toolbar-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    min-width: 170px;
+    padding: 4px;
+    background: rgba(35, 40, 45, 0.97);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.floating-toolbar .floating-toolbar-menu button {
+    width: 100%;
+    height: auto;
+    justify-content: flex-start;
+    padding: 6px 10px;
+    text-align: left;
+    color: #ddd;
+}
+
+.floating-toolbar-menu button[aria-checked="true"] {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.floating-toolbar-menu button h2,
+.floating-toolbar-menu button h3,
+.floating-toolbar-menu button h4,
+.floating-toolbar-menu button p,
+.floating-toolbar-menu button em {
+    margin: 0;
+    color: inherit;
+    font-family: inherit;
+    line-height: 1.2;
+}
+
+.floating-toolbar-menu button h2 { font-size: 17px; font-weight: 700; }
+.floating-toolbar-menu button h3 { font-size: 15px; font-weight: 700; }
+.floating-toolbar-menu button h4 { font-size: 14px; font-weight: 700; }
+.floating-toolbar-menu button p { font-size: 13px; }
+.floating-toolbar-menu button em { font-size: 13px; }
+
+/* Menu of text block styles (posts): plain labels, opens under its own button */
+.floating-toolbar-style-menu button { font-size: 13px; }
+
 .floating-toolbar button {
     position: relative;
     display: flex;
@@ -1294,64 +1383,6 @@ dialog.editor-mode-hint .editor-btn:focus-visible { outline: 2px solid var(--edi
     background: rgba(255, 255, 255, 0.15);
     margin: 0 4px;
 }
-
-.floating-toolbar button.floating-toolbar-format {
-    width: auto;
-    gap: 6px;
-    padding: 0 8px;
-    font-size: 13px;
-    white-space: nowrap;
-}
-
-.floating-toolbar-format[aria-expanded="true"] {
-    background: rgba(255, 255, 255, 0.15);
-    color: #fff;
-}
-
-.floating-toolbar-menu {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    display: flex;
-    flex-direction: column;
-    min-width: 170px;
-    padding: 4px;
-    background: rgba(35, 40, 45, 0.97);
-    border-radius: 6px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-}
-
-.floating-toolbar .floating-toolbar-menu button {
-    width: 100%;
-    height: auto;
-    justify-content: flex-start;
-    padding: 6px 10px;
-    text-align: left;
-    color: #ddd;
-}
-
-.floating-toolbar-menu button[aria-checked="true"] {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.12);
-}
-
-.floating-toolbar-menu button h2,
-.floating-toolbar-menu button h3,
-.floating-toolbar-menu button h4,
-.floating-toolbar-menu button p,
-.floating-toolbar-menu button em {
-    margin: 0;
-    color: inherit;
-    font-family: inherit;
-    line-height: 1.2;
-}
-
-.floating-toolbar-menu button h2 { font-size: 17px; font-weight: 700; }
-.floating-toolbar-menu button h3 { font-size: 15px; font-weight: 700; }
-.floating-toolbar-menu button h4 { font-size: 14px; font-weight: 700; }
-.floating-toolbar-menu button p { font-size: 13px; }
-.floating-toolbar-menu button em { font-size: 13px; }
-
 
 /* ============================================================
    WYSIWYG TOOLBAR & EDITOR
@@ -2168,8 +2199,9 @@ body.edit-mode-active .editable-field-active {
     transition: outline-color 0.2s ease;
 }
 
+/* Feldrahmen in einem intensiveren Blau als die übrige Editor-Farbe, Blockrahmen in Türkis (--editor-block) */
 body.edit-mode-active .editable-field-active:hover {
-    outline-color: var(--editor-primary, #2563eb);
+    outline-color: var(--editor-field, #1d4ed8);
 }
 
 body.edit-mode-active .editable-field-active::selection,
@@ -2792,6 +2824,13 @@ body.edit-mode-active .nibbly-editor-group-overlay svg {
     stroke: none;
 }
 
+/* Strich-Symbole (z. B. Papierkorb) behalten ihre Kontur */
+body.edit-mode-active .nibbly-editor-control-btn svg[stroke],
+body.edit-mode-active .nibbly-editor-drag-handle svg[stroke],
+body.edit-mode-active .nibbly-editor-group-overlay svg[stroke] {
+    stroke: currentColor;
+}
+
 body.edit-mode-active .nibbly-editor-drag-handle {
     display: flex !important;
     align-items: center !important;
@@ -2847,9 +2886,9 @@ body.edit-mode-active .nibbly-editor-drag-handle:focus-visible {
     transform: translateX(-50%);
     width: 28px;
     height: 28px;
-    border: 2px solid var(--editor-primary, #2563eb);
-    background: #fff;
-    color: var(--editor-primary, #2563eb);
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    background: var(--editor-primary, #2563eb);
+    color: #fff;
     cursor: pointer;
     border-radius: 50%;
     display: flex;
@@ -2874,7 +2913,7 @@ body.edit-mode-active .editable-list-item:hover .list-item-add-btn {
 }
 
 .list-item-add-btn:hover {
-    background: var(--editor-primary, #2563eb);
+    background: color-mix(in srgb, var(--editor-primary, #2563eb) 85%, #000);
     color: #fff;
     transform: translateX(-50%) scale(1.15);
 }
@@ -4053,6 +4092,123 @@ body.edit-mode-active .news-editable:focus {
     outline-width: 2px;
 }
 
+/* Post blocks (site templates with data-news-block / data-news-blocks, see enableNewsBlockEditing).
+   Same chrome as page sections: thin solid outline, dark tool bar, round "+" below the block. */
+body.edit-mode-active [data-news-block] {
+    position: relative;
+    outline: 1px solid transparent;
+    outline-offset: 6px;
+    transition: outline-color 0.2s ease;
+}
+
+body.edit-mode-active [data-news-block]:hover,
+body.edit-mode-active [data-news-block]:focus-within,
+body.edit-mode-active [data-news-block]:has(.section-add-btn-toggle[aria-expanded="true"]) {
+    outline-color: var(--editor-block, #0d9488);
+}
+
+body.edit-mode-active .news-post-page__block.news-editable {
+    min-height: 1.5em;
+    outline-offset: 6px;
+}
+
+/* Thin or empty blocks (divider, spacer, media without id) still need room for the hover tool bar */
+body.edit-mode-active .news-post-page__block[data-block-type="divider"],
+body.edit-mode-active .news-post-page__block[data-block-type="spacer"],
+body.edit-mode-active .news-post-page__block[data-block-type="youtube"],
+body.edit-mode-active .news-post-page__block[data-block-type="audio"] {
+    min-height: 2rem;
+}
+
+/* A text block is block and field in one: hovering shows the block frame,
+   editing (focus) the field frame, so the caret state stays recognisable. */
+body.edit-mode-active [data-news-block].news-editable:focus {
+    outline: 2px solid var(--editor-field, #1d4ed8);
+}
+
+.news-block-tools {
+    position: absolute;
+    top: -22px;
+    right: -6px;
+    z-index: 11;
+    opacity: 0;
+    visibility: hidden;
+    /* fades out slowly and with a short delay, so the bar is still there when the pointer returns */
+    transition: opacity 0.4s ease 0.4s, visibility 0s linear 0.8s;
+}
+
+body.edit-mode-active [data-news-block]:hover > .news-block-tools,
+body.edit-mode-active [data-news-block]:focus-within > .news-block-tools {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.15s ease, visibility 0s;
+}
+
+.news-block-tools .overlay-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.news-block-tools .overlay-btn:disabled:hover {
+    background: transparent;
+}
+
+/* The round "+" of a block appears on hover like on page sections (.section-add-buttons) */
+body.edit-mode-active [data-news-block]:hover > .news-block-add,
+body.edit-mode-active [data-news-block]:focus-within > .news-block-add,
+body.edit-mode-active .news-block-add:has(.section-add-btn-toggle[aria-expanded="true"]) {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Block-level "+" (page sections, post blocks) filled in the block colour (green) with a white plus;
+   item-level "+" (list items, gallery images, .list-item-add-btn) filled blue like the field frame. */
+.news-block-add .section-add-btn-toggle,
+.section-add-buttons .section-add-btn-toggle {
+    background: var(--editor-block, #0d9488);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.news-block-add .section-add-btn-toggle:hover,
+.news-block-add .section-add-btn-toggle.is-hover,
+.news-block-add .section-add-btn-toggle[aria-expanded="true"],
+.section-add-buttons .section-add-btn-toggle:hover,
+.section-add-buttons .section-add-btn-toggle.is-hover,
+.section-add-buttons .section-add-btn-toggle[aria-expanded="true"] {
+    background: color-mix(in srgb, var(--editor-block, #0d9488) 85%, #000) !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28), 0 0 0 2px color-mix(in srgb, var(--editor-block, #0d9488) 34%, transparent) !important;
+}
+
+.section-add-buttons .section-add-btn-toggle:focus-visible {
+    outline-color: var(--editor-block, #0d9488);
+}
+
+/* Empty block list: the "+" is always visible */
+.news-blocks-add {
+    display: none;
+    position: relative;
+    min-height: 40px;
+    margin: 12px 0;
+    clear: both;
+}
+
+body.edit-mode-active .news-blocks-add {
+    display: block;
+}
+
+.news-blocks-add .section-add-buttons {
+    bottom: 4px;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+body.edit-mode-active figcaption.news-editable:empty::before {
+    content: attr(data-placeholder);
+    color: #999;
+}
+
 /* Editor-only media title label (youtube, soundcloud).
    Rendered only for admins to expose the "title" metadata field inline
    — not visible to visitors. */
@@ -4071,4 +4227,139 @@ body.edit-mode-active .news-editable:focus {
     font-weight: 600;
     font-style: normal;
     opacity: 0.7;
+}
+
+/* Gallery block in posts (.block-gallery[data-news-block]): per-image tool bar, add button, editable captions */
+body.edit-mode-active .block-gallery[data-news-block] > figure {
+    position: relative;
+}
+
+.news-gallery-tools {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    z-index: 5;
+    padding: 2px;
+    opacity: 0;
+    visibility: hidden;
+    /* fades out slowly and with a short delay, so the bar is still there when the pointer returns */
+    transition: opacity 0.4s ease 0.4s, visibility 0s linear 0.8s;
+}
+
+body.edit-mode-active .block-gallery[data-news-block] > figure:hover > .news-gallery-tools,
+body.edit-mode-active .block-gallery[data-news-block] > figure:focus-within > .news-gallery-tools {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.15s ease, visibility 0s;
+}
+
+/* While its buttons are hovered the image bar rises above the block bar, so its tooltips stay readable */
+.news-gallery-tools:hover {
+    z-index: 12;
+}
+
+/* Item-level "+" (blue, like list items) at the bottom edge of each figure; shows on hover of the figure */
+body.edit-mode-active .block-gallery[data-news-block] > figure:hover > .news-gallery-add,
+body.edit-mode-active .block-gallery[data-news-block] > figure:focus-within > .news-gallery-add,
+body.edit-mode-active .news-gallery-add--empty {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+body.edit-mode-active .news-gallery-add--empty {
+    position: static;
+    transform: none;
+    justify-self: start;
+    align-self: start;
+}
+
+body.edit-mode-active .block-gallery[data-news-block] > .news-block-tools,
+body.edit-mode-active .block-gallery[data-news-block] > .news-block-add {
+    grid-column: 1 / -1;
+}
+
+/* The gallery's first image carries its own remove button at the top right; the block tool bar
+   therefore sits fully above the outline instead of half inside the block. */
+body.edit-mode-active .block-gallery[data-news-block] > .news-block-tools {
+    top: -44px;
+}
+
+body.edit-mode-active .block-gallery[data-news-block] figcaption.news-editable {
+    min-height: 1.2em;
+}
+
+/* The site's :focus-visible rule rounds corners (2px) and restyles the outline; an editable
+   box under the caret keeps the square editor frame instead. */
+body.edit-mode-active .editable-field-active:focus-visible,
+body.edit-mode-active .editable-section:focus-visible,
+body.edit-mode-active .editable-group-active:focus-visible,
+body.edit-mode-active .news-editable:focus-visible,
+body.edit-mode-active [data-news-block]:focus-visible,
+body.edit-mode-active [contenteditable="true"]:focus-visible {
+    border-radius: 0;
+}
+
+/* Floated image column (title figure, .block-gallery--column): the following text blocks are
+   position: relative and painted later, so their boxes would cover the column and swallow
+   hover and clicks. Lift the column above them. */
+body.edit-mode-active .news-post-page__content .block-gallery--column[data-news-block],
+body.edit-mode-active .news-post-page__hero[data-news-field] {
+    position: relative;
+    z-index: 2;
+}
+
+/* Title image: layout tool bar (column / full / hidden) above the figure; the active choice is filled.
+   A hidden title image stays visible while editing, dimmed and labelled, so it can be switched back. */
+body.edit-mode-active .news-post-page__hero[data-news-field] > .news-block-tools {
+    top: -44px;
+}
+
+body.edit-mode-active .news-post-page__hero[data-news-field]:hover > .news-block-tools,
+body.edit-mode-active .news-post-page__hero[data-news-field]:focus-within > .news-block-tools {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.15s ease, visibility 0s;
+}
+
+.news-block-tools .overlay-btn.is-active {
+    background: var(--editor-primary, #2563eb);
+}
+
+body.edit-mode-active .news-post-page__hero--hidden {
+    display: block;
+    opacity: 0.45;
+}
+
+body.edit-mode-active .news-post-page__hero--hidden::after {
+    content: attr(data-hidden-label);
+    display: block;
+    margin-top: 0.5em;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--editor-block, #0d9488);
+}
+
+/* Tool bars coloured by level, like the frames: block bars green, item bars (gallery images) blue.
+   An invisible bridge below a bar that floats above its block keeps the hover alive while the
+   pointer crosses the gap between frame and bar; otherwise the bar faded before it could be reached. */
+.news-block-tools {
+    background: var(--editor-block, #0d9488);
+}
+
+.news-gallery-tools {
+    background: var(--editor-primary, #2563eb);
+}
+
+.news-block-tools::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    height: 18px;
+}
+
+.news-block-tools .overlay-btn.is-active {
+    background: #fff;
+    color: var(--editor-block, #0d9488);
 }

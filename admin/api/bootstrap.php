@@ -1274,6 +1274,10 @@ function sanitizeNewsSettings(array $settings, array $existing = []): array {
             $base = '/' . trim(preg_replace('#[^a-z0-9/-]#', '', strtolower((string)$input['archive']['base'])), '/');
             $archive['base'] = $base === '/' ? '' : $base;
         }
+        if (array_key_exists('categoryBase', $input['archive'])) {
+            $categoryBase = '/' . trim(preg_replace('#[^a-z0-9/-]#', '', strtolower((string)$input['archive']['categoryBase'])), '/');
+            $archive['categoryBase'] = $categoryBase === '/' ? '' : $categoryBase;
+        }
         foreach (['tag', 'year', 'decade'] as $key) {
             if (!array_key_exists($key, $input['archive'])) continue;
             $value = strtolower(trim((string)$input['archive'][$key]));

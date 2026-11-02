@@ -2253,6 +2253,11 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                                 <small class="form-hint"><?php echo t('settings.news_archive_base_hint'); ?></small>
                             </div>
                             <div class="form-group">
+                                <label for="newsArchiveCategoryBase"><?php echo t('settings.news_archive_category_base'); ?></label>
+                                <input type="text" id="newsArchiveCategoryBase" autocomplete="off" spellcheck="false" placeholder="/category">
+                                <small class="form-hint"><?php echo t('settings.news_archive_category_base_hint'); ?></small>
+                            </div>
+                            <div class="form-group">
                                 <label for="newsArchiveTag"><?php echo t('settings.news_archive_tag'); ?></label>
                                 <input type="text" id="newsArchiveTag" autocomplete="off" spellcheck="false" placeholder="tag">
                             </div>
