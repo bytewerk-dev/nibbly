@@ -921,8 +921,9 @@
     position: absolute;
     top: 8px;
     right: 8px;
-    width: 22px;
-    height: 22px;
+    box-sizing: border-box;
+    width: 26px;
+    height: 26px;
     border: 2px solid rgba(255, 255, 255, 0.8);
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.35);
@@ -1908,4 +1909,66 @@
     .nb-imgmgr-dropzone-upload { flex: 1 1 100%; gap: 12px; }
     .nb-imgmgr-ai-generator-btn { flex: 1 1 100%; }
     .nb-imgmgr-footer, .nb-imgmgr-footer-actions { flex-wrap: wrap; }
+}
+
+/* Picker: the thumbnail selects (pointer), the lightbox opens through the zoom button that
+   appears over the thumbnail on hover (top left; the selection circle sits top right). */
+.nb-imgmgr-thumb-btn--select {
+    cursor: pointer;
+}
+
+.nb-imgmgr-zoom {
+    /* same size as the selection circle (.nb-imgmgr-check), without its ring */
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    cursor: zoom-in;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.nb-imgmgr-zoom svg {
+    width: 15px;
+    height: 15px;
+}
+
+/* List view: the zoom button sits centred over the thumbnail and appears when the row is hovered */
+.nb-imgmgr-list-thumb-wrap {
+    position: relative;
+    display: flex;
+    align-self: stretch;
+}
+
+.nb-imgmgr-list-thumb-wrap .nb-imgmgr-list-thumb {
+    flex: 1;
+}
+
+.nb-imgmgr-list-thumb-wrap .nb-imgmgr-zoom {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.nb-imgmgr-row:hover .nb-imgmgr-zoom,
+.nb-imgmgr-row:focus-within .nb-imgmgr-zoom,
+.nb-imgmgr-item:hover .nb-imgmgr-zoom,
+.nb-imgmgr-item:focus-within .nb-imgmgr-zoom {
+    opacity: 1;
+}
+
+.nb-imgmgr-zoom:hover {
+    background: var(--nb-imgmgr-accent);
 }

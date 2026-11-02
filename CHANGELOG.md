@@ -15,6 +15,15 @@ Git milestones and the gaps in publication records.
   with a format menu (Paragraph, Heading 2–4, Quote) that shows the element at the caret and
   switches it; it is a custom dark menu, since a native `<select>` is painted by the browser.
 
+### Changed
+
+- **Image manager: click selects, magnifier previews.** In the picker (Visual Editor, settings
+  and content fields) a click on a thumbnail now toggles the selection instead of opening the
+  lightbox; the lightbox opens through a round magnifier button that appears over the thumbnail
+  (top left in the grid, centred in the list). The selection circle grew to the same 26 px. The
+  eye button "Image preview" in the action rows of grid and list is gone; outside the picker
+  (library tab in the dashboard, trash) the thumbnail still opens the preview.
+
 ## [2.7.0] — 2026-10-30
 
 ### Added

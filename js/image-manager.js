@@ -100,6 +100,7 @@
         upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',
         grid: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z"/></svg>',
         list: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5h18v2H3zM3 11h18v2H3zM3 17h18v2H3z"/></svg>',
+        zoomIn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>',
         eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
         download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
         ai: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.6 5.2L19 9l-5.4 1.8L12 16l-1.6-5.2L5 9l5.4-1.8L12 2z"/><path d="M19 14l.8 2.7L22 17.5l-2.2.8L19 21l-.8-2.7-2.2-.8 2.2-.8L19 14z"/><path d="M5 13l.7 2.1L8 16l-2.3.9L5 19l-.7-2.1L2 16l2.3-.9L5 13z"/></svg>',
@@ -349,16 +350,30 @@
         return '<button type="button" class="nb-imgmgr-action-btn' + (item.aiLabel ? ' nb-imgmgr-action-btn--on' : '') + '" data-action="ai-label" title="' + escapeHtml(title) + '" aria-label="' + escapeHtml(title) + '">' + Icons.ai + '</button>';
     }
 
+    // In a picker the thumbnail toggles the selection; the lightbox then opens through
+    // the zoom button over the thumbnail. Elsewhere (library tab, trash) the thumbnail previews.
+    function thumbSelectsOnClick() {
+        return state.isPicker && state.mode !== 'trash';
+    }
+
     function mediaThumbHtml(item, className, previewAction) {
-        var actionAttr = previewAction ? ' data-action="preview"' : '';
-        var previewAttr = ' data-preview-path="' + escapeHtml(item.path || '') + '" data-preview-name="' + escapeHtml(mediaDisplayName(item)) + '" onclick="window.NbImageManager && NbImageManager.preview(this.dataset.previewPath, this.dataset.previewName); return false;"';
+        var selectOnClick = thumbSelectsOnClick();
+        var actionAttr = previewAction && !selectOnClick ? ' data-action="preview"' : '';
+        var previewAttr = selectOnClick ? '' : ' data-preview-path="' + escapeHtml(item.path || '') + '" data-preview-name="' + escapeHtml(mediaDisplayName(item)) + '" onclick="window.NbImageManager && NbImageManager.preview(this.dataset.previewPath, this.dataset.previewName); return false;"';
+        var label = selectOnClick ? t('image.select') : t('image_preview');
+        var cls = className + ' nb-imgmgr-thumb-btn' + (selectOnClick ? ' nb-imgmgr-thumb-btn--select' : '');
         if (isImage(item)) {
-            return '<button type="button" class="' + className + ' nb-imgmgr-thumb-btn nb-imgmgr-thumb-btn--image"' + actionAttr + previewAttr + ' aria-label="' + escapeHtml(t('image_preview')) + '">' +
+            return '<button type="button" class="' + cls + ' nb-imgmgr-thumb-btn--image"' + actionAttr + previewAttr + ' aria-label="' + escapeHtml(label) + '">' +
                 '<span class="nb-imgmgr-thumb-surface"><img src="' + escapeHtml(previewSrc(item)) + '" alt="" loading="lazy" onload="window.NbImageManager && NbImageManager.detectTransparency(this)"></span>' +
                 aiBadgeHtml(item) +
             '</button>';
         }
-        return '<button type="button" class="' + className + ' nb-imgmgr-thumb-btn nb-imgmgr-media-icon nb-imgmgr-media-icon--' + escapeHtml(item.type || 'document') + '"' + actionAttr + previewAttr + ' aria-label="' + escapeHtml(t('image_preview')) + '">' + mediaIcon(item) + '</button>';
+        return '<button type="button" class="' + cls + ' nb-imgmgr-media-icon nb-imgmgr-media-icon--' + escapeHtml(item.type || 'document') + '"' + actionAttr + previewAttr + ' aria-label="' + escapeHtml(label) + '">' + mediaIcon(item) + '</button>';
+    }
+
+    // Zoom button over the thumbnail (appears on hover) — opens the lightbox
+    function zoomButtonHtml() {
+        return '<button type="button" class="nb-imgmgr-zoom" data-action="preview" title="' + escapeHtml(t('image_preview')) + '" aria-label="' + escapeHtml(t('image_preview')) + '">' + Icons.zoomIn + '</button>';
     }
 
     // ============================================================
@@ -469,7 +484,9 @@
             if (!image) return;
             e.preventDefault();
             e.stopPropagation();
-            openLightbox(image);
+            // picker: the thumbnail toggles the selection, the zoom button opens the lightbox
+            if (thumbSelectsOnClick()) toggleSelection(image.path);
+            else openLightbox(image);
         }, true);
         modal.querySelector('.nb-imgmgr-folder-create').addEventListener('click', createMediaFolder);
         var folderListEl = modal.querySelector('.nb-imgmgr-folder-list');
@@ -1063,18 +1080,16 @@
             item.setAttribute('role', 'listitem');
             item.setAttribute('aria-label', image.name || image.path || t('media.file'));
             item.innerHTML = state.mode === 'trash'
-                ? mediaThumbHtml(image, 'nb-imgmgr-thumb', true) +
+                ? mediaThumbHtml(image, 'nb-imgmgr-thumb', true) + zoomButtonHtml() +
                 mediaNameHtml(image, 'nb-imgmgr-name') +
                 '<div class="nb-imgmgr-actions">' +
-                    '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '" aria-label="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="restore" title="' + escapeHtml(t('image.restore')) + '" aria-label="' + escapeHtml(t('image.restore')) + '">' + Icons.restore + '</button>' +
                     '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete-permanent" title="' + escapeHtml(t('image.delete_permanently')) + '" aria-label="' + escapeHtml(t('image.delete_permanently')) + '">' + Icons.delete + '</button>' +
                 '</div>'
                 :
-                mediaThumbHtml(image, 'nb-imgmgr-thumb', true) +
+                mediaThumbHtml(image, 'nb-imgmgr-thumb', true) + zoomButtonHtml() +
                 mediaNameHtml(image, 'nb-imgmgr-name') +
                 '<div class="nb-imgmgr-actions">' +
-                    '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '" aria-label="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
                     mediaDownloadActionHtml(image) +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="copy" title="' + escapeHtml(t('image.copy_path')) + '" aria-label="' + escapeHtml(t('image.copy_path')) + '">' + Icons.copy + '</button>' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="move" title="' + escapeHtml(t('media.move_file')) + '" aria-label="' + escapeHtml(t('media.move_file')) + '">' + Icons.move + '</button>' +
@@ -1118,23 +1133,21 @@
             row.setAttribute('aria-label', image.name || image.path || t('media.file'));
             row.innerHTML = state.mode === 'trash'
                 ? '<div></div>' +
-                mediaThumbHtml(image, 'nb-imgmgr-list-thumb', true) +
+                '<div class="nb-imgmgr-list-thumb-wrap">' + mediaThumbHtml(image, 'nb-imgmgr-list-thumb', true) + zoomButtonHtml() + '</div>' +
                 mediaNameHtml(image, 'nb-imgmgr-list-name') +
                 '<div class="nb-imgmgr-list-size">' + escapeHtml(image.size || '-') + '</div>' +
                 '<div class="nb-imgmgr-list-date">' + escapeHtml(image.dateFormatted || '-') + '</div>' +
                 '<div class="nb-imgmgr-list-actions">' +
-                    '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '" aria-label="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="restore" title="' + escapeHtml(t('image.restore')) + '" aria-label="' + escapeHtml(t('image.restore')) + '">' + Icons.restore + '</button>' +
                     '<button type="button" class="nb-imgmgr-action-btn nb-imgmgr-action-btn--danger" data-action="delete-permanent" title="' + escapeHtml(t('image.delete_permanently')) + '" aria-label="' + escapeHtml(t('image.delete_permanently')) + '">' + Icons.delete + '</button>' +
                 '</div>'
                 :
                 '<div></div>' +
-                mediaThumbHtml(image, 'nb-imgmgr-list-thumb', true) +
+                '<div class="nb-imgmgr-list-thumb-wrap">' + mediaThumbHtml(image, 'nb-imgmgr-list-thumb', true) + zoomButtonHtml() + '</div>' +
                 mediaNameHtml(image, 'nb-imgmgr-list-name') +
                 '<div class="nb-imgmgr-list-size">' + escapeHtml(image.size || '-') + '</div>' +
                 '<div class="nb-imgmgr-list-date">' + escapeHtml(image.dateFormatted || '-') + '</div>' +
                 '<div class="nb-imgmgr-list-actions">' +
-                    '<button type="button" class="nb-imgmgr-action-btn" data-action="preview" title="' + escapeHtml(t('image_preview')) + '" aria-label="' + escapeHtml(t('image_preview')) + '">' + Icons.eye + '</button>' +
                     mediaDownloadActionHtml(image) +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="copy" title="' + escapeHtml(t('image.copy_path')) + '" aria-label="' + escapeHtml(t('image.copy_path')) + '">' + Icons.copy + '</button>' +
                     '<button type="button" class="nb-imgmgr-action-btn" data-action="move" title="' + escapeHtml(t('media.move_file')) + '" aria-label="' + escapeHtml(t('media.move_file')) + '">' + Icons.move + '</button>' +
@@ -1163,7 +1176,8 @@
         if (previewThumb) {
             previewThumb.addEventListener('click', function (e) {
                 e.stopPropagation();
-                openLightbox(image);
+                if (thumbSelectsOnClick()) toggleSelection(image.path);
+                else openLightbox(image);
             });
         }
 
