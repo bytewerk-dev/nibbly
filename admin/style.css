@@ -12903,6 +12903,10 @@ html[data-theme-preset="pop"] .settings-subnav .settings-nav-group h3 {
 .nb-news-subtitle-field .form-hint{margin:var(--nb-space-1) 0 0}
 
 
+/* Fußnote im Inhaltseditor: der Text bleibt im Satz, markiert mit Stern und gestrichelter Linie */
+.nb-page-rich-editor .footnote{padding:0 .25em;border-bottom:1px dashed var(--nb-primary);background:var(--nb-primary-soft,rgba(37,99,235,.1));font-size:.85em}
+.nb-page-rich-editor .footnote::before{content:"\2731\00a0";color:var(--nb-primary);font-weight:700}
+
 /* Bilder im Rich-Editor: nie breiter als der Editor und in der Höhe gedeckelt; Galerien und
    Figuren (block-gallery, block-image) in einer schlichten Näherung des Website-Layouts */
 .nb-page-rich-editor img{max-width:100%;height:auto;max-height:18rem;object-fit:contain}

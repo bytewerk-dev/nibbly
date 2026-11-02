@@ -2510,3 +2510,93 @@ body.edit-mode-active .news-post-page__kicker:empty::before {
 .nb-comments__privacy { font-size: 0.85rem; color: var(--color-text-secondary, #666); }
 .nb-comments__replying { font-size: 0.9rem; }
 @media (max-width: 40rem) { .nb-comments__grid { grid-template-columns: 1fr; } }
+
+/* ============================================
+   FOOTNOTES
+   <span class="footnote">Text</span> in running text. js/footnotes.js turns it into a superscript
+   number with a tooltip (hover, focus, tap). While the inline editor is active the text stays in
+   the sentence, marked, so it can be edited.
+   ============================================ */
+.footnote--ready {
+    position: relative;
+    display: inline-block;
+}
+
+.footnote__mark {
+    display: inline-block;
+    vertical-align: super;
+    min-width: 1.5em;
+    margin-left: 0.15em;
+    padding: 0.1em 0.4em;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(96, 200, 205, 0.15);
+    color: var(--color-accent);
+    font: inherit;
+    font-size: 0.68em;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.footnote--ready:hover .footnote__mark,
+.footnote--open .footnote__mark,
+.footnote__mark:focus-visible {
+    background: var(--color-accent);
+    color: var(--color-background);
+}
+
+.footnote__mark:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+.footnote__text {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 50%;
+    z-index: 30;
+    width: max-content;
+    max-width: min(24rem, calc(100vw - 2rem));
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--color-border);
+    border-top: 3px solid var(--color-accent);
+    border-radius: 6px;
+    background: var(--color-background);
+    color: var(--color-text);
+    font-size: 0.85rem;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 1.5;
+    text-align: left;
+    box-shadow: 0 14px 30px -16px rgba(0, 0, 0, 0.45);
+    transform: translateX(-50%);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.18s ease, visibility 0.18s ease;
+}
+
+.footnote--ready:hover .footnote__text,
+.footnote--ready:focus-within .footnote__text,
+.footnote--open .footnote__text {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* In the visual editor (edit mode and field dialog) the footnote text stays editable in the sentence */
+body.edit-mode-active .footnote:not(.footnote--ready),
+.editor-wysiwyg .footnote {
+    padding: 0 0.25em;
+    border-bottom: 1px dashed var(--color-accent);
+    background: rgba(96, 200, 205, 0.15);
+    font-size: 0.85em;
+}
+
+body.edit-mode-active .footnote:not(.footnote--ready)::before,
+.editor-wysiwyg .footnote::before {
+    content: "\2731\00a0";
+    color: var(--color-accent);
+    font-weight: 700;
+}

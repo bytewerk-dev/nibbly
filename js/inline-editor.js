@@ -1763,6 +1763,7 @@
                         <button type="button" onclick="InlineEditor.execCommand('bold')" title="${t('bold')}"><b>B</b></button>
                         <button type="button" onclick="InlineEditor.execCommand('italic')" title="${t('italic')}"><i>I</i></button>
                         <button type="button" onclick="InlineEditor.insertLink()" title="${t('insert_link')}">🔗</button>
+                        <button type="button" onclick="InlineEditor.toggleFootnote()" title="${t('insert_footnote')}">${FOOTNOTE_ICON}</button>
                         <button type="button" onclick="InlineEditor.cleanHtml()" title="${t('clean_formatting')}" class="editor-toolbar-eraser">${Icons.eraser}</button>
                         <span class="editor-toolbar-separator"></span>
                         <label class="editor-toggle">
@@ -3581,6 +3582,42 @@
      * @param {string} html - Raw HTML string
      * @returns {string} Cleaned HTML string
      */
+    var FOOTNOTE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" width="16" height="16"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M5.07 8l13.86 8M5.07 16 18.93 8"/></g></svg>';
+
+    /**
+     * Footnote: wraps the selection in <span class="footnote">; inside an existing footnote the
+     * span is unwrapped again. js/footnotes.js renders the span as a numbered marker with a tooltip.
+     */
+    function toggleFootnoteIn(root) {
+        const selection = window.getSelection();
+        if (!selection.rangeCount || !root) return;
+        const range = selection.getRangeAt(0);
+        if (!root.contains(range.commonAncestorContainer)) return;
+        const startNode = range.startContainer.nodeType === 1 ? range.startContainer : range.startContainer.parentElement;
+        const existing = startNode ? startNode.closest('.footnote') : null;
+        if (existing && root.contains(existing)) {
+            existing.replaceWith(...existing.childNodes);
+            root.normalize();
+            return;
+        }
+        const holder = document.createElement('div');
+        holder.append(range.cloneContents());
+        const inner = range.collapsed ? escHtml(t('footnote_placeholder')) : holder.innerHTML;
+        document.execCommand('insertHTML', false, '<span class="footnote" id="nb-footnote-new">' + inner + '</span>');
+        const span = root.querySelector('#nb-footnote-new');
+        if (!span) return;
+        span.removeAttribute('id');
+        const next = document.createRange();
+        if (range.collapsed) next.selectNodeContents(span); else { next.setStartAfter(span); next.collapse(true); }
+        selection.removeAllRanges();
+        selection.addRange(next);
+    }
+
+    function toggleFootnote() {
+        const wysiwyg = document.getElementById('editor-wysiwyg');
+        if (wysiwyg) { wysiwyg.focus(); toggleFootnoteIn(wysiwyg); }
+    }
+
     // Mirrors includes/html-sanitizer.php (the server's sanitizer remains final): the same tags and
     // attributes survive inline editing, so site components (classes, ids, tables, figures) keep working.
     const SANITIZE_TAGS = new Set('p br strong b em i u a ul ol li h1 h2 h3 h4 h5 h6 blockquote span div figure figcaption img table thead tbody tfoot tr th td caption sup sub hr pre code small cite q mark s del ins abbr dl dt dd details summary video audio source'.split(' '));
@@ -3806,7 +3843,17 @@
                 activeHtmlField.focus();
             } else if (action === 'link') {
                 insertLinkInField(activeHtmlField);
+            } else if (action === 'footnote') {
+                toggleFootnoteIn(activeHtmlField);
+                activeHtmlField.focus();
+            } else if (action === 'split') {
+                const parts = String(activeHtmlField.dataset.newsBlock || '').split('.');
+                splitNewsBlockAt(parts[0], parseInt(parts[1], 10), { el: activeHtmlField });
             } else if (action === 'html-source') {
+                if (activeHtmlField.classList.contains('news-editable')) {
+                    openNewsHtmlEditor(activeHtmlField);
+                    return;
+                }
                 // Finish inline editing first, then open modal
                 const field = activeHtmlField;
                 finishInlineHtmlEdit(field, field._originalHtml, false);
@@ -7670,6 +7717,7 @@
         closeModal: closeModal,
         execCommand: execCommand,
         insertLink: insertLink,
+        toggleFootnote: toggleFootnote,
         toggleHtmlMode: toggleHtmlMode,
         saveSection: saveSection,
         closeGroupEditor: closeGroupEditor,

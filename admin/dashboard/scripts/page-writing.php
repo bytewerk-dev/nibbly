@@ -10,6 +10,7 @@
         eraser: '<svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 0 1-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0M4.22 15.58l3.54 3.53c.78.79 2.04.79 2.83 0l3.53-3.53-4.95-4.95-4.95 4.95z"/></svg>',
     };
     toolbarIcons.quote = '<svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z"/></svg>';
+    toolbarIcons.footnote = '<svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M11 2h2v7.2l6.2-3.6 1 1.7L14 11l6.2 3.7-1 1.7L13 12.8V20h-2v-7.2l-6.2 3.6-1-1.7L10 11 3.8 7.3l1-1.7L11 9.2z"/></svg>';
     toolbarIcons.unlink = toolbarIcons.link.replace('</svg>', '<path d="M4 3 21 20" fill="none" stroke="currentColor" stroke-width="2"/> </svg>');
     // Mirrors includes/html-sanitizer.php (the server's sanitizer remains final)
     const allowedTags = new Set('p br strong b em i u a ul ol li h1 h2 h3 h4 h5 h6 blockquote span div figure figcaption img table thead tbody tfoot tr th td caption sup sub hr pre code small cite q mark s del ins abbr dl dt dd details summary video audio source'.split(' '));
@@ -228,6 +229,7 @@
             [t('editor.writing.quote'), toolbarIcons.quote, () => wrap('<blockquote>', '</blockquote>')],
             [t('editor.writing.unordered'), toolbarIcons.unorderedList, () => list('ul')],
             [t('editor.writing.ordered'), toolbarIcons.orderedList, () => list('ol')],
+            [t('editor.writing.footnote'), toolbarIcons.footnote, () => wrap('<span class="footnote">', '</span>')],
             [t('editor.writing.list_item'), 'li', () => wrap('<li>', '</li>')],
             [t('editor.writing.inline_code'), 'code', () => wrap('<code>', '</code>')],
             [t('editor.writing.close_tags'), escapeHtml(t('editor.writing.close_tags')), () => { const closing = unclosedTags(source.value.slice(0, source.selectionStart)); if (closing) { source.focus(); code.insert(closing); } }],
@@ -236,7 +238,7 @@
         buttons.forEach(([title, label, action], index) => {
             const button = document.createElement('button'); button.type = 'button'; button.title = title; button.setAttribute('aria-label', title); button.innerHTML = label;
             if (index === buttons.length - 1) button.className = 'btn btn-secondary btn-sm nb-code-toolbar__format';
-            else if (index >= 6) button.classList.add('nb-code-toolbar__text');
+            else if (index >= 7) button.classList.add('nb-code-toolbar__text');
             button.addEventListener('mousedown', event => event.preventDefault()); // keep the selection in the field
             button.addEventListener('click', action);
             bar.append(button);
@@ -281,6 +283,10 @@
             if (['bold','italic','insertUnorderedList','insertOrderedList'].includes(command)) button.setAttribute('aria-pressed', 'false');
             toolbar.append(button);
         });
+        // Fußnote: Markierung in <span class="footnote"> fassen, innerhalb einer Fußnote diese auflösen
+        const footnoteButton = document.createElement('button'); footnoteButton.type = 'button'; footnoteButton.dataset.action = 'footnote';
+        footnoteButton.title = t('editor.writing.footnote'); footnoteButton.setAttribute('aria-label', t('editor.writing.footnote')); footnoteButton.innerHTML = toolbarIcons.footnote;
+        toolbar.append(footnoteButton);
         const visual = document.createElement('div'); visual.className = 'nb-page-rich-editor'; visual.id = id;
         visual.contentEditable = 'true'; visual.setAttribute('role', 'textbox'); visual.setAttribute('aria-multiline','true'); visual.setAttribute('aria-labelledby',label.id); visual.spellcheck = true;
         visual.innerHTML = cleanHtml(source.value);
@@ -304,6 +310,25 @@
         };
         const sync = () => { source.value = cleanHtml(visual.innerHTML); source.dispatchEvent(new Event('input',{bubbles:true})); hooks.markDirty(); remember(); };
         const command = (name, value = null) => { restore(); document.execCommand(name, false, value); sync(); };
+        const footnote = () => {
+            restore();
+            const selection = window.getSelection(); if (!selection.rangeCount) return;
+            const current = selection.getRangeAt(0);
+            const startNode = current.startContainer.nodeType === 1 ? current.startContainer : current.startContainer.parentElement;
+            const existing = startNode?.closest('.footnote');
+            if (existing && visual.contains(existing)) { existing.replaceWith(...existing.childNodes); visual.normalize(); sync(); return; }
+            const holder = document.createElement('div'); holder.append(current.cloneContents());
+            const inner = current.collapsed ? escapeHtml(t('editor.writing.footnote_placeholder')) : holder.innerHTML;
+            document.execCommand('insertHTML', false, `<span class="footnote" id="nb-footnote-new">${inner}</span>`);
+            const span = visual.querySelector('#nb-footnote-new');
+            if (span) {
+                span.removeAttribute('id');
+                const next = document.createRange();
+                if (current.collapsed) next.selectNodeContents(span); else { next.setStartAfter(span); next.collapse(true); }
+                selection.removeAllRanges(); selection.addRange(next);
+            }
+            sync();
+        };
         visual.addEventListener('focus', () => hooks.pushUndoSnapshot());
         visual.addEventListener('input', sync);
         visual.addEventListener('keyup', remember); visual.addEventListener('mouseup', remember);
@@ -330,6 +355,7 @@
         url.oninput = () => url.setCustomValidity('');
         url.onkeydown = event => { if (event.key === 'Enter') { event.preventDefault(); apply.click(); } if (event.key === 'Escape') cancel.click(); };
         toolbar.addEventListener('click', event => {
+            if (event.target.closest('[data-action="footnote"]')) { footnote(); return; }
             const button = event.target.closest('[data-command]'); if (!button) return;
             if (button.dataset.command === 'createLink') {
                 const node = range?.startContainer; const anchor = (node?.nodeType === 1 ? node : node?.parentElement)?.closest('a');
