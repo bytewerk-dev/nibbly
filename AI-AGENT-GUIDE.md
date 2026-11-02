@@ -1375,7 +1375,7 @@ editableListItems($page, $listKey)
 editableTextList($page, $listKey, $defaults = ['content' => ''])
 // Renders a list of editable HTML paragraphs with add/remove/reorder controls.
 // Each item is a single editableHtml() field. Admins get inline editing with
-// a floating toolbar (Bold, Italic, Link, Clean). Visitors see clean HTML.
+// a floating toolbar (block format, Bold, Italic, Link, Clean). Visitors see clean HTML.
 // JSON stores: {"0": {"content": "..."}, "1": {"content": "..."}}
 ```
 
