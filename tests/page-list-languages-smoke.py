@@ -143,7 +143,10 @@ def check_conflicts(site, admin):
 
 with tempfile.TemporaryDirectory(prefix="nibbly-page-list-") as folder:
     site = Site(folder)
-    site.start()
+    # The checks rewrite admin/config.php and includes/nav-config.php behind PHP's back. With OPcache a copy
+    # compiled shortly before (slow runner: config.php was old enough to be cached at login) is served for up
+    # to revalidate_freq seconds, so the list ran with the previous default language and grouped nothing.
+    site.start(ini={"opcache.enable": "0"})
     try:
         admin = Client(site).login("admin")
         check_direction(site, admin, "de", "en", "German site with English paths")
