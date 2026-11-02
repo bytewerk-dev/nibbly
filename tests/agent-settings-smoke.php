@@ -101,18 +101,18 @@ settingsAssert(nibblyAgentCan('publish') === true && nibblyAgentCan('research') 
 $_SESSION['admin_role'] = 'admin';
 
 // ---- Keys stay when the fields are empty, go when cleared ----------------------------------------------
-$again = nibblyAiSaveSettings($base + ['apiKey' => '', 'agent' => ['enabled' => true], 'research' => ['braveApiKey' => '', 'allowDomains' => 'news.example.org'], 'stock' => ['pexelsApiKey' => '']]);
+$again = nibblyAiSaveSettings(array_replace($base, ['apiKey' => '', 'agent' => ['enabled' => true], 'research' => ['braveApiKey' => '', 'allowDomains' => 'news.example.org'], 'stock' => ['pexelsApiKey' => '']]));
 settingsAssert($stored()['research']['brave']['apiKey'] === BRAVE && $stored()['stock']['pexels']['apiKey'] === PEXELS && $again['research']['hasBraveApiKey'] && $again['stock']['hasPexelsApiKey'], 'empty key fields keep the saved keys');
 settingsAssert($again['research']['allowDomains'] === ['news.example.org'] && $again['research']['denyDomains'] === ['blocked.test'] && $again['research']['respectRobots'] === false, 'fields that were not sent keep their values');
 settingsAssert($again['agent']['limits']['maxToolCalls'] === 25 && $again['agent']['roles']['editor']['publish'] === true && $again['agent']['mediaFolder'] === 'team-photos', 'agent values that were not sent stay as they were');
-$replaced = nibblyAiSaveSettings($base + ['apiKey' => '', 'research' => ['braveApiKey' => 'BSA-another-brave-key-999'], 'stock' => []]);
+$replaced = nibblyAiSaveSettings(array_replace($base, ['apiKey' => '', 'research' => ['braveApiKey' => 'BSA-another-brave-key-999'], 'stock' => []]));
 settingsAssert($stored()['research']['brave']['apiKey'] === 'BSA-another-brave-key-999' && $stored()['stock']['pexels']['apiKey'] === PEXELS, 'a new key replaces the old one, the other stays');
-$cleared = nibblyAiSaveSettings($base + ['apiKey' => '', 'research' => ['clearBraveApiKey' => true], 'stock' => ['clearPexelsApiKey' => true]]);
+$cleared = nibblyAiSaveSettings(array_replace($base, ['apiKey' => '', 'research' => ['clearBraveApiKey' => true], 'stock' => ['clearPexelsApiKey' => true]]));
 settingsAssert(($stored()['research']['brave']['apiKey'] ?? '') === '' && ($stored()['stock']['pexels']['apiKey'] ?? '') === '' && !str_contains((string)file_get_contents($secretsFile), 'BSA-') && !$cleared['research']['hasBraveApiKey'] && !$cleared['stock']['hasPexelsApiKey'], 'keys can be removed');
 settingsAssert(!nibblyAgentResearchSettings()['available'] && !nibblyAgentStockSettings()['available'], 'without keys there is no research and no stock photos');
 
 // ---- Sections survive callers that know nothing about them -----------------------------------------------------
-nibblyAiSaveSettings($base + ['apiKey' => '', 'agent' => ['enabled' => true, 'mediaFolder' => 'kept'], 'research' => ['braveApiKey' => BRAVE], 'stock' => ['pexelsApiKey' => PEXELS]]);
+nibblyAiSaveSettings(array_replace($base, ['apiKey' => '', 'agent' => ['enabled' => true, 'mediaFolder' => 'kept'], 'research' => ['braveApiKey' => BRAVE], 'stock' => ['pexelsApiKey' => PEXELS]]));
 $before = $stored();
 nibblyAiSaveSettings(array_replace($base, ['apiKey' => '', 'chatModel' => 'gpt-4.1']));
 $after = $stored();
@@ -120,10 +120,10 @@ settingsAssert($after['agent'] === $before['agent'] && $after['research'] === $b
 
 // ---- Refusals ------------------------------------------------------------------------------------------------------------------
 foreach ([['research' => ['braveApiKey' => 'short']], ['research' => ['braveApiKey' => 'has spaces in it 12345']], ['stock' => ['pexelsApiKey' => "line\nbreak-key-12345678"]], ['stock' => ['pexelsApiKey' => str_repeat('k', 201)]]] as $bad) {
-    settingsThrows(static fn() => nibblyAiSaveSettings($base + ['apiKey' => ''] + $bad), 'API key', 'an invalid key is refused: ' . json_encode($bad));
+    settingsThrows(static fn() => nibblyAiSaveSettings(array_replace($base, ['apiKey' => ''], $bad)), 'API key', 'an invalid key is refused: ' . json_encode($bad));
 }
 foreach (['Bad Folder', '../up', 'UPPER', '', str_repeat('a', 41), 5] as $folder) {
-    settingsThrows(static fn() => nibblyAiSaveSettings($base + ['apiKey' => '', 'agent' => ['mediaFolder' => $folder]]), 'media folder', 'an invalid media folder is refused: ' . json_encode($folder));
+    settingsThrows(static fn() => nibblyAiSaveSettings(array_replace($base, ['apiKey' => '', 'agent' => ['mediaFolder' => $folder]])), 'media folder', 'an invalid media folder is refused: ' . json_encode($folder));
 }
 settingsAssert($stored()['agent']['mediaFolder'] === 'kept', 'a refused save changes nothing');
 
