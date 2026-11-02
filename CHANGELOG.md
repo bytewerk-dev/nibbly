@@ -9,6 +9,8 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+## [2.8.0] — 2026-11-02
+
 ### Added
 
 - **Block format in the floating text toolbar.** The toolbar of an inline-edited HTML field starts
