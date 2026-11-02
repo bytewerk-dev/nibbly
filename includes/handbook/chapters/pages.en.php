@@ -14,22 +14,24 @@
 <h3>Adding a page</h3>
 <ol class="hb-steps">
   <li><span>Click <?php echo $hb->btn('New Page', 'primary', 'plus'); ?> at the top right.</span></li>
-  <li><span>Enter a <b>title</b>. nibbly fills in the <b>slug</b>, the part of the address, from it. A slash makes a subpage, such as <code>services/consulting</code>.</span></li>
+  <li><span>Enter a <b>title</b>. For a subpage, choose the <b>parent page</b>. nibbly fills in the <b>slug</b>, the last part of the address, from the title; the resulting address is shown below, such as <code>/services/consulting</code>.</span></li>
   <li><span><?php echo $hb->btn('Create Page', 'primary'); ?>. The new page is publicly reachable right away. Which menu it appears in you set in the Content Editor under <b>Navigation</b><?php if ($hb->module('menus') && $hb->isAdmin): ?> or under <?php echo $hb->ref('menus'); ?><?php endif; ?>.</span></li>
 </ol>
 <?php echo $hb->note('Drafts', 'Pages have no draft status. If a page shouldn’t be public yet, set it to “Private, password protected” in the page settings. Signed-in users still see it without a password.'); ?>
 
 <h3>The Content Editor</h3>
 <div class="hb-prose">
-  <p>The Content Editor shows a page as a form: title and text at the top, the sections below to expand. At the top right are <?php echo $hb->btn('Save', 'primary'); ?>, <?php echo $hb->ui('View'); ?> and the languages. Changes in the Content Editor apply only after saving.</p>
+  <p>The Content Editor shows a page as a form: title and text at the top, the sections below to expand and the description, and at the very bottom, set apart by a line, the SEO fields. On the right are <?php echo $hb->btn('Save', 'primary'); ?>, <?php echo $hb->ui('View'); ?> and the languages, below them page image, page settings, access and backups. Changes in the Content Editor apply only after saving.</p>
 </div>
 <?php echo $hb->shot('page-editor.webp', 'Content Editor of the home page with title, text field and page actions', '<b>Content Editor.</b> The same content as on the website, field by field.'); ?>
 <dl class="hb-fields">
   <div><dt>Sections</dt><dd>Expand to edit, drag the handle to sort, <?php echo $hb->ui('Insert here'); ?> to add a new section at a spot. Hints such as “alt text missing” show where something is missing.</dd></div>
-  <div><dt>Basic data</dt><dd>Title and description of the page.</dd></div>
-  <div><dt>Navigation</dt><dd>Which menus the page appears in, and the breadcrumb.</dd></div>
-  <div><dt>Access</dt><dd><?php echo $hb->ui('Public'); ?> or <?php echo $hb->ui('Private, password protected'); ?> with its own page password and text for the password page.</dd></div>
-  <div><dt>SEO / AEO</dt><dd>SEO title, meta description (the text below the link in Google), a short answer for AI search and the image for shared links. The SEO rating at the top shows what's missing.</dd></div>
+  <div><dt>Navigation, breadcrumb</dt><dd>Two expandable rows right below the title: which menus the page appears in, and the breadcrumb.</dd></div>
+  <div><dt>Page image</dt><dd>In the sidebar: the page's title image with alt text. It also appears on the overview cards of the parent page.</dd></div>
+  <div><dt>Description</dt><dd>Below the sections, ahead of SEO / AEO: the card text on the parent page and the meta description at once. The field takes bold, italic and links, but no paragraphs; <?php echo $hb->ui('Code'); ?> shows the HTML. The meta tags get the plain text.</dd></div>
+  <div><dt>Page settings</dt><dd>In the sidebar: the address. <?php echo $hb->ui('Move / rename …'); ?> gives the page a new address or moves it below another page: subpages move along, internal links are rewritten, and the old address redirects permanently to the new one.</dd></div>
+  <div><dt>Access</dt><dd>In the sidebar: <?php echo $hb->ui('Public'); ?> or <?php echo $hb->ui('Private, password protected'); ?> with its own page password and text for the password page.</dd></div>
+  <div><dt>SEO / AEO</dt><dd>At the end of the page, below the sections: SEO title, meta description (the text below the link in Google), a short answer for AI search and the image for shared links. The SEO rating at the top shows what's missing.</dd></div>
 </dl>
 
 <h3>SEO rating</h3>

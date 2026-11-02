@@ -404,7 +404,7 @@
     "modal.new_page_title_placeholder": "My New Page",
     "modal.new_page_slug": "Slug",
     "modal.new_page_slug_placeholder": "my-new-page",
-    "modal.new_page_slug_hint": "Lowercase URL path; use slashes for nested pages. Auto-generated from title.",
+    "modal.new_page_slug_hint": "Last part of the address, lowercase. Filled in from the title.",
     "modal.create_page": "Create Page",
     "modal.delete_permanently": "Delete Permanently",
     "modal.delete_confirm": "Are you sure you want to permanently delete \"{title}\" ({page})? This cannot be undone.",
@@ -2537,5 +2537,18 @@
     "comments.saved": "Saved",
     "comments.deleted": "Entry deleted",
     "comments.delete_title": "Delete entry",
-    "comments.confirm_delete": "Delete this entry permanently? Replies to it stay and move up."
+    "comments.confirm_delete": "Delete this entry permanently? Replies to it stay and move up.",
+    "modal.page_parent": "Parent page",
+    "modal.page_parent_none": "None (top level)",
+    "modal.page_address": "Address",
+    "modal.move_page": "Move or rename page",
+    "modal.move_page_hint": "Subpages move along. Internal links are rewritten and the old address redirects permanently to the new one. Applies to this language version.",
+    "modal.move_page_confirm": "Move",
+    "toast.page_moved": "Address changed: {url}",
+    "editor.page_address": "Address",
+    "editor.page_address_change": "Move / rename …",
+    "editor.page_move_save_first": "Please save first, then move or rename.",
+    "editor.page_image": "Page image",
+    "editor.page_image_alt": "Alt text of the page image",
+    "editor.page_image_hint": "Title image of the page and image on the overview cards of the parent page."
 }

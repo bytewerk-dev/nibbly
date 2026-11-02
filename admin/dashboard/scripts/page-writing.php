@@ -187,7 +187,7 @@
         return open.reverse().map(tag => `</${tag}>`).join('');
     }
     // Tag buttons above the code field, after WordPress's text editor ("quicktags")
-    function codeToolbar(source, code) {
+    function codeToolbar(source, code, compact = false) {
         const bar = document.createElement('div'); bar.className = 'news-wysiwyg-toolbar nb-page-rich-toolbar nb-code-toolbar'; bar.setAttribute('role', 'toolbar'); bar.setAttribute('aria-label', t('editor.writing.code_tools'));
         const selection = () => [source.selectionStart, source.selectionEnd, source.value.slice(source.selectionStart, source.selectionEnd)];
         const wrap = (open, close) => {
@@ -226,19 +226,21 @@
             [t('editor.writing.bold'), '<b>B</b>', () => wrap('<strong>', '</strong>')],
             [t('editor.writing.italic'), toolbarIcons.italic, () => wrap('<em>', '</em>')],
             [t('editor.writing.link'), toolbarIcons.link, openLink],
+        ];
+        // Teaser fields hold one line of inline markup: only bold, italic and link apply there
+        if (!compact) buttons.push(
             [t('editor.writing.quote'), toolbarIcons.quote, () => wrap('<blockquote>', '</blockquote>')],
             [t('editor.writing.unordered'), toolbarIcons.unorderedList, () => list('ul')],
             [t('editor.writing.ordered'), toolbarIcons.orderedList, () => list('ol')],
             [t('editor.writing.footnote'), toolbarIcons.footnote, () => wrap('<span class="footnote">', '</span>')],
-            [t('editor.writing.list_item'), 'li', () => wrap('<li>', '</li>')],
-            [t('editor.writing.inline_code'), 'code', () => wrap('<code>', '</code>')],
-            [t('editor.writing.close_tags'), escapeHtml(t('editor.writing.close_tags')), () => { const closing = unclosedTags(source.value.slice(0, source.selectionStart)); if (closing) { source.focus(); code.insert(closing); } }],
-            [t('editor.writing.format_code_hint'), escapeHtml(t('editor.writing.format_code')), () => { source.focus(); code.insert(formatHtml(source.value), 0, source.value.length); source.setSelectionRange(0, 0); }],
-        ];
-        buttons.forEach(([title, label, action], index) => {
+            [t('editor.writing.list_item'), 'li', () => wrap('<li>', '</li>'), 'nb-code-toolbar__text'],
+            [t('editor.writing.inline_code'), 'code', () => wrap('<code>', '</code>'), 'nb-code-toolbar__text'],
+            [t('editor.writing.close_tags'), escapeHtml(t('editor.writing.close_tags')), () => { const closing = unclosedTags(source.value.slice(0, source.selectionStart)); if (closing) { source.focus(); code.insert(closing); } }, 'nb-code-toolbar__text'],
+            [t('editor.writing.format_code_hint'), escapeHtml(t('editor.writing.format_code')), () => { source.focus(); code.insert(formatHtml(source.value), 0, source.value.length); source.setSelectionRange(0, 0); }, 'btn btn-secondary btn-sm nb-code-toolbar__format'],
+        );
+        buttons.forEach(([title, label, action, className]) => {
             const button = document.createElement('button'); button.type = 'button'; button.title = title; button.setAttribute('aria-label', title); button.innerHTML = label;
-            if (index === buttons.length - 1) button.className = 'btn btn-secondary btn-sm nb-code-toolbar__format';
-            else if (index >= 7) button.classList.add('nb-code-toolbar__text');
+            if (className) button.className = className;
             button.addEventListener('mousedown', event => event.preventDefault()); // keep the selection in the field
             button.addEventListener('click', action);
             bar.append(button);
@@ -252,6 +254,159 @@
         const text = document.createElement('span'); text.textContent = label;
         summary.append(text); el.append(summary);
         return el;
+    }
+    // The page settings leave the tab panels of the plain editor (scripts/pages.php): title image,
+    // address and access become sidebar panels like in the news editor, navigation and breadcrumb
+    // fold out under the title, the description follows the blocks, and SEO closes the page at the
+    // bottom behind a divider, where it is easy to find after scrolling down a long page.
+    function sidePanel(label, className) {
+        const section = document.createElement('section');
+        section.className = 'nb-page-panel nb-page-panel--meta ' + className;
+        const heading = document.createElement('h3'); heading.textContent = label;
+        section.append(heading);
+        return section;
+    }
+    function placeSettings(sections, panel, nav) {
+        const fieldOf = selector => sections.querySelector(selector)?.closest('.ce-field') || null;
+        const imagePanel = sidePanel(t('editor.page_image'), 'nb-page-image');
+        const image = fieldOf('[data-path="image"]'); if (image) { image.querySelector('.ce-field-label')?.remove(); imagePanel.append(image); }
+        const imageAlt = fieldOf('[data-path="imageAlt"]'); if (imageAlt) imagePanel.append(imageAlt);
+        const basicsPanel = sidePanel(t('editor.page_settings'), 'nb-page-basics');
+        const address = fieldOf('.ce-address-row'); if (address) basicsPanel.append(address);
+        const accessPanel = sidePanel(t('editor.settings_access'), 'nb-page-access');
+        const access = fieldOf('.ce-visibility-grid'); if (access) accessPanel.append(access);
+        nav.after(...[imagePanel, basicsPanel, accessPanel].filter(p => p.children.length > 1));
+
+        const meta = document.createElement('div'); meta.className = 'nb-page-meta';
+        [['.ce-nav-checkboxes', t('editor.nav_locations')], ['#breadcrumbEditor', t('editor.breadcrumb')]].forEach(([selector, label]) => {
+            const field = fieldOf(selector); if (!field) return;
+            field.querySelector('.ce-card-field-label')?.remove();
+            const disclosure = details(label, 'nb-page-details--meta'); disclosure.append(field); meta.append(disclosure);
+        });
+        if (meta.children.length) { const titleField = panel.querySelector('.nb-page-title-field'); titleField ? titleField.after(meta) : panel.prepend(meta); }
+
+        // The description (card text, fallback for the meta description) needs the width of the main
+        // column for its toolbar and tabs; it sits after the blocks, ahead of the SEO section.
+        const description = fieldOf('[data-path="description"]');
+        if (description) { const wrap = document.createElement('section'); wrap.className = 'nb-page-description'; wrap.append(description); panel.append(wrap); }
+        const seo = sections.querySelector('.ce-settings-card--seo');
+        if (seo) {
+            seo.querySelectorAll('.ce-form-tile').forEach(tile => { const control = tile.querySelector('input,textarea,select'); if (control?.id) tile.dataset.seoField = control.id; });
+            const wrap = document.createElement('section'); wrap.className = 'nb-page-seo'; wrap.setAttribute('aria-label', t('editor.seo'));
+            wrap.append(seo); panel.append(wrap);
+        }
+        // emptied cards of the hidden tab panels
+        sections.querySelectorAll('.ce-settings-card:not(.ce-settings-card--seo)').forEach(card => { if (!card.querySelector('.ce-field')) card.remove(); });
+    }
+    // Teaser fields (post excerpt, page description) are one short rich-text line: bold, italic and
+    // link only, no paragraphs. Block elements and line breaks become spaces; cards set their own <p>.
+    const inlineTags = new Set(['b','strong','i','em','a','sub','sup']);
+    function cleanInline(html) {
+        const template = document.createElement('template'); template.innerHTML = cleanHtml(html);
+        const walk = parent => [...parent.childNodes].forEach(node => {
+            if (node.nodeType !== 1) return;
+            walk(node);
+            const tag = node.tagName.toLowerCase();
+            if (!inlineTags.has(tag)) { node.replaceWith(' ', ...node.childNodes, ' '); return; }
+            [...node.attributes].forEach(({name}) => { if (!(tag === 'a' && ['href','target','rel'].includes(name))) node.removeAttribute(name); });
+            // execCommand writes <b>/<i>; the content uses the semantic tags
+            if (tag === 'b' || tag === 'i') { const semantic = document.createElement(tag === 'b' ? 'strong' : 'em'); semantic.append(...node.childNodes); node.replaceWith(semantic); }
+        });
+        walk(template.content);
+        return template.innerHTML.replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+    // The textarea stays the source the save routines read; the editing surface writes back into it.
+    // Same frame as the content field: label with Visual / Code tabs, toolbar, and in Code the
+    // highlighted source with a short tag bar.
+    function inlineEditor(source, index, hooks) {
+        if (!source || source.dataset.writingReady) return;
+        source.dataset.writingReady = 'true';
+        const id = 'nb-inline-rich-' + index;
+        const label = source.id ? document.querySelector(`label[for="${source.id}"]`) : source.closest('.ce-field, .section-fields, .editor-form-row')?.querySelector('label');
+        const wrap = document.createElement('div'); wrap.className = 'nb-inline-rich';
+        const head = document.createElement('div'); head.className = 'nb-page-rich-head';
+        if (label) { label.id = id + '-label'; head.append(label); }
+        const modes = document.createElement('div'); modes.className = 'segmented nb-page-modes'; modes.setAttribute('role', 'radiogroup'); modes.setAttribute('aria-label', t('editor.writing.view_modes'));
+        const [visualChoice, codeChoice] = [['visual', t('editor.writing.visual')], ['code', t('editor.writing.code')]].map(([value, text]) => {
+            const option = document.createElement('label'); const input = document.createElement('input'); const caption = document.createElement('span');
+            input.type = 'radio'; input.name = id + '-mode'; input.value = value; caption.textContent = text;
+            option.append(input, caption); modes.append(option); return input;
+        });
+        head.append(modes);
+        const toolbar = document.createElement('div'); toolbar.className = 'news-wysiwyg-toolbar nb-page-rich-toolbar nb-inline-rich-toolbar'; toolbar.setAttribute('role', 'toolbar'); toolbar.setAttribute('aria-label', t('editor.writing.format_text'));
+        [['bold',t('editor.writing.bold'),'<b>B</b>'],['italic',t('editor.writing.italic'),toolbarIcons.italic],['createLink',t('editor.writing.link'),toolbarIcons.link],['unlink',t('editor.writing.unlink'),toolbarIcons.unlink],['removeFormat',t('editor.writing.clear'),toolbarIcons.eraser]].forEach(([command, title, text]) => {
+            const button = document.createElement('button'); button.type = 'button'; button.dataset.command = command; button.title = title; button.setAttribute('aria-label', title); button.innerHTML = text;
+            if (command === 'bold' || command === 'italic') button.setAttribute('aria-pressed', 'false');
+            toolbar.append(button);
+        });
+        const visual = document.createElement('div'); visual.className = 'nb-page-rich-editor nb-inline-rich-editor'; visual.id = id;
+        visual.contentEditable = 'true'; visual.setAttribute('role', 'textbox'); visual.setAttribute('aria-multiline', 'false'); visual.spellcheck = true;
+        if (label) visual.setAttribute('aria-labelledby', label.id);
+        visual.innerHTML = cleanInline(source.value);
+        if (!source.id) source.id = id + '-source';
+        source.setAttribute('aria-label', t('editor.writing.html_content')); source.classList.add('nb-inline-rich-source');
+        source.replaceWith(wrap); wrap.append(head, toolbar, visual, source);
+        const code = codeField(source); code.box.hidden = true;
+        const codeBar = codeToolbar(source, code, true); code.box.before(codeBar.bar, codeBar.panel); codeBar.bar.hidden = true;
+        let range = null;
+        const remember = () => {
+            const selection = window.getSelection();
+            if (!selection.rangeCount || !visual.contains(selection.anchorNode) || !visual.contains(selection.focusNode)) return;
+            range = selection.getRangeAt(0).cloneRange();
+            toolbar.querySelectorAll('[aria-pressed]').forEach(button => button.setAttribute('aria-pressed', String(document.queryCommandState(button.dataset.command))));
+        };
+        const restore = () => {
+            visual.focus();
+            const selection = window.getSelection();
+            if (range && visual.contains(range.commonAncestorContainer)) { selection.removeAllRanges(); selection.addRange(range); }
+        };
+        const sync = () => { source.value = cleanInline(visual.innerHTML); source.dispatchEvent(new Event('input', {bubbles: true})); hooks.markDirty(); remember(); };
+        const command = (name, value = null) => { restore(); document.execCommand(name, false, value); sync(); };
+        visual.addEventListener('focus', () => hooks.pushUndoSnapshot());
+        visual.addEventListener('input', sync);
+        visual.addEventListener('keyup', remember); visual.addEventListener('mouseup', remember); visual.addEventListener('blur', remember);
+        visual.addEventListener('keydown', event => { if (event.key === 'Enter') event.preventDefault(); });
+        visual.addEventListener('click', event => { if (event.target.closest('a')) event.preventDefault(); });
+        visual.addEventListener('paste', event => {
+            event.preventDefault();
+            const html = event.clipboardData.getData('text/html');
+            if (html) document.execCommand('insertHTML', false, cleanInline(html));
+            else document.execCommand('insertText', false, event.clipboardData.getData('text/plain').replace(/\s+/g, ' '));
+            sync();
+        });
+        visual.addEventListener('drop', event => event.preventDefault());
+        toolbar.addEventListener('mousedown', event => { if (event.target.closest('button')) event.preventDefault(); });
+        const linkPanel = document.createElement('div'); linkPanel.className = 'nb-page-link-panel'; linkPanel.hidden = true;
+        const linkLabel = document.createElement('label'); linkLabel.textContent = t('editor.writing.link_target');
+        const url = document.createElement('input'); url.type = 'text'; url.placeholder = t('editor.writing.link_placeholder'); url.autocomplete = 'off'; linkLabel.append(url);
+        const apply = document.createElement('button'); apply.type = 'button'; apply.className = 'btn btn-primary btn-sm'; apply.textContent = t('editor.writing.apply');
+        const cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 'btn btn-secondary btn-sm'; cancel.textContent = t('btn.cancel');
+        linkPanel.append(linkLabel, apply, cancel); toolbar.after(linkPanel);
+        apply.onclick = () => { const href = url.value.trim(); if (!href || !safeHref(href)) { url.setCustomValidity(t('editor.writing.invalid_link')); url.reportValidity(); return; } command('createLink', href); linkPanel.hidden = true; };
+        cancel.onclick = () => { linkPanel.hidden = true; restore(); };
+        url.oninput = () => url.setCustomValidity('');
+        url.onkeydown = event => { if (event.key === 'Enter') { event.preventDefault(); apply.click(); } if (event.key === 'Escape') cancel.click(); };
+        toolbar.addEventListener('click', event => {
+            const button = event.target.closest('[data-command]'); if (!button) return;
+            if (button.dataset.command === 'createLink') {
+                const node = range?.startContainer; const anchor = (node?.nodeType === 1 ? node : node?.parentElement)?.closest('a');
+                url.value = anchor?.getAttribute('href') || ''; linkPanel.hidden = false; url.focus(); return;
+            }
+            command(button.dataset.command);
+        });
+        let inCode = false;
+        const mode = html => {
+            // back from Code, the source takes the cleaned one-line form the field stands for
+            if (!html) { const clean = cleanInline(source.value); visual.innerHTML = clean; if (inCode && clean !== source.value) { source.value = clean; source.dispatchEvent(new Event('input', {bubbles: true})); } }
+            inCode = html;
+            visual.hidden = html; toolbar.hidden = html; code.box.hidden = !html; codeBar.bar.hidden = !html; codeBar.panel.hidden = true; linkPanel.hidden = true;
+            if (html) code.refresh();
+            if (label) label.htmlFor = html ? source.id : visual.id;
+            visualChoice.checked = !html; codeChoice.checked = html;
+        };
+        visualChoice.addEventListener('change', () => mode(false)); codeChoice.addEventListener('change', () => mode(true)); mode(false);
+        source.addEventListener('focus', () => hooks.pushUndoSnapshot());
+        source.addEventListener('input', hooks.markDirty);
     }
     function richEditor(field, index, hooks) {
         const source = field.querySelector('textarea.section-field');
@@ -402,11 +557,16 @@
             else root.querySelector('.editor-header').append(actions);
         }
         root.classList.remove('nb-writing-single');
-        if (!enabled) { layout.querySelector('.nb-page-navigation').replaceChildren(); return; }
-        const tabs = sections.querySelector('.ce-editor-tabs'); layout.querySelector('.nb-page-navigation').replaceChildren(...(tabs ? [tabs] : []));
+        const aside = layout.querySelector('.nb-page-sidebar'); const nav = layout.querySelector('.nb-page-navigation');
+        aside.querySelectorAll('.nb-page-panel--meta').forEach(el => el.remove());
+        nav.replaceChildren(); nav.hidden = enabled;
+        if (!enabled) return;
+        sections.querySelector('.ce-editor-tabs')?.remove();
         const panel = sections.querySelector('[data-editor-panel="content"]');
         const title = sections.querySelector('[data-path="title"]');
         if (title && panel) { title.autocomplete='off'; title.name='page-title'; title.id='nb-page-title'; const field=title.closest('.ce-field'); field.classList.add('nb-page-title-field'); field.querySelector('label').htmlFor=title.id; panel.prepend(field); }
+        inlineEditor(sections.querySelector('textarea[data-path="description"]'), 'page-description', hooks);
+        if (panel) placeSettings(sections, panel, nav);
         const single = content.sections.length === 1 && content.sections[0].type === 'text'; root.classList.toggle('nb-writing-single', single);
         if (single) sections.querySelector('.section-item')?.classList.add('is-open');
         sections.querySelectorAll('.html-editor').forEach((field,index) => richEditor(field,index,hooks));
@@ -422,6 +582,6 @@
         const groups=[...sections.querySelectorAll('.ce-section-editor>.ce-group')];
         if(groups.length) {const disclosure=details(t('editor.writing.more_fields')); groups[0].before(disclosure); groups.forEach(group=>disclosure.append(group));}
     }
-    // richEditor is shared with the news editor (scripts/news.php)
-    window.NbPageEditor = { enhance, richEditor };
+    // richEditor and inlineEditor are shared with the news editor (scripts/news.php)
+    window.NbPageEditor = { enhance, richEditor, inlineEditor };
 })();

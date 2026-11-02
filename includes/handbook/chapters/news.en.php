@@ -7,7 +7,7 @@
 <h3>Writing a post</h3>
 <ol class="hb-steps">
   <li><span>Click <?php echo $hb->btn('New Post', 'primary', 'plus'); ?>.</span></li>
-  <li><span>Enter <b>title</b> and <b>content</b>. The content is made of blocks: text, image, gallery, YouTube, audio, divider and spacer. The <b>kicker</b> sits above the title and also appears in overviews, the <b>short description</b> in overviews and previews.</span></li>
+  <li><span>Enter <b>title</b> and <b>content</b>. The content is made of blocks: text, image, gallery, YouTube, audio, divider and spacer. The <b>kicker</b> sits above the title and also appears in overviews, the <b>short description</b> in overviews and previews; it takes bold, italic and links, but no paragraphs; <?php echo $hb->ui('Code'); ?> shows the HTML.</span></li>
   <li><span>On the right, under <b>post settings</b>, are the date, author, address (slug), categories and tags and the <b>title image</b>, which you pick from the image manager via <?php echo $hb->ui('Browse'); ?>. You choose whether it appears in the text column, at full width or not at all.</span></li>
   <li><span>The <b>sidebar</b> sits next to the text: a cover with a label, the short description and blocks of its own. Comments can be switched off for a single post.</span></li>
   <li><span>As long as <b>Draft</b> is ticked, visitors don't see the post. To publish, untick it and click <?php echo $hb->btn('Save post', 'primary'); ?>.</span></li>

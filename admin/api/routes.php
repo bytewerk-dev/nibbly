@@ -19,6 +19,7 @@ return [
     'copy-page' => 'pages',
     'delete-page' => 'pages',
     'duplicate-page' => 'pages',
+    'move-page' => 'pages',
     'list-trash' => 'pages',
     'restore-page' => 'pages',
     'delete-trash' => 'pages',

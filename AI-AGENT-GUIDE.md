@@ -2298,10 +2298,17 @@ Validation: `python3 tests/people-smoke.py` uses disposable content only.
 ## Dashboard page writing view
 
 `admin/dashboard/scripts/page-writing.php` enhances the standard `sections[]` editor
-through `NbPageEditor.enhance()` after each native render. Save controls and panel tabs
-move into a responsive right sidebar; a single text block uses the full writing column.
-Custom JSON pages without `sections` keep the generic field editor. Multiple blocks keep
-navigation, reordering and all registered field types (including Person and Team).
+through `NbPageEditor.enhance()` after each native render. Save controls move into a
+responsive right sidebar; `placeSettings()` dissolves the settings tabs: page image, address
+and access become sidebar panels, navigation and breadcrumb fold out under the title, the
+description follows the blocks and the SEO card closes the page behind a divider. A single
+text block uses the full writing column. Custom JSON pages without `sections` keep the generic
+field editor with its tabs. Multiple blocks keep navigation, reordering and all registered
+field types (including Person and Team).
+
+`inlineEditor(textarea, index, hooks)` turns a teaser textarea (post excerpt `#newsExcerpt`,
+page description) into a one-line rich-text field with Visual / Code view; `cleanInline()`
+keeps `strong`, `em`, `a`, `sub`, `sup` only. The textarea stays the value the save routines read.
 
 Visual rich-text fields synchronize into the existing `.section-field` textarea. It remains
 the data source for collection, undo snapshots and the revision-aware save API. The HTML
@@ -2310,4 +2317,6 @@ HTML use an inert allowlist sanitizer; server validation stays final. Use admin 
 and `editor.writing.*` translations for changes. Do not add a second save or content store.
 
 Validation: `python3 tests/page-writing-smoke.py`; add `--serve` for the isolated browser
-fixture (single text, multiple blocks, empty sections and custom JSON).
+fixture (single text, multiple blocks, empty sections and custom JSON). Moving a page
+(`move-page`: rename with subpages, link rewrite, menus, redirect rule) is covered by
+`python3 tests/page-move-smoke.py`.

@@ -4,7 +4,7 @@ if (!defined('NIBBLY_ADMIN_DIR')) { http_response_code(404); exit; }
 require_once dirname(__DIR__, 2) . '/includes/search-helper.php';
 
 // The search index follows every change of a page (the response is sent first; the rebuild runs at shutdown)
-if (in_array($action, ['save', 'create-page', 'copy-page', 'delete-page', 'duplicate-page', 'restore-page', 'restore'], true)) {
+if (in_array($action, ['save', 'create-page', 'copy-page', 'delete-page', 'duplicate-page', 'restore-page', 'restore', 'move-page'], true)) {
     register_shutdown_function(static function (): void { nibblySearchIndexRebuild(); });
 }
 
@@ -171,6 +171,147 @@ switch ($action) {
         }
 
         jsonResponse(true, ['pageList' => buildPageList()], 'Page moved to trash');
+        break;
+
+    case 'move-page':
+        // Change the address of a page: rename its file and those of its subpages, rewrite internal
+        // links, redirect the old address and update managed menus. One language version at a time.
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        $page = $_POST['page'] ?? '';
+        if (!validatePageName($page) || ($parts = nibblyPageParseContentKey($page)) === null) {
+            jsonResponse(false, null, 'Invalid page name');
+        }
+        $lang = $parts['lang'];
+        $oldPath = $parts['path'];
+        $newPath = trim($_POST['slug'] ?? '');
+        if (!nibblyPageIsValidPath($newPath)) {
+            jsonResponse(false, null, 'Invalid path (use lowercase URL segments separated by slashes)');
+        }
+        if ($oldPath === 'home' || $newPath === 'home') {
+            jsonResponse(false, null, 'The home page cannot be moved');
+        }
+        if ($newPath === $oldPath) {
+            jsonResponse(false, null, 'The page already has this address');
+        }
+        if (str_starts_with($newPath, $oldPath . '/')) {
+            jsonResponse(false, null, 'A page cannot be moved below itself');
+        }
+        if (!file_exists(CONTENT_PATH . $page . '.json')) {
+            jsonResponse(false, null, 'Page does not exist');
+        }
+
+        // Pages to rename: the page and all subpages (same language), old key → new key
+        $oldPrefix = nibblyPageContentKey($lang, $oldPath);
+        $newPrefix = nibblyPageContentKey($lang, $newPath);
+        $moves = [$oldPrefix => $newPrefix];
+        foreach (glob(CONTENT_PATH . $oldPrefix . '__*.json') ?: [] as $childFile) {
+            $childKey = basename($childFile, '.json');
+            $moves[$childKey] = $newPrefix . substr($childKey, strlen($oldPrefix));
+        }
+        foreach ($moves as $fromKey => $toKey) {
+            if (file_exists(CONTENT_PATH . $toKey . '.json')) {
+                jsonResponse(false, null, 'A page with this address already exists: ' . str_replace('__', '/', substr($toKey, 3)));
+            }
+        }
+
+        require_once NIBBLY_ADMIN_DIR . '/../includes/json-store.php';
+        // Backups of every file that moves, then rename and update page/path inside
+        $stamp = date('Y-m-d_His') . '_' . bin2hex(random_bytes(3));
+        foreach ($moves as $fromKey => $toKey) {
+            if (!copy(CONTENT_PATH . $fromKey . '.json', BACKUP_PATH . $fromKey . '_' . $stamp . '.json')) {
+                jsonResponse(false, null, 'Could not create a backup before moving');
+            }
+            cleanupOldBackups($fromKey);
+        }
+        $renamed = [];
+        foreach ($moves as $fromKey => $toKey) {
+            if (!rename(CONTENT_PATH . $fromKey . '.json', CONTENT_PATH . $toKey . '.json')) {
+                foreach ($renamed as $doneTo => $doneFrom) @rename(CONTENT_PATH . $doneTo . '.json', CONTENT_PATH . $doneFrom . '.json');
+                jsonResponse(false, null, 'Error moving page files');
+            }
+            $renamed[$toKey] = $fromKey;
+            @unlink(CONTENT_PATH . $fromKey . '.json.lock');
+            $data = json_decode((string)file_get_contents(CONTENT_PATH . $toKey . '.json'), true);
+            if (is_array($data)) {
+                $data['page'] = $toKey;
+                $data['path'] = str_replace('__', '/', substr($toKey, 3));
+                $data['lastModified'] = date('c');
+                nibblyJsonAtomicWrite(CONTENT_PATH . $toKey . '.json', $data);
+            }
+        }
+
+        // Internal links: "/old", "/old/sub", "/xx/old" (language prefix) inside any string of the
+        // content files become the new address. Strings are matched at their start or after a quote,
+        // "=", "(" or whitespace, so "/old-other" and "/foo/old" stay as they are.
+        $quoted = preg_quote($oldPath, '~');
+        $linkPattern = '~(^|(?<=["\'=(\s]))(/[a-z]{2})?/' . $quoted . '(?=$|[/"\'#?)\s])~';
+        $rewriteStrings = static function ($value) use (&$rewriteStrings, $linkPattern, $oldPath, $newPath, &$changed) {
+            if (is_string($value)) {
+                if (!str_contains($value, '/' . $oldPath)) return $value;
+                $out = preg_replace($linkPattern, '$1$2/' . $newPath, $value);
+                if ($out === null) return $value;
+                if ($out !== $value) $changed = true;
+                return $out;
+            }
+            if (is_array($value)) {
+                foreach ($value as $k => $v) $value[$k] = $rewriteStrings($v);
+            }
+            return $value;
+        };
+        $rewritten = 0;
+        $contentRoot = dirname(CONTENT_PATH);
+        $files = array_merge(
+            glob(CONTENT_PATH . '*.json') ?: [],
+            glob($contentRoot . '/news/*.json') ?: [],
+            array_filter([$contentRoot . '/footer.json', $contentRoot . '/sidebar.json'], 'is_file')
+        );
+        foreach ($files as $file) {
+            $raw = (string)file_get_contents($file);
+            if (!str_contains($raw, '/' . $oldPath)) continue;
+            $data = json_decode($raw, true);
+            if (!is_array($data)) continue;
+            $changed = false;
+            $data = $rewriteStrings($data);
+            if ($changed && nibblyJsonAtomicWrite($file, $data)) $rewritten++;
+        }
+
+        // Managed menus (content/menus.json): page items of this language follow the page and its subpages
+        require_once NIBBLY_ADMIN_DIR . '/../includes/menu-helpers.php';
+        foreach ($moves as $fromKey => $toKey) {
+            nibblyMenusRenamePage($lang, str_replace('__', '/', substr($fromKey, 3)), str_replace('__', '/', substr($toKey, 3)));
+        }
+
+        // 301 from the old address (and its subpages, with or without language prefix) to the new one;
+        // the rule goes first so it wins over older migration rules
+        $redirectsFile = $contentRoot . '/redirects.json';
+        $redirects = is_file($redirectsFile) ? json_decode((string)file_get_contents($redirectsFile), true) : null;
+        if (!is_array($redirects)) $redirects = [];
+        if (!isset($redirects['redirects']) || !is_array($redirects['redirects'])) $redirects['redirects'] = [];
+        // Older rules that pointed at the old address now point at the new one (no redirect chains);
+        // targets of earlier moves start with "$1" (the language prefix of the matched request)
+        $rulePattern = '~^((?:\\$1)?(?:/[a-z]{2})?)/' . $quoted . '(?=$|[/$"\'#?)\\s])~';
+        foreach ($redirects['redirects'] as &$rule) {
+            if (!is_string($rule['to'] ?? null)) continue;
+            $rule['to'] = preg_replace($rulePattern, '$1/' . $newPath, $rule['to']) ?? $rule['to'];
+        }
+        unset($rule);
+        array_unshift($redirects['redirects'], [
+            'from' => '^(/[a-z]{2})?/' . preg_quote($oldPath, '#') . '(/.+?)?/?$',
+            'to' => '$1/' . $newPath . '$2',
+            'status' => 301,
+            'note' => 'Page moved on ' . date('Y-m-d') . ': /' . $oldPath . ' -> /' . $newPath,
+        ]);
+        nibblyJsonAtomicWrite($redirectsFile, $redirects);
+
+        jsonResponse(true, [
+            'page' => $newPrefix,
+            'slug' => $newPath,
+            'moved' => count($moves),
+            'rewritten' => $rewritten,
+            'pageList' => buildPageList(),
+        ], 'Page moved');
         break;
 
     case 'duplicate-page':

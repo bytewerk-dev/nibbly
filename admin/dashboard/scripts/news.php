@@ -440,6 +440,7 @@
         // Body and sidebar as block lists (a post still stored as HTML string becomes one text block)
         initNewsBlocks(post);
         renderNewsBlocks('sections');
+        window.NbPageEditor?.inlineEditor(document.getElementById('newsExcerpt'), 'news-excerpt', { markDirty() {}, pushUndoSnapshot() {} });
         renderNewsBlocks('aside');
 
         mountNewsLanguageSwitch(post);

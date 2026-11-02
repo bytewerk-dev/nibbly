@@ -404,7 +404,7 @@
     "modal.new_page_title_placeholder": "Meine neue Seite",
     "modal.new_page_slug": "Slug",
     "modal.new_page_slug_placeholder": "meine-neue-seite",
-    "modal.new_page_slug_hint": "URL-Pfad in Kleinbuchstaben; Schrägstriche erzeugen Unterseiten. Wird automatisch aus dem Titel generiert.",
+    "modal.new_page_slug_hint": "Letzter Teil der Adresse, in Kleinbuchstaben. Wird aus dem Titel gebildet.",
     "modal.create_page": "Seite erstellen",
     "modal.delete_permanently": "Endgültig löschen",
     "modal.delete_confirm": "Möchtest du \"{title}\" ({page}) wirklich endgültig löschen? Dies kann nicht rückgängig gemacht werden.",
@@ -2537,5 +2537,18 @@
     "comments.saved": "Gespeichert",
     "comments.deleted": "Eintrag gelöscht",
     "comments.delete_title": "Eintrag löschen",
-    "comments.confirm_delete": "Diesen Eintrag endgültig löschen? Antworten darauf bleiben erhalten und rücken nach oben."
+    "comments.confirm_delete": "Diesen Eintrag endgültig löschen? Antworten darauf bleiben erhalten und rücken nach oben.",
+    "modal.page_parent": "Übergeordnete Seite",
+    "modal.page_parent_none": "Keine (oberste Ebene)",
+    "modal.page_address": "Adresse",
+    "modal.move_page": "Seite verschieben oder umbenennen",
+    "modal.move_page_hint": "Unterseiten ziehen mit. Interne Links werden umgeschrieben, die alte Adresse leitet dauerhaft auf die neue weiter. Gilt für diese Sprachversion.",
+    "modal.move_page_confirm": "Verschieben",
+    "toast.page_moved": "Adresse geändert: {url}",
+    "editor.page_address": "Adresse",
+    "editor.page_address_change": "Verschieben / umbenennen …",
+    "editor.page_move_save_first": "Bitte zuerst speichern, dann verschieben oder umbenennen.",
+    "editor.page_image": "Seitenbild",
+    "editor.page_image_alt": "Alt-Text des Seitenbilds",
+    "editor.page_image_hint": "Titelbild der Seite und Bild auf den Übersichtskarten der übergeordneten Seite."
 }
