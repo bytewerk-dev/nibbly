@@ -1488,7 +1488,10 @@
 
     function getSectionPreview(section, maxLength = 72) {
         const formatPreview = (value) => {
-            const clean = value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+            // Tags out, entities (&nbsp;, &amp;, …) back to characters, then one space between words
+            const decoder = document.createElement('textarea');
+            decoder.innerHTML = value.replace(/<[^>]*>/g, ' ');
+            const clean = decoder.value.replace(/[\s\u00a0]+/g, ' ').trim();
             if (!maxLength || clean.length <= maxLength) return clean;
             return clean.slice(0, maxLength) + '…';
         };

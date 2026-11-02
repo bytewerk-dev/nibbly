@@ -3606,6 +3606,24 @@
      * Footnote: wraps the selection in <span class="footnote">; inside an existing footnote the
      * span is unwrapped again. js/footnotes.js renders the span as a numbered marker with a tooltip.
      */
+    // Moves the ends of a range inwards past spaces (also non-breaking ones) in text nodes.
+    function trimRangeWhitespace(range) {
+        const isSpace = (ch) => ch === ' ' || ch === '\u00a0' || ch === '\t' || ch === '\n';
+        while (!range.collapsed && range.startContainer.nodeType === 3 && range.startOffset < range.startContainer.data.length && isSpace(range.startContainer.data[range.startOffset])) {
+            range.setStart(range.startContainer, range.startOffset + 1);
+        }
+        while (!range.collapsed && range.endContainer.nodeType === 3 && range.endOffset > 0 && isSpace(range.endContainer.data[range.endOffset - 1])) {
+            range.setEnd(range.endContainer, range.endOffset - 1);
+        }
+    }
+
+    // insertHTML turns the spaces next to the inserted element into non-breaking ones; give them back
+    function unstickSpacesAround(el) {
+        const prev = el.previousSibling, next = el.nextSibling;
+        if (prev && prev.nodeType === 3 && prev.data.endsWith('\u00a0')) prev.data = prev.data.slice(0, -1) + ' ';
+        if (next && next.nodeType === 3 && next.data.startsWith('\u00a0')) next.data = ' ' + next.data.slice(1);
+    }
+
     function toggleFootnoteIn(root) {
         const selection = window.getSelection();
         if (!selection.rangeCount || !root) return;
@@ -3618,6 +3636,10 @@
             root.normalize();
             return;
         }
+        // A double-click selects the word plus its trailing space; the space stays outside the footnote
+        trimRangeWhitespace(range);
+        selection.removeAllRanges();
+        selection.addRange(range);
         const holder = document.createElement('div');
         holder.append(range.cloneContents());
         const inner = range.collapsed ? escHtml(t('footnote_placeholder')) : holder.innerHTML;
@@ -3625,6 +3647,7 @@
         const span = root.querySelector('#nb-footnote-new');
         if (!span) return;
         span.removeAttribute('id');
+        unstickSpacesAround(span);
         const next = document.createRange();
         if (range.collapsed) next.selectNodeContents(span); else { next.setStartAfter(span); next.collapse(true); }
         selection.removeAllRanges();

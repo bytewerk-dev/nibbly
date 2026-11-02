@@ -317,12 +317,21 @@
             const startNode = current.startContainer.nodeType === 1 ? current.startContainer : current.startContainer.parentElement;
             const existing = startNode?.closest('.footnote');
             if (existing && visual.contains(existing)) { existing.replaceWith(...existing.childNodes); visual.normalize(); sync(); return; }
+            // A double-click selects the word plus its trailing space; the space stays outside the footnote
+            const isSpace = (ch) => ch === ' ' || ch === '\u00a0' || ch === '\t' || ch === '\n';
+            while (!current.collapsed && current.startContainer.nodeType === 3 && current.startOffset < current.startContainer.data.length && isSpace(current.startContainer.data[current.startOffset])) current.setStart(current.startContainer, current.startOffset + 1);
+            while (!current.collapsed && current.endContainer.nodeType === 3 && current.endOffset > 0 && isSpace(current.endContainer.data[current.endOffset - 1])) current.setEnd(current.endContainer, current.endOffset - 1);
+            selection.removeAllRanges(); selection.addRange(current);
             const holder = document.createElement('div'); holder.append(current.cloneContents());
             const inner = current.collapsed ? escapeHtml(t('editor.writing.footnote_placeholder')) : holder.innerHTML;
             document.execCommand('insertHTML', false, `<span class="footnote" id="nb-footnote-new">${inner}</span>`);
             const span = visual.querySelector('#nb-footnote-new');
             if (span) {
                 span.removeAttribute('id');
+                // insertHTML turns the spaces next to the span into non-breaking ones; give them back
+                const before = span.previousSibling, after = span.nextSibling;
+                if (before && before.nodeType === 3 && before.data.endsWith('\u00a0')) before.data = before.data.slice(0, -1) + ' ';
+                if (after && after.nodeType === 3 && after.data.startsWith('\u00a0')) after.data = ' ' + after.data.slice(1);
                 const next = document.createRange();
                 if (current.collapsed) next.selectNodeContents(span); else { next.setStartAfter(span); next.collapse(true); }
                 selection.removeAllRanges(); selection.addRange(next);

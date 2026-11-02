@@ -667,7 +667,9 @@
     }
 
     function newsBlockPreview(block, def) {
-        const plain = html => String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        // Tags out, entities (&nbsp;, &amp;, …) back to characters, then one space between words
+        const decoder = document.createElement('textarea');
+        const plain = html => { decoder.innerHTML = String(html || '').replace(/<[^>]+>/g, ' '); return decoder.value.replace(/[\s\u00a0]+/g, ' ').trim(); };
         let text = '';
         if (block.type === 'text') text = plain(block.title) || plain(block.content);
         else if (block.type === 'image') text = plain(block.caption) || plain(block.alt) || String(block.src || '').split('/').pop();
