@@ -3,6 +3,45 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.7.0 to 2.8.0
+
+Version 2.8.0 builds posts from blocks (gallery, kicker, cover, sidebar, footnotes, backups per
+post), lets pages be moved with their subpages, restructures the page editor and adds nested
+folders to the media library. All defaults reproduce the previous behaviour; posts stored as an
+HTML string keep working, existing sites need no data migration and no configuration.
+
+1. Deploy the complete core. New: `includes/block-renderers/gallery.php`, `includes/text-styles.php`,
+   `js/lightbox.js`, `js/footnotes.js`. Changed, among others: `.htaccess`, `includes/footer.php`,
+   `includes/content-loader.php`, `includes/news-helper.php`, `includes/news-post.php`,
+   `includes/seo-helper.php`, `includes/block-types.php`, `includes/block-renderers/*.php`,
+   `admin/api/*.php`, `admin/dashboard/scripts/*.php`, `admin/lang/*.json`, `admin/style.css`,
+   `css/*.css`, `js/inline-editor.js`, `js/image-manager.js`.
+2. Sites with their own `includes/footer.php`: the core footer loads `js/lightbox.js` and
+   `js/footnotes.js` (both `defer`, only when the file exists). Copy those two lines if the site
+   uses galleries, image lightboxes or footnotes.
+3. `.htaccess`: one new block serves `.mjs` files with the JavaScript MIME type. Nginx and other
+   servers add the type themselves if they serve ES modules.
+4. Posts: a post may now carry `sections` and `aside` (block lists) instead of `content`; the
+   dashboard converts a post on its first save in the new editor, the renderer accepts both. Site
+   templates that read `$post['content']` directly switch to `nibblyNewsBodyHtml($post)`. Optional
+   fields `subtitle`, `cover`, `sidebar`, `imageLayout` and `comments` stay empty until set. Text
+   block styles come from `includes/text-styles.php`; a site adds its own in
+   `content/text-styles.json` (label per language, CSS class) and styles the classes in its CSS.
+5. Backups: every save of a post keeps the previous JSON in `backups/` (`news__{id}_{date}.json`),
+   trimmed like page backups. Deployments that exclude `backups/` from version control keep doing
+   so.
+6. Moving a page (`Move / rename …` in the Page Settings) writes a 301 rule to
+   `content/redirects.json` (created when missing) and rewrites internal links in
+   `content/pages/*.json`, `content/news/*.json`, `content/footer.json` and `content/sidebar.json`.
+   Sites that keep `content/redirects.json` under version control commit the new rule.
+7. Media library: folders may contain folders up to five levels. Site code that lists media
+   through `list-media` receives folder paths such as `2000/10`; `create-media-folder`,
+   `delete-media-folder` and `move-media` take paths.
+8. Page description and post excerpt may contain inline markup (`strong`, `em`, `a`, `sub`,
+   `sup`). Site templates that print `$page['description']` or `$post['excerpt']` with
+   `htmlspecialchars()` show the tags as text; print the excerpt through the core helpers or
+   strip the tags with `nibblySeoTextFromHtml()`. Meta tags already receive the plain text.
+
 ## Upgrading from 2.6.0 to 2.7.0
 
 Version 2.7.0 extends the News module (URL patterns, categories, tags, archive pages), adds full-text
