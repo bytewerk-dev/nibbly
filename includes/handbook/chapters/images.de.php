@@ -15,7 +15,7 @@
 <dl class="hb-fields">
   <div><dt>Ordner</dt><dd>Links legst du mit dem Ordner-Symbol neue Ordner an, etwa für ein Projekt oder ein Jahr. Ist ein Ordner ausgewählt, entsteht der neue darin; so baust du etwa „2026/Oktober“. Ordner mit Unterordnern klappst du mit dem Pfeil zu und auf. Leere Ordner lassen sich wieder löschen.</dd></div>
   <div><dt>Suche und Ansicht</dt><dd>Oben suchst du nach Dateinamen und wechselst zwischen Raster und Liste.</dd></div>
-  <div><dt>Unter jedem Bild</dt><dd>Kleine Symbole für Vorschau, Herunterladen, Pfad kopieren, Verschieben in einen anderen Ordner, Umbenennen, Ersetzen, KI-Kennzeichnung und Löschen. Fahr mit der Maus darüber, dann steht dort, was das Symbol tut.</dd></div>
+  <div><dt>Unter jedem Bild</dt><dd>Kleine Symbole für Herunterladen, Pfad kopieren, Verschieben in einen anderen Ordner, Umbenennen, Ersetzen, KI-Kennzeichnung und Löschen. Fahr mit der Maus darüber, dann steht dort, was das Symbol tut. Ein Klick aufs Bild wählt es aus; die Lupe, die beim Überfahren oben links erscheint, zeigt es groß.</dd></div>
   <div><dt>Papierkorb</dt><dd>Gelöschte Bilder landen zuerst im <?php echo $hb->ui('Papierkorb'); ?> (oben neben <?php echo $hb->ui('Bibliothek'); ?>). Von dort holst du sie mit <?php echo $hb->ui('Wiederherstellen'); ?> zurück oder löschst sie endgültig.</dd></div>
   <div><dt>Gleicher Dateiname</dt><dd>Gibt es den Namen schon, fragt nibbly, ob die alte Datei überschrieben oder die neue unter anderem Namen gespeichert werden soll.</dd></div>
 </dl>
