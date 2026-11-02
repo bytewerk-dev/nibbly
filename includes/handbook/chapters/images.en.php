@@ -15,7 +15,7 @@
 <dl class="hb-fields">
   <div><dt>Folders</dt><dd>On the left, the folder symbol creates new folders, for example for a project or a year. With a folder selected, the new one is created inside it, so you can build “2026/October”. Folders with subfolders collapse and expand with the arrow. Empty folders can be deleted again.</dd></div>
   <div><dt>Search and view</dt><dd>At the top you search by file name and switch between grid and list.</dd></div>
-  <div><dt>Below each image</dt><dd>Small symbols for preview, download, copy path, move to another folder, rename, replace, AI label and delete. Move the mouse over a symbol to see what it does.</dd></div>
+  <div><dt>Below each image</dt><dd>Small symbols for download, copy path, move to another folder, rename, replace, AI label and delete. Move the mouse over a symbol to see what it does. A click on the image selects it; the magnifier that appears top left on hover shows it large.</dd></div>
   <div><dt>Trash</dt><dd>Deleted images go to the <?php echo $hb->ui('Trash'); ?> first (at the top next to <?php echo $hb->ui('Library'); ?>). From there you bring them back with <?php echo $hb->ui('Restore'); ?> or delete them for good.</dd></div>
   <div><dt>Same file name</dt><dd>If the name already exists, nibbly asks whether to overwrite the old file or save the new one under a different name.</dd></div>
 </dl>
