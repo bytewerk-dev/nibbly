@@ -12428,7 +12428,9 @@ html[data-sidebar="collapsed"] .admin-sidebar .sidebar-nav-item.has-unsaved::aft
 .nb-page-sidebar{display:none}
 .nb-writing-view .nb-writing-layout{display:grid;grid-template-columns:minmax(0,1fr) 16.25rem;gap:var(--nb-space-5);align-items:start}
 .nb-writing-view #sectionsContainer{min-width:0}
-.nb-writing-view .nb-page-sidebar{display:grid;gap:var(--nb-space-4);position:sticky;top:calc(var(--nb-space-6) + var(--nb-topbar-h));min-width:0}
+/* One column of minmax(0,1fr): an implicit auto column would grow to the widest content (long slug,
+   address) and push the sidebar past the editor's right edge */
+.nb-writing-view .nb-page-sidebar{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--nb-space-4);position:sticky;top:calc(var(--nb-space-6) + var(--nb-topbar-h));min-width:0}
 .nb-writing-view .nb-page-save,.nb-writing-view .nb-page-navigation{padding:var(--nb-space-4);background:var(--nb-bg-elevated);border:1px solid var(--nb-border);border-radius:var(--nb-radius-md)}
 .nb-page-save h3{font-size:var(--nb-text-base);margin:0 0 var(--nb-space-4);font-weight:600}
 .nb-writing-view .editor-header-right{display:flex;flex-direction:column;align-items:stretch;gap:var(--nb-space-3)}
@@ -12516,7 +12518,8 @@ html[data-sidebar="collapsed"] .admin-sidebar .sidebar-nav-item.has-unsaved::aft
 
 /* News and event editors in the writing view (scripts/news.php, scripts/events.php):
    main column with title and text, settings in sidebar panels like the save box */
-.nb-writing-view .nb-page-panel{padding:var(--nb-space-4);background:var(--nb-bg-elevated);border:1px solid var(--nb-border);border-radius:var(--nb-radius-md);display:grid;gap:var(--nb-space-3)}
+.nb-writing-view .nb-page-panel{padding:var(--nb-space-4);background:var(--nb-bg-elevated);border:1px solid var(--nb-border);border-radius:var(--nb-radius-md);display:grid;gap:var(--nb-space-3);grid-template-columns:minmax(0,1fr);min-width:0}
+.nb-page-panel[hidden]{display:none}
 .nb-page-panel h3{font-size:var(--nb-text-base);margin:0;font-weight:600}
 .nb-page-panel .editor-form-row{margin:0}
 .nb-page-panel .editor-form-row label{display:block;margin-bottom:var(--nb-space-1)}

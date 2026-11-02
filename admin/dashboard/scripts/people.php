@@ -171,7 +171,7 @@ window.NbPeople = (() => {
         try {const data=await request('save-person',{id:current.id,person:JSON.stringify(pending)});people=data.people;current=data.person;dirty=false;updateOptions();form();message(tr('saved'));}
         catch(error){message(error.message);}
     }
-    mount().addEventListener('click', async event=>{
+    mount()?.addEventListener('click', async event=>{
         const button=event.target.closest('[data-people]');if(!button||busy)return;
         if(button.tagName==='A')event.preventDefault();
         const action=button.dataset.people,id=button.dataset.id;
