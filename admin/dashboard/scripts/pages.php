@@ -745,7 +745,7 @@
         document.getElementById('pageListContainer').style.display = 'block';
         document.getElementById('trashContainer').style.display = 'none';
         document.getElementById('editorContainer').style.display = 'none';
-        document.getElementById('backupContainer').style.display = 'none';
+        document.getElementById('backupContainer').hidden = true;
         currentPage = null;
         currentContent = null;
         // Update topbar
@@ -765,7 +765,7 @@
     async function showTrash() {
         document.getElementById('pageListContainer').style.display = 'none';
         document.getElementById('editorContainer').style.display = 'none';
-        document.getElementById('backupContainer').style.display = 'none';
+        document.getElementById('backupContainer').hidden = true;
         document.getElementById('trashContainer').style.display = 'block';
         const topbarTitle = document.getElementById('topbarTitle');
         if (topbarTitle) topbarTitle.textContent = t('trash.title');
@@ -1013,7 +1013,7 @@
                 // Hide page list, show editor
                 document.getElementById('pageListContainer').style.display = 'none';
                 document.getElementById('editorContainer').style.display = 'block';
-                document.getElementById('backupContainer').style.display = 'block';
+                document.getElementById('backupContainer').hidden = false;
                 document.getElementById('toggleAllBtn').style.display = '';
                 allExpanded = false;
                 document.getElementById('toggleAllBtn').textContent = t('editor.expand_all');

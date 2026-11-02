@@ -878,18 +878,23 @@
             button.title = t(this.reloadRequired ? 'page_backups.reload' : 'page_backups.restore_title');
             group.setAttribute('aria-busy', String(!!busy));
         },
+        // Posts have their own backups (api list-news-backups / restore-news-backup, no page revision)
+        isPost() { return !!(EditorConfig.isNewsPost && EditorConfig.newsPostData?.id); },
         async load() {
-            if (!EditorConfig.currentPage || EditorConfig.isNewsPost || this.loading || this.restoring) return;
+            if ((!EditorConfig.currentPage && !this.isPost()) || this.loading || this.restoring) return;
             const select = document.getElementById('admin-backup-select');
             if (!select) return;
             this.loading = true;
             this.update();
             try {
-                const response = await fetch(`${EditorConfig.apiUrl}?action=backups&page=${encodeURIComponent(EditorConfig.currentPage)}`, {cache: 'no-store'});
+                const url = this.isPost()
+                    ? `${EditorConfig.apiUrl}?action=list-news-backups&id=${encodeURIComponent(EditorConfig.newsPostData.id)}`
+                    : `${EditorConfig.apiUrl}?action=backups&page=${encodeURIComponent(EditorConfig.currentPage)}`;
+                const response = await fetch(url, {cache: 'no-store'});
                 const result = await response.json();
                 if (!response.ok || !result.success || !Array.isArray(result.data)) throw new Error('Backup list unavailable');
                 // Only show backups of this exact content page, never shared or nested pages.
-                this.items = result.data.filter(item => {
+                this.items = this.isPost() ? result.data : result.data.filter(item => {
                     const match = String(item.filename || '').match(/^(.*)_\d{4}-\d{2}-\d{2}_\d{6}(?:_[a-f0-9]{6})?\.json$/);
                     return match && match[1] === EditorConfig.currentPage;
                 });
@@ -937,6 +942,13 @@
             const item = this.items.find(backup => backup.filename === select?.value);
             if (!item) return;
             flushActiveInlineEdits();
+            if (this.isPost()) {
+                const message = t('post_backups.confirm', {backup: select.options[select.selectedIndex].textContent});
+                const hint = t(EditorConfig.dirtyPages.size > 0 ? 'page_backups.unsaved' : 'page_backups.saved_first');
+                showConfirmDialog(t('page_backups.restore_title'), message, hint,
+                    () => this.restore(item, ''), t('page_backups.apply'), 'editor-btn-primary');
+                return;
+            }
             const revision = window.NibblyRevisions?.get('page:' + EditorConfig.currentPage)
                 || EditorConfig.contentRevisions[EditorConfig.currentPage];
             if (!revision) {
@@ -959,10 +971,15 @@
             controls.forEach(control => { control.disabled = true; });
             try {
                 const formData = new FormData();
-                formData.append('action', 'restore');
-                formData.append('page', EditorConfig.currentPage);
+                if (this.isPost()) {
+                    formData.append('action', 'restore-news-backup');
+                    formData.append('post_id', EditorConfig.newsPostData.id);
+                } else {
+                    formData.append('action', 'restore');
+                    formData.append('page', EditorConfig.currentPage);
+                    formData.append('revision', revision);
+                }
                 formData.append('backup', item.filename);
-                formData.append('revision', revision);
                 formData.append('csrf_token', EditorConfig.csrfToken);
                 const response = await fetch(EditorConfig.apiUrl, {method: 'POST', body: formData});
                 const result = await response.json();
@@ -1043,12 +1060,12 @@
             <div class="admin-bar-inner">
                 <div class="admin-bar-left">
                     ${logoHtml}
-                    <a href="/admin/dashboard" class="admin-bar-link"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg> ${t('dashboard')}</a>
+                    <a href="/admin/dashboard" class="admin-bar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></g></svg> ${t('dashboard')}</a>
                     ${handbookHtml}
                 </div>
                 <div class="admin-bar-center">
-                    <div class="admin-bar-backups" id="admin-page-backups" role="group" aria-label="${escHtml(t('page_backups.label'))}" hidden>
-                        <select class="admin-bar-backup-select" id="admin-backup-select" data-native-select aria-label="${escHtml(t('page_backups.label'))}"></select>
+                    <div class="admin-bar-backups" id="admin-page-backups" role="group" aria-label="${escHtml(t(EditorConfig.isNewsPost ? 'post_backups.label' : 'page_backups.label'))}" hidden>
+                        <select class="admin-bar-backup-select" id="admin-backup-select" data-native-select aria-label="${escHtml(t(EditorConfig.isNewsPost ? 'post_backups.label' : 'page_backups.label'))}"></select>
                         <button type="button" class="admin-bar-btn" id="admin-btn-restore-backup">${t('page_backups.apply')}</button>
                     </div>
                     <span class="admin-bar-info" id="admin-bar-info" role="status" aria-live="polite" aria-atomic="true"></span>

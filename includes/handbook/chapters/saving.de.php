@@ -19,5 +19,5 @@
 
 <h3>Ältere Stände zurückholen</h3>
 <div class="hb-prose">
-  <p>Bei jedem Speichern sichert nibbly den vorherigen Stand der Seite, die letzten 30 bleiben erhalten. Damit kommst du auch nach dem Speichern noch zu einem früheren Stand zurück, siehe <?php echo $hb->ref('backups'); ?>.</p>
+  <p>Bei jedem Speichern sichert nibbly den vorherigen Stand der Seite oder des Beitrags, die letzten 30 bleiben erhalten. Damit kommst du auch nach dem Speichern noch zu einem früheren Stand zurück, siehe <?php echo $hb->ref('backups'); ?>.</p>
 </div>

@@ -26,6 +26,8 @@
     "page_backups.reload": "Der Seitenstand hat sich geändert. Bitte lade die Seite neu, bevor du ein Backup übernimmst.",
     "page_backups.failed": "Das Backup konnte nicht übernommen werden. Bitte versuche es erneut.",
     "page_backups.unconfirmed": "Die Wiederherstellung konnte nicht bestätigt werden. Bitte lade die Seite neu und prüfe den Stand.",
+    "post_backups.label": "Backups dieses Beitrags",
+    "post_backups.confirm": "{backup} für diesen Beitrag übernehmen?",
     "cat.content": "Inhalt",
     "cat.media": "Medien",
     "cat.cards": "Karten & Raster",

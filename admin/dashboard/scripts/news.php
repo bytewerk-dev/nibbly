@@ -426,6 +426,10 @@
                         </label>
                         <small class="form-hint">${escapeHtml(t('news.post_sidebar_hint'))}</small>
                     </section>
+                    <section class="nb-page-panel nb-backups-panel" id="newsBackupsPanel" aria-labelledby="newsBackupsTitle" ${editingPostId ? '' : 'hidden'}>
+                        <h3 id="newsBackupsTitle">${escapeHtml(t('backups.title'))}</h3>
+                        <div class="backup-list" id="newsBackupList"></div>
+                    </section>
                 </aside>
             </div>
         `;
@@ -439,6 +443,7 @@
         renderNewsBlocks('aside');
 
         mountNewsLanguageSwitch(post);
+        if (editingPostId) loadNewsBackups();
 
         // Update view + trash buttons (after form is built, so newsSlug/newsLang exist)
         updateNewsEditorButtons();
@@ -458,6 +463,87 @@
     }
 
  with the slug and date in the form
+    // ------------------------------------------------------------
+    // Post backups (api list-news-backups …): the previous state of the post, saved before every
+    // write, like the page backups in scripts/page-actions.php (whose preview renderer is reused)
+    // ------------------------------------------------------------
+    async function loadNewsBackups() {
+        const panel = document.getElementById('newsBackupsPanel');
+        const list = document.getElementById('newsBackupList');
+        if (!panel || !list || !editingPostId) return;
+        panel.hidden = false;
+        try {
+            const result = await (await fetch('api.php?action=list-news-backups&id=' + encodeURIComponent(editingPostId) + '&_=' + Date.now())).json();
+            if (!result.success) throw new Error(result.message || 'error');
+            const backups = result.data || [];
+            if (!backups.length) {
+                list.innerHTML = '<p class="form-hint">' + escapeHtml(t('backups.no_backups')) + '</p>';
+                return;
+            }
+            list.innerHTML = backups.map(backup => `
+                <div class="backup-item">
+                    <div class="backup-info">
+                        <span class="backup-date">${escapeHtml(backup.date)}</span>
+                        <span class="backup-time">${escapeHtml(backup.time)}</span>
+                    </div>
+                    ${renderBackupActions(backup.filename, 'previewNewsBackup', 'restoreNewsBackup', 'deleteNewsBackup')}
+                </div>`).join('');
+        } catch (error) {
+            list.innerHTML = '<p class="form-hint">' + escapeHtml(t('toast.error_generic', {message: error.message})) + '</p>';
+        }
+    }
+
+    async function previewNewsBackup(filename) {
+        try {
+            const result = await (await fetch('api.php?action=load-news-backup&backup=' + encodeURIComponent(filename))).json();
+            if (!result.success) { showToast(result.message, 'error'); return; }
+            showModal(t('backups.view'), renderBackupPreview(result.data), closeModal,
+                { html: true, modalClass: 'modal-backup-preview', confirmText: t('btn.close'), confirmClass: 'btn btn-primary' });
+        } catch (error) {
+            showToast(t('toast.error_generic', {message: error.message}), 'error');
+        }
+    }
+
+    function restoreNewsBackup(filename) {
+        showModal(t('modal.restore_backup'), t('modal.restore_backup_confirm'), async () => {
+            try {
+                const formData = new FormData();
+                formData.append('action', 'restore-news-backup');
+                formData.append('backup', filename);
+                formData.append('post_id', editingPostId);
+                formData.append('csrf_token', CSRF_TOKEN);
+                const result = await (await fetch('api.php', { method: 'POST', body: formData })).json();
+                if (!result.success) { showToast(result.message, 'error'); return; }
+                closeModal();
+                showToast(t('toast.backup_restored'), 'success');
+                await loadNews();
+                const post = await loadNewsPost(editingPostId);
+                if (post) { editingPost = post; showPostEditor(post); }
+            } catch (error) {
+                showToast(t('toast.error_generic', {message: error.message}), 'error');
+            }
+        });
+    }
+
+    function deleteNewsBackup(filename) {
+        showModal(t('modal.delete_backup'), t('modal.delete_backup_confirm'), async () => {
+            try {
+                const formData = new FormData();
+                formData.append('action', 'delete-news-backup');
+                formData.append('backup', filename);
+                formData.append('csrf_token', CSRF_TOKEN);
+                const result = await (await fetch('api.php', { method: 'POST', body: formData })).json();
+                if (!result.success) { showToast(result.message, 'error'); return; }
+                closeModal();
+                showToast(t('toast.backup_deleted'), 'success');
+                loadNewsBackups();
+            } catch (error) {
+                showToast(t('toast.error_generic', {message: error.message}), 'error');
+            }
+        });
+    }
+
+    // The address the post will have with the slug and date in the form
     function updateNewsUrlPreview() {
         const preview = document.getElementById('newsUrlPreview');
         if (!preview) return;
@@ -1007,6 +1093,7 @@
                 updateNewsEditorButtons();
                 updateNewsUrlPreview();
                 newsSavedState = JSON.stringify(collectNewsPost());
+                loadNewsBackups(); // the state before this save is now the newest backup
                 return true;
             }
             showToast(result.message, 'error');

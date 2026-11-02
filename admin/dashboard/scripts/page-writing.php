@@ -384,6 +384,7 @@
             layout = document.createElement('div'); layout.className = 'nb-writing-layout'; sections.before(layout); layout.append(sections);
             const aside = document.createElement('aside'); aside.className = 'nb-page-sidebar'; aside.setAttribute('aria-label',t('editor.writing.page_actions'));
             aside.innerHTML = `<section class="nb-page-save"><h3>${escapeHtml(t('editor.writing.save_page'))}</h3><div class="nb-page-save-controls"></div></section><nav class="nb-page-navigation" aria-label="${escapeHtml(t('editor.writing.page_settings'))}"></nav>`;
+            const backups = document.getElementById('backupContainer'); if (backups) aside.append(backups);
             layout.append(aside);
         }
         const actions = root.querySelector('.editor-header-right');

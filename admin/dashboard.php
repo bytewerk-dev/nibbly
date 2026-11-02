@@ -554,13 +554,13 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
             </div>
         </div>
 
-        <!-- Backups -->
-        <div class="backup-container" id="backupContainer" style="display: none;">
-            <h3><?php echo t('backups.title'); ?></h3>
+        <!-- Backups: moved to the bottom of the page editor's sidebar by scripts/page-writing.php -->
+        <section class="nb-page-panel nb-backups-panel" id="backupContainer" aria-labelledby="backupsTitle" hidden>
+            <h3 id="backupsTitle"><?php echo t('backups.title'); ?></h3>
             <div class="backup-list" id="backupList">
                 <!-- Backups inserted via JS -->
             </div>
-        </div>
+        </section>
     </div>
 
     <!-- Events Tab — list view -->

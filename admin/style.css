@@ -3140,6 +3140,44 @@ svg.topbar-logo {
     gap: 5px;
 }
 
+/* Backups panel at the bottom of the editor sidebar (pages and posts): date above a row of
+   icon buttons, the delete button set apart like the section delete button */
+.nb-backups-panel .backup-list {
+    max-height: 240px;
+}
+
+.nb-backups-panel .backup-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--nb-space-2);
+    padding: var(--nb-space-2-5) 0;
+}
+
+.nb-backups-panel .backup-item:first-child {
+    padding-top: 0;
+}
+
+.nb-backups-panel .backup-actions .btn {
+    box-sizing: border-box;
+    width: var(--nb-control-h-sm);
+    height: var(--nb-control-h-sm);
+    min-height: 0;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.backup-actions .section-delete-btn {
+    margin-left: var(--nb-space-3);
+    color: var(--nb-danger);
+}
+
+.backup-actions .section-delete-btn:hover {
+    color: var(--nb-danger-text);
+    border-color: var(--nb-danger);
+}
+
 
 /* ============================================================
    MEDIA FIELDS

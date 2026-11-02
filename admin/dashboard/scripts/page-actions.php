@@ -73,13 +73,21 @@
                     <span class="backup-date">${backup.date}</span>
                     <span class="backup-time">${backup.time}</span>
                 </div>
-                <div class="backup-actions">
-                    <button class="btn btn-sm btn-secondary" onclick="previewBackup('${backup.filename}')">${t('backups.view')}</button>
-                    <button class="btn btn-sm btn-primary" onclick="restoreBackup('${backup.filename}')">${t('backups.restore')}</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteBackup('${backup.filename}')">${t('backups.delete')}</button>
-                </div>
+                ${renderBackupActions(backup.filename, 'previewBackup', 'restoreBackup', 'deleteBackup')}
             </div>
         `).join('');
+    }
+
+    // Icon buttons of a backup entry (pages and posts alike): view, restore and, set apart, delete
+    // in the quiet red style of the section delete button. The handlers get the backup's filename.
+    function renderBackupActions(filename, viewFn, restoreFn, deleteFn) {
+        const file = escapeHtml(filename);
+        const button = (fn, cls, iconName, label) => `<button type="button" class="btn btn-sm btn-secondary ${cls}" onclick="${fn}('${file}')" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}">${icon(iconName, 14)}</button>`;
+        return `<div class="backup-actions">
+            ${button(viewFn, 'backup-view-btn', 'eye', t('backups.view'))}
+            ${button(restoreFn, 'backup-restore-btn', 'restore', t('backups.restore'))}
+            ${button(deleteFn, 'section-delete-btn', 'trash', t('backups.delete'))}
+        </div>`;
     }
 
     async function previewBackup(filename) {

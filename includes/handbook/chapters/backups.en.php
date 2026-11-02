@@ -3,11 +3,11 @@
   <p>You can hardly break anything. nibbly keeps backups on two levels:</p>
 </div>
 <div class="hb-cards">
-  <div class="hb-card"><h4>Backups of a page</h4><p>Every time you save, nibbly keeps the previous version. The last 30 versions of each page are kept.</p></div>
+  <div class="hb-card"><h4>Backups of a page or post</h4><p>Every time you save, nibbly keeps the previous version. The last 30 versions of each page and each post are kept.</p></div>
   <?php if ($hb->isAdmin): ?><div class="hb-card"><h4>Website backup</h4><p>A ZIP file of the whole website: content, images and program files. Manually or automatically on a schedule.</p></div><?php endif; ?>
 </div>
 
-<h3>Bringing back an earlier version of a page</h3>
+<h3>Bringing back an earlier version of a page or post</h3>
 <ol class="hb-steps">
   <li><span>Open the page on the website. If it has backups, a select with date and time appears in the middle of the bar.</span></li>
   <li><span>Pick the version you want and click <?php echo $hb->bar('Apply'); ?>.</span></li>
