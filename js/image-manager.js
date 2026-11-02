@@ -476,6 +476,15 @@
         folderListEl.addEventListener('click', function(e) {
             var entry = e.target.closest('.nb-imgmgr-folder-item');
             if (!entry || !modal.contains(entry)) return;
+            var toggleBtn = e.target.closest('.nb-imgmgr-folder-item-toggle');
+            if (toggleBtn && toggleBtn.tagName === 'BUTTON') {
+                e.stopPropagation();
+                var toggled = entry.getAttribute('data-folder') || '';
+                if (state.expandedFolders[toggled]) delete state.expandedFolders[toggled];
+                else state.expandedFolders[toggled] = true;
+                updateFolderUI();
+                return;
+            }
             var deleteBtn = e.target.closest('.nb-imgmgr-folder-item-delete');
             if (deleteBtn) {
                 e.stopPropagation();
@@ -485,6 +494,7 @@
             // Root folder uses an empty-string value, which is falsy — read the
             // attribute directly so "Main folder" is not coerced to "all".
             state.folderFilter = entry.getAttribute('data-folder') || '';
+            if (state.folderFilter && state.folderFilter !== 'all') state.expandedFolders[state.folderFilter] = true;
             state.page = 1;
             filterAndRender();
             updateFolderUI();
@@ -495,6 +505,7 @@
             if (!entry) return;
             e.preventDefault();
             state.folderFilter = entry.getAttribute('data-folder') || '';
+            if (state.folderFilter && state.folderFilter !== 'all') state.expandedFolders[state.folderFilter] = true;
             state.page = 1;
             filterAndRender();
             updateFolderUI();
@@ -819,10 +830,35 @@
         dropzone.classList.toggle('nb-imgmgr-dropzone--with-ai', visible);
     }
 
+    // Folders are paths ("2000", "2000/10"); a folder includes its subfolders
+    function folderContains(folderValue, itemFolder) {
+        itemFolder = itemFolder || '';
+        if (folderValue === '') return itemFolder === '';
+        return itemFolder === folderValue || itemFolder.indexOf(folderValue + '/') === 0;
+    }
+
     function folderItemCount(folderValue) {
         return state.data.reduce(function(total, item) {
-            return total + ((item.folder || '') === folderValue ? 1 : 0);
+            return total + (folderContains(folderValue, item.folder) ? 1 : 0);
         }, 0);
+    }
+
+    function folderParent(folderValue) {
+        var pos = folderValue.lastIndexOf('/');
+        return pos === -1 ? '' : folderValue.slice(0, pos);
+    }
+
+    function folderHasChildren(folderValue) {
+        return state.folders.some(function (other) { return other.indexOf(folderValue + '/') === 0; });
+    }
+
+    // Open every ancestor so the selected folder is visible in the tree
+    function expandFolderAncestors(folderValue) {
+        var parent = folderParent(folderValue || '');
+        while (parent) {
+            state.expandedFolders[parent] = true;
+            parent = folderParent(parent);
+        }
     }
 
     function updateFolderUI() {
@@ -842,20 +878,43 @@
             current = 'all';
             state.folderFilter = current;
         }
+        if (current !== 'all') expandFolderAncestors(current);
 
         var entries = [
-            { value: 'all', label: t('media.folder_all'), icon: Icons.layers || Icons.folder, deletable: false },
-            { value: '', label: t('media.folder_root'), icon: Icons.folder, deletable: false }
-        ].concat(state.folders.map(function(folder) {
-            return { value: folder, label: folder, icon: Icons.folder, deletable: true };
+            { value: 'all', label: t('media.folder_all'), icon: Icons.layers || Icons.folder, deletable: false, depth: 0 },
+            { value: '', label: t('media.folder_root'), icon: Icons.folder, deletable: false, depth: 0 }
+        ].concat(state.folders.filter(function(folder) {
+            // A subfolder shows only while all of its ancestors are expanded
+            var parent = folderParent(folder);
+            while (parent) {
+                if (!state.expandedFolders[parent]) return false;
+                parent = folderParent(parent);
+            }
+            return true;
+        }).map(function(folder) {
+            var depth = folder.split('/').length - 1;
+            return {
+                value: folder,
+                label: depth ? folder.slice(folder.lastIndexOf('/') + 1) : folder,
+                icon: Icons.folder,
+                deletable: true,
+                depth: depth,
+                hasChildren: folderHasChildren(folder)
+            };
         }));
 
         list.innerHTML = entries.map(function(entry) {
             var active = entry.value === current;
             var count = entry.value === 'all' ? state.data.length : folderItemCount(entry.value);
-            return '<div class="nb-imgmgr-folder-item' + (active ? ' is-active' : '') + '"' +
+            var expanded = !!state.expandedFolders[entry.value];
+            var toggle = entry.hasChildren
+                ? '<button type="button" class="nb-imgmgr-folder-item-toggle" aria-expanded="' + (expanded ? 'true' : 'false') + '" title="' + escapeHtml(t(expanded ? 'media.folder_collapse' : 'media.folder_expand')) + '" aria-label="' + escapeHtml(t(expanded ? 'media.folder_collapse' : 'media.folder_expand')) + '">' + Icons.chevronRight + '</button>'
+                : '<span class="nb-imgmgr-folder-item-toggle nb-imgmgr-folder-item-toggle--empty"></span>';
+            return '<div class="nb-imgmgr-folder-item' + (active ? ' is-active' : '') + (expanded ? ' is-expanded' : '') + '"' +
                 ' role="option" tabindex="0" aria-selected="' + (active ? 'true' : 'false') + '"' +
-                ' data-folder="' + escapeHtml(entry.value) + '">' +
+                ' style="--nb-folder-depth:' + entry.depth + '"' +
+                ' data-folder="' + escapeHtml(entry.value) + '" title="' + escapeHtml(entry.value || entry.label) + '">' +
+                (entry.depth || entry.hasChildren ? toggle : '') +
                 '<span class="nb-imgmgr-folder-item-icon">' + (entry.icon || '') + '</span>' +
                 '<span class="nb-imgmgr-folder-item-label">' + escapeHtml(entry.label) + '</span>' +
                 '<span class="nb-imgmgr-folder-item-count">' + count + '</span>' +
@@ -956,7 +1015,7 @@
     function filterAndRender() {
         state.filtered = state.data.filter(function (img) {
             var folder = img.folder || '';
-            var matchesFolder = state.folderFilter === 'all' || folder === state.folderFilter;
+            var matchesFolder = state.folderFilter === 'all' || folderContains(state.folderFilter, folder);
             var matchesSearch = !state.search || ((img.name || '') + ' ' + (img.basename || '') + ' ' + folder).toLowerCase().indexOf(state.search) !== -1;
             return matchesFolder && matchesSearch;
         });
@@ -1436,7 +1495,7 @@
 
     // In-app name prompt: window.prompt() is unavailable in embedded
     // webviews (Electron/VS Code) and clashes with the UI style anyway.
-    function promptFolderName(onSubmit) {
+    function promptFolderName(onSubmit, parent) {
         var existing = document.getElementById('nb-imgmgr-folder-prompt');
         if (existing) existing.remove();
         var dialog = document.createElement('div');
@@ -1450,7 +1509,7 @@
                     '<button type="button" class="nb-imgmgr-close" aria-label="Close">&times;</button>' +
                 '</div>' +
                 '<div class="nb-imgmgr-move-body">' +
-                    '<label>' + escapeHtml(t('media.folder_create_prompt')) + '</label>' +
+                    '<label>' + escapeHtml(parent ? t('media.folder_create_in', { folder: parent }) : t('media.folder_create_prompt')) + '</label>' +
                     '<input type="text" class="nb-imgmgr-folder-name-input" maxlength="60" spellcheck="false">' +
                 '</div>' +
                 '<div class="nb-imgmgr-move-footer">' +
@@ -1480,7 +1539,12 @@
 
     function createMediaFolder() {
         if (state.mode !== 'library') return;
-        promptFolderName(submitCreateMediaFolder);
+        // A new folder goes inside the one that is open; "/" in the name nests deeper
+        var parent = state.folderFilter && state.folderFilter !== 'all' ? state.folderFilter : '';
+        promptFolderName(function (name) {
+            name = name.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+            submitCreateMediaFolder(parent ? parent + '/' + name : name);
+        }, parent);
     }
 
     function submitCreateMediaFolder(name) {
@@ -2032,7 +2096,9 @@
         var select = dialog.querySelector('.nb-imgmgr-move-select');
         select.innerHTML = '<option value="">' + escapeHtml(t('media.folder_root')) + '</option>' +
             state.folders.map(function(folder) {
-                return '<option value="' + escapeHtml(folder) + '">' + escapeHtml(folder) + '</option>';
+                var depth = folder.split('/').length - 1;
+                var label = new Array(depth + 1).join('\u2003') + (depth ? folder.slice(folder.lastIndexOf('/') + 1) : folder);
+                return '<option value="' + escapeHtml(folder) + '">' + escapeHtml(label) + '</option>';
             }).join('');
         select.value = item.folder || '';
         dialog.classList.add('active');

@@ -433,6 +433,8 @@
     align-items: center;
     gap: var(--nb-space-2, 8px);
     padding: 7px var(--nb-space-2, 8px);
+    /* Nested folders step in by one level each (see --nb-folder-depth in the markup) */
+    padding-left: calc(var(--nb-space-2, 8px) + var(--nb-folder-depth, 0) * 14px);
     border-radius: var(--nb-radius-md, 6px);
     cursor: pointer;
     color: var(--nb-text, #1a1a1a);
@@ -451,6 +453,41 @@
 .nb-imgmgr-folder-item:focus-visible {
     outline: none;
     box-shadow: 0 0 0 2px var(--nb-primary, #2e95d2);
+}
+
+.nb-imgmgr-folder-item-toggle {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-right: -4px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--nb-radius-sm, 4px);
+    background: transparent;
+    color: var(--nb-text-muted, #888);
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+.nb-imgmgr-folder-item-toggle svg {
+    width: 14px;
+    height: 14px;
+}
+
+.nb-imgmgr-folder-item-toggle--empty {
+    cursor: default;
+}
+
+.nb-imgmgr-folder-item.is-expanded .nb-imgmgr-folder-item-toggle {
+    transform: rotate(90deg);
+}
+
+button.nb-imgmgr-folder-item-toggle:hover {
+    color: var(--nb-text, #1a1a1a);
+    background: var(--nb-bg-hover, rgba(127, 127, 127, 0.15));
 }
 
 .nb-imgmgr-folder-item-icon {
