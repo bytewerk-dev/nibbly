@@ -51,6 +51,12 @@ Git milestones and the gaps in publication records.
 - **Monochrome stroke icons.** Block pickers, dashboard actions, the AI copilot and the menu editor
   use one set of line icons instead of emoji and mixed glyphs; the YouTube block shows the
   play-button logo.
+- **Image manager: click selects, magnifier previews.** In the picker (Visual Editor, settings
+  and content fields) a click on a thumbnail now toggles the selection instead of opening the
+  lightbox; the lightbox opens through a round magnifier button that appears over the thumbnail
+  (top left in the grid, centred in the list). The selection circle grew to the same 26 px. The
+  eye button "Image preview" in the action rows of grid and list is gone; outside the picker
+  (library tab in the dashboard, trash) the thumbnail still opens the preview.
 
 ### Fixed
 
@@ -58,15 +64,6 @@ Git milestones and the gaps in publication records.
   (`parent__child`) resolve in the page tree; the people tab only binds its click handler when
   its mount point exists; the local development login (loopback only) comes prefilled; `.mjs`
   files are served with the JavaScript MIME type.
-
-### Changed
-
-- **Image manager: click selects, magnifier previews.** In the picker (Visual Editor, settings
-  and content fields) a click on a thumbnail now toggles the selection instead of opening the
-  lightbox; the lightbox opens through a round magnifier button that appears over the thumbnail
-  (top left in the grid, centred in the list). The selection circle grew to the same 26 px. The
-  eye button "Image preview" in the action rows of grid and list is gone; outside the picker
-  (library tab in the dashboard, trash) the thumbnail still opens the preview.
 
 ## [2.7.0] — 2026-10-30
 
