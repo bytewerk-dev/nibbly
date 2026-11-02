@@ -260,38 +260,41 @@
 
     // SVG Icons (monochrome)
     const Icons = {
-        edit: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>',
-        delete: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>',
-        drag: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>',
-        audio: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>',
-        video: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>',
-        text: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.5 4v3h5v12h3V7h5V4h-13zm19 5h-9v3h3v7h3v-7h3V9z"/></svg>',
-        plus: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>',
-        warning: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>',
-        eraser: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 0 1-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0M4.22 15.58l3.54 3.53c.78.79 2.04.79 2.83 0l3.53-3.53-4.95-4.95-4.95 4.95z"/></svg>',
-        undo: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>',
-        redo: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.06-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg>',
-        save: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>',
-        history: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>',
-        eyeOpen: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>',
-        eyeClosed: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>',
-        image: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>',
-        link: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>',
-        card: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>',
-        upload: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>',
-        folder: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>',
-        grid: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>',
-        list: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>',
-        eye: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>',
-        replace: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>',
-        check: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>',
-        heading: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 4v3h5.5v12h3V7H19V4H5z"/></svg>',
-        quote: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z"/></svg>',
-        spacer: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 18H3v2h18v-2zM21 4H3v2h18V4zm-9 8.5l3.5 3.5-1.41 1.41L12 15.33l-2.09 2.08L8.5 16l3.5-3.5zM12 7.5L8.5 11l1.41 1.41L12 10.33l2.09 2.08L15.5 11 12 7.5z"/></svg>',
-        divider: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11h18v2H3z"/></svg>',
+        edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></g></svg>',
+        delete: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M8.451,5.968V3.484 c0-1.371,1.113-2.484,2.484-2.484h2.129c1.371,0,2.484,1.113,2.484,2.484v2.484 M2.065,5.968h19.871 M4.194,5.968l1.732,14.733 c0.156,1.334,1.277,2.299,2.626,2.299h6.898c1.348,0,2.47-0.965,2.626-2.299l1.732-14.733 M8.341,9.804l0.753,9.616 M12,9.804 v9.616 M15.66,9.804l-0.753,9.616"/></g></svg>',
+        drag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></g></svg>',
+        audio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></g></svg>',
+        video: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="m22 8-6 4 6 4V8z"/><rect x="2" y="6" width="14" height="12" rx="2"/></g></svg>',
+        text: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></g></svg>',
+        plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></g></svg>',
+        arrowUp: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></g></svg>',
+        arrowDown: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></g></svg>',
+        warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></g></svg>',
+        eraser: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21M22 21H7M5 11l9 9"/></g></svg>',
+        undo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6.69 3L3 13"/></g></svg>',
+        redo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6.69 3L21 13"/></g></svg>',
+        save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></g></svg>',
+        history: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></g></svg>',
+        eyeOpen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></g></svg>',
+        eyeClosed: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><path d="m2 2 20 20"/></g></svg>',
+        extract: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M16.96 20.883 H2.714 c-1.09 0 -1.974 -0.884 -1.974 -1.974 V5.09 C0.74 4 1.624 3.117 2.714 3.117 h13.818 c1.09 0 1.974 0.884 1.974 1.974 V14.961 M6.17 7.065 c0.817 0 1.481 0.663 1.481 1.481 s-0.663 1.481 -1.481 1.481 s-1.481 -0.663 -1.481 -1.481 S5.351 7.065 6.17 7.065 z M18.507 14.961 L13.572 10.026 L2.714 20.883 M15.149 17.253 h8.111 M21.461 15.454 l1.799 1.799 M21.461 19.052 l1.799 -1.799"/></g></svg>',
+        image: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></g></svg>',
+        link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></g></svg>',
+        card: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></g></svg>',
+        upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/></g></svg>',
+        folder: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"/></g></svg>',
+        grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></g></svg>',
+        list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></g></svg>',
+        eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></g></svg>',
+        replace: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></g></svg>',
+        check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></g></svg>',
+        heading: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16M18 4v16M6 12h12"/></g></svg>',
+        quote: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6a4 4 0 0 1-4 4"/><path d="M20 11h-4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6a4 4 0 0 1-4 4"/></g></svg>',
+        spacer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18M3 20h18"/><path d="m8 10 4-3 4 3M8 14l4 3 4-3"/></g></svg>',
+        divider: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"/></g></svg>',
         // Offizielle Brand Icons
         soundcloud: '<svg viewBox="0 0 24 24"><defs><style>.cls-1{fill:currentColor;stroke:currentColor;stroke-miterlimit:10;stroke-width:1.91px;}</style></defs><path class="cls-1" d="M22.5,13.93a2.87,2.87,0,0,1-2.86,2.87H13V7.47a4.82,4.82,0,0,1,1.44-.22,4.07,4.07,0,0,1,4.29,3.82h1A2.86,2.86,0,0,1,22.5,13.93Z"/><line class="cls-1" x1="10.09" y1="8.2" x2="10.09" y2="17.75"/><line class="cls-1" x1="7.23" y1="9.16" x2="7.23" y2="17.75"/><line class="cls-1" x1="4.36" y1="9.16" x2="4.36" y2="17.75"/><line class="cls-1" x1="1.5" y1="11.07" x2="1.5" y2="16.8"/></svg>',
-        youtube: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>'
+        youtube: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9.629 16.258 V7.728 l6.411 4.265 L9.629 16.258 z M12 20.298 c0.278 0 5.828 0.013 9.616 -1.139 c0.662 -0.199 1.152 -0.768 1.285 -1.47 l0 0 c0.278 -1.536 0.411 -3.444 0.411 -5.695 c0 -2.252 -0.146 -4.159 -0.424 -5.695 c-0.132 -0.702 -0.609 -1.258 -1.272 -1.457 C17.828 3.675 12.252 3.689 12.013 3.702 c-1.02 0 -6.066 0.053 -9.629 1.139 C1.722 5.026 1.232 5.596 1.099 6.298 c-0.278 1.536 -0.424 3.457 -0.424 5.695 c0 2.252 0.146 4.159 0.424 5.695 c0.132 0.702 0.623 1.258 1.272 1.47 C6.172 20.311 11.762 20.298 12 20.298 z"/></g></svg>'
     };
 
     // ============================================================
@@ -875,18 +878,24 @@
             button.title = t(this.reloadRequired ? 'page_backups.reload' : 'page_backups.restore_title');
             group.setAttribute('aria-busy', String(!!busy));
         },
+        // Posts have their own backups (api list-news-backups / restore-news-backup, no page revision)
+        isPost() { return !!(EditorConfig.isNewsPost && EditorConfig.newsPostData?.id); },
         async load() {
-            if (!EditorConfig.currentPage || EditorConfig.isNewsPost || this.loading || this.restoring) return;
+            // a post loads its own backups only once its id is known, never the page list
+            if ((EditorConfig.isNewsPost ? !this.isPost() : !EditorConfig.currentPage) || this.loading || this.restoring) return;
             const select = document.getElementById('admin-backup-select');
             if (!select) return;
             this.loading = true;
             this.update();
             try {
-                const response = await fetch(`${EditorConfig.apiUrl}?action=backups&page=${encodeURIComponent(EditorConfig.currentPage)}`, {cache: 'no-store'});
+                const url = this.isPost()
+                    ? `${EditorConfig.apiUrl}?action=list-news-backups&id=${encodeURIComponent(EditorConfig.newsPostData.id)}`
+                    : `${EditorConfig.apiUrl}?action=backups&page=${encodeURIComponent(EditorConfig.currentPage)}`;
+                const response = await fetch(url, {cache: 'no-store'});
                 const result = await response.json();
                 if (!response.ok || !result.success || !Array.isArray(result.data)) throw new Error('Backup list unavailable');
                 // Only show backups of this exact content page, never shared or nested pages.
-                this.items = result.data.filter(item => {
+                this.items = this.isPost() ? result.data : result.data.filter(item => {
                     const match = String(item.filename || '').match(/^(.*)_\d{4}-\d{2}-\d{2}_\d{6}(?:_[a-f0-9]{6})?\.json$/);
                     return match && match[1] === EditorConfig.currentPage;
                 });
@@ -934,6 +943,13 @@
             const item = this.items.find(backup => backup.filename === select?.value);
             if (!item) return;
             flushActiveInlineEdits();
+            if (this.isPost()) {
+                const message = t('post_backups.confirm', {backup: select.options[select.selectedIndex].textContent});
+                const hint = t(EditorConfig.dirtyPages.size > 0 ? 'page_backups.unsaved' : 'page_backups.saved_first');
+                showConfirmDialog(t('page_backups.restore_title'), message, hint,
+                    () => this.restore(item, ''), t('page_backups.apply'), 'editor-btn-primary');
+                return;
+            }
             const revision = window.NibblyRevisions?.get('page:' + EditorConfig.currentPage)
                 || EditorConfig.contentRevisions[EditorConfig.currentPage];
             if (!revision) {
@@ -956,10 +972,15 @@
             controls.forEach(control => { control.disabled = true; });
             try {
                 const formData = new FormData();
-                formData.append('action', 'restore');
-                formData.append('page', EditorConfig.currentPage);
+                if (this.isPost()) {
+                    formData.append('action', 'restore-news-backup');
+                    formData.append('post_id', EditorConfig.newsPostData.id);
+                } else {
+                    formData.append('action', 'restore');
+                    formData.append('page', EditorConfig.currentPage);
+                    formData.append('revision', revision);
+                }
                 formData.append('backup', item.filename);
-                formData.append('revision', revision);
                 formData.append('csrf_token', EditorConfig.csrfToken);
                 const response = await fetch(EditorConfig.apiUrl, {method: 'POST', body: formData});
                 const result = await response.json();
@@ -1040,12 +1061,12 @@
             <div class="admin-bar-inner">
                 <div class="admin-bar-left">
                     ${logoHtml}
-                    <a href="/admin/dashboard" class="admin-bar-link"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg> ${t('dashboard')}</a>
+                    <a href="/admin/dashboard" class="admin-bar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="14" height="14"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></g></svg> ${t('dashboard')}</a>
                     ${handbookHtml}
                 </div>
                 <div class="admin-bar-center">
-                    <div class="admin-bar-backups" id="admin-page-backups" role="group" aria-label="${escHtml(t('page_backups.label'))}" hidden>
-                        <select class="admin-bar-backup-select" id="admin-backup-select" data-native-select aria-label="${escHtml(t('page_backups.label'))}"></select>
+                    <div class="admin-bar-backups" id="admin-page-backups" role="group" aria-label="${escHtml(t(EditorConfig.isNewsPost ? 'post_backups.label' : 'page_backups.label'))}" hidden>
+                        <select class="admin-bar-backup-select" id="admin-backup-select" data-native-select aria-label="${escHtml(t(EditorConfig.isNewsPost ? 'post_backups.label' : 'page_backups.label'))}"></select>
                         <button type="button" class="admin-bar-btn" id="admin-btn-restore-backup">${t('page_backups.apply')}</button>
                     </div>
                     <span class="admin-bar-info" id="admin-bar-info" role="status" aria-live="polite" aria-atomic="true"></span>
@@ -1184,6 +1205,13 @@
         // Editable fields inside ordinary links must enter the editor before
         // the navigation guard can turn the click into a leave-page prompt.
         if (e.target.closest('.editable-field, .editable-field-wrapper, [data-editable-image]')) return;
+        // Images of post blocks (image, gallery) open the library; their lightbox link is not followed
+        if (e.target.closest('img.news-editable')) return;
+        // Links inside an editable post text (blocks, legacy content field): only place the caret
+        if (e.target.closest('.news-editable[contenteditable="true"]')) {
+            e.preventDefault();
+            return;
+        }
 
         const groupedLink = link.closest('[data-editable-group]');
         if (groupedLink && !link.hasAttribute('data-editable-link')) {
@@ -1306,19 +1334,7 @@
             // Save news post if dirty
             if (hasNewsChanges && EditorConfig.newsPostData) {
                 const postEl = document.querySelector('[data-news-post]');
-                if (postEl) {
-                    const titleEl = newsPostField(postEl, 'title');
-                    const contentEl = newsPostField(postEl, 'content');
-                    const authorEl = newsPostField(postEl, 'author');
-                    if (titleEl) EditorConfig.newsPostData.title = titleEl.textContent.trim();
-                    if (contentEl) EditorConfig.newsPostData.content = contentEl.innerHTML.trim();
-                    if (authorEl) {
-                        // Strip "by " prefix if present
-                        let authorText = authorEl.textContent.trim();
-                        authorText = authorText.replace(/^by\s+/i, '');
-                        EditorConfig.newsPostData.author = authorText;
-                    }
-                }
+                if (postEl) collectNewsPostFields(postEl);
 
                 const formData = new FormData();
                 formData.append('action', 'save-news');
@@ -1765,6 +1781,7 @@
                         <button type="button" onclick="InlineEditor.execCommand('bold')" title="${t('bold')}"><b>B</b></button>
                         <button type="button" onclick="InlineEditor.execCommand('italic')" title="${t('italic')}"><i>I</i></button>
                         <button type="button" onclick="InlineEditor.insertLink()" title="${t('insert_link')}">🔗</button>
+                        <button type="button" onclick="InlineEditor.toggleFootnote()" title="${t('insert_footnote')}">${FOOTNOTE_ICON}</button>
                         <button type="button" onclick="InlineEditor.cleanHtml()" title="${t('clean_formatting')}" class="editor-toolbar-eraser">${Icons.eraser}</button>
                         <span class="editor-toolbar-separator"></span>
                         <label class="editor-toggle">
@@ -1824,11 +1841,11 @@
                     <div class="editor-audio-buttons">
                         <label class="editor-btn editor-btn-primary editor-btn-inline">
                             <input type="file" id="editor-audio-upload-input" accept=".mp3,.wav,.ogg,.m4a,.aac,.flac,audio/*" style="display:none;">
-                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/></g></svg>
                             ${t('image.upload')}
                         </label>
                         <button type="button" class="editor-btn editor-btn-secondary editor-btn-inline" onclick="InlineEditor.openAudioManager('${iid}')">
-                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"/></g></svg>
                             ${t('audio.manager')}
                         </button>
                     </div>
@@ -2665,8 +2682,8 @@
     function getBlockIcon(type) {
         if (BlockTypes[type]?.iconSvg) return BlockTypes[type].iconSvg;
         const iconMap = {
-            person: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-8 8v-2c0-3 4-5 8-5s8 2 8 5v2z"/></svg>',
-            team: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-8 8v-2c0-3 4-5 8-5s8 2 8 5v2z"/></svg>',
+            person: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></g></svg>',
+            team: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a7 7 0 0 1 14 0v2M17 4a4 4 0 0 1 0 8M22 21v-2a7 7 0 0 0-4-6"/></g></svg>',
             text: Icons.text,
             heading: Icons.heading,
             quote: Icons.quote,
@@ -2937,7 +2954,8 @@
     // SECTION TYPE PICKER POPOVER
     // ============================================================
 
-    function openSectionTypePicker(anchorBtn, afterIndex, contentPage) {
+    function openSectionTypePicker(anchorBtn, afterIndex, contentPage, options) {
+        options = options || {};
         // Toggle: close if already open for this anchor
         const existing = document.querySelector('.section-type-picker');
         if (existing) {
@@ -2956,13 +2974,16 @@
         const categoryOrder = ['content', 'cards', 'media', 'interactive', 'embed', 'layout'];
         const grouped = {};
         for (const [type, def] of Object.entries(BlockTypes)) {
+            if (options.types && !options.types.includes(type)) continue;
             const cat = def.category || 'other';
             if (!grouped[cat]) grouped[cat] = [];
             grouped[cat].push({ type, def });
         }
 
         const picker = document.createElement('div');
-        picker.className = 'section-type-picker';
+        // Few types (news blocks): one flat row without category headings
+        const compact = !!options.types && options.types.length <= 4;
+        picker.className = 'section-type-picker' + (compact ? ' section-type-picker--compact' : '');
         picker.dataset.anchorId = pickerId;
 
         const orderedCategories = [
@@ -2973,7 +2994,9 @@
         let markup = '';
         for (const cat of orderedCategories) {
             const label = CategoryLabels[cat] || cat;
-            markup += `<div class="section-type-picker__category"><span class="section-type-picker__category-label">${label}</span><div class="section-type-picker__grid">`;
+            markup += compact
+                ? `<div class="section-type-picker__category"><div class="section-type-picker__grid">`
+                : `<div class="section-type-picker__category"><span class="section-type-picker__category-label">${label}</span><div class="section-type-picker__grid">`;
             for (const { type, def } of grouped[cat]) {
                 const icon = def.iconSvg || Icons[def.icon] || Icons[type] || Icons.plus;
                 const labelText = def.label || type;
@@ -2991,6 +3014,10 @@
             e.stopPropagation();
             const type = item.dataset.type;
             closePicker();
+            if (options.onSelect) {
+                options.onSelect(type);
+                return;
+            }
             const wrapper = anchorBtn.closest('.editable-section');
             const currentIndex = wrapper ? parseInt(wrapper.dataset.sectionIndex, 10) : afterIndex;
             addSectionAfter(currentIndex, type, contentPage);
@@ -3555,6 +3582,7 @@
         EditorConfig.currentSection = null;
         EditorConfig.currentSectionIndex = null;
         EditorConfig.currentContentPage = null;
+        EditorConfig.newsEditorSave = null;
     }
 
     // ============================================================
@@ -3572,6 +3600,75 @@
      * @param {string} html - Raw HTML string
      * @returns {string} Cleaned HTML string
      */
+    var FOOTNOTE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" width="16" height="16"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M5.07 8l13.86 8M5.07 16 18.93 8"/></g></svg>';
+
+    /**
+     * Footnote: wraps the selection in <span class="footnote">; inside an existing footnote the
+     * span is unwrapped again. js/footnotes.js renders the span as a numbered marker with a tooltip.
+     */
+    // Moves the ends of a range inwards past spaces (also non-breaking ones) in text nodes.
+    function trimRangeWhitespace(range) {
+        const isSpace = (ch) => ch === ' ' || ch === '\u00a0' || ch === '\t' || ch === '\n';
+        while (!range.collapsed && range.startContainer.nodeType === 3 && range.startOffset < range.startContainer.data.length && isSpace(range.startContainer.data[range.startOffset])) {
+            range.setStart(range.startContainer, range.startOffset + 1);
+        }
+        while (!range.collapsed && range.endContainer.nodeType === 3 && range.endOffset > 0 && isSpace(range.endContainer.data[range.endOffset - 1])) {
+            range.setEnd(range.endContainer, range.endOffset - 1);
+        }
+    }
+
+    // insertHTML turns the spaces next to the inserted element into non-breaking ones; give them back
+    function unstickSpacesAround(el) {
+        const prev = el.previousSibling, next = el.nextSibling;
+        if (prev && prev.nodeType === 3 && prev.data.endsWith('\u00a0')) prev.data = prev.data.slice(0, -1) + ' ';
+        if (next && next.nodeType === 3 && next.data.startsWith('\u00a0')) next.data = ' ' + next.data.slice(1);
+    }
+
+    function toggleFootnoteIn(root) {
+        const selection = window.getSelection();
+        if (!selection.rangeCount || !root) return;
+        const range = selection.getRangeAt(0);
+        if (!root.contains(range.commonAncestorContainer)) return;
+        const startNode = range.startContainer.nodeType === 1 ? range.startContainer : range.startContainer.parentElement;
+        const existing = startNode ? startNode.closest('.footnote') : null;
+        if (existing && root.contains(existing)) {
+            existing.replaceWith(...existing.childNodes);
+            root.normalize();
+            return;
+        }
+        // A double-click selects the word plus its trailing space; the space stays outside the footnote
+        trimRangeWhitespace(range);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        const holder = document.createElement('div');
+        holder.append(range.cloneContents());
+        const inner = range.collapsed ? escHtml(t('footnote_placeholder')) : holder.innerHTML;
+        document.execCommand('insertHTML', false, '<span class="footnote" id="nb-footnote-new">' + inner + '</span>');
+        const span = root.querySelector('#nb-footnote-new');
+        if (!span) return;
+        span.removeAttribute('id');
+        unstickSpacesAround(span);
+        const next = document.createRange();
+        if (range.collapsed) next.selectNodeContents(span); else { next.setStartAfter(span); next.collapse(true); }
+        selection.removeAllRanges();
+        selection.addRange(next);
+    }
+
+    function toggleFootnote() {
+        const wysiwyg = document.getElementById('editor-wysiwyg');
+        if (wysiwyg) { wysiwyg.focus(); toggleFootnoteIn(wysiwyg); }
+    }
+
+    // Mirrors includes/html-sanitizer.php (the server's sanitizer remains final): the same tags and
+    // attributes survive inline editing, so site components (classes, ids, tables, figures) keep working.
+    const SANITIZE_TAGS = new Set('p br strong b em i u a ul ol li h1 h2 h3 h4 h5 h6 blockquote span div figure figcaption img table thead tbody tfoot tr th td caption sup sub hr pre code small cite q mark s del ins abbr dl dt dd details summary video audio source'.split(' '));
+    const SANITIZE_DROP = new Set('script style iframe object embed svg math template form input button textarea select link meta base'.split(' '));
+    const SANITIZE_ATTRS = { a: ['href', 'target', 'rel'], img: ['src', 'alt', 'width', 'height', 'loading', 'decoding'], ol: ['start', 'reversed'], td: ['colspan', 'rowspan', 'scope'], th: ['colspan', 'rowspan', 'scope'], video: ['src', 'controls', 'preload', 'poster', 'playsinline', 'muted', 'loop'], audio: ['src', 'controls', 'preload', 'loop'], source: ['src', 'type'], details: ['open'], abbr: ['title'] };
+    const safeUrl = (value, schemes) => {
+        const probe = value.replace(/[\x00-\x20\x7f]+/g, '');
+        return !probe.includes('\\') && !probe.startsWith('//') && (!/^[a-z][a-z0-9+.-]*:/i.test(probe) || schemes.test(probe));
+    };
+
     function sanitizeHtmlString(html) {
         const temp = document.createElement('div');
         temp.innerHTML = html;
@@ -3579,21 +3676,24 @@
         function cleanNode(node) {
             const children = Array.from(node.childNodes);
             children.forEach(child => {
+                if (child.nodeType === Node.COMMENT_NODE) { node.removeChild(child); return; }
                 if (child.nodeType === Node.ELEMENT_NODE) {
                     const tagName = child.tagName.toLowerCase();
-                    const allowedTags = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'b', 'strong', 'i', 'em', 'br', 'ul', 'ol', 'li', 'img'];
+                    if (SANITIZE_DROP.has(tagName)) { node.removeChild(child); return; }
 
-                    if (allowedTags.includes(tagName)) {
+                    if (SANITIZE_TAGS.has(tagName)) {
                         const attrs = Array.from(child.attributes);
                         attrs.forEach(attr => {
-                            if (tagName === 'a' && (attr.name === 'href' || attr.name === 'target' || attr.name === 'rel')) {
-                                // keep href, target, rel on links
-                            } else if (tagName === 'img' && (attr.name === 'src' || attr.name === 'alt')) {
-                                // keep src/alt on images
-                            } else {
-                                child.removeAttribute(attr.name);
-                            }
+                            const name = attr.name.toLowerCase();
+                            const keep = ['class', 'title', 'lang', 'dir'].includes(name)
+                                || (name === 'id' && /^[A-Za-z][\w:.-]{0,80}$/.test(attr.value))
+                                || (SANITIZE_ATTRS[tagName] || []).includes(name);
+                            if (!keep) { child.removeAttribute(attr.name); return; }
+                            if (name === 'href' && !safeUrl(attr.value, /^(https?|mailto|tel):/i)) child.setAttribute('href', '#');
+                            if ((name === 'src' || name === 'poster') && !safeUrl(attr.value, /^https?:/i)) child.removeAttribute(attr.name);
+                            if (name === 'target' && !['_blank', '_self'].includes(attr.value)) child.removeAttribute(attr.name);
                         });
+                        if ((tagName === 'img' || tagName === 'source') && !child.hasAttribute('src')) { node.removeChild(child); return; }
                         // Auto-set target="_blank" for external links
                         if (tagName === 'a') {
                             const href = child.getAttribute('href') || '';
@@ -3644,16 +3744,26 @@
         const toolbar = document.createElement('div');
         toolbar.className = 'floating-toolbar';
         const formats = [['p', t('format_paragraph')], ['h2', t('format_heading') + ' 2'], ['h3', t('format_heading') + ' 3'], ['h4', t('format_heading') + ' 4'], ['blockquote', t('format_quote')]];
+        // Text block styles (includes/text-styles.php + content/text-styles.json) for post blocks; the
+        // page editor offers the same list in its field dialog
+        const textStyles = ((BlockTypes.text?.fields || []).find(f => f.key === 'style')?.options || [{ value: '' }])
+            .map(o => ({ value: o.value || '', label: o.value ? o.label : t('text_style_default') }));
         toolbar.innerHTML = `
             <button type="button" class="floating-toolbar-format" data-action="format-menu" aria-haspopup="menu" aria-expanded="false" data-editor-tooltip="${escHtml(t('format_block'))}" aria-label="${escHtml(t('format_block'))}"><span class="floating-toolbar-format-label">${escHtml(formats[0][1])}</span><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
             <div class="floating-toolbar-menu" role="menu" hidden>${formats.map(([v, l]) => `<button type="button" role="menuitemradio" aria-checked="false" data-format="${v}"><${v === 'blockquote' ? 'em' : v}>${escHtml(l)}</${v === 'blockquote' ? 'em' : v}></button>`).join('')}</div>
             <span class="floating-toolbar-separator"></span>
             <button type="button" data-command="bold" data-editor-tooltip="${escHtml(t('bold'))} (Ctrl+B)" aria-label="${escHtml(t('bold'))} (Ctrl+B)"><b>B</b></button>
             <button type="button" data-command="italic" data-editor-tooltip="${escHtml(t('italic'))} (Ctrl+I)" aria-label="${escHtml(t('italic'))} (Ctrl+I)"><i>I</i></button>
-            <button type="button" data-action="link" data-editor-tooltip="${escHtml(t('insert_link'))}" aria-label="${escHtml(t('insert_link'))}"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg></button>
+            <button type="button" data-action="link" data-editor-tooltip="${escHtml(t('insert_link'))}" aria-label="${escHtml(t('insert_link'))}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="16" height="16"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></g></svg></button>
+            <button type="button" data-action="footnote" data-editor-tooltip="${escHtml(t('insert_footnote'))}" aria-label="${escHtml(t('insert_footnote'))}">${FOOTNOTE_ICON}</button>
             <button type="button" data-command="removeFormat" data-editor-tooltip="${escHtml(t('clean_formatting'))}" aria-label="${escHtml(t('clean_formatting'))}">${Icons.eraser}</button>
             <span class="floating-toolbar-separator"></span>
             <button type="button" data-action="html-source" data-editor-tooltip="HTML" aria-label="HTML">&lt;/&gt;</button>
+            <span class="floating-toolbar-separator" data-news-only hidden></span>
+            <button type="button" data-action="split" data-news-only hidden data-editor-tooltip="${escHtml(t('news_block.split'))}" aria-label="${escHtml(t('news_block.split'))}">${NEWS_SPLIT_ICON}</button>
+            <span class="floating-toolbar-separator" data-news-only hidden></span>
+            <button type="button" class="floating-toolbar-format floating-toolbar-style" data-action="style-menu" data-news-only hidden aria-haspopup="menu" aria-expanded="false" data-editor-tooltip="${escHtml(t('text_style'))}" aria-label="${escHtml(t('text_style'))}"><span class="floating-toolbar-style-label">${escHtml(textStyles[0].label)}</span><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="floating-toolbar-menu floating-toolbar-style-menu" role="menu" hidden>${textStyles.map(s => `<button type="button" role="menuitemradio" aria-checked="false" data-style="${escHtml(s.value)}">${escHtml(s.label)}</button>`).join('')}</div>
         `;
 
         // Prevent blur on toolbar button clicks
@@ -3708,6 +3818,59 @@
         }, true);
         toolbar._closeFormatMenu = closeFormatMenu;
 
+        // Style of the whole post text block (field "style"): saved at once like other structural changes
+        const styleButton = toolbar.querySelector('.floating-toolbar-style');
+        const styleLabel = toolbar.querySelector('.floating-toolbar-style-label');
+        const styleMenu = toolbar.querySelector('.floating-toolbar-style-menu');
+        const newsBlockRef = (el) => {
+            const parts = String(el?.dataset.newsBlock || '').split('.');
+            return { field: parts[0], index: parseInt(parts[1], 10) };
+        };
+        const setStyleState = (value) => {
+            const current = textStyles.some(s => s.value === value) ? value : '';
+            styleLabel.textContent = textStyles.find(s => s.value === current).label;
+            styleMenu.querySelectorAll('[data-style]').forEach(item => item.setAttribute('aria-checked', String(item.dataset.style === current)));
+        };
+        const closeStyleMenu = () => {
+            styleMenu.hidden = true;
+            styleButton.setAttribute('aria-expanded', 'false');
+        };
+        toolbar._syncNewsStyle = (el) => {
+            const ref = newsBlockRef(el);
+            const block = Number.isInteger(ref.index) ? newsBlockList(ref.field)[ref.index] : null;
+            setStyleState(block && block.style ? String(block.style) : '');
+        };
+        styleButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            closeFormatMenu();
+            styleMenu.style.left = styleButton.offsetLeft + 'px';
+            styleMenu.hidden = !styleMenu.hidden;
+            styleButton.setAttribute('aria-expanded', String(!styleMenu.hidden));
+        });
+        styleMenu.addEventListener('click', (e) => {
+            const item = e.target.closest('[data-style]');
+            if (!item) return;
+            e.preventDefault();
+            e.stopPropagation();
+            closeStyleMenu();
+            const ref = newsBlockRef(activeHtmlField);
+            if (!Number.isInteger(ref.index)) return;
+            const value = item.dataset.style;
+            newsStructuralChange(() => {
+                const block = newsBlockList(ref.field)[ref.index];
+                if (!block) return;
+                if (value) block.style = value; else delete block.style;
+            });
+        });
+        document.addEventListener('click', (e) => {
+            if (!styleMenu.hidden && !toolbar.contains(e.target)) closeStyleMenu();
+        }, true);
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !styleMenu.hidden) { e.stopPropagation(); closeStyleMenu(); }
+        }, true);
+        toolbar._closeStyleMenu = closeStyleMenu;
+
         // Handle button clicks
         toolbar.addEventListener('click', (e) => {
             const btn = e.target.closest('button');
@@ -3721,7 +3884,17 @@
                 activeHtmlField.focus();
             } else if (action === 'link') {
                 insertLinkInField(activeHtmlField);
+            } else if (action === 'footnote') {
+                toggleFootnoteIn(activeHtmlField);
+                activeHtmlField.focus();
+            } else if (action === 'split') {
+                const parts = String(activeHtmlField.dataset.newsBlock || '').split('.');
+                splitNewsBlockAt(parts[0], parseInt(parts[1], 10), { el: activeHtmlField });
             } else if (action === 'html-source') {
+                if (activeHtmlField.classList.contains('news-editable')) {
+                    openNewsHtmlEditor(activeHtmlField);
+                    return;
+                }
                 // Finish inline editing first, then open modal
                 const field = activeHtmlField;
                 finishInlineHtmlEdit(field, field._originalHtml, false);
@@ -3774,6 +3947,9 @@
     function positionFloatingToolbar(field) {
         const toolbar = createFloatingToolbar();
         const rect = field.getBoundingClientRect();
+        const isNewsBlock = field.hasAttribute('data-news-block');
+        toolbar.querySelectorAll('[data-news-only]').forEach(node => { node.hidden = !isNewsBlock; });
+        if (isNewsBlock && toolbar._syncNewsStyle) toolbar._syncNewsStyle(field);
         toolbar.style.display = 'flex';
 
         // Measure toolbar
@@ -3784,9 +3960,14 @@
         let left = rect.left + (rect.width / 2) - (tbRect.width / 2);
         let top = rect.top - tbRect.height - gap;
 
-        // If no room above, place below
+        // If no room above, place below; a field taller than the viewport gets the
+        // toolbar pinned in the upper third of the viewport (not at the very top edge, where it
+        // would sit under the admin bar and far from the text) so it stays in reach while scrolling
         if (top < 50) {
             top = rect.bottom + gap;
+            if (top > window.innerHeight - tbRect.height - gap) {
+                top = Math.max(50 + gap, Math.round(window.innerHeight * 0.3) - tbRect.height);
+            }
         }
 
         // Keep within viewport horizontally
@@ -3800,6 +3981,7 @@
         if (floatingToolbar) {
             floatingToolbar.style.display = 'none';
             if (floatingToolbar._closeFormatMenu) floatingToolbar._closeFormatMenu();
+            if (floatingToolbar._closeStyleMenu) floatingToolbar._closeStyleMenu();
         }
         if (activeHtmlField && activeHtmlField._scrollHandler) {
             window.removeEventListener('scroll', activeHtmlField._scrollHandler, true);
@@ -4117,6 +4299,19 @@
         const section = EditorConfig.currentSection;
         const index = EditorConfig.currentSectionIndex;
         const contentPage = EditorConfig.currentContentPage;
+
+        if (EditorConfig.newsEditorSave && section) {
+            // post block (openNewsBlockEditor): read the fields, hand the block back, no page involved
+            for (const field of (BlockTypes[section.type]?.fields || [])) {
+                const value = readEditorField(field);
+                if ((field.type === 'select' && value === '') || (field.type === 'checkbox' && !value)) delete section[field.key];
+                else section[field.key] = value;
+            }
+            const onSave = EditorConfig.newsEditorSave;
+            closeModal();
+            onSave(section);
+            return;
+        }
 
         if (!section || index === null || !contentPage) return;
 
@@ -6783,41 +6978,612 @@
     // NEWS POST INLINE EDITING
     // ============================================================
 
-    // Editable parts of a post page. A site template marks them with data-news-field="title|content|author|image"
+    // Editable parts of a post page. A site template marks them with data-news-field="title|content|author|image|excerpt|cover"
     // (on the image itself or its figure); without the attribute the classes of includes/news-post.php apply.
     function newsPostField(postEl, name) {
         const marked = postEl.querySelector('[data-news-field="' + name + '"]');
         if (marked) return name === 'image' && marked.tagName !== 'IMG' ? marked.querySelector('img') : marked;
-        return postEl.querySelector(name === 'image' ? '.news-post-page__hero img' : '.news-post-page__' + name);
+        const el = postEl.querySelector(name === 'image' ? '.news-post-page__hero img' : '.news-post-page__' + name);
+        // a column of blocks (data-news-blocks) is edited block by block, not as one HTML field
+        return el && el.hasAttribute('data-news-blocks') ? null : el;
+    }
+
+    // ------------------------------------------------------------
+    // Posts built from blocks: the site template marks each block with data-news-block="sections.N|aside.N"
+    // and data-block-type (text blocks in a wrapper, image blocks on the <figure>), each column with
+    // data-news-blocks. Text, captions and the excerpt are edited in place and saved with "Speichern";
+    // adding, moving and deleting blocks saves at once and reloads in edit mode (like page sections).
+    // ------------------------------------------------------------
+    function newsBlockRefs(postEl) {
+        return Array.from(postEl.querySelectorAll('[data-news-block]')).map(el => {
+            const parts = String(el.dataset.newsBlock).split('.');
+            return { el, field: parts[0], index: parseInt(parts[1], 10), type: el.dataset.blockType || '' };
+        }).filter(ref => (ref.field === 'sections' || ref.field === 'aside') && Number.isInteger(ref.index));
+    }
+
+    function newsBlockList(field) {
+        if (!Array.isArray(EditorConfig.newsPostData[field])) EditorConfig.newsPostData[field] = [];
+        return EditorConfig.newsPostData[field];
+    }
+
+    // The template wraps a plain excerpt in one <p>; stored is the text inside
+    function newsUnwrapParagraph(html) {
+        const match = /^\s*<p>([\s\S]*?)<\/p>\s*$/i.exec(html);
+        return match && !/<p[\s>]/i.test(match[1]) ? match[1].trim() : html.trim();
+    }
+
+    function newsEditableHtml(el) {
+        const copy = el.cloneNode(true);
+        copy.querySelectorAll('.news-block-tools, .news-blocks-add, .news-block-add').forEach(node => node.remove());
+        return copy.innerHTML.trim();
+    }
+
+    // The editable parts as they stand in the page → EditorConfig.newsPostData
+    function collectNewsPostFields(postEl) {
+        const data = EditorConfig.newsPostData;
+        if (!data) return;
+        const titleEl = newsPostField(postEl, 'title');
+        const contentEl = newsPostField(postEl, 'content');
+        const authorEl = newsPostField(postEl, 'author');
+        const excerptEl = newsPostField(postEl, 'excerpt');
+        if (titleEl) data.title = titleEl.textContent.trim();
+        const subtitleEl = newsPostField(postEl, 'subtitle');
+        if (subtitleEl) data.subtitle = subtitleEl.textContent.trim();
+        if (contentEl) data.content = newsEditableHtml(contentEl);
+        if (authorEl) data.author = authorEl.textContent.trim().replace(/^by\s+/i, '');
+        if (excerptEl) data.excerpt = newsUnwrapParagraph(newsEditableHtml(excerptEl));
+        newsBlockRefs(postEl).forEach(ref => {
+            const block = newsBlockList(ref.field)[ref.index];
+            if (!block) return;
+            if (ref.type === 'text') {
+                block.content = newsEditableHtml(ref.el);
+            } else if (ref.type === 'image') {
+                Object.assign(block, newsCaptionData(ref.el.querySelector('figcaption')));
+            } else if (ref.type === 'gallery') {
+                if (!Array.isArray(block.images)) return;
+                ref.el.querySelectorAll('figure[data-gallery-item]').forEach(figure => {
+                    const image = block.images[parseInt(figure.dataset.galleryItem, 10)];
+                    if (image) Object.assign(image, newsCaptionData(figure.querySelector('figcaption')));
+                });
+            }
+        });
+    }
+
+    // caption and credit as edited in a <figcaption> (credit sits in .block-image__credit)
+    function newsCaptionData(caption) {
+        if (!caption) return {};
+        const credit = caption.querySelector('.block-image__credit');
+        const copy = caption.cloneNode(true);
+        copy.querySelectorAll('.block-image__credit').forEach(node => node.remove());
+        return {
+            credit: credit ? credit.textContent.replace(/\s+/g, ' ').trim() : '',
+            caption: copy.textContent.replace(/\s+/g, ' ').trim()
+        };
+    }
+
+    async function newsStructuralChange(mutate) {
+        const postEl = document.querySelector('[data-news-post]');
+        if (!postEl || !EditorConfig.newsPostData) return;
+        collectNewsPostFields(postEl);
+        mutate(EditorConfig.newsPostData);
+        const formData = new FormData();
+        formData.append('action', 'save-news');
+        formData.append('post', JSON.stringify(EditorConfig.newsPostData));
+        formData.append('csrf_token', EditorConfig.csrfToken);
+        try {
+            const result = await (await fetch(EditorConfig.apiUrl, { method: 'POST', body: formData })).json();
+            if (!result.success) {
+                showToast(t('toast.error_saving', { page: 'news', message: result.message || 'Unknown' }), 'error');
+                return;
+            }
+            EditorConfig.dirtyPages.delete('__news_post__');
+            sessionStorage.setItem('site-edit-mode', 'true');
+            // the editor itself reloads: without this the browser asks "leave page?" although everything is saved
+            window.removeEventListener('beforeunload', beforeUnloadGuard);
+            location.reload();
+        } catch (error) {
+            showToast(error.message, 'error');
+        }
+    }
+
+    function newsNewBlock(type, extra) {
+        return Object.assign({ id: 'block_' + Date.now().toString(36), type }, extra);
+    }
+
+    function addNewsBlockAt(field, index, type) {
+        if (type === 'gallery') {
+            openImageManager(function(imagePath) {
+                closeImageManager();
+                newsStructuralChange(() => newsBlockList(field).splice(index, 0, newsNewBlock('gallery', { images: [{ src: imagePath, alt: '', caption: '', credit: '' }] })));
+            }, null, null);
+            return;
+        }
+        if (type === 'image') {
+            openImageManager(function(imagePath) {
+                closeImageManager();
+                newsStructuralChange(() => newsBlockList(field).splice(index, 0, newsNewBlock('image', { src: imagePath, alt: '', caption: '', credit: '', width: 'full', align: 'right', lightbox: true })));
+            }, null, null);
+            return;
+        }
+        if (type === 'divider' || type === 'spacer') {
+            newsStructuralChange(() => newsBlockList(field).splice(index, 0, newsNewBlock(type, newsBlockDefaults(type))));
+            return;
+        }
+        if (type !== 'text' && BlockTypes[type]) {
+            // youtube, audio: the field dialog of the page sections collects the data first
+            openNewsBlockEditor(newsNewBlock(type, newsBlockDefaults(type)), block => newsStructuralChange(() => newsBlockList(field).splice(index, 0, block)));
+            return;
+        }
+        newsStructuralChange(() => newsBlockList(field).splice(index, 0, newsNewBlock('text', { content: '<p>' + t('news_block.new_text') + '</p>' })));
+    }
+
+    function newsBlockDefaults(type) {
+        return JSON.parse(JSON.stringify(BlockTypes[type]?.defaults || {}));
+    }
+
+    // Field dialog (#editor-modal) for a post block: saveSection() hands the edited block to onSave
+    // instead of writing it into a page
+    function openNewsBlockEditor(block, onSave) {
+        EditorConfig.newsEditorSave = onSave;
+        openEditor(-1, block, '__news_post__');
+    }
+
+    function moveNewsBlockAt(field, index, direction) {
+        const list = newsBlockList(field);
+        const target = index + direction;
+        if (target < 0 || target >= list.length) return;
+        newsStructuralChange(() => { [list[index], list[target]] = [list[target], list[index]]; });
+    }
+
+    // Split a text block at the top-level element that holds the caret (the element and
+    // everything after it move into a new block); null when nothing to split
+    function newsSplitElement(el) {
+        const sel = window.getSelection();
+        if (!sel || !sel.rangeCount) return null;
+        let node = sel.getRangeAt(0).startContainer;
+        if (!el.contains(node) || node === el) return null;
+        while (node.parentNode !== el) node = node.parentNode;
+        if (node.nodeType !== 1 || node.classList.contains('news-block-tools') || node.classList.contains('news-block-add')) return null;
+        return node;
+    }
+
+    function newsChildrenHtml(el, fromNode, before) {
+        const parts = [];
+        let seen = false;
+        Array.from(el.childNodes).forEach(node => {
+            if (node === fromNode) seen = true;
+            if (node.nodeType === 1 && (node.classList.contains('news-block-tools') || node.classList.contains('news-block-add'))) return;
+            if (before ? !seen : seen) parts.push(node.nodeType === 1 ? node.outerHTML : node.textContent);
+        });
+        return parts.join('').trim();
+    }
+
+    function splitNewsBlockAt(field, index, ref) {
+        const node = newsSplitElement(ref.el);
+        if (!node || !node.previousElementSibling) {
+            showToast(t('news_block.split_hint'), 'error');
+            return;
+        }
+        const before = newsChildrenHtml(ref.el, node, true);
+        const after = newsChildrenHtml(ref.el, node, false);
+        if (!before || !after) {
+            showToast(t('news_block.split_hint'), 'error');
+            return;
+        }
+        newsStructuralChange(data => {
+            const list = newsBlockList(field);
+            const block = list[index];
+            if (!block) return;
+            block.content = before;
+            list.splice(index + 1, 0, newsNewBlock('text', { content: after }));
+        });
+    }
+
+    function mergeNewsBlockAt(field, index) {
+        const list = newsBlockList(field);
+        const next = list[index + 1];
+        if (!next || next.type !== 'text' || list[index].type !== 'text') return;
+        newsStructuralChange(() => {
+            const current = list[index];
+            const title = next.title ? '<h2>' + escHtml(next.title) + '</h2>' : '';
+            current.content = [current.content || '', title, next.content || ''].filter(Boolean).join('\n');
+            list.splice(index + 1, 1);
+        });
+    }
+
+    function newsImageFromGalleryItem(image) {
+        return { src: image.src || '', alt: image.alt || '', caption: image.caption || '', credit: image.credit || '', width: 'full', align: 'right', lightbox: true };
+    }
+
+    function newsGalleryItemFromImage(block) {
+        return { src: block.src || '', alt: block.alt || '', caption: block.caption || '', credit: block.credit || '' };
+    }
+
+    // Number of image blocks directly following index (they join a new gallery)
+    function newsFollowingImageCount(field, index) {
+        const list = newsBlockList(field);
+        let n = 0;
+        while (list[index + 1 + n] && list[index + 1 + n].type === 'image') n++;
+        return n;
+    }
+
+    // Image block → gallery block with that image plus the directly following image blocks
+    function convertNewsImageToGallery(field, index) {
+        newsStructuralChange(() => {
+            const list = newsBlockList(field);
+            const block = list[index];
+            if (!block || block.type !== 'image') return;
+            const n = newsFollowingImageCount(field, index);
+            const images = [block].concat(list.slice(index + 1, index + 1 + n)).map(newsGalleryItemFromImage);
+            list.splice(index, 1 + n, { id: block.id || newsNewBlock('gallery').id, type: 'gallery', layout: index === 0 ? 'column' : 'grid', images });
+        });
+    }
+
+    // Gallery block with exactly one image → image block
+    function convertNewsGalleryToImage(field, index) {
+        newsStructuralChange(() => {
+            const list = newsBlockList(field);
+            const block = list[index];
+            if (!block || block.type !== 'gallery' || !Array.isArray(block.images) || block.images.length !== 1) return;
+            list.splice(index, 1, Object.assign({ id: block.id || newsNewBlock('image').id, type: 'image' }, newsImageFromGalleryItem(block.images[0])));
+        });
+    }
+
+    function deleteNewsBlockAt(field, index) {
+        showConfirmDialog(
+            t('news_block.delete'),
+            t('news_block.delete_confirm'),
+            t('section.reload_hint'),
+            () => newsStructuralChange(() => newsBlockList(field).splice(index, 1))
+        );
+    }
+
+    // Block types a post accepts in the visual editor; youtube/audio stay out of the side column
+    const NEWS_BLOCK_TYPES = {
+        sections: ['text', 'image', 'gallery', 'youtube', 'audio', 'divider', 'spacer'],
+        aside: ['text', 'image', 'gallery', 'divider', 'spacer']
+    };
+    const NEWS_INLINE_TYPES = ['text', 'image', 'gallery']; // edited in place; the others use the field dialog
+    const NEWS_GALLERY_GRID_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></g></svg>';
+    const NEWS_GALLERY_FULL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="14" width="18" height="7" rx="1"/></g></svg>';
+    const NEWS_GALLERY_COLUMN_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h8M3 10h8M3 15h8M3 20h8"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></g></svg>';
+    // Title image: full width (wide frame) / hidden uses Icons.eyeClosed / column uses the column icon
+    const NEWS_IMAGE_FULL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="1.5"/></g></svg>';
+    // Split: two bars with a gap; merge: two bars pulled together
+    const NEWS_SPLIT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16M4 8h16M4 16h16M4 20h16"/><path d="M3 12h3M10.5 12h3M18 12h3"/></g></svg>';
+    const NEWS_MERGE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h16M4 7h16M4 17h16M4 21h16"/><path d="m9 10 3 2 3-2M9 14l3-2 3 2"/></g></svg>';
+
+    function newsToolButton(label, title, onClick, extraClass) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'overlay-btn nibbly-editor-control-btn' + (extraClass ? ' ' + extraClass : '');
+        button.innerHTML = label;
+        button.dataset.editorTooltip = title;
+        button.setAttribute('aria-label', title);
+        button.addEventListener('mousedown', event => event.preventDefault());
+        button.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); onClick(); });
+        return button;
+    }
+
+    // Round "+" below a block (or in an empty list), same look as the page sections' add button
+    function newsAddButton(field, indexFn) {
+        const container = document.createElement('div');
+        container.className = 'section-add-buttons news-block-add';
+        container.contentEditable = 'false';
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.className = 'section-add-btn-toggle nibbly-editor-add-button';
+        const addLabel = tFallback('add_block', 'Add block');
+        addBtn.dataset.editorTooltip = addLabel;
+        addBtn.setAttribute('aria-label', addLabel);
+        addBtn.setAttribute('aria-expanded', 'false');
+        addBtn.innerHTML = Icons.plus;
+        addBtn.addEventListener('mousedown', event => event.preventDefault());
+        addBtn.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (!EditorConfig.editMode) return;
+            openSectionTypePicker(addBtn, indexFn(), null, {
+                types: NEWS_BLOCK_TYPES[field] || NEWS_BLOCK_TYPES.sections,
+                onSelect: type => addNewsBlockAt(field, indexFn(), type)
+            });
+        });
+        container.appendChild(addBtn);
+        return container;
+    }
+
+    function newsBlockTools(ref, count) {
+        const tools = document.createElement('div');
+        tools.className = 'news-block-tools editable-overlay-buttons';
+        tools.contentEditable = 'false';
+        const up = newsToolButton(Icons.arrowUp, t('news_block.move_up'), () => moveNewsBlockAt(ref.field, ref.index, -1));
+        const down = newsToolButton(Icons.arrowDown, t('news_block.move_down'), () => moveNewsBlockAt(ref.field, ref.index, 1));
+        if (ref.index === 0) up.disabled = true;
+        if (ref.index >= count - 1) down.disabled = true;
+        tools.append(up, down);
+        if (ref.type === 'text') {
+            const list = newsBlockList(ref.field);
+            const merge = newsToolButton(NEWS_MERGE_ICON, t('news_block.merge'), () => mergeNewsBlockAt(ref.field, ref.index));
+            const next = list[ref.index + 1];
+            if (!next || next.type !== 'text') merge.disabled = true;
+            tools.append(merge);
+        }
+        if (ref.type === 'gallery') {
+            // layout: column (text flows around) / grid / full width; the active one is filled
+            const block = newsBlockList(ref.field)[ref.index] || {};
+            const current = ['grid', 'full'].includes(block.layout) ? block.layout : 'column';
+            [['column', NEWS_GALLERY_COLUMN_ICON], ['grid', NEWS_GALLERY_GRID_ICON], ['full', NEWS_GALLERY_FULL_ICON]].forEach(([layout, icon]) => {
+                const button = newsToolButton(icon, t('gallery.layout_' + layout),
+                    () => newsStructuralChange(() => { const b = newsBlockList(ref.field)[ref.index]; if (b) b.layout = layout; }),
+                    layout === current ? 'is-active' : '');
+                button.setAttribute('aria-pressed', layout === current ? 'true' : 'false');
+                tools.appendChild(button);
+            });
+            // a gallery down to one image can become a single image block again
+            if (Array.isArray(block.images) && block.images.length === 1) {
+                tools.append(newsToolButton(Icons.image, t('news_block.to_image'), () => convertNewsGalleryToImage(ref.field, ref.index)));
+            }
+        }
+        if (ref.type === 'image') {
+            const n = newsFollowingImageCount(ref.field, ref.index);
+            tools.append(newsToolButton(NEWS_GALLERY_GRID_ICON, n ? t('news_block.to_gallery_merge') : t('news_block.to_gallery'), () => convertNewsImageToGallery(ref.field, ref.index)));
+        }
+        if (!NEWS_INLINE_TYPES.includes(ref.type) && (BlockTypes[ref.type]?.fields || []).length) {
+            // youtube, audio, spacer: fields in the dialog, then saved and re-rendered
+            tools.append(newsToolButton(Icons.edit, t('edit'), () => {
+                const current = newsBlockList(ref.field)[ref.index];
+                if (!current) return;
+                openNewsBlockEditor(Object.assign({}, current), block => newsStructuralChange(() => { newsBlockList(ref.field)[ref.index] = block; }));
+            }));
+        }
+        tools.append(newsToolButton(Icons.delete, t('news_block.delete'), () => deleteNewsBlockAt(ref.field, ref.index), 'overlay-btn-delete'));
+        return tools;
+    }
+
+    function enableNewsBlockEditing(postEl) {
+        newsBlockRefs(postEl).forEach(ref => {
+            ref.el.classList.add('news-block-editing');
+            if (ref.type === 'text') {
+                ref.el.contentEditable = 'true';
+                ref.el.classList.add('news-editable');
+                ref.el.addEventListener('input', markNewsPostDirty);
+                attachNewsToolbar(ref.el);
+            } else if (ref.type === 'image') {
+                const img = ref.el.querySelector('img');
+                if (img) {
+                    img.style.cursor = 'pointer';
+                    img.classList.add('news-editable');
+                    img.title = t('editor.change_image') || 'Change image';
+                    img._newsClickHandler = function(event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const block = newsBlockList(ref.field)[ref.index] || {};
+                        openImageManager(function(imagePath) {
+                            img.src = imagePath;
+                            img.removeAttribute('srcset');
+                            syncAiLabel(img);
+                            const link = img.closest('a');
+                            if (link) link.setAttribute('href', imagePath);
+                            if (newsBlockList(ref.field)[ref.index]) newsBlockList(ref.field)[ref.index].src = imagePath;
+                            markNewsPostDirty();
+                            closeImageManager();
+                        }, null, block.src || imageElementPath(img));
+                    };
+                    img.addEventListener('click', img._newsClickHandler, true);
+                }
+                newsEnableCaption(ref.el.querySelector('figcaption'));
+            } else if (ref.type === 'gallery') {
+                enableNewsGalleryEditing(ref);
+            }
+            ref.el.appendChild(newsBlockTools(ref, newsBlockList(ref.field).length));
+            ref.el.appendChild(newsAddButton(ref.field, () => ref.index + 1));
+        });
+        postEl.querySelectorAll('[data-news-blocks]').forEach(container => {
+            const field = container.dataset.newsBlocks;
+            if (newsBlockList(field).length > 0) return;
+            const add = document.createElement('div');
+            add.className = 'news-blocks-add';
+            add.contentEditable = 'false';
+            add.appendChild(newsAddButton(field, () => newsBlockList(field).length));
+            container.appendChild(add);
+        });
+    }
+
+    function newsEnableCaption(caption) {
+        if (!caption) return;
+        caption.contentEditable = 'true';
+        caption.classList.add('news-editable');
+        caption.dataset.placeholder = t('news_block.caption_placeholder');
+        caption.addEventListener('input', markNewsPostDirty);
+    }
+
+    function newsDisableCaption(caption) {
+        if (!caption) return;
+        caption.contentEditable = 'false';
+        caption.classList.remove('news-editable');
+        delete caption.dataset.placeholder;
+        caption.removeEventListener('input', markNewsPostDirty);
+    }
+
+    // Gallery block (.block-gallery with one figure[data-gallery-item] per image): the image opens the
+    // library, the caption is edited in place (a missing <figcaption> is created for the edit), a small
+    // "x" removes the image and a last tile adds one; both save at once like other structural changes.
+    function enableNewsGalleryEditing(ref) {
+        const images = () => {
+            const block = newsBlockList(ref.field)[ref.index];
+            if (block && !Array.isArray(block.images)) block.images = [];
+            return block ? block.images : null;
+        };
+        ref.el.querySelectorAll('figure[data-gallery-item]').forEach(figure => {
+            const j = parseInt(figure.dataset.galleryItem, 10);
+            const img = figure.querySelector('img');
+            if (img) {
+                img.style.cursor = 'pointer';
+                img.classList.add('news-editable');
+                img.title = t('editor.change_image') || 'Change image';
+                img._newsClickHandler = function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const list = images();
+                    openImageManager(function(imagePath) {
+                        img.src = imagePath;
+                        img.removeAttribute('srcset');
+                        syncAiLabel(img);
+                        const link = img.closest('a');
+                        if (link) link.setAttribute('href', imagePath);
+                        if (list && list[j]) list[j].src = imagePath;
+                        markNewsPostDirty();
+                        closeImageManager();
+                    }, null, (list && list[j] && list[j].src) || imageElementPath(img));
+                };
+                img.addEventListener('click', img._newsClickHandler, true);
+            }
+            let caption = figure.querySelector('figcaption');
+            if (!caption) {
+                caption = document.createElement('figcaption');
+                caption.dataset.newsTemp = '1';
+                figure.appendChild(caption);
+            }
+            newsEnableCaption(caption);
+            // round blue "+" at the bottom edge of the figure, like list items: inserts after this image
+            const addAfter = document.createElement('button');
+            addAfter.type = 'button';
+            addAfter.className = 'list-item-add-btn news-gallery-add';
+            addAfter.contentEditable = 'false';
+            addAfter.innerHTML = Icons.plus;
+            addAfter.dataset.editorTooltip = t('gallery.add_image');
+            addAfter.setAttribute('aria-label', t('gallery.add_image'));
+            addAfter.addEventListener('mousedown', event => event.preventDefault());
+            addAfter.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                openImageManager(function(imagePath) {
+                    closeImageManager();
+                    newsStructuralChange(() => {
+                        const list = images();
+                        if (list) list.splice(j + 1, 0, { src: imagePath, alt: '', caption: '', credit: '' });
+                    });
+                }, null, null);
+            });
+            figure.appendChild(addAfter);
+            // per-image tool bar (top right): order, extract as single image block, remove
+            const count = (images() || []).length;
+            const moveImage = direction => newsStructuralChange(() => {
+                const list = images();
+                const k = j + direction;
+                if (!list || !list[j] || !list[k]) return;
+                [list[j], list[k]] = [list[k], list[j]];
+            });
+            const back = newsToolButton(Icons.arrowUp, t('gallery.move_up'), () => moveImage(-1));
+            const forward = newsToolButton(Icons.arrowDown, t('gallery.move_down'), () => moveImage(1));
+            if (j === 0) back.disabled = true;
+            if (j >= count - 1) forward.disabled = true;
+            // the image becomes an image block right after the gallery; an emptied gallery goes away
+            const extract = newsToolButton(Icons.extract, t('gallery.extract'), () => newsStructuralChange(() => {
+                const blocks = newsBlockList(ref.field);
+                const list = images();
+                if (!list || !list[j]) return;
+                const image = list.splice(j, 1)[0];
+                blocks.splice(ref.index + 1, 0, newsNewBlock('image', newsImageFromGalleryItem(image)));
+                if (!list.length) blocks.splice(ref.index, 1);
+            }));
+            const remove = newsToolButton(Icons.delete, t('gallery.remove_image'), () => {
+                showConfirmDialog(t('gallery.remove_image'), t('gallery.remove_confirm'), t('section.reload_hint'), () => newsStructuralChange(() => {
+                    const list = images();
+                    if (list) list.splice(j, 1);
+                }));
+            }, 'overlay-btn-delete');
+            // wrapper: the control buttons themselves are forced to position: relative (tooltip rule)
+            const toolsWrap = document.createElement('div');
+            toolsWrap.className = 'news-gallery-tools editable-overlay-buttons';
+            toolsWrap.contentEditable = 'false';
+            toolsWrap.append(back, forward, extract, remove);
+            figure.appendChild(toolsWrap);
+        });
+        // an emptied gallery keeps one visible "+" so images can come back
+        if (!ref.el.querySelector('figure[data-gallery-item]')) {
+            const add = document.createElement('button');
+            addEmpty(add);
+        }
+        function addEmpty(add) {
+            add.type = 'button';
+            add.className = 'list-item-add-btn news-gallery-add news-gallery-add--empty';
+            add.contentEditable = 'false';
+            add.innerHTML = Icons.plus;
+            add.dataset.editorTooltip = t('gallery.add_image');
+            add.setAttribute('aria-label', t('gallery.add_image'));
+            add.addEventListener('mousedown', event => event.preventDefault());
+            add.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                openImageManager(function(imagePath) {
+                    closeImageManager();
+                    newsStructuralChange(() => {
+                        const list = images();
+                        if (list) list.push({ src: imagePath, alt: '', caption: '', credit: '' });
+                    });
+                }, null, null);
+            });
+            ref.el.appendChild(add);
+        }
+    }
+
+    function disableNewsGalleryEditing(ref) {
+        ref.el.querySelectorAll('.news-gallery-tools, .news-gallery-add').forEach(node => node.remove());
+        ref.el.querySelectorAll('figure[data-gallery-item]').forEach(figure => {
+            const img = figure.querySelector('img');
+            if (img && img._newsClickHandler) {
+                img.style.cursor = '';
+                img.classList.remove('news-editable');
+                img.title = '';
+                img.removeEventListener('click', img._newsClickHandler, true);
+                delete img._newsClickHandler;
+            }
+            const caption = figure.querySelector('figcaption');
+            if (caption && caption.dataset.newsTemp && !caption.textContent.trim()) caption.remove();
+            else newsDisableCaption(caption);
+        });
+    }
+
+    function disableNewsBlockEditing(postEl) {
+        postEl.querySelectorAll('.news-block-tools, .news-blocks-add, .news-block-add').forEach(node => node.remove());
+        newsBlockRefs(postEl).forEach(ref => {
+            ref.el.classList.remove('news-block-editing');
+            if (ref.type === 'text') {
+                ref.el.contentEditable = 'false';
+                ref.el.classList.remove('news-editable');
+                ref.el.removeEventListener('input', markNewsPostDirty);
+                detachNewsToolbar(ref.el);
+            } else if (ref.type === 'image') {
+                const img = ref.el.querySelector('img');
+                if (img && img._newsClickHandler) {
+                    img.style.cursor = '';
+                    img.classList.remove('news-editable');
+                    img.title = '';
+                    img.removeEventListener('click', img._newsClickHandler, true);
+                    delete img._newsClickHandler;
+                }
+                newsDisableCaption(ref.el.querySelector('figcaption'));
+            } else if (ref.type === 'gallery') {
+                disableNewsGalleryEditing(ref);
+            }
+        });
     }
 
     function enableNewsPostEditing() {
         const postEl = document.querySelector('[data-news-post]');
         if (!postEl) return;
 
-        const titleEl = newsPostField(postEl, 'title');
-        const contentEl = newsPostField(postEl, 'content');
-        const authorEl = newsPostField(postEl, 'author');
+        ['title', 'subtitle', 'content', 'author', 'excerpt'].forEach(name => {
+            const el = newsPostField(postEl, name);
+            if (!el) return;
+            el.contentEditable = 'true';
+            el.classList.add('news-editable');
+            el.addEventListener('input', markNewsPostDirty);
+            if (name === 'content') attachNewsToolbar(el);
+        });
+
         const heroEl = newsPostField(postEl, 'image');
-
-        if (titleEl) {
-            titleEl.contentEditable = 'true';
-            titleEl.classList.add('news-editable');
-            titleEl.addEventListener('input', markNewsPostDirty);
-        }
-
-        if (contentEl) {
-            contentEl.contentEditable = 'true';
-            contentEl.classList.add('news-editable');
-            contentEl.addEventListener('input', markNewsPostDirty);
-        }
-
-        if (authorEl) {
-            authorEl.contentEditable = 'true';
-            authorEl.classList.add('news-editable');
-            authorEl.addEventListener('input', markNewsPostDirty);
-        }
-
         if (heroEl) {
             heroEl.style.cursor = 'pointer';
             heroEl.classList.add('news-editable');
@@ -6832,36 +7598,64 @@
                 }, null, EditorConfig.newsPostData.image || imageElementPath(heroEl));
             };
             heroEl.addEventListener('click', heroEl._newsClickHandler);
+            // layout of the title image in the post: column (default) / full width / hidden (previews only)
+            const heroFigure = heroEl.closest('figure[data-news-field="image"]');
+            if (heroFigure) {
+                const tools = document.createElement('div');
+                tools.className = 'news-block-tools editable-overlay-buttons';
+                tools.contentEditable = 'false';
+                const current = ['full', 'hidden'].includes(EditorConfig.newsPostData.imageLayout) ? EditorConfig.newsPostData.imageLayout : 'column';
+                [['column', NEWS_GALLERY_COLUMN_ICON], ['full', NEWS_IMAGE_FULL_ICON], ['hidden', Icons.eyeClosed]].forEach(([layout, icon]) => {
+                    const button = newsToolButton(icon, t('post_image.layout_' + layout), () => newsStructuralChange(data => { data.imageLayout = layout; }), layout === current ? 'is-active' : '');
+                    button.setAttribute('aria-pressed', layout === current ? 'true' : 'false');
+                    tools.appendChild(button);
+                });
+                heroFigure.appendChild(tools);
+            }
         }
+
+        // Cover of the issue in the sidebar: click opens the media library, the lightbox link follows
+        const coverEl = newsPostField(postEl, 'cover');
+        if (coverEl) {
+            coverEl.style.cursor = 'pointer';
+            coverEl.classList.add('news-editable');
+            coverEl.title = t('editor.change_image') || 'Change image';
+            coverEl._newsClickHandler = function(event) {
+                event.preventDefault();
+                event.stopPropagation();
+                const current = EditorConfig.newsPostData.cover && EditorConfig.newsPostData.cover.src ? EditorConfig.newsPostData.cover.src : imageElementPath(coverEl);
+                openImageManager(function(imagePath) {
+                    coverEl.src = imagePath;
+                    syncAiLabel(coverEl);
+                    const link = coverEl.closest('a');
+                    if (link) link.setAttribute('href', imagePath);
+                    const figure = coverEl.closest('figure');
+                    if (figure) figure.classList.remove('news-post-page__cover--empty');
+                    EditorConfig.newsPostData.cover = Object.assign({ alt: '', label: '' }, EditorConfig.newsPostData.cover || {}, { src: imagePath });
+                    markNewsPostDirty();
+                    closeImageManager();
+                }, null, current);
+            };
+            coverEl.addEventListener('click', coverEl._newsClickHandler, true);
+        }
+
+        enableNewsBlockEditing(postEl);
     }
 
     function disableNewsPostEditing() {
         const postEl = document.querySelector('[data-news-post]');
         if (!postEl) return;
 
-        const titleEl = newsPostField(postEl, 'title');
-        const contentEl = newsPostField(postEl, 'content');
-        const authorEl = newsPostField(postEl, 'author');
+        ['title', 'subtitle', 'content', 'author', 'excerpt'].forEach(name => {
+            const el = newsPostField(postEl, name);
+            if (!el) return;
+            el.contentEditable = 'false';
+            el.classList.remove('news-editable');
+            el.removeEventListener('input', markNewsPostDirty);
+            detachNewsToolbar(el);
+        });
+
         const heroEl = newsPostField(postEl, 'image');
-
-        if (titleEl) {
-            titleEl.contentEditable = 'false';
-            titleEl.classList.remove('news-editable');
-            titleEl.removeEventListener('input', markNewsPostDirty);
-        }
-
-        if (contentEl) {
-            contentEl.contentEditable = 'false';
-            contentEl.classList.remove('news-editable');
-            contentEl.removeEventListener('input', markNewsPostDirty);
-        }
-
-        if (authorEl) {
-            authorEl.contentEditable = 'false';
-            authorEl.classList.remove('news-editable');
-            authorEl.removeEventListener('input', markNewsPostDirty);
-        }
-
         if (heroEl) {
             heroEl.style.cursor = '';
             heroEl.classList.remove('news-editable');
@@ -6871,11 +7665,89 @@
                 delete heroEl._newsClickHandler;
             }
         }
+
+        const coverEl = newsPostField(postEl, 'cover');
+        if (coverEl) {
+            coverEl.style.cursor = '';
+            coverEl.classList.remove('news-editable');
+            coverEl.title = '';
+            if (coverEl._newsClickHandler) {
+                coverEl.removeEventListener('click', coverEl._newsClickHandler, true);
+                delete coverEl._newsClickHandler;
+            }
+        }
+
+        disableNewsBlockEditing(postEl);
     }
 
     function markNewsPostDirty() {
         EditorConfig.dirtyPages.add('__news_post__');
         updateUndoRedoButtons();
+    }
+
+    // Floating toolbar (bold, italic, link, footnote, HTML) on an always-editable post text.
+    // Unlike page fields there is no start/finish cycle: the toolbar follows focus and blur.
+    function attachNewsToolbar(el) {
+        if (el._newsToolbar) return;
+        const onFocus = () => {
+            if (activeHtmlField && activeHtmlField !== el && !activeHtmlField.classList.contains('news-editable')) {
+                finishInlineHtmlEdit(activeHtmlField, activeHtmlField._originalHtml, false);
+            }
+            activeHtmlField = el;
+            positionFloatingToolbar(el);
+            const scrollHandler = () => positionFloatingToolbar(el);
+            el._scrollHandler = scrollHandler;
+            window.addEventListener('scroll', scrollHandler, true);
+            window.addEventListener('resize', scrollHandler);
+        };
+        const onBlur = () => {
+            setTimeout(() => {
+                const active = document.activeElement;
+                if (floatingToolbar && floatingToolbar.contains(active)) return;
+                if (document.querySelector('.prompt-dialog-overlay, .editor-modal.active')) return;
+                if (activeHtmlField === el) hideFloatingToolbar();
+            }, 200);
+        };
+        const onPaste = (e) => {
+            e.preventDefault();
+            const html = e.clipboardData.getData('text/html');
+            const text = e.clipboardData.getData('text/plain');
+            if (html) document.execCommand('insertHTML', false, sanitizeHtmlString(html));
+            else if (text) document.execCommand('insertText', false, text);
+        };
+        el.addEventListener('focus', onFocus);
+        el.addEventListener('blur', onBlur);
+        el.addEventListener('paste', onPaste);
+        el._newsToolbar = { onFocus, onBlur, onPaste };
+    }
+
+    function detachNewsToolbar(el) {
+        if (!el._newsToolbar) return;
+        el.removeEventListener('focus', el._newsToolbar.onFocus);
+        el.removeEventListener('blur', el._newsToolbar.onBlur);
+        el.removeEventListener('paste', el._newsToolbar.onPaste);
+        delete el._newsToolbar;
+        if (activeHtmlField === el) hideFloatingToolbar();
+    }
+
+    // HTML source of a post text (block or legacy content field); saved with "Speichern"
+    function openNewsHtmlEditor(el) {
+        const currentValue = newsEditableHtml(el);
+        createHtmlSourceDialog();
+        document.getElementById('html-source-dialog-title').textContent = 'HTML';
+        const textarea = document.getElementById('html-source-textarea');
+        textarea.value = formatHtml(currentValue);
+        _htmlSourceCallback = (newValue) => {
+            if (newValue === null || newValue === currentValue) return;
+            const tools = Array.from(el.querySelectorAll(':scope > .news-block-tools, :scope > .news-block-add'));
+            el.innerHTML = sanitizeHtmlString(newValue);
+            tools.forEach(node => el.appendChild(node));
+            markNewsPostDirty();
+        };
+        const modal = document.getElementById('html-source-dialog-modal');
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => { textarea.focus(); textarea.setSelectionRange(0, 0); }, 100);
     }
 
     // ============================================================
@@ -6888,6 +7760,7 @@
         closeModal: closeModal,
         execCommand: execCommand,
         insertLink: insertLink,
+        toggleFootnote: toggleFootnote,
         toggleHtmlMode: toggleHtmlMode,
         saveSection: saveSection,
         closeGroupEditor: closeGroupEditor,

@@ -42,11 +42,18 @@ return [
                 ['value' => 'h6', 'label' => 'H6'],
             ]],
             ['key' => 'content',  'type' => 'wysiwyg',  'label' => t('field.content')],
-            ['key' => 'style',    'type' => 'select',   'label' => t('field.style'), 'options' => [
-                ['value' => '',          'label' => t('option.default')],
-                ['value' => 'highlight', 'label' => t('option.highlight')],
-            ]],
+            // styles from includes/text-styles.php plus the site's content/text-styles.json
+            ['key' => 'style',    'type' => 'select',   'label' => t('field.style'), 'options' => textStyleOptions()],
         ],
+    ],
+
+    'gallery' => [
+        'label'    => t('block.gallery'),
+        'category' => 'media',
+        'icon'     => 'gallery',
+        // images: [{src, alt, caption, credit}], edited with its own UI in the dashboard and inline
+        'defaults' => ['images' => [], 'layout' => 'column'],
+        'fields'   => [],
     ],
 
     'youtube' => [

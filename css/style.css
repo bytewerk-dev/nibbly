@@ -2106,6 +2106,97 @@ hr, .divider hr {
     max-width: 50%;
 }
 
+/* Reduced widths may be aligned (right is the default); on pages the figure simply keeps its
+   width and alignment, inside a post (css/components.css) it floats and the text flows around */
+.block-image--left {
+    margin-right: auto;
+}
+
+.block-image--center {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.block-image--right {
+    margin-left: auto;
+}
+
+.block-image--half {
+    max-width: 50%;
+}
+
+.block-image > a {
+    display: block;
+}
+
+/* Photo credit after the caption */
+.block-image__credit {
+    display: inline-block;
+    margin-left: 0.35em;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+}
+
+/* ============================================
+   BLOCK: GALLERY
+   ============================================ */
+.block-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: 1.75rem 1.25rem;
+    margin: var(--spacing-md) 0;
+    clear: both;
+}
+
+.block-gallery__item {
+    margin: 0;
+    max-width: none;
+    float: none;
+}
+
+.block-gallery__item > a {
+    display: block;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    border-radius: 8px;
+    background: var(--color-background-section);
+}
+
+.block-gallery__item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.block-gallery__item figcaption {
+    margin-top: 0.75em;
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+}
+
+/* "full": every image stacked at the width of the content box, uncropped, at most 600px high */
+.block-gallery--full {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.block-gallery--full .block-gallery__item > a {
+    aspect-ratio: auto;
+    background: none;
+    text-align: center;
+}
+
+.block-gallery--full .block-gallery__item img {
+    display: inline-block;
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    max-height: 600px;
+    object-fit: contain;
+}
+
 .block-image--placeholder {
     display: flex;
     align-items: center;

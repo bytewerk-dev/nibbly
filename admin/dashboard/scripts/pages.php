@@ -745,7 +745,7 @@
         document.getElementById('pageListContainer').style.display = 'block';
         document.getElementById('trashContainer').style.display = 'none';
         document.getElementById('editorContainer').style.display = 'none';
-        document.getElementById('backupContainer').style.display = 'none';
+        document.getElementById('backupContainer').hidden = true;
         currentPage = null;
         currentContent = null;
         // Update topbar
@@ -765,7 +765,7 @@
     async function showTrash() {
         document.getElementById('pageListContainer').style.display = 'none';
         document.getElementById('editorContainer').style.display = 'none';
-        document.getElementById('backupContainer').style.display = 'none';
+        document.getElementById('backupContainer').hidden = true;
         document.getElementById('trashContainer').style.display = 'block';
         const topbarTitle = document.getElementById('topbarTitle');
         if (topbarTitle) topbarTitle.textContent = t('trash.title');
@@ -1013,7 +1013,7 @@
                 // Hide page list, show editor
                 document.getElementById('pageListContainer').style.display = 'none';
                 document.getElementById('editorContainer').style.display = 'block';
-                document.getElementById('backupContainer').style.display = 'block';
+                document.getElementById('backupContainer').hidden = false;
                 document.getElementById('toggleAllBtn').style.display = '';
                 allExpanded = false;
                 document.getElementById('toggleAllBtn').textContent = t('editor.expand_all');
@@ -1488,7 +1488,10 @@
 
     function getSectionPreview(section, maxLength = 72) {
         const formatPreview = (value) => {
-            const clean = value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+            // Tags out, entities (&nbsp;, &amp;, …) back to characters, then one space between words
+            const decoder = document.createElement('textarea');
+            decoder.innerHTML = value.replace(/<[^>]*>/g, ' ');
+            const clean = decoder.value.replace(/[\s\u00a0]+/g, ' ').trim();
             if (!maxLength || clean.length <= maxLength) return clean;
             return clean.slice(0, maxLength) + '…';
         };

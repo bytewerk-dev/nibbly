@@ -91,7 +91,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
         'icons'     => '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
         'settings'  => '<path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="3"/>',
         'logout'    => '<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>',
-        'trash'     => '<path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/>',
+        'trash'     => '<g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M8.451,5.968V3.484 c0-1.371,1.113-2.484,2.484-2.484h2.129c1.371,0,2.484,1.113,2.484,2.484v2.484 M2.065,5.968h19.871 M4.194,5.968l1.732,14.733 c0.156,1.334,1.277,2.299,2.626,2.299h6.898c1.348,0,2.47-0.965,2.626-2.299l1.732-14.733 M8.341,9.804l0.753,9.616 M12,9.804 v9.616 M15.66,9.804l-0.753,9.616"/></g>',
         'back'      => '<path d="M19 12H5M12 19l-7-7 7-7"/>',
         'undo'      => '<path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6.69 3L3 13"/>',
         'redo'      => '<path d="M21 7v6h-6"/><path d="M3 17a9 9 0 019-9 9 9 0 016.69 3L21 13"/>',
@@ -554,13 +554,13 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
             </div>
         </div>
 
-        <!-- Backups -->
-        <div class="backup-container" id="backupContainer" style="display: none;">
-            <h3><?php echo t('backups.title'); ?></h3>
+        <!-- Backups: moved to the bottom of the page editor's sidebar by scripts/page-writing.php -->
+        <section class="nb-page-panel nb-backups-panel" id="backupContainer" aria-labelledby="backupsTitle" hidden>
+            <h3 id="backupsTitle"><?php echo t('backups.title'); ?></h3>
             <div class="backup-list" id="backupList">
                 <!-- Backups inserted via JS -->
             </div>
-        </div>
+        </section>
     </div>
 
     <!-- Events Tab — list view -->
@@ -2251,6 +2251,11 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                                 <label for="newsArchiveBase"><?php echo t('settings.news_archive_base'); ?></label>
                                 <input type="text" id="newsArchiveBase" autocomplete="off" spellcheck="false" placeholder="/news">
                                 <small class="form-hint"><?php echo t('settings.news_archive_base_hint'); ?></small>
+                            </div>
+                            <div class="form-group">
+                                <label for="newsArchiveCategoryBase"><?php echo t('settings.news_archive_category_base'); ?></label>
+                                <input type="text" id="newsArchiveCategoryBase" autocomplete="off" spellcheck="false" placeholder="/category">
+                                <small class="form-hint"><?php echo t('settings.news_archive_category_base_hint'); ?></small>
                             </div>
                             <div class="form-group">
                                 <label for="newsArchiveTag"><?php echo t('settings.news_archive_tag'); ?></label>

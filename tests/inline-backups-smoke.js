@@ -76,7 +76,20 @@ function harness(replies = []) {
     assert.equal(empty.nodes.get('admin-page-backups').hidden, true);
     const news = harness(); news.config.isNewsPost = true;
     await news.controller.load();
-    assert.equal(news.requests.length, 0);
+    assert.equal(news.requests.length, 0, 'A post without a known id loads no page backups');
+
+    const postBackup = {filename: 'news__2026-10-31-post_2026-10-31_120000_abcdef.json', timestamp: Date.parse('2026-10-31T11:00:00Z') / 1000};
+    const post = harness([{data: [postBackup]}, {data: null}]);
+    post.config.isNewsPost = true; post.config.newsPostData = {id: '2026-10-31-post'};
+    await post.controller.load();
+    assert.match(post.requests[0].url, /action=list-news-backups&id=2026-10-31-post$/);
+    assert.equal(post.controller.items.length, 1);
+    assert.equal(post.nodes.get('admin-page-backups').hidden, false);
+    post.controller.requestRestore();
+    assert.match(post.confirmations[0][1], /Backup 31\.10\.26 12:00/);
+    await post.confirmations[0][3]();
+    assert.deepEqual(post.requests[1].fields, {action: 'restore-news-backup', post_id: '2026-10-31-post', backup: postBackup.filename, csrf_token: 'fixture'});
+    assert.equal(post.reloads(), 1);
 
     const unavailable = harness([new Error('offline'), {data: [backup]}]);
     await unavailable.controller.load();

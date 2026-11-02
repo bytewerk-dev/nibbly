@@ -369,6 +369,7 @@ function nibblyCommentsTargetInfo(array $target, string $lang): array {
         require_once $root . '/includes/news-helper.php';
         foreach (nibblyNewsAllPosts() as $post) {
             if (($post['id'] ?? '') !== $target['id'] || !empty($post['hidden'])) continue;
+            if (array_key_exists('comments', $post) && $post['comments'] === false) return [false, (string)$post['title'], ''];
             $settings = nibblyCommentsSettings();
             if ($settings['closeAfterDays'] > 0 && strtotime((string)($post['date'] ?? '')) < time() - $settings['closeAfterDays'] * 86400) return [false, (string)$post['title'], ''];
             return [true, (string)($post['title'] ?? ''), nibblyNewsUrl($post, (string)($post['lang'] ?? $lang))];

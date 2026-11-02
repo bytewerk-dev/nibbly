@@ -192,6 +192,11 @@ function nibblyPublicString(string $key, ?string $lang = null): string {
             'de' => 'Themen',
             'es' => 'Temas',
         ],
+        'news_image_hidden' => [
+            'en' => 'Title image: not in the post, previews only',
+            'de' => 'Titelbild: nicht im Beitrag, nur in Vorschauen',
+            'es' => 'Imagen de portada: solo en las vistas previas',
+        ],
         'pagination_label' => [
             'en' => 'Pagination',
             'de' => 'Seitennavigation',

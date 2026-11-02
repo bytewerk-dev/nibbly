@@ -133,6 +133,41 @@ function getBlockTypes() {
     return $blockTypes;
 }
 
+/**
+ * Text block styles: core list (includes/text-styles.php) merged with the site's
+ * content/text-styles.json (same key overrides, "label" may be a map of language codes).
+ * Returns key => ['label' => string, 'class' => string].
+ */
+function getTextStyles() {
+    static $styles = null;
+    if ($styles !== null) return $styles;
+    $styles = require __DIR__ . '/text-styles.php';
+    $sitePath = dirname(__DIR__) . '/content/text-styles.json';
+    $site = file_exists($sitePath) ? json_decode((string)file_get_contents($sitePath), true) : null;
+    $lang = function_exists('_nbAdminLang') ? _nbAdminLang() : (defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en');
+    foreach (is_array($site) ? $site : [] as $key => $def) {
+        if (!is_array($def) || !preg_match('/^[a-z][a-z0-9_-]*$/i', (string)$key)) continue;
+        $label = $def['label'] ?? $key;
+        if (is_array($label)) $label = $label[$lang] ?? reset($label);
+        $class = trim(preg_replace('/[^A-Za-z0-9_\- ]+/', '', (string)($def['class'] ?? '')));
+        $styles[$key] = ['label' => (string)$label, 'class' => $class !== '' ? $class : 'text-style--' . $key];
+    }
+    return $styles;
+}
+
+/** CSS class of a text block style; "" for the plain block or an unknown key. */
+function textStyleClass($style) {
+    $styles = getTextStyles();
+    return isset($styles[(string)$style]) ? $styles[(string)$style]['class'] : '';
+}
+
+/** Options of the "style" select of text blocks (plain block first). */
+function textStyleOptions() {
+    $options = [['value' => '', 'label' => t('option.default')]];
+    foreach (getTextStyles() as $key => $def) $options[] = ['value' => $key, 'label' => $def['label']];
+    return $options;
+}
+
 function getSectionTypeName($type) {
     // Legacy alias
     if ($type === 'project') return t('block.card');
@@ -1958,7 +1993,10 @@ function renderNewsList($limit = 0, $lang = 'en', array $options = []) {
     $html = '<div class="news-grid">';
     foreach ($posts as $post) {
         $title = htmlspecialchars($post['title'] ?? '');
-        $excerpt = htmlspecialchars($post['excerpt'] ?? '');
+        // Excerpts may hold inline markup (strong, em, …); block tags are dropped, the card sets its own <p>
+        $excerptRaw = trim((string)($post['excerpt'] ?? ''));
+        // The card is one link: links inside the excerpt would nest <a> in <a> and break the markup
+        $excerpt = strip_tags($excerptRaw) === $excerptRaw ? htmlspecialchars($excerptRaw) : trim(strip_tags(sanitizeHtml($excerptRaw), '<strong><em><b><i><br><span><sub><sup>'));
         $date = $post['date'] ?? '';
         $author = htmlspecialchars($post['author'] ?? '');
         $image = htmlspecialchars($post['image'] ?? '');
@@ -1993,6 +2031,9 @@ function renderNewsList($limit = 0, $lang = 'en', array $options = []) {
             }
         }
         $html .= '</div>';
+        if (trim((string)($post['subtitle'] ?? '')) !== '') {
+            $html .= '<p class="news-kicker">' . htmlspecialchars(trim((string)$post['subtitle'])) . '</p>';
+        }
         $html .= '<h3 class="news-card__title">' . $title . '</h3>';
         if ($excerpt || $_isAdmin) {
             $html .= '<p class="news-card__excerpt">' . $excerpt . '</p>';
@@ -2099,6 +2140,9 @@ function renderNewsTimeline($lang = 'en', array $options = []) {
         $html .= '<div class="news-timeline__marker" aria-hidden="true"></div>';
         $html .= '<article class="news-timeline__entry">';
         $html .= '<time class="news-timeline__date" datetime="' . htmlspecialchars($date) . '">' . $formattedDate . '</time>';
+        if (trim((string)($post['subtitle'] ?? '')) !== '') {
+            $html .= '<p class="news-kicker">' . htmlspecialchars(trim((string)$post['subtitle'])) . '</p>';
+        }
         $html .= '<h3 class="news-timeline__title"><a href="' . $url . '">' . $title . '</a></h3>';
         if ($showImages) {
             $gallery = [];
@@ -2130,8 +2174,8 @@ function renderNewsTimeline($lang = 'en', array $options = []) {
             // Excerpts may carry simple inline markup (links, emphasis) from imports; print rules apply
             $html .= '<div class="news-timeline__text">' . (strip_tags($excerpt) === $excerpt ? '<p>' . htmlspecialchars($excerpt) . '</p>' : sanitizeHtml($excerpt)) . '</div>';
         }
-        if ($showContent && is_string($post['content'] ?? null) && trim($post['content']) !== '') {
-            $html .= '<div class="news-timeline__content">' . sanitizeHtml($post['content']) . '</div>';
+        if ($showContent && trim($timelineBody = nibblyNewsBodyHtml($post)) !== '') {
+            $html .= '<div class="news-timeline__content">' . (is_string($post['content'] ?? null) ? sanitizeHtml($timelineBody) : $timelineBody) . '</div>';
         }
         $html .= '<a class="news-timeline__link" href="' . $url . '">' . htmlspecialchars($linkLabel) . '<span class="visually-hidden">: ' . $title . '</span></a>';
         $html .= '</article></li>';
@@ -2363,7 +2407,7 @@ function renderEvent($event, $lang = 'de', $showImage = true, $editable = false)
                 ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>'
                 : '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>')
             . '</button>';
-        $html .= '<button type="button" class="event-delete-btn" title="Delete"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>';
+        $html .= '<button type="button" class="event-delete-btn" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M8.451,5.968V3.484 c0-1.371,1.113-2.484,2.484-2.484h2.129c1.371,0,2.484,1.113,2.484,2.484v2.484 M2.065,5.968h19.871 M4.194,5.968l1.732,14.733 c0.156,1.334,1.277,2.299,2.626,2.299h6.898c1.348,0,2.47-0.965,2.626-2.299l1.732-14.733 M8.341,9.804l0.753,9.616 M12,9.804 v9.616 M15.66,9.804l-0.753,9.616"/></g></svg></button>';
         $html .= '</div>';
     }
 

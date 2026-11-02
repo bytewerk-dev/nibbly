@@ -21,6 +21,26 @@ function nibblyNewsApiNormalize(array $post): array {
     return $post;
 }
 
+// Post backups: like page backups (pages.php) a copy of the previous state lands in BACKUP_PATH before
+// every write, named news__{id}_{Y-m-d}_{His}_{6 hex}.json; the newest MAX_BACKUPS per post are kept.
+function nibblyNewsBackupPattern(): string {
+    return '/^news__([a-z0-9]+(?:-[a-z0-9]+)*)_(\d{4}-\d{2}-\d{2})_(\d{6})_[a-f0-9]{6}\.json$/D';
+}
+
+function nibblyNewsBackupCreate(string $filepath, string $postId): void {
+    if (!is_file($filepath)) return;
+    if (!is_dir(BACKUP_PATH)) @mkdir(BACKUP_PATH, 0755, true);
+    $backupPath = BACKUP_PATH . 'news__' . $postId . '_' . date('Y-m-d_His') . '_' . bin2hex(random_bytes(3)) . '.json';
+    if (!copy($filepath, $backupPath)) {
+        jsonResponse(false, null, 'Could not create a backup before saving');
+    }
+    $backups = glob(BACKUP_PATH . 'news__' . $postId . '_*.json') ?: [];
+    usort($backups, static fn($a, $b) => filemtime($b) - filemtime($a));
+    while (count($backups) > MAX_BACKUPS) {
+        @unlink(array_pop($backups));
+    }
+}
+
 // List row for the dashboard: what the table, filters and language columns need, excerpt shortened
 function nibblyNewsApiListItem(array $post): array {
     $excerpt = trim(preg_replace('/\s+/u', ' ', strip_tags((string)($post['excerpt'] ?? ''))) ?? '');
@@ -28,7 +48,7 @@ function nibblyNewsApiListItem(array $post): array {
         $excerpt = rtrim(mb_substr($excerpt, 0, 159)) . '…';
     }
     $item = [];
-    foreach (['id', 'slug', 'lang', 'title', 'date', 'author', 'image', 'categories', 'tags', 'flags', 'url', 'wpId', 'lastModified'] as $key) {
+    foreach (['id', 'slug', 'lang', 'title', 'subtitle', 'date', 'author', 'image', 'categories', 'tags', 'flags', 'url', 'wpId', 'lastModified'] as $key) {
         if (array_key_exists($key, $post)) $item[$key] = $post[$key];
     }
     $item['excerpt'] = $excerpt;
@@ -178,11 +198,14 @@ switch ($action) {
             'id' => $postId,
             'lang' => $lang,
             'title' => $title,
+            'subtitle' => trim(strip_tags((string)($post['subtitle'] ?? ''))),
             'slug' => $slug,
             'date' => $date,
             'author' => trim($post['author'] ?? ''),
             'excerpt' => trim($post['excerpt'] ?? ''),
             'image' => trim($post['image'] ?? ''),
+            // Title image inside the post: column (image column), full (full width), hidden (previews only)
+            'imageLayout' => in_array($post['imageLayout'] ?? '', ['full', 'hidden'], true) ? $post['imageLayout'] : 'column',
             'content' => sanitizeHtml((string)($post['content'] ?? '')),
             // Categories are slugs of content/news-categories.json; tags are free (typed names become
             // slugs, their spelling is kept in content/news-tags.json); flags mark sub-lists (e.g. "column")
@@ -192,14 +215,47 @@ switch ($action) {
             'hidden' => !empty($post['hidden']),
             'lastModified' => date('c'),
         ];
+        // Cover image (shown in the sidebar, e.g. the issue of a magazine) and the sidebar switch
+        $cover = is_array($post['cover'] ?? null) ? $post['cover'] : [];
+        $coverSrc = trim((string)($cover['src'] ?? ''));
+        if ($coverSrc !== '' && preg_match('#^/?assets/[^\s"<>]+$#', $coverSrc)) {
+            $sanitized['cover'] = [
+                'src' => '/' . ltrim($coverSrc, '/'),
+                'alt' => trim(strip_tags((string)($cover['alt'] ?? ''))),
+                'label' => trim(strip_tags((string)($cover['label'] ?? ''))),
+            ];
+        }
+        if (!empty($post['sidebar'])) {
+            $sanitized['sidebar'] = true;
+        }
+        // Comments are open by default; "comments": false closes them for this post
+        if (array_key_exists('comments', $post) && ($post['comments'] === false || $post['comments'] === 'false' || $post['comments'] === 0 || $post['comments'] === '0')) {
+            $sanitized['comments'] = false;
+        }
+        // Block lists: "sections" is the body of a post built from blocks (it replaces the "content"
+        // string, in its place), "aside" the sidebar below cover and excerpt
+        if (is_array($post['sections'] ?? null)) {
+            $ordered = [];
+            foreach ($sanitized as $key => $value) {
+                if ($key === 'content') $ordered['sections'] = nibblyNewsSanitizeBlocks($post['sections']);
+                else $ordered[$key] = $value;
+            }
+            $sanitized = $ordered;
+        }
+        $aside = nibblyNewsSanitizeBlocks($post['aside'] ?? null);
+        if ($aside) {
+            $sanitized['aside'] = $aside;
+        }
         // Fields this editor does not know (e.g. "seo" from an import) survive a save
         foreach ($post as $key => $value) {
-            if (!array_key_exists($key, $sanitized) && !in_array($key, ['url', '_file'], true) && preg_match('/^[a-zA-Z][a-zA-Z0-9_]{0,40}$/', (string)$key)) {
+            if (!array_key_exists($key, $sanitized) && !in_array($key, ['url', '_file', 'cover', 'sidebar', 'comments', 'sections', 'aside', 'content'], true) && preg_match('/^[a-zA-Z][a-zA-Z0-9_]{0,40}$/', (string)$key)) {
                 $sanitized[$key] = $value;
             }
         }
 
         $filepath = $newsDir . $postId . '.json';
+        // previous state of the post (under its old id when the id changes) → backups/
+        nibblyNewsBackupCreate($newsDir . ($oldId !== '' ? $oldId : $postId) . '.json', $postId);
         $result = nibblyJsonAtomicWrite($filepath, $sanitized);
 
         if ($result === false) {
@@ -212,6 +268,76 @@ switch ($action) {
 
         $sanitized['url'] = nibblyNewsUrl($sanitized);
         jsonResponse(true, $sanitized, 'Post saved');
+        break;
+
+    case 'list-news-backups':
+        $postId = $_GET['id'] ?? '';
+        if (!is_string($postId) || !preg_match('/^[a-z0-9][a-z0-9-]*$/D', $postId)) {
+            jsonResponse(false, null, 'Invalid post ID');
+        }
+        $list = [];
+        foreach (glob(BACKUP_PATH . 'news__' . $postId . '_*.json') ?: [] as $file) {
+            $name = basename($file);
+            if (!preg_match(nibblyNewsBackupPattern(), $name, $m) || $m[1] !== $postId) continue;
+            $list[] = [
+                'filename' => $name,
+                'date' => $m[2],
+                'time' => substr($m[3], 0, 2) . ':' . substr($m[3], 2, 2) . ':' . substr($m[3], 4, 2),
+                'timestamp' => filemtime($file),
+            ];
+        }
+        usort($list, static fn($a, $b) => $b['timestamp'] - $a['timestamp']);
+        jsonResponse(true, $list);
+        break;
+
+    case 'load-news-backup':
+        $backup = $_GET['backup'] ?? '';
+        if (!is_string($backup) || !preg_match(nibblyNewsBackupPattern(), $backup) || !is_file(BACKUP_PATH . $backup)) {
+            jsonResponse(false, null, 'Backup not found');
+        }
+        $data = json_decode((string)file_get_contents(BACKUP_PATH . $backup), true);
+        if (!is_array($data)) {
+            jsonResponse(false, null, 'Backup is not valid JSON');
+        }
+        jsonResponse(true, $data);
+        break;
+
+    case 'restore-news-backup':
+        $backup = $_POST['backup'] ?? '';
+        if (!is_string($backup) || !preg_match(nibblyNewsBackupPattern(), $backup, $m) || !is_file(BACKUP_PATH . $backup)) {
+            jsonResponse(false, null, 'Backup not found');
+        }
+        $postId = $m[1];
+        if (isset($_POST['post_id']) && $_POST['post_id'] !== $postId) {
+            http_response_code(400);
+            jsonResponse(false, null, 'Backup does not belong to the requested post');
+        }
+        $restored = json_decode((string)file_get_contents(BACKUP_PATH . $backup), true);
+        if (!is_array($restored)) {
+            jsonResponse(false, null, 'Backup is not valid JSON');
+        }
+        $newsDir = dirname(CONTENT_PATH) . '/news/';
+        $filepath = $newsDir . $postId . '.json';
+        // the current state is saved first, so the restore itself can be undone
+        nibblyNewsBackupCreate($filepath, $postId);
+        $restored['id'] = $postId;
+        $restored['lastModified'] = date('c');
+        if (!nibblyJsonAtomicWrite($filepath, $restored)) {
+            jsonResponse(false, null, 'Error restoring');
+        }
+        register_shutdown_function(static function (): void { nibblySearchIndexRebuild(); });
+        jsonResponse(true, nibblyNewsApiNormalize($restored), 'Backup restored successfully');
+        break;
+
+    case 'delete-news-backup':
+        $backup = $_POST['backup'] ?? '';
+        if (!is_string($backup) || !preg_match(nibblyNewsBackupPattern(), $backup) || !is_file(BACKUP_PATH . $backup)) {
+            jsonResponse(false, null, 'Backup not found');
+        }
+        if (!unlink(BACKUP_PATH . $backup)) {
+            jsonResponse(false, null, 'Error deleting');
+        }
+        jsonResponse(true, null, 'Backup deleted');
         break;
 
     case 'toggle-news-status':

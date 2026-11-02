@@ -659,6 +659,12 @@ if (trim($_footerSummaryHtml) === '') {
     <?php if (file_exists(__DIR__ . '/../js/faq-accordion.js')): ?>
     <script src="<?php echo $basePath; ?>js/faq-accordion.js"></script>
     <?php endif; ?>
+    <?php if (file_exists(__DIR__ . '/../js/lightbox.js')): ?>
+    <script src="<?php echo $basePath; ?>js/lightbox.js" defer></script>
+    <?php endif; ?>
+    <?php if (file_exists(__DIR__ . '/../js/footnotes.js')): ?>
+    <script src="<?php echo $basePath; ?>js/footnotes.js" defer></script>
+    <?php endif; ?>
     <?php if (function_exists('nibblyAiLabelsRendered') && nibblyAiLabelsRendered() && file_exists(__DIR__ . '/../js/ai-labels.js')): ?>
     <script src="<?php echo $basePath; ?>js/ai-labels.js" defer></script>
     <?php endif; ?>

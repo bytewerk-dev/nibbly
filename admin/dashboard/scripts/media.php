@@ -374,6 +374,74 @@
         collectSectionData();
     }
 
+    // Form fields of one block from its registry definition (shared with the news editor, scripts/news.php)
+    function sectionFieldsHtml(section, def) {
+        let content = '';
+        if (!def || !def.fields) return content;
+        for (const field of def.fields) {
+        const val = escapeHtml(section[field.key] ?? '');
+        const fieldClass = 'section-field-group section-field-group--' + String(field.key || 'field').replace(/[^a-z0-9_-]/gi, '-').toLowerCase();
+        switch (field.type) {
+            case 'input':
+            case 'url':
+            case 'number':
+                content += `<div class="form-group ${fieldClass}">
+                    <label>${field.label}</label>
+                    <input type="${field.type === 'input' ? 'text' : field.type}" class="section-field" data-key="${field.key}" value="${val}" placeholder="${field.label}...">
+                    ${field.hint ? `<small style="color: #666;">${field.hint}</small>` : ''}
+                </div>`;
+                break;
+            case 'textarea':
+                content += `<div class="form-group ${fieldClass}">
+                    <label>${field.label}</label>
+                    <textarea class="section-field" data-key="${field.key}" placeholder="${field.label}...">${val}</textarea>
+                </div>`;
+                break;
+            case 'wysiwyg':
+                content += `<div class="form-group html-editor ${fieldClass}">
+                    <label>${field.label} (HTML)</label>
+                    <textarea class="section-field" data-key="${field.key}">${val}</textarea>
+                </div>`;
+                break;
+            case 'select':
+                const opts = (field.options || []).map(o =>
+                    `<option value="${o.value}"${section[field.key] === o.value ? ' selected' : ''}>${o.label}</option>`
+                ).join('');
+                content += `<div class="form-group ${fieldClass}">
+                    <label>${field.label}</label>
+                    <select class="section-field" data-key="${field.key}">${opts}</select>
+                </div>`;
+                break;
+            case 'checkbox':
+                content += `<div class="form-group ${fieldClass}">
+                    <label><input type="checkbox" class="section-field" data-key="${field.key}"${section[field.key] ? ' checked' : ''}> ${field.label}</label>
+                </div>`;
+                break;
+            case 'image':
+                const imgSrc = val ? (val.startsWith('/') ? '..' + val : val) : '';
+                content += `<div class="form-group ${fieldClass}">
+                    <label>${field.label}</label>
+                    ${imgSrc ? `<div class="ce-image-preview"><img src="${escapeHtml(imgSrc)}" alt="preview" onerror="this.style.display='none'"></div>` : ''}
+                    <div class="ce-image-input-row">
+                        <input type="text" class="section-field ce-input" data-key="${field.key}" value="${val}" placeholder="Path to image...">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="browseSectionImage(this)">${t('btn.browse')}</button>
+                    </div>
+                </div>`;
+                break;
+            case 'audio':
+                content += `<div class="form-group ${fieldClass}">
+                    <label>${field.label}</label>
+                    <div class="ce-image-input-row">
+                        <input type="text" class="section-field ce-input" data-key="${field.key}" value="${val}" placeholder="Path to audio file...">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="browseSectionMedia(this, 'audio')">${t('btn.browse')}</button>
+                    </div>
+                </div>`;
+                break;
+        }
+        }
+        return content;
+    }
+
     // Add section element (registry-driven)
     function addSectionElement(section, index, container) {
         if (!container) container = document.getElementById('sectionsLegacyContainer');
@@ -397,70 +465,7 @@
             : t('editor.section_issues', {count: issues.length});
 
         // Build form fields from registry
-        let content = '';
-        if (def && def.fields) {
-            for (const field of def.fields) {
-                const val = escapeHtml(section[field.key] ?? '');
-                const fieldClass = 'section-field-group section-field-group--' + String(field.key || 'field').replace(/[^a-z0-9_-]/gi, '-').toLowerCase();
-                switch (field.type) {
-                    case 'input':
-                    case 'url':
-                    case 'number':
-                        content += `<div class="form-group ${fieldClass}">
-                            <label>${field.label}</label>
-                            <input type="${field.type === 'input' ? 'text' : field.type}" class="section-field" data-key="${field.key}" value="${val}" placeholder="${field.label}...">
-                            ${field.hint ? `<small style="color: #666;">${field.hint}</small>` : ''}
-                        </div>`;
-                        break;
-                    case 'textarea':
-                        content += `<div class="form-group ${fieldClass}">
-                            <label>${field.label}</label>
-                            <textarea class="section-field" data-key="${field.key}" placeholder="${field.label}...">${val}</textarea>
-                        </div>`;
-                        break;
-                    case 'wysiwyg':
-                        content += `<div class="form-group html-editor ${fieldClass}">
-                            <label>${field.label} (HTML)</label>
-                            <textarea class="section-field" data-key="${field.key}">${val}</textarea>
-                        </div>`;
-                        break;
-                    case 'select':
-                        const opts = (field.options || []).map(o =>
-                            `<option value="${o.value}"${section[field.key] === o.value ? ' selected' : ''}>${o.label}</option>`
-                        ).join('');
-                        content += `<div class="form-group ${fieldClass}">
-                            <label>${field.label}</label>
-                            <select class="section-field" data-key="${field.key}">${opts}</select>
-                        </div>`;
-                        break;
-                    case 'checkbox':
-                        content += `<div class="form-group ${fieldClass}">
-                            <label><input type="checkbox" class="section-field" data-key="${field.key}"${section[field.key] ? ' checked' : ''}> ${field.label}</label>
-                        </div>`;
-                        break;
-                    case 'image':
-                        const imgSrc = val ? (val.startsWith('/') ? '..' + val : val) : '';
-                        content += `<div class="form-group ${fieldClass}">
-                            <label>${field.label}</label>
-                            ${imgSrc ? `<div class="ce-image-preview"><img src="${escapeHtml(imgSrc)}" alt="preview" onerror="this.style.display='none'"></div>` : ''}
-                            <div class="ce-image-input-row">
-                                <input type="text" class="section-field ce-input" data-key="${field.key}" value="${val}" placeholder="Path to image...">
-                                <button type="button" class="btn btn-secondary btn-sm" onclick="browseSectionImage(this)">${t('btn.browse')}</button>
-                            </div>
-                        </div>`;
-                        break;
-                    case 'audio':
-                        content += `<div class="form-group ${fieldClass}">
-                            <label>${field.label}</label>
-                            <div class="ce-image-input-row">
-                                <input type="text" class="section-field ce-input" data-key="${field.key}" value="${val}" placeholder="Path to audio file...">
-                                <button type="button" class="btn btn-secondary btn-sm" onclick="browseSectionMedia(this, 'audio')">${t('btn.browse')}</button>
-                            </div>
-                        </div>`;
-                        break;
-                }
-            }
-        }
+        const content = sectionFieldsHtml(section, def);
 
         div.innerHTML = `
             <div class="section-header">

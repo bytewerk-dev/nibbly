@@ -24,9 +24,8 @@ switch ($action) {
         foreach ($types as $type) {
             $folders = array_merge($folders, listMediaFolders($type, $trash));
         }
+        // Keep the tree order (parents before children) and only drop duplicates across types
         $folders = array_values(array_unique($folders));
-        natcasesort($folders);
-        $folders = array_values($folders);
         usort($items, function($a, $b) {
             return ($b['modified'] ?? 0) <=> ($a['modified'] ?? 0);
         });

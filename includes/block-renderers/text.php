@@ -7,10 +7,11 @@
  */
 
 $html = '';
-$isHighlight = !empty($section['style']) && $section['style'] === 'highlight';
+// style key → CSS class (includes/text-styles.php, content/text-styles.json); "" = plain block
+$styleClass = textStyleClass($section['style'] ?? '');
 
-if ($isHighlight) {
-    $html .= '<div class="content-highlight">' . "\n";
+if ($styleClass !== '') {
+    $html .= '<div class="' . htmlspecialchars($styleClass) . '">' . "\n";
 }
 
 $title = $section['title'] ?? '';
@@ -30,7 +31,7 @@ if ($editable) {
     $html .= sanitizeHtml($section['content'] ?? '');
 }
 
-if ($isHighlight) {
+if ($styleClass !== '') {
     $html .= '</div>' . "\n";
 }
 

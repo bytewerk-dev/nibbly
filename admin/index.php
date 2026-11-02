@@ -672,16 +672,21 @@ $loginBoxStyleAttr = $loginBoxVariables
                     <?php endif; ?>
                 </div>
             <?php endif; ?>
+            <?php
+            // Local development: the form comes prefilled with admin / "dev", which the loopback-only
+            // shortcut above accepts in any case (synthetic admin when no such user exists).
+            $_devPrefill = nibblyDevLoginAvailable() ? 'admin' : null;
+            ?>
             <form method="post" action="" id="loginForm">
                 <div class="form-group">
                     <label for="username"><?php echo t('login.username'); ?></label>
-                    <input type="text" id="username" name="username" required autofocus>
+                    <input type="text" id="username" name="username" required autofocus<?php if ($_devPrefill !== null) echo ' value="' . htmlspecialchars($_devPrefill) . '"'; ?>>
                 </div>
 
                 <div class="form-group">
                     <label for="password"><?php echo t('login.password'); ?></label>
                     <div class="password-input-wrap">
-                        <input type="password" id="password" name="password" required>
+                        <input type="password" id="password" name="password" required<?php if ($_devPrefill !== null) echo ' value="dev"'; ?>>
                         <button type="button" class="password-toggle" id="passwordToggle" aria-label="<?php echo t('login.show_password'); ?>" data-label-show="<?php echo t('login.show_password'); ?>" data-label-hide="<?php echo t('login.hide_password'); ?>">
                             <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                             <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>

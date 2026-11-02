@@ -147,7 +147,8 @@
         if (hashParts[0] === 'page' && hashParts[1] && hashParts[1].includes('_')) {
             const page = hashParts[1];
             const lang = page.substring(0, page.indexOf('_'));
-            const slug = page.substring(page.indexOf('_') + 1);
+            // Content keys write sub-pages with "__" (de_start__unterseite); the page select holds the path with "/"
+            const slug = page.substring(page.indexOf('_') + 1).replaceAll('__', '/');
             switchTab('content', { replace: true });
             canonicalTab = 'content';
             canonicalSubtab = '';
@@ -178,7 +179,7 @@
             }
         } else if (pageParam && pageParam.includes('_')) {
             const lang = pageParam.substring(0, pageParam.indexOf('_'));
-            const slug = pageParam.substring(pageParam.indexOf('_') + 1);
+            const slug = pageParam.substring(pageParam.indexOf('_') + 1).replaceAll('__', '/');
             switchTab('content', { replace: true });
             canonicalTab = 'content';
             canonicalSubtab = '';

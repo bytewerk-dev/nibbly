@@ -134,13 +134,26 @@ However, **missing fields are auto-generated**: when an admin visits a page, any
   "flags": [],
   "seo": { "title": "", "description": "" },
   "hidden": false,
-  "content": "<p>Post body.</p>"
+  "subtitle": "Kicker above the title",
+  "cover": { "src": "assets/images/cover.webp", "alt": "", "label": "Issue 2/2026" },
+  "sidebar": false,
+  "imageLayout": "column",
+  "comments": true,
+  "sections": [ { "type": "text", "title": "", "titleTag": "h2", "style": "", "content": "<p>Post body.</p>" } ],
+  "aside": []
 }
 ```
 
 The post is addressed by `slug` (file name and `id` are storage details). `categories` are slugs of
 `content/news-categories.json`, `tags` free slugs (names in `content/news-tags.json`), `flags` internal
-markers; `seo` is optional. The body is `content` (dashboard) or a `sections` array (converter).
+markers; `seo` is optional. The body is either one HTML string `content` (older posts) or the block
+list `sections` (block types as on pages, plus `gallery`); `aside` holds the sidebar blocks.
+`subtitle` is the kicker (cards, timeline, post page), `cover` the sidebar image with a label,
+`sidebar` shows the sidebar without a cover, `imageLayout` places the title image (`column`, `full`,
+`hidden`), `comments: false` closes the comments of this post. `nibblyNewsBodyHtml()` returns the
+body of either form, `nibblyNewsRenderBlocks()` renders a block list, `nibblyNewsSanitizeBlocks()`
+cleans one on save. Text block styles come from `includes/text-styles.php` merged with
+`content/text-styles.json` (`getTextStyles()`).
 Settings for URLs, archives and lists live in `content/settings.json` → `news`:
 
 ```json
@@ -148,9 +161,12 @@ Settings for URLs, archives and lists live in `content/settings.json` → `news`
   "urlPattern": "/{yyyy}/{mm}/{dd}/{slug}",
   "perPage": 12,
   "pageParam": "seite",
-  "archive": { "base": "/blog", "tag": "thema", "year": "jahr", "decade": "jahrzehnt" }
+  "archive": { "base": "/blog", "categoryBase": "/rubrik", "tag": "thema", "year": "jahr", "decade": "jahrzehnt" }
 }
 ```
+
+`archive.categoryBase` (optional) serves category pages below a path of their own instead of
+`{base}/{category}`; `nibblyNewsCategoryBaseUrl()` builds their links.
 
 ### Footer JSON (`content/pages/footer.json`)
 
@@ -429,8 +445,9 @@ Defined in `includes/block-types.php`. Each block type has: label, category, ico
 
 ### text
 - **Category**: content
-- **Fields**: `title` (input), `titleTag` (select: h1-h6), `content` (wysiwyg), `style` (select: default, highlight)
+- **Fields**: `title` (input), `titleTag` (select: h1-h6), `content` (wysiwyg), `style` (select from the text style registry: `includes/text-styles.php` plus `content/text-styles.json`, see `getTextStyles()`)
 - **Defaults**: `{ "title": "", "content": "<p></p>", "titleTag": "h2" }`
+- A known style wraps the block in `<div class="{class}">`; the core ships `highlight` → `.content-highlight`.
 
 ### heading
 - **Category**: content
@@ -449,8 +466,15 @@ Defined in `includes/block-types.php`. Each block type has: label, category, ico
 
 ### image
 - **Category**: media
-- **Fields**: `src` (image upload), `alt` (input), `caption` (input), `width` (select: full, medium, small)
+- **Fields**: `src` (image upload), `alt` (input), `caption` (input), `width` (select: full, half, medium, small), `align` (right, left, center; for reduced widths), `credit` (input), `lightbox` (boolean)
 - **Defaults**: `{ "src": "", "alt": "", "caption": "", "width": "full" }`
+- Renders `figure.block-image.block-image--{width}[.block-image--{align}]`; `credit` is appended to the caption as `.block-image__credit`; with `lightbox` the image links to its file (`data-lightbox`, opened by `js/lightbox.js`). In posts, reduced widths float beside the text (`css/components.css`).
+
+### gallery
+- **Category**: media
+- **Fields**: `images[]` (src, alt, caption, credit), `layout` (select: column, grid, full)
+- **Defaults**: `{ "images": [], "layout": "column" }`
+- Renders `div.block-gallery.block-gallery--{layout}` with `figure.block-gallery__item[data-gallery-item]`; every image links to its file for the lightbox. `column` is an image column the text flows around (a swipeable strip on phones), `grid` tiles, `full` stacked at full width.
 
 ### card
 - **Category**: cards
@@ -833,6 +857,10 @@ All endpoints are in `admin/api.php`. Authenticated via PHP sessions with CSRF t
 | `restore` | POST | Restore a backup |
 | `delete-backup` | POST | Delete a specific backup |
 | `preview-backup` | GET | Preview backup content |
+| `list-news-backups` | GET | List backups of a post (`backups/news__{id}_…json`) |
+| `load-news-backup` | GET | Return one post backup |
+| `restore-news-backup` | POST | Restore a post backup (the current state is backed up first) |
+| `delete-news-backup` | POST | Delete one post backup |
 | `create-site-backup` | POST | Create a manual full-site ZIP backup and issue a download token |
 | `download-site-backup` | GET | Stream a site backup ZIP using a one-time token |
 | `restore-site-backup` | POST | Restore a full-site ZIP in `full` or `content` mode |
@@ -862,9 +890,10 @@ Full-site backups are created by `includes/backup-helper.php` and can be run fro
 | Action | Method | Description |
 |---|---|---|
 | `load-news` | GET | List all news posts (with their public `url`) |
+| `load-news-post` | GET | Load one post for the editor |
 | `load-news-config` | GET | News settings, categories, tag names and counts |
 | `save-news-categories` | POST | Store the category list (admin) |
-| `save-news` | POST | Create or update news post |
+| `save-news` | POST | Create or update news post (`content` or `sections`/`aside` blocks, `subtitle`, `cover`, `sidebar`, `imageLayout`, `comments`) |
 | `toggle-news-status` | POST | Show/hide news post |
 | `trash-news` | POST | Move a post to `content/news-trash/` |
 | `list-news-trash` | GET | List trashed posts |
@@ -876,6 +905,10 @@ Full-site backups are created by `includes/backup-helper.php` and can be run fro
 | Action | Method | Description |
 |---|---|---|
 | `list-images` | GET | List uploaded images |
+| `list-media` | GET | List files and folders of one media type (folders nested up to 5 levels, as paths) |
+| `upload-media` | POST | Upload a file into a folder path |
+| `create-media-folder` / `delete-media-folder` | POST | Create a folder (inside a parent path) / delete an empty folder |
+| `move-media` / `rename-media` | POST | Move a file to another folder path / rename a file in place |
 | `upload-image` | POST | Upload image file |
 | `delete-image` | POST | Delete image file |
 | `list-audio` | GET | List uploaded audio files |

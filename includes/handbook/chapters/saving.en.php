@@ -19,5 +19,5 @@
 
 <h3>Bringing back earlier versions</h3>
 <div class="hb-prose">
-  <p>Every time you save, nibbly keeps the previous version of the page; the last 30 are kept. So even after saving you can go back to an earlier version, see <?php echo $hb->ref('backups'); ?>.</p>
+  <p>Every time you save, nibbly keeps the previous version of the page or post; the last 30 are kept. So even after saving you can go back to an earlier version, see <?php echo $hb->ref('backups'); ?>.</p>
 </div>

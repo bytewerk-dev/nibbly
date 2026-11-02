@@ -1137,6 +1137,350 @@
     border-top: 1px solid var(--color-border-dark);
 }
 
+/* Kicker (field "subtitle"): a small line above the title, in cards, the timeline and the post */
+.news-kicker {
+    margin: 0 0 0.15rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--color-accent);
+    line-height: 1.3;
+}
+
+.news-kicker + .news-card__title,
+.news-kicker + .news-timeline__title {
+    margin-top: 0;
+}
+
+.news-post-page__kicker {
+    margin: 0 0 0.5rem;
+    font-size: clamp(1rem, 0.9rem + 0.5vw, 1.25rem);
+    font-weight: 400;
+    color: var(--color-accent);
+    line-height: 1.3;
+}
+
+.news-post-page__kicker:empty {
+    display: none;
+}
+
+/* Logged-in editors see the empty kicker to fill it */
+body.edit-mode-active .news-post-page__kicker:empty {
+    display: block;
+    min-height: 1.2em;
+}
+
+body.edit-mode-active .news-post-page__kicker:empty::before {
+    content: attr(data-placeholder);
+    opacity: 0.6;
+}
+
+/* Title image inside the post: column (floats right, the text flows around), full width, hidden */
+.news-post-page__hero--hidden {
+    display: none;
+}
+
+.news-post-page__hero figcaption {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--color-text-on-dark-muted);
+}
+
+.news-post-page__content {
+    /* flow-root: an image column longer than the text stays inside the body */
+    display: flow-root;
+}
+
+@media (min-width: 40rem) {
+    .news-post-page__hero--column {
+        float: right;
+        clear: right;
+        width: clamp(12rem, 38%, 18rem);
+        margin: 0.35em 0 1.25em 1.75em;
+    }
+
+    .news-post-page__hero--column img {
+        max-height: none;
+    }
+
+    .news-post-page__content h2,
+    .news-post-page__content h3 {
+        clear: none;
+    }
+
+    /* Reduced image widths float inside a post; "half" is 45 % of the column */
+    .news-post-page__content .block-image--half,
+    .news-post-page__content .block-image--medium,
+    .news-post-page__content .block-image--small {
+        float: right;
+        clear: right;
+        margin: 0.35em 0 1.25em 1.75em;
+    }
+
+    .news-post-page__content .block-image--half {
+        max-width: 45%;
+    }
+
+    .news-post-page__content .block-image--medium {
+        max-width: 24rem;
+    }
+
+    .news-post-page__content .block-image--small {
+        max-width: 14rem;
+    }
+
+    .news-post-page__content .block-image--left {
+        float: left;
+        clear: left;
+        margin: 0.35em 1.75em 1.25em 0;
+    }
+
+    .news-post-page__content .block-image--center {
+        float: none;
+        clear: both;
+        margin: var(--spacing-md) auto;
+    }
+
+    /* Gallery "column": a right-hand image column the text flows around */
+    .news-post-page__content .block-gallery--column {
+        float: right;
+        clear: right;
+        width: clamp(12rem, 38%, 18rem);
+        margin: 0.35em 0 1.25em 1.75em;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1.75rem;
+    }
+
+    .news-post-page__content .block-gallery--column .block-gallery__item > a {
+        aspect-ratio: auto;
+    }
+
+    .news-post-page__content .block-gallery--column .block-gallery__item img {
+        height: auto;
+        object-fit: contain;
+    }
+
+    .news-post-page__content .block-gallery--grid,
+    .news-post-page__content .block-gallery--full {
+        clear: both;
+    }
+}
+
+@media (max-width: 39.99rem) {
+    /* On phones the image column becomes a swipeable strip */
+    .news-post-page__content .block-gallery--column {
+        display: flex;
+        align-items: flex-start;
+        gap: 1.25rem;
+        padding-bottom: 0.25rem;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .news-post-page__content .block-gallery--column .block-gallery__item {
+        flex: 0 0 auto;
+        min-width: 8rem;
+        max-width: 85%;
+        scroll-snap-align: start;
+    }
+
+    .news-post-page__content .block-gallery--column .block-gallery__item > a {
+        aspect-ratio: auto;
+        width: max-content;
+        max-width: 100%;
+        height: 11rem;
+    }
+
+    .news-post-page__content .block-gallery--column .block-gallery__item img {
+        width: auto;
+        max-width: 100%;
+        height: 11rem;
+        object-fit: contain;
+    }
+
+    .news-post-page__content .block-gallery--column figcaption {
+        width: 0;
+        min-width: 100%;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 6;
+        overflow: hidden;
+    }
+
+    .news-post-page__content .block-gallery--grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* Sidebar (cover, excerpt, "aside" blocks): below the header on narrow screens, a sticky right
+   column from 64rem; the post grows to make room */
+.news-post-page--aside {
+    max-width: 70rem;
+}
+
+.news-post-page__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--spacing-md);
+}
+
+.news-post-page__aside {
+    display: grid;
+    grid-template-columns: minmax(7.2rem, 9.6rem) minmax(0, 1fr);
+    column-gap: 1.25rem;
+    align-items: start;
+}
+
+.news-post-page__cover {
+    margin: 0;
+}
+
+.news-post-page__cover a {
+    display: block;
+}
+
+.news-post-page__cover img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--color-border-dark);
+    border-radius: 4px;
+}
+
+.news-post-page__cover--empty img {
+    opacity: 0.5;
+}
+
+.news-post-page__cover figcaption {
+    margin-top: 0.6rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+}
+
+.news-post-page__aside-excerpt {
+    font-size: 0.98rem;
+    line-height: 1.55;
+    color: var(--color-text-on-dark-muted);
+}
+
+.news-post-page__aside-excerpt p {
+    margin: 0 0 0.6rem;
+}
+
+.news-post-page__aside-excerpt p:last-child {
+    margin-bottom: 0;
+}
+
+.news-post-page__aside-blocks {
+    grid-column: 1 / -1;
+    margin-top: var(--spacing-md);
+    font-size: 0.98rem;
+    color: var(--color-text-on-dark);
+}
+
+/* Nothing floats inside the sidebar */
+.news-post-page__aside .block-image,
+.news-post-page__aside .block-gallery {
+    float: none;
+    clear: both;
+    width: auto;
+    max-width: 100%;
+    margin: 1.25em 0;
+}
+
+@media (min-width: 64rem) {
+    .news-post-page--aside .news-post-page__layout {
+        grid-template-columns: minmax(0, 48.75rem) 13rem;
+        column-gap: clamp(2.5rem, 5vw, 4.5rem);
+        align-items: start;
+    }
+
+    .news-post-page__main {
+        grid-column: 1;
+        grid-row: 1;
+        min-width: 0;
+    }
+
+    .news-post-page__aside {
+        grid-column: 2;
+        grid-row: 1;
+        display: block;
+        position: sticky;
+        top: 1.5rem;
+    }
+
+    .news-post-page__aside-excerpt {
+        margin-top: var(--spacing-md);
+    }
+}
+
+/* Lightbox (js/lightbox.js): caption and previous/next */
+.gallery-lightbox__figure {
+    margin: 0;
+    max-width: 90vw;
+    text-align: center;
+}
+
+.gallery-lightbox__caption {
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.gallery-lightbox__caption[hidden] {
+    display: none;
+}
+
+.gallery-lightbox__nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: white;
+    font-size: 3rem;
+    line-height: 1;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    z-index: 1;
+}
+
+.gallery-lightbox__nav:hover {
+    opacity: 1;
+}
+
+.gallery-lightbox__nav--prev {
+    left: 0.5rem;
+}
+
+.gallery-lightbox__nav--next {
+    right: 0.5rem;
+}
+
+.gallery-lightbox__nav[hidden] {
+    display: none;
+}
+
+[data-theme="light"] .news-post-page__hero figcaption,
+[data-theme="light"] .news-post-page__aside-excerpt {
+    color: var(--color-text-secondary);
+}
+
+[data-theme="light"] .news-post-page__aside-blocks {
+    color: var(--color-text);
+}
+
+[data-theme="light"] .news-post-page__cover img {
+    border-color: var(--color-border);
+}
+
 
 /* -- Gallery Section -- */
 .showcase-gallery {
@@ -2166,3 +2510,93 @@
 .nb-comments__privacy { font-size: 0.85rem; color: var(--color-text-secondary, #666); }
 .nb-comments__replying { font-size: 0.9rem; }
 @media (max-width: 40rem) { .nb-comments__grid { grid-template-columns: 1fr; } }
+
+/* ============================================
+   FOOTNOTES
+   <span class="footnote">Text</span> in running text. js/footnotes.js turns it into a superscript
+   number with a tooltip (hover, focus, tap). While the inline editor is active the text stays in
+   the sentence, marked, so it can be edited.
+   ============================================ */
+.footnote--ready {
+    position: relative;
+    display: inline-block;
+}
+
+.footnote__mark {
+    display: inline-block;
+    vertical-align: super;
+    min-width: 1.5em;
+    margin-left: 0.15em;
+    padding: 0.1em 0.4em;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(96, 200, 205, 0.15);
+    color: var(--color-accent);
+    font: inherit;
+    font-size: 0.68em;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.footnote--ready:hover .footnote__mark,
+.footnote--open .footnote__mark,
+.footnote__mark:focus-visible {
+    background: var(--color-accent);
+    color: var(--color-background);
+}
+
+.footnote__mark:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+.footnote__text {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 50%;
+    z-index: 30;
+    width: max-content;
+    max-width: min(24rem, calc(100vw - 2rem));
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--color-border);
+    border-top: 3px solid var(--color-accent);
+    border-radius: 6px;
+    background: var(--color-background);
+    color: var(--color-text);
+    font-size: 0.85rem;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 1.5;
+    text-align: left;
+    box-shadow: 0 14px 30px -16px rgba(0, 0, 0, 0.45);
+    transform: translateX(-50%);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.18s ease, visibility 0.18s ease;
+}
+
+.footnote--ready:hover .footnote__text,
+.footnote--ready:focus-within .footnote__text,
+.footnote--open .footnote__text {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* In the visual editor (edit mode and field dialog) the footnote text stays editable in the sentence */
+body.edit-mode-active .footnote:not(.footnote--ready),
+.editor-wysiwyg .footnote {
+    padding: 0 0.25em;
+    border-bottom: 1px dashed var(--color-accent);
+    background: rgba(96, 200, 205, 0.15);
+    font-size: 0.85em;
+}
+
+body.edit-mode-active .footnote:not(.footnote--ready)::before,
+.editor-wysiwyg .footnote::before {
+    content: "\2731\00a0";
+    color: var(--color-accent);
+    font-weight: 700;
+}

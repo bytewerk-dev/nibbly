@@ -877,8 +877,9 @@ function validateMediaFilename(string $filename, string $type): bool {
         return false;
     }
 
+    // Folders may be nested (e.g. 2000/10/photo.webp), up to NIBBLY_MEDIA_MAX_DEPTH levels
     $segments = explode('/', $filename);
-    if (count($segments) > 2) {
+    if (count($segments) > NIBBLY_MEDIA_MAX_DEPTH + 1) {
         return false;
     }
 
@@ -892,13 +893,27 @@ function validateMediaFilename(string $filename, string $type): bool {
     return in_array($ext, $config['extensions'], true);
 }
 
+/** Nesting depth the media library allows for folders (assets/images/a/b/c = 3). */
+const NIBBLY_MEDIA_MAX_DEPTH = 5;
+
+/**
+ * A folder path relative to the media root: one or more segments joined by "/",
+ * each a plain name (letters, digits, dot, hyphen, underscore), no "..".
+ */
 function validateMediaFolderName(string $folder): bool {
-    return $folder !== ''
-        && strlen($folder) <= 64
-        && preg_match('/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/', $folder)
-        && !str_contains($folder, '..')
-        && !str_contains($folder, '/')
-        && !str_contains($folder, '\\');
+    if ($folder === '' || str_contains($folder, '\\') || str_contains($folder, '..')) {
+        return false;
+    }
+    $segments = explode('/', $folder);
+    if (count($segments) > NIBBLY_MEDIA_MAX_DEPTH) {
+        return false;
+    }
+    foreach ($segments as $segment) {
+        if ($segment === '' || strlen($segment) > 64 || !preg_match('/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/', $segment)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 function listMediaFolders(string $type, bool $trash = false): array {
@@ -912,17 +927,24 @@ function listMediaFolders(string $type, bool $trash = false): array {
         return [];
     }
 
+    // Nested folders come back as paths ("2000", "2000/10"), parents before children
     $folders = [];
-    foreach (scandir($directory) ?: [] as $entry) {
-        if ($entry === '.' || $entry === '..' || !validateMediaFolderName($entry)) {
-            continue;
+    $walk = function (string $base, string $prefix, int $depth) use (&$walk, &$folders) {
+        if ($depth > NIBBLY_MEDIA_MAX_DEPTH) return;
+        $entries = scandir($base) ?: [];
+        natcasesort($entries);
+        foreach ($entries as $entry) {
+            if ($entry === '.' || $entry === '..' || !validateMediaFolderName($entry)) {
+                continue;
+            }
+            if (is_dir($base . $entry) && !is_link($base . $entry)) {
+                $folders[] = $prefix . $entry;
+                $walk($base . $entry . '/', $prefix . $entry . '/', $depth + 1);
+            }
         }
-        if (is_dir($directory . $entry) && !is_link($directory . $entry)) {
-            $folders[] = $entry;
-        }
-    }
-    natcasesort($folders);
-    return array_values($folders);
+    };
+    $walk($directory, '', 1);
+    return $folders;
 }
 
 function uniqueMediaRelativePath(string $directory, string $relativePath): string {
@@ -1251,6 +1273,10 @@ function sanitizeNewsSettings(array $settings, array $existing = []): array {
         if (array_key_exists('base', $input['archive'])) {
             $base = '/' . trim(preg_replace('#[^a-z0-9/-]#', '', strtolower((string)$input['archive']['base'])), '/');
             $archive['base'] = $base === '/' ? '' : $base;
+        }
+        if (array_key_exists('categoryBase', $input['archive'])) {
+            $categoryBase = '/' . trim(preg_replace('#[^a-z0-9/-]#', '', strtolower((string)$input['archive']['categoryBase'])), '/');
+            $archive['categoryBase'] = $categoryBase === '/' ? '' : $categoryBase;
         }
         foreach (['tag', 'year', 'decade'] as $key) {
             if (!array_key_exists($key, $input['archive'])) continue;

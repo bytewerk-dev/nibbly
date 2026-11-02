@@ -94,3 +94,8 @@ RewriteRule ^ /route.php [END,QSA]
 # ============================================
 ErrorDocument 404 /404.php
 ErrorDocument 410 /410.php
+
+# Serve ES modules (e.g. PDF.js) with the JavaScript MIME type
+<IfModule mod_mime.c>
+    AddType application/javascript .mjs
+</IfModule>

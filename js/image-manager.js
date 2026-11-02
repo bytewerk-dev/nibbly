@@ -105,7 +105,7 @@
         download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
         ai: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l1.6 5.2L19 9l-5.4 1.8L12 16l-1.6-5.2L5 9l5.4-1.8L12 2z"/><path d="M19 14l.8 2.7L22 17.5l-2.2.8L19 21l-.8-2.7-2.2-.8 2.2-.8L19 14z"/><path d="M5 13l.7 2.1L8 16l-2.3.9L5 19l-.7-2.1L2 16l2.3-.9L5 13z"/></svg>',
         replace: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
-        delete: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+        delete: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M8.451,5.968V3.484 c0-1.371,1.113-2.484,2.484-2.484h2.129c1.371,0,2.484,1.113,2.484,2.484v2.484 M2.065,5.968h19.871 M4.194,5.968l1.732,14.733 c0.156,1.334,1.277,2.299,2.626,2.299h6.898c1.348,0,2.47-0.965,2.626-2.299l1.732-14.733 M8.341,9.804l0.753,9.616 M12,9.804 v9.616 M15.66,9.804l-0.753,9.616"/></g></svg>',
         copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
         restore: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>',
         folder: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4H10l2 2.5h6.5A2.5 2.5 0 0 1 21 9v8.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/></svg>',
@@ -493,6 +493,15 @@
         folderListEl.addEventListener('click', function(e) {
             var entry = e.target.closest('.nb-imgmgr-folder-item');
             if (!entry || !modal.contains(entry)) return;
+            var toggleBtn = e.target.closest('.nb-imgmgr-folder-item-toggle');
+            if (toggleBtn && toggleBtn.tagName === 'BUTTON') {
+                e.stopPropagation();
+                var toggled = entry.getAttribute('data-folder') || '';
+                if (state.expandedFolders[toggled]) delete state.expandedFolders[toggled];
+                else state.expandedFolders[toggled] = true;
+                updateFolderUI();
+                return;
+            }
             var deleteBtn = e.target.closest('.nb-imgmgr-folder-item-delete');
             if (deleteBtn) {
                 e.stopPropagation();
@@ -502,6 +511,7 @@
             // Root folder uses an empty-string value, which is falsy — read the
             // attribute directly so "Main folder" is not coerced to "all".
             state.folderFilter = entry.getAttribute('data-folder') || '';
+            if (state.folderFilter && state.folderFilter !== 'all') state.expandedFolders[state.folderFilter] = true;
             state.page = 1;
             filterAndRender();
             updateFolderUI();
@@ -512,6 +522,7 @@
             if (!entry) return;
             e.preventDefault();
             state.folderFilter = entry.getAttribute('data-folder') || '';
+            if (state.folderFilter && state.folderFilter !== 'all') state.expandedFolders[state.folderFilter] = true;
             state.page = 1;
             filterAndRender();
             updateFolderUI();
@@ -836,10 +847,35 @@
         dropzone.classList.toggle('nb-imgmgr-dropzone--with-ai', visible);
     }
 
+    // Folders are paths ("2000", "2000/10"); a folder includes its subfolders
+    function folderContains(folderValue, itemFolder) {
+        itemFolder = itemFolder || '';
+        if (folderValue === '') return itemFolder === '';
+        return itemFolder === folderValue || itemFolder.indexOf(folderValue + '/') === 0;
+    }
+
     function folderItemCount(folderValue) {
         return state.data.reduce(function(total, item) {
-            return total + ((item.folder || '') === folderValue ? 1 : 0);
+            return total + (folderContains(folderValue, item.folder) ? 1 : 0);
         }, 0);
+    }
+
+    function folderParent(folderValue) {
+        var pos = folderValue.lastIndexOf('/');
+        return pos === -1 ? '' : folderValue.slice(0, pos);
+    }
+
+    function folderHasChildren(folderValue) {
+        return state.folders.some(function (other) { return other.indexOf(folderValue + '/') === 0; });
+    }
+
+    // Open every ancestor so the selected folder is visible in the tree
+    function expandFolderAncestors(folderValue) {
+        var parent = folderParent(folderValue || '');
+        while (parent) {
+            state.expandedFolders[parent] = true;
+            parent = folderParent(parent);
+        }
     }
 
     function updateFolderUI() {
@@ -859,20 +895,43 @@
             current = 'all';
             state.folderFilter = current;
         }
+        if (current !== 'all') expandFolderAncestors(current);
 
         var entries = [
-            { value: 'all', label: t('media.folder_all'), icon: Icons.layers || Icons.folder, deletable: false },
-            { value: '', label: t('media.folder_root'), icon: Icons.folder, deletable: false }
-        ].concat(state.folders.map(function(folder) {
-            return { value: folder, label: folder, icon: Icons.folder, deletable: true };
+            { value: 'all', label: t('media.folder_all'), icon: Icons.layers || Icons.folder, deletable: false, depth: 0 },
+            { value: '', label: t('media.folder_root'), icon: Icons.folder, deletable: false, depth: 0 }
+        ].concat(state.folders.filter(function(folder) {
+            // A subfolder shows only while all of its ancestors are expanded
+            var parent = folderParent(folder);
+            while (parent) {
+                if (!state.expandedFolders[parent]) return false;
+                parent = folderParent(parent);
+            }
+            return true;
+        }).map(function(folder) {
+            var depth = folder.split('/').length - 1;
+            return {
+                value: folder,
+                label: depth ? folder.slice(folder.lastIndexOf('/') + 1) : folder,
+                icon: Icons.folder,
+                deletable: true,
+                depth: depth,
+                hasChildren: folderHasChildren(folder)
+            };
         }));
 
         list.innerHTML = entries.map(function(entry) {
             var active = entry.value === current;
             var count = entry.value === 'all' ? state.data.length : folderItemCount(entry.value);
-            return '<div class="nb-imgmgr-folder-item' + (active ? ' is-active' : '') + '"' +
+            var expanded = !!state.expandedFolders[entry.value];
+            var toggle = entry.hasChildren
+                ? '<button type="button" class="nb-imgmgr-folder-item-toggle" aria-expanded="' + (expanded ? 'true' : 'false') + '" title="' + escapeHtml(t(expanded ? 'media.folder_collapse' : 'media.folder_expand')) + '" aria-label="' + escapeHtml(t(expanded ? 'media.folder_collapse' : 'media.folder_expand')) + '">' + Icons.chevronRight + '</button>'
+                : '<span class="nb-imgmgr-folder-item-toggle nb-imgmgr-folder-item-toggle--empty"></span>';
+            return '<div class="nb-imgmgr-folder-item' + (active ? ' is-active' : '') + (expanded ? ' is-expanded' : '') + '"' +
                 ' role="option" tabindex="0" aria-selected="' + (active ? 'true' : 'false') + '"' +
-                ' data-folder="' + escapeHtml(entry.value) + '">' +
+                ' style="--nb-folder-depth:' + entry.depth + '"' +
+                ' data-folder="' + escapeHtml(entry.value) + '" title="' + escapeHtml(entry.value || entry.label) + '">' +
+                (entry.depth || entry.hasChildren ? toggle : '') +
                 '<span class="nb-imgmgr-folder-item-icon">' + (entry.icon || '') + '</span>' +
                 '<span class="nb-imgmgr-folder-item-label">' + escapeHtml(entry.label) + '</span>' +
                 '<span class="nb-imgmgr-folder-item-count">' + count + '</span>' +
@@ -973,7 +1032,7 @@
     function filterAndRender() {
         state.filtered = state.data.filter(function (img) {
             var folder = img.folder || '';
-            var matchesFolder = state.folderFilter === 'all' || folder === state.folderFilter;
+            var matchesFolder = state.folderFilter === 'all' || folderContains(state.folderFilter, folder);
             var matchesSearch = !state.search || ((img.name || '') + ' ' + (img.basename || '') + ' ' + folder).toLowerCase().indexOf(state.search) !== -1;
             return matchesFolder && matchesSearch;
         });
@@ -1450,7 +1509,7 @@
 
     // In-app name prompt: window.prompt() is unavailable in embedded
     // webviews (Electron/VS Code) and clashes with the UI style anyway.
-    function promptFolderName(onSubmit) {
+    function promptFolderName(onSubmit, parent) {
         var existing = document.getElementById('nb-imgmgr-folder-prompt');
         if (existing) existing.remove();
         var dialog = document.createElement('div');
@@ -1464,7 +1523,7 @@
                     '<button type="button" class="nb-imgmgr-close" aria-label="Close">&times;</button>' +
                 '</div>' +
                 '<div class="nb-imgmgr-move-body">' +
-                    '<label>' + escapeHtml(t('media.folder_create_prompt')) + '</label>' +
+                    '<label>' + escapeHtml(parent ? t('media.folder_create_in', { folder: parent }) : t('media.folder_create_prompt')) + '</label>' +
                     '<input type="text" class="nb-imgmgr-folder-name-input" maxlength="60" spellcheck="false">' +
                 '</div>' +
                 '<div class="nb-imgmgr-move-footer">' +
@@ -1494,7 +1553,12 @@
 
     function createMediaFolder() {
         if (state.mode !== 'library') return;
-        promptFolderName(submitCreateMediaFolder);
+        // A new folder goes inside the one that is open; "/" in the name nests deeper
+        var parent = state.folderFilter && state.folderFilter !== 'all' ? state.folderFilter : '';
+        promptFolderName(function (name) {
+            name = name.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+            submitCreateMediaFolder(parent ? parent + '/' + name : name);
+        }, parent);
     }
 
     function submitCreateMediaFolder(name) {
@@ -2046,7 +2110,9 @@
         var select = dialog.querySelector('.nb-imgmgr-move-select');
         select.innerHTML = '<option value="">' + escapeHtml(t('media.folder_root')) + '</option>' +
             state.folders.map(function(folder) {
-                return '<option value="' + escapeHtml(folder) + '">' + escapeHtml(folder) + '</option>';
+                var depth = folder.split('/').length - 1;
+                var label = new Array(depth + 1).join('\u2003') + (depth ? folder.slice(folder.lastIndexOf('/') + 1) : folder);
+                return '<option value="' + escapeHtml(folder) + '">' + escapeHtml(label) + '</option>';
             }).join('');
         select.value = item.folder || '';
         dialog.classList.add('active');

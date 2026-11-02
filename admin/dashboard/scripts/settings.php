@@ -2918,6 +2918,7 @@
             pageParam: (document.getElementById('newsPageParam').value || '').trim() || 'page',
             archive: {
                 base: (document.getElementById('newsArchiveBase').value || '').trim(),
+                categoryBase: (document.getElementById('newsArchiveCategoryBase').value || '').trim(),
                 tag: (document.getElementById('newsArchiveTag').value || '').trim() || 'tag',
                 year: (document.getElementById('newsArchiveYear').value || '').trim() || 'year',
                 decade: (document.getElementById('newsArchiveDecade').value || '').trim() || 'decade'
@@ -2932,7 +2933,8 @@
         var archive = document.getElementById('newsArchiveExample');
         if (archive) {
             var base = values.archive.base.replace(/\/+$/, '');
-            archive.textContent = base ? base + '/{category} · ' + base + '/' + values.archive.tag + '/{tag} · ' + base + '/' + values.archive.year + '/2001 · ' + base + '/' + values.archive.decade + '/1990' : '—';
+            var categoryBase = (values.archive.categoryBase || base).replace(/\/+$/, '');
+            archive.textContent = base ? categoryBase + '/{category} · ' + base + '/' + values.archive.tag + '/{tag} · ' + base + '/' + values.archive.year + '/2001 · ' + base + '/' + values.archive.decade + '/1990' : '—';
         }
     }
 
@@ -2986,6 +2988,7 @@
         document.getElementById('newsPerPage').value = news.perPage || 12;
         document.getElementById('newsPageParam').value = news.pageParam || 'page';
         document.getElementById('newsArchiveBase').value = archive.base || '';
+        document.getElementById('newsArchiveCategoryBase').value = archive.categoryBase || '';
         document.getElementById('newsArchiveTag').value = archive.tag || 'tag';
         document.getElementById('newsArchiveYear').value = archive.year || 'year';
         document.getElementById('newsArchiveDecade').value = archive.decade || 'decade';
