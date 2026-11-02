@@ -6,8 +6,9 @@
     <li><b>Fließtext</b> wie Absätze. Sobald du hineinklickst, erscheint darüber eine kleine Werkzeugleiste.</li>
   </ul>
 </div>
-<?php echo $hb->shot('text-toolbar.webp', 'Ein Absatz im Bearbeitungsmodus mit der Werkzeugleiste für Formatierung darüber', '<b>Werkzeugleiste für Fließtext.</b> Fett, Kursiv, Link, Formatierung entfernen und die HTML-Ansicht.'); ?>
+<?php echo $hb->shot('text-toolbar.webp', 'Ein Absatz im Bearbeitungsmodus mit der Werkzeugleiste für Formatierung darüber', '<b>Werkzeugleiste für Fließtext.</b> Absatzformat, Fett, Kursiv, Link, Formatierung entfernen und die HTML-Ansicht.'); ?>
 <dl class="hb-fields">
+  <div><dt>Absatz ▾</dt><dd>Das Absatzformat des Elements, in dem der Cursor steht: Absatz, Überschrift 2 bis 4 oder Zitat. Ein Klick öffnet die Auswahl, ein zweiter wechselt das Format nur für diesen Absatz.</dd></div>
   <div><dt>B / I</dt><dd>Fett und Kursiv für den markierten Text. Tastatur: <?php echo $hb->key('⌘ B', 'Strg B'); ?> und <?php echo $hb->key('⌘ I', 'Strg I'); ?>.</dd></div>
   <div><dt><?php echo $hb->icon('link', 'Link einfügen'); ?> Link einfügen</dt><dd>Erst ein Wort oder einen Satzteil markieren, dann klicken; ohne Markierung erscheint ein Hinweis. Du wählst eine Seite der Website oder trägst eine Adresse ein, siehe <?php echo $hb->ref('links'); ?>.</dd></div>
   <div><dt>Formatierung bereinigen</dt><dd>Entfernt Fett, Kursiv und andere Auszeichnungen aus dem markierten Text.</dd></div>

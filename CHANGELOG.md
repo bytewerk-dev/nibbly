@@ -9,6 +9,12 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+### Added
+
+- **Block format in the floating text toolbar.** The toolbar of an inline-edited HTML field starts
+  with a format menu (Paragraph, Heading 2–4, Quote) that shows the element at the caret and
+  switches it; it is a custom dark menu, since a native `<select>` is painted by the browser.
+
 ### Changed
 
 - **Image manager: click selects, magnifier previews.** In the picker (Visual Editor, settings
