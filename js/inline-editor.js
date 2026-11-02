@@ -881,7 +881,8 @@
         // Posts have their own backups (api list-news-backups / restore-news-backup, no page revision)
         isPost() { return !!(EditorConfig.isNewsPost && EditorConfig.newsPostData?.id); },
         async load() {
-            if ((!EditorConfig.currentPage && !this.isPost()) || this.loading || this.restoring) return;
+            // a post loads its own backups only once its id is known, never the page list
+            if ((EditorConfig.isNewsPost ? !this.isPost() : !EditorConfig.currentPage) || this.loading || this.restoring) return;
             const select = document.getElementById('admin-backup-select');
             if (!select) return;
             this.loading = true;
@@ -6959,7 +6960,9 @@
     function newsPostField(postEl, name) {
         const marked = postEl.querySelector('[data-news-field="' + name + '"]');
         if (marked) return name === 'image' && marked.tagName !== 'IMG' ? marked.querySelector('img') : marked;
-        return postEl.querySelector(name === 'image' ? '.news-post-page__hero img' : '.news-post-page__' + name);
+        const el = postEl.querySelector(name === 'image' ? '.news-post-page__hero img' : '.news-post-page__' + name);
+        // a column of blocks (data-news-blocks) is edited block by block, not as one HTML field
+        return el && el.hasAttribute('data-news-blocks') ? null : el;
     }
 
     // ------------------------------------------------------------

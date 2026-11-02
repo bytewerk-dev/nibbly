@@ -462,7 +462,6 @@
         ['newsSlug', 'newsDate'].forEach(id => document.getElementById(id).addEventListener('input', updateNewsUrlPreview));
     }
 
- with the slug and date in the form
     // ------------------------------------------------------------
     // Post backups (api list-news-backups …): the previous state of the post, saved before every
     // write, like the page backups in scripts/page-actions.php (whose preview renderer is reused)
