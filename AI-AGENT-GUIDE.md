@@ -163,6 +163,14 @@ shared footer JavaScript. Submissions are stored in `content/mails.json` with
 `formId`, `formLabel`, and a structured `fields[]` array; the dashboard inbox can
 filter by form.
 
+Both SMTP and PHP mail() send form notifications as a UTF-8 HTML message with a plain-text
+alternative. Both use the primary site language and the same form fields. The default HTML
+shows the configured sender name, links for email and phone, and preserves message paragraphs.
+A site can override the HTML layout in `templates/contact-email.php` by defining
+`nibblyFormsBuildHtmlBody(array $form, array $values): string`. Return a complete HTML document,
+escape submitted values before inserting them, and keep line breaks when displaying text areas.
+The core supplies MIME encoding, the plain-text version, recipients and Reply-To.
+
 ### Placing a Form and Custom PHP Forms
 
 A JSON-only page shows a form below its sections when its JSON names it:

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Full local setup, multipart media lifecycle, page save and mock SMTP."""
+from email import policy
+from email.parser import BytesParser
 import base64
 import json
 import re
@@ -31,6 +33,43 @@ class Mailbox(socketserver.StreamRequestHandler):
                 self.server.messages.append(b''.join(lines)); send('250 Queued')
             elif line == b'QUIT': send('221 Bye'); break
             else: send('250 OK')
+
+def check_form_notifications(site, mailbox, config):
+    guest = Client(site)
+    message = "Grüße & Wünsche\n\nTermin am <Mittwoch>?"
+    capture = site.root / 'notification.eml'
+    sink = site.root / 'capture-mail'
+    sink.write_text('#!/bin/sh\ncat > "$(dirname "$0")/notification.eml"\n')
+    sink.chmod(0o700)
+    site.start(ini={'sendmail_path': str(sink)})
+    settings_path = site.root / 'content/settings.json'
+    settings = json.loads(settings_path.read_bytes())
+    for method in ['smtp', 'sendmail']:
+        settings['email'] = {**config, 'method': method}
+        settings_path.write_text(json.dumps(settings))
+        html = guest.request('/api/form.php?form=contact&lang=de')[2]
+        token = re.search(rb'name="form_token" value="([^"]+)"', html)[1].decode()
+        token_file = site.root / 'content/form-tokens.json'
+        tokens = json.loads(token_file.read_bytes())
+        for entry in tokens.values():
+            entry['created'] -= 5
+        token_file.write_text(json.dumps(tokens))
+        payload = {'form_id': 'contact', 'form_token': token, 'name': 'Zoë', 'email': 'guest@example.invalid', 'message': message}
+        status, _, response = guest.request('/api/form-submit.php', payload)
+        assert status == 200 and json.loads(response)['success'], response
+        raw = mailbox.messages[-1] if method == 'smtp' else capture.read_bytes()
+        mail = BytesParser(policy=policy.default).parsebytes(raw)
+        assert mail.get_content_type() == 'multipart/alternative' and not mail.defects
+        assert [part.get_content_type() for part in mail.iter_parts()] == ['text/plain', 'text/html']
+        assert mail['Reply-To'].addresses[0].addr_spec == payload['email']
+        assert mail['Bcc'] is None and 'Zoë' in str(mail['Subject'])
+        plain, rich = [part.get_content().replace('\r\n', '\n') for part in mail.iter_parts()]
+        assert message in plain and '\n\n' in plain
+        assert '&lt;Mittwoch&gt;' in rich and '<br>\n<br>' in rich and 'Grüße &amp; Wünsche' in rich
+        assert 'mailto:guest@example.invalid' in rich and 'Fixture' in rich
+        if method == 'smtp':
+            assert not re.search(rb'(?<!\r)\n', raw)
+
 
 with tempfile.TemporaryDirectory(prefix='nibbly-workflows-') as folder:
     site = Site(folder).start()
@@ -82,6 +121,8 @@ with tempfile.TemporaryDirectory(prefix='nibbly-workflows-') as folder:
         assert b'to@example.invalid' in mailbox.messages[0]
         status, response = admin.api('system-status')
         assert status == 200 and response['data']['extensions'] and response['data']['lastBackup'] is None
+        check_form_notifications(site, mailbox, config)
+        print('PASS form notifications over SMTP and sendmail as HTML and plain text')
         print('PASS setup with CSRF, generated login, page edit/render, multipart upload/trash/restore, loopback SMTP and system status')
     finally:
         site.close(); mailbox.shutdown(); mailbox.server_close(); worker.join()

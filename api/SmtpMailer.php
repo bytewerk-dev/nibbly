@@ -47,7 +47,7 @@ class SmtpMailer {
     /**
      * Sends an email via SMTP
      */
-    public function send($to, $subject, $body, $fromEmail, $fromName = '', $replyTo = '', $bcc = []) {
+    public function send($to, $subject, $body, $fromEmail, $fromName = '', $replyTo = '', $bcc = [], $htmlBody = '') {
         try {
             // Connect to the server
             if (!$this->connect()) {
@@ -80,7 +80,7 @@ class SmtpMailer {
             }
 
             // Send email
-            if (!$this->sendMail($to, $subject, $body, $fromEmail, $fromName, $replyTo, $bcc)) {
+            if (!$this->sendMail($to, $subject, $body, $fromEmail, $fromName, $replyTo, $bcc, $htmlBody)) {
                 $this->disconnect();
                 return false;
             }
@@ -208,7 +208,7 @@ class SmtpMailer {
         }, $recipients));
     }
 
-    private function sendMail($to, $subject, $body, $fromEmail, $fromName, $replyTo, $bcc = []) {
+    private function sendMail($to, $subject, $body, $fromEmail, $fromName, $replyTo, $bcc = [], $htmlBody = '') {
         $toRecipients = $this->normalizeRecipients($to);
         $bccRecipients = $this->normalizeRecipients($bcc);
 
@@ -251,9 +251,8 @@ class SmtpMailer {
             $headers[] = "Reply-To: <$replyTo>";
         }
 
-        $headers[] = "MIME-Version: 1.0";
-        $headers[] = "Content-Type: text/plain; charset=UTF-8";
-        $headers[] = "Content-Transfer-Encoding: 8bit";
+        [$mimeHeaders, $body] = self::mimeParts($body, $htmlBody);
+        $headers = array_merge($headers, $mimeHeaders);
         $headers[] = "X-Mailer: SmtpMailer/1.0";
 
         $message = implode("\r\n", $headers) . "\r\n\r\n" . $body;
@@ -271,6 +270,26 @@ class SmtpMailer {
         }
 
         return true;
+    }
+
+    /** MIME headers and wire body shared by SMTP and PHP mail(). */
+    public static function mimeParts(string $plain, string $html = ''): array {
+        $crlf = static fn(string $text): string => preg_replace("/\r\n|\r|\n/", "\r\n", $text);
+        $headers = ['MIME-Version: 1.0'];
+        if ($html === '') {
+            $headers[] = 'Content-Type: text/plain; charset=UTF-8';
+            $headers[] = 'Content-Transfer-Encoding: 8bit';
+            return [$headers, $crlf($plain)];
+        }
+        $boundary = '=_nibbly_' . bin2hex(random_bytes(16));
+        $headers[] = 'Content-Type: multipart/alternative; boundary="' . $boundary . '"';
+        $body = '';
+        foreach (['plain' => $plain, 'html' => $html] as $type => $text) {
+            $body .= "--$boundary\r\nContent-Type: text/$type; charset=UTF-8\r\n"
+                . "Content-Transfer-Encoding: base64\r\n\r\n"
+                . chunk_split(base64_encode($crlf($text)), 76, "\r\n");
+        }
+        return [$headers, $body . "--$boundary--"];
     }
 
     private function sendCommand($command) {

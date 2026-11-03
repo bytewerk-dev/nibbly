@@ -9,6 +9,12 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+### Added
+
+- JSON form notifications send formatted HTML and plain text through SMTP and PHP mail().
+  Each answer has a labeled row, message paragraphs keep their line breaks, and sites can
+  supply a custom layout in `templates/contact-email.php`.
+
 ## [2.8.0] — 2026-11-02
 
 ### Added

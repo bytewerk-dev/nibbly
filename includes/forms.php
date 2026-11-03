@@ -485,6 +485,7 @@ function nibblyFormsSendNotification(array $form, array $values, string $subject
     $fromName = trim(str_replace(["\r", "\n", "\t"], '', (string)($emailConfig['fromName'] ?? '')));
     $replyTo = filter_var(($values['email'] ?? ''), FILTER_VALIDATE_EMAIL) ? (string)$values['email'] : '';
     $bccRecipients = nibblyFormsParseEmailList($emailConfig['bccEmail'] ?? '');
+    $html = nibblyFormsNotificationHtml($form, $values, $fromName ?: (defined('SITE_NAME') ? SITE_NAME : ''));
     if ($method === 'smtp') {
         $mailer = new SmtpMailer(
             $emailConfig['smtpHost'] ?? '',
@@ -493,7 +494,7 @@ function nibblyFormsSendNotification(array $form, array $values, string $subject
             $emailConfig['smtpPassword'] ?? '',
             $emailConfig['smtpEncryption'] ?? 'tls'
         );
-        return $mailer->send($toRecipients, $subject, $body, $fromEmail, $fromName, $replyTo, $bccRecipients);
+        return $mailer->send($toRecipients, $subject, $body, $fromEmail, $fromName, $replyTo, $bccRecipients, $html);
     }
     if ($method === 'sendmail') {
         $headers = [];
@@ -501,7 +502,8 @@ function nibblyFormsSendNotification(array $form, array $values, string $subject
         if ($replyTo) {
             $headers[] = 'Reply-To: ' . $replyTo;
         }
-        $headers[] = 'Content-Type: text/plain; charset=UTF-8';
+        [$mimeHeaders, $body] = SmtpMailer::mimeParts($body, $html);
+        $headers = array_merge($headers, $mimeHeaders);
         $headers[] = 'X-Mailer: nibbly CMS';
         $sent = @mail(implode(', ', $toRecipients), '=?UTF-8?B?' . base64_encode($subject) . '?=', $body, implode("\r\n", $headers));
         foreach ($bccRecipients as $bccRecipient) {
@@ -512,15 +514,4 @@ function nibblyFormsSendNotification(array $form, array $values, string $subject
     return false;
 }
 
-function nibblyFormsBuildBody(array $form, array $values): string
-{
-    $body = 'Neue Einsendung über Formular: ' . nibblyFormText($form['label']) . "\n";
-    $body .= str_repeat('-', 40) . "\n\n";
-    foreach ($form['fields'] as $field) {
-        if (in_array(($field['type'] ?? ''), ['heading', 'note', 'hidden'], true)) {
-            continue;
-        }
-        $body .= (nibblyFormText($field['label'] ?? '') ?: $field['key']) . ': ' . ($values[$field['key']] ?? '') . "\n";
-    }
-    return $body;
-}
+require_once __DIR__ . '/form-email.php';
