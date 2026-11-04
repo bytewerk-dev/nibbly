@@ -1125,7 +1125,7 @@ svg.topbar-logo {
 
 .topbar-handbook:hover,
 .topbar-handbook:focus-visible {
-    color: var(--nb-primary);
+    color: var(--nb-topbar-text-hover, var(--nb-primary));
 }
 
 /* Narrow screens: the book icon alone, so the page title keeps its room */
@@ -1201,8 +1201,9 @@ svg.topbar-logo {
     white-space: nowrap;
 }
 
-.topbar-viewsite:hover {
-    color: var(--nb-primary);
+.topbar-viewsite:hover,
+.topbar-viewsite:focus-visible {
+    color: var(--nb-topbar-text-hover, var(--nb-primary));
 }
 
 .sidebar-toggle {

@@ -138,6 +138,15 @@ const boxesOverlap = (a, b) => a.x < b.x + b.width && b.x < a.x + a.width && a.y
         assert.ok(await page.locator('.nb-comment-admin--open').count() === 1, 'long comment opens');
         await page.screenshot({ path: shots + '/comments.png' });
 
+        step('dashboard: sidebar colour follows the preset, top bar hover stays readable');
+        const sidebarColour = preset => page.evaluate(p => sanitizeThemeContrast({ preset: p, sidebarBg: '#102a5c' }).theme.sidebarBg, preset);
+        assert.strictEqual(await sidebarColour('pop'), '#102a5c', 'dark colour stays with light sidebar text');
+        assert.strictEqual(await sidebarColour('classic'), '#102a5c');
+        assert.notStrictEqual(await sidebarColour('soft'), '#102a5c', 'lightened under dark sidebar text');
+        await page.locator('.topbar-viewsite').hover();
+        await page.waitForTimeout(300);
+        assert.strictEqual(await page.locator('.topbar-viewsite').evaluate(el => getComputedStyle(el).color), 'rgb(255, 255, 255)', 'white on the dark top bar of Pop');
+
         // ---- Page sections ----
         step('page: bars of text, image and gallery sections');
         await editMode(page, '/services/test/');

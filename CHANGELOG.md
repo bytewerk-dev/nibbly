@@ -43,6 +43,10 @@ Git milestones and the gaps in publication records.
 - "View" of the start page in the content editor opens `/`, not the missing `/home`.
 - The text toolbar no longer covers a block's bar: it starts at the field's left edge and moves above
   the bar on narrow fields.
+- The sidebar colour is checked against the text that sits on it: in Classic and Pop, whose sidebar
+  carries light text, dark colours are no longer lightened, in the browser and on the server.
+- "View site" and "Handbook" stay readable on hover on the dark top bar of Classic and Pop
+  (new token `--nb-topbar-text-hover`).
 
 ## [2.8.0] — 2026-11-02
 
