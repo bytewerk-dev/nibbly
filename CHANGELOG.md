@@ -14,6 +14,35 @@ Git milestones and the gaps in publication records.
 - JSON form notifications send formatted HTML and plain text through SMTP and PHP mail().
   Each answer has a labeled row, message paragraphs keep their line breaks, and sites can
   supply a custom layout in `templates/contact-email.php`.
+- **Block tools for page sections in the Visual Editor.** Text sections can be split, merged and given
+  a box style like the text blocks of posts; image and gallery sections are edited in place with the
+  tools of post blocks (layout, image to gallery and back). Page and post bars are built alike: edit,
+  hide, arrows, merge and type tools, delete, drag handle. Post blocks gain the handle, the field
+  dialog for every type with fields, and hiding; a hidden block stays visible to logged-in editors.
+- **Link dialog in rich text.** The link text can be changed, the caret in a link loads its values, an
+  empty target removes the link, and a new "Remove link" button works with only the caret in the link.
+  Links keep `download` on both sides of the sanitizer and the dialog's choice of window.
+- **Image dialog:** credit, half width and alignment, as in the post editor of the dashboard.
+- **Content editor:** pages with their own template use the writing view with their field groups as
+  main content, HTML fields are detected from the rendered template and get toolbar and code view;
+  the section list can be collapsed; "Expand all" is a text link in the header of the sections.
+- **Comment list:** one table per post or page, with its linked title, a count, compact entries and
+  "show more" on long texts; `load-comments` returns `targetTitle` and `targetUrl`.
+- Pagination arrows are wrapped in `.pagination__arrow`, so a site can replace them with CSS.
+
+### Changed
+
+- Frames and bars in edit mode follow one colour rule: blocks, groups and cards green
+  (`--editor-block`), fields and list items blue (`--editor-field`), including the text toolbar.
+- Text toolbars in the dashboard use the line icons of the Visual Editor, in the same order.
+- The insertion line while dragging is its own element, as an inset shadow lay behind images.
+
+### Fixed
+
+- The link dialog took the focus from the text field, which ended the edit, and no link was inserted.
+- "View" of the start page in the content editor opens `/`, not the missing `/home`.
+- The text toolbar no longer covers a block's bar: it starts at the field's left edge and moves above
+  the bar on narrow fields.
 
 ## [2.8.0] — 2026-11-02
 

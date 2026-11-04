@@ -8,6 +8,10 @@
  * a post block, see news-helper.php); it is never stored. In posts, reduced widths float
  * (css/components.css); on pages they keep their plain max-width (css/style.css).
  *
+ * A page section with an image gets the same hooks in edit mode, so the visual editor treats it
+ * like a post block (enablePageBlockEditing in js/inline-editor.js). Without a file the field
+ * placeholder stays, and so do the fields in a scan (the AI agent reads src and caption from them).
+ *
  * @param array $section Section data
  * @param bool $editable Whether in edit mode
  * @return string HTML output
@@ -20,6 +24,10 @@ $caption = trim((string)($section['caption'] ?? ''));
 $credit = trim((string)($section['credit'] ?? ''));
 $width = $section['width'] ?? 'full';
 $attrs = (string)($section['_attrs'] ?? '');
+if ($editable && !empty($src) && !nibblyContentScanActive()) {
+    $attrs = ' data-news-block="sections.' . (int)$index . '" data-block-type="image"';
+    $editable = false;
+}
 
 $classes = ['block-image'];
 if (in_array($width, ['full', 'half', 'medium', 'small'], true)) {

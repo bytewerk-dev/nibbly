@@ -1,17 +1,17 @@
 /* Native writing view. Source fields, revisions and saves remain authoritative. */
 (() => {
     'use strict';
-    // Match Nibbly's floating inline toolbar (js/inline-editor.js).
+    // Same icons as Nibbly's floating inline toolbar (js/inline-editor.js).
     const toolbarIcons = {
-        italic: '<svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 4h-9M14 20H5M15 4 9 20"/></svg>',
-        unorderedList: '<svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h12M9 12h12M9 18h12"/><g fill="currentColor" stroke="none"><circle cx="4" cy="6" r="1.5"/><circle cx="4" cy="12" r="1.5"/><circle cx="4" cy="18" r="1.5"/></g></svg>',
-        orderedList: '<svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6h11M10 12h11M10 18h11"/><path stroke-width="1.5" d="M3 3h1v6M2.5 9h3M2 14a2 2 0 0 1 4 0c0 1-1 2-4 5h4"/></svg>',
-        link: '<svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>',
-        eraser: '<svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 0 1-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0M4.22 15.58l3.54 3.53c.78.79 2.04.79 2.83 0l3.53-3.53-4.95-4.95-4.95 4.95z"/></svg>',
+        italic: '<i>I</i>',
+        unorderedList: '<svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h12M9 12h12M9 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01" stroke-width="3"/></svg>',
+        orderedList: '<svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6h11M10 12h11M10 18h11"/><path d="M3 3h1v6M2.5 9h3M2 14a2 2 0 0 1 4 0c0 1-1 2-4 5h4"/></svg>',
+        link: '<svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+        unlink: '<svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/><path d="m3 3 18 18"/></svg>',
+        eraser: '<svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21M22 21H7M5 11l9 9"/></svg>',
+        quote: '<svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17h3l2-4V7H5v6h3zM14 17h3l2-4V7h-6v6h3z"/></svg>',
+        footnote: '<svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M5.07 8l13.86 8M5.07 16 18.93 8"/></svg>',
     };
-    toolbarIcons.quote = '<svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z"/></svg>';
-    toolbarIcons.footnote = '<svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M11 2h2v7.2l6.2-3.6 1 1.7L14 11l6.2 3.7-1 1.7L13 12.8V20h-2v-7.2l-6.2 3.6-1-1.7L10 11 3.8 7.3l1-1.7L11 9.2z"/></svg>';
-    toolbarIcons.unlink = toolbarIcons.link.replace('</svg>', '<path d="M4 3 21 20" fill="none" stroke="currentColor" stroke-width="2"/> </svg>');
     // Mirrors includes/html-sanitizer.php (the server's sanitizer remains final)
     const allowedTags = new Set('p br strong b em i u a ul ol li h1 h2 h3 h4 h5 h6 blockquote span div figure figcaption img table thead tbody tfoot tr th td caption sup sub hr pre code small cite q mark s del ins abbr dl dt dd details summary video audio source'.split(' '));
     const mediaAttrs = { img: ['src','alt','width','height','loading','decoding'], td: ['colspan','rowspan','scope'], th: ['colspan','rowspan','scope'], video: ['src','controls','preload','poster','playsinline','muted','loop'], audio: ['src','controls','preload','loop'], source: ['src','type'], details: ['open'], abbr: ['title'] };
@@ -361,7 +361,18 @@
             if (range && visual.contains(range.commonAncestorContainer)) { selection.removeAllRanges(); selection.addRange(range); }
         };
         const sync = () => { source.value = cleanInline(visual.innerHTML); source.dispatchEvent(new Event('input', {bubbles: true})); hooks.markDirty(); remember(); };
-        const command = (name, value = null) => { restore(); document.execCommand(name, false, value); sync(); };
+        const command = (name, value = null) => {
+            restore();
+            // With only the caret in a link the browser's unlink does nothing: select the whole link first
+            if (name === 'unlink') {
+                const selection = window.getSelection();
+                const node = selection.rangeCount && selection.isCollapsed ? selection.getRangeAt(0).startContainer : null;
+                const anchor = node ? (node.nodeType === 1 ? node : node.parentElement).closest('a') : null;
+                if (anchor) selection.selectAllChildren(anchor);
+            }
+            document.execCommand(name, false, value);
+            sync();
+        };
         visual.addEventListener('focus', () => hooks.pushUndoSnapshot());
         visual.addEventListener('input', sync);
         visual.addEventListener('keyup', remember); visual.addEventListener('mouseup', remember); visual.addEventListener('blur', remember);
@@ -441,7 +452,7 @@
         // Fußnote: Markierung in <span class="footnote"> fassen, innerhalb einer Fußnote diese auflösen
         const footnoteButton = document.createElement('button'); footnoteButton.type = 'button'; footnoteButton.dataset.action = 'footnote';
         footnoteButton.title = t('editor.writing.footnote'); footnoteButton.setAttribute('aria-label', t('editor.writing.footnote')); footnoteButton.innerHTML = toolbarIcons.footnote;
-        toolbar.append(footnoteButton);
+        toolbar.querySelector('[data-command="removeFormat"]').before(footnoteButton); // same order as the inline toolbar
         const visual = document.createElement('div'); visual.className = 'nb-page-rich-editor'; visual.id = id;
         visual.contentEditable = 'true'; visual.setAttribute('role', 'textbox'); visual.setAttribute('aria-multiline','true'); visual.setAttribute('aria-labelledby',label.id); visual.spellcheck = true;
         visual.innerHTML = cleanHtml(source.value);
@@ -464,7 +475,18 @@
             if (range && visual.contains(range.commonAncestorContainer)) { selection.removeAllRanges(); selection.addRange(range); }
         };
         const sync = () => { source.value = cleanHtml(visual.innerHTML); source.dispatchEvent(new Event('input',{bubbles:true})); hooks.markDirty(); remember(); };
-        const command = (name, value = null) => { restore(); document.execCommand(name, false, value); sync(); };
+        const command = (name, value = null) => {
+            restore();
+            // With only the caret in a link the browser's unlink does nothing: select the whole link first
+            if (name === 'unlink') {
+                const selection = window.getSelection();
+                const node = selection.rangeCount && selection.isCollapsed ? selection.getRangeAt(0).startContainer : null;
+                const anchor = node ? (node.nodeType === 1 ? node : node.parentElement).closest('a') : null;
+                if (anchor) selection.selectAllChildren(anchor);
+            }
+            document.execCommand(name, false, value);
+            sync();
+        };
         const footnote = () => {
             restore();
             const selection = window.getSelection(); if (!selection.rangeCount) return;
@@ -541,8 +563,9 @@
     function enhance(content, hooks) {
         const root = document.getElementById('editorContainer'); const sections = document.getElementById('sectionsContainer');
         if (!root || !sections) return;
-        const enabled = Array.isArray(content.sections);
-        root.classList.toggle('nb-writing-view', enabled);
+        // Pages of a custom template have field groups instead of a block list
+        const hasBlocks = Array.isArray(content.sections);
+        root.classList.add('nb-writing-view');
         let layout = root.querySelector('.nb-writing-layout');
         if (!layout) {
             layout = document.createElement('div'); layout.className = 'nb-writing-layout'; sections.before(layout); layout.append(sections);
@@ -552,22 +575,18 @@
             layout.append(aside);
         }
         const actions = root.querySelector('.editor-header-right');
-        if (actions) {
-            if (enabled) layout.querySelector('.nb-page-save-controls').append(actions);
-            else root.querySelector('.editor-header').append(actions);
-        }
+        if (actions) layout.querySelector('.nb-page-save-controls').append(actions);
         root.classList.remove('nb-writing-single');
         const aside = layout.querySelector('.nb-page-sidebar'); const nav = layout.querySelector('.nb-page-navigation');
         aside.querySelectorAll('.nb-page-panel--meta').forEach(el => el.remove());
-        nav.replaceChildren(); nav.hidden = enabled;
-        if (!enabled) return;
+        nav.replaceChildren(); nav.hidden = true;
         sections.querySelector('.ce-editor-tabs')?.remove();
         const panel = sections.querySelector('[data-editor-panel="content"]');
         const title = sections.querySelector('[data-path="title"]');
         if (title && panel) { title.autocomplete='off'; title.name='page-title'; title.id='nb-page-title'; const field=title.closest('.ce-field'); field.classList.add('nb-page-title-field'); field.querySelector('label').htmlFor=title.id; panel.prepend(field); }
         inlineEditor(sections.querySelector('textarea[data-path="description"]'), 'page-description', hooks);
         if (panel) placeSettings(sections, panel, nav);
-        const single = content.sections.length === 1 && content.sections[0].type === 'text'; root.classList.toggle('nb-writing-single', single);
+        const single = hasBlocks && content.sections.length === 1 && content.sections[0].type === 'text'; root.classList.toggle('nb-writing-single', single);
         if (single) sections.querySelector('.section-item')?.classList.add('is-open');
         sections.querySelectorAll('.html-editor').forEach((field,index) => richEditor(field,index,hooks));
         sections.querySelectorAll('.section-item[data-type="text"]').forEach(section => {
@@ -577,6 +596,7 @@
             fields.append(options);
             section.querySelectorAll('input').forEach(input=>{input.autocomplete='off'; input.name='page-section-'+section.dataset.index+'-'+input.dataset.key;});
         });
+        if (!hasBlocks) return; // the field groups are the page's content, not "further fields"
         const add = sections.querySelector('.add-section-container');
         if (add) { const disclosure=details(t('editor.writing.add_sections')); disclosure.open = content.sections.length === 0; add.before(disclosure); disclosure.append(add); }
         const groups=[...sections.querySelectorAll('.ce-section-editor>.ce-group')];

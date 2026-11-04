@@ -23,6 +23,9 @@
 <div class="hb-prose">
   <p>Der Inhaltseditor zeigt eine Seite als Formular: oben Titel und Text, darunter die Abschnitte zum Aufklappen und die Beschreibung, ganz unten, durch eine Linie abgesetzt, die SEO-Felder. Rechts stehen <?php echo $hb->btn('Speichern', 'primary'); ?>, <?php echo $hb->ui('Ansehen'); ?> und die Sprachen, darunter Seitenbild, Seiteneinstellungen, Zugriff und Backups. Änderungen im Inhaltseditor gelten erst nach dem Speichern.</p>
 </div>
+<div class="hb-prose">
+  <p>Die Abschnittsliste links klappst du über das Symbol neben ihrer Überschrift ein, dann haben die Felder die volle Breite. Seiten mit eigener Vorlage zeigen statt der Abschnitte ihre Feldgruppen; Felder, die auf der Website Formatierungen erlauben, bekommen dieselbe Textleiste wie ein Textabschnitt.</p>
+</div>
 <?php echo $hb->shot('page-editor.webp', 'Inhaltseditor der Startseite mit Titel, Textfeld und Seitenaktionen', '<b>Inhaltseditor.</b> Dieselben Inhalte wie auf der Website, Feld für Feld.'); ?>
 <dl class="hb-fields">
   <div><dt>Abschnitte</dt><dd>Aufklappen zum Bearbeiten, am Griff ziehen zum Sortieren, mit <?php echo $hb->ui('Hier einfügen'); ?> einen neuen Abschnitt an einer Stelle einfügen. Hinweise wie „Alt-Text fehlt“ zeigen, wo etwas fehlt.</dd></div>

@@ -2218,7 +2218,8 @@ refuses submissions). Helpers in `includes/news-helper.php`:
 - `nibblyNewsRenderBlocks(array $blocks, string $field = '')` renders a block list; with `$field`
   (`sections` or `aside`) each block gets the Visual Editor hooks `data-news-block="{i}"` and
   `data-block-type`. Image and gallery blocks receive them through the internal key `_attrs`, which
-  the renderers print on their container and which is never stored.
+  the renderers print on their container and which is never stored. Hidden blocks stay out, except
+  with `$field`: logged-in editors get them marked `data-hidden="true"`, so they can be shown again.
 - `nibblyNewsBodyHtml($post)` returns the body of either form; feed, search index and timeline use it.
 - `nibblyNewsSanitizeBlocks($blocks)` cleans a saved block list (known types only, sanitized HTML).
 
@@ -2229,6 +2230,18 @@ previous JSON in `backups/` (`list-news-backups`, `load-news-backup`, `restore-n
 `delete-news-backup`); the dashboard shows them in the backups panel at the bottom of the sidebar.
 Category pages can live below their own base with `news.archive.categoryBase` (for example
 `/rubrik`); link them with `nibblyNewsCategoryBaseUrl()`.
+
+Page sections share the block tools of posts in `js/inline-editor.js`. In edit mode the image and
+gallery renderers put the same hooks on their container with `sections.{i}`
+(`data-news-block="sections.2"`), so `enablePageBlockEditing()` edits them in place; an image without
+a file keeps the field placeholder. `pageBlockPage` switches `newsBlockList()`,
+`newsStructuralChange()` and `markNewsPostDirty()` from the post to that page. Text sections stay
+ordinary `editableHtml()` fields, recognised by `pageTextSectionRef()`. A site template that renders
+its own figures needs those two attributes on the root element to get the tools. Structural tools
+(arrows, split, merge, style, the image and gallery tools) save at once and reload; dragging a section
+at its handle waits for Save, dragging a post block saves at once. Bars and frames use two colours:
+`--editor-block` for blocks, `--editor-field` for fields. `python3 tests/visual-editor-check.py` drives
+all of this in Chromium; it is not part of the offline suite.
 
 ### Always use `$contentPage` variable, not hardcoded page names
 

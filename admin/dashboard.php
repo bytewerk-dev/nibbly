@@ -859,19 +859,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                 </div>
             </div>
             <div class="admin-list-footer admin-list-footer--top" id="commentsListFooterTop"></div>
-            <div class="page-list-table-wrap">
-                <table class="page-list-table" id="commentsListTable">
-                    <thead>
-                        <tr>
-                            <th class="page-list-col-title"><?php echo t('comments.col_entry'); ?></th>
-                            <th><?php echo t('comments.col_target'); ?></th>
-                            <th><?php echo t('comments.col_status'); ?></th>
-                            <th class="page-list-col-date"><?php echo t('comments.col_date'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody id="commentsList"></tbody>
-                </table>
-            </div>
+            <div class="nb-comment-groups" id="commentsGroups"></div>
             <div class="admin-list-footer" id="commentsListFooter"></div>
         </div>
     </div>

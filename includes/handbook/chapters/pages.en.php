@@ -23,6 +23,9 @@
 <div class="hb-prose">
   <p>The Content Editor shows a page as a form: title and text at the top, the sections below to expand and the description, and at the very bottom, set apart by a line, the SEO fields. On the right are <?php echo $hb->btn('Save', 'primary'); ?>, <?php echo $hb->ui('View'); ?> and the languages, below them page image, page settings, access and backups. Changes in the Content Editor apply only after saving.</p>
 </div>
+<div class="hb-prose">
+  <p>The section list on the left collapses with the symbol beside its heading, which gives the fields the full width. Pages with their own template show their field groups instead of sections; fields that allow formatting on the website get the same text toolbar as a text section.</p>
+</div>
 <?php echo $hb->shot('page-editor.webp', 'Content Editor of the home page with title, text field and page actions', '<b>Content Editor.</b> The same content as on the website, field by field.'); ?>
 <dl class="hb-fields">
   <div><dt>Sections</dt><dd>Expand to edit, drag the handle to sort, <?php echo $hb->ui('Insert here'); ?> to add a new section at a spot. Hints such as “alt text missing” show where something is missing.</dd></div>

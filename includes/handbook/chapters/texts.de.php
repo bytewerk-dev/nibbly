@@ -10,9 +10,11 @@
 <dl class="hb-fields">
   <div><dt>Absatz ▾</dt><dd>Das Absatzformat des Elements, in dem der Cursor steht: Absatz, Überschrift 2 bis 4 oder Zitat. Ein Klick öffnet die Auswahl, ein zweiter wechselt das Format nur für diesen Absatz.</dd></div>
   <div><dt>B / I</dt><dd>Fett und Kursiv für den markierten Text. Tastatur: <?php echo $hb->key('⌘ B', 'Strg B'); ?> und <?php echo $hb->key('⌘ I', 'Strg I'); ?>.</dd></div>
-  <div><dt><?php echo $hb->icon('link', 'Link einfügen'); ?> Link einfügen</dt><dd>Erst ein Wort oder einen Satzteil markieren, dann klicken; ohne Markierung erscheint ein Hinweis. Du wählst eine Seite der Website oder trägst eine Adresse ein, siehe <?php echo $hb->ref('links'); ?>.</dd></div>
+  <div><dt><?php echo $hb->icon('link', 'Link einfügen'); ?> Link einfügen</dt><dd>Erst ein Wort oder einen Satzteil markieren, dann klicken; ohne Markierung erscheint ein Hinweis. Steht der Cursor in einem Link, öffnet der Klick diesen Link zum Ändern; ein leeres Linkziel entfernt ihn. Du wählst eine Seite der Website oder trägst eine Adresse ein, siehe <?php echo $hb->ref('links'); ?>.</dd></div>
+  <div><dt>Link entfernen</dt><dd>Entfernt den Link und lässt den Text stehen. Dafür genügt es, wenn der Cursor im Link steht.</dd></div>
   <div><dt>Fußnote</dt><dd>Markiere den Text der Anmerkung und klicke auf das Fußnoten-Symbol. Besucher sehen an der Stelle eine kleine Zahl; beim Darüberfahren oder Antippen erscheint der Text. Ein zweiter Klick auf eine bestehende Fußnote macht sie wieder zu normalem Text.</dd></div>
-  <div><dt>Stil der Textbox</dt><dd>Nur in Beiträgen: ein Menü mit den Darstellungen, die deine Website für einen Textblock kennt, etwa „Hervorgehoben“. Es gilt für den ganzen Block, nicht für markierten Text. Welche Stile es gibt, legt die Website in <code>content/text-styles.json</code> fest.</dd></div>
+  <div><dt>Block hier teilen</dt><dd>Teilt einen Textblock zwischen zwei Absätzen in zwei Blöcke. Der Cursor bestimmt die Stelle.</dd></div>
+  <div><dt>Stil der Textbox</dt><dd>In Textblöcken von Beiträgen und Textabschnitten von Seiten: ein Menü mit den Darstellungen, die deine Website für einen Textblock kennt, etwa „Hervorgehoben“. Es gilt für den ganzen Block, nicht für markierten Text. Welche Stile es gibt, legt die Website in <code>content/text-styles.json</code> fest.</dd></div>
   <div><dt>Formatierung bereinigen</dt><dd>Entfernt Fett, Kursiv und andere Auszeichnungen aus dem markierten Text.</dd></div>
   <div><dt>&lt;/&gt; HTML</dt><dd>Zeigt den Absatz als HTML-Code. Nur nötig, wenn du genau weißt, was du tust.</dd></div>
 </dl>

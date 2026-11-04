@@ -20,12 +20,15 @@
 <dl class="hb-fields">
   <div><dt><?php echo $hb->icon('edit', 'Edit'); ?> Edit</dt><dd>Opens all fields of the section in a form, including those you can't click directly on the page.</dd></div>
   <div><dt><?php echo $hb->icon('eye', 'Hide'); ?> Hide</dt><dd>Hides the section from visitors without deleting it. A second click shows it again. Single fields and list items have the same eye.</dd></div>
+  <div><dt>Arrows</dt><dd>Move the section up or down by one place.</dd></div>
+  <div><dt>Merge</dt><dd>Text sections only: appends the next text section to this one; its heading stays in the text.</dd></div>
+  <div><dt>Image and gallery</dt><dd>Turns an image into a gallery and takes the images right after it along. On a gallery you choose the layout here; a gallery with a single image becomes an image again. Images and captions are edited directly on the page.</dd></div>
   <div><dt><?php echo $hb->icon('trash', 'Delete'); ?> Delete</dt><dd>Removes the section after asking.</dd></div>
   <div><dt><?php echo $hb->icon('grip', 'Drag to reorder'); ?> Move</dt><dd>Drag the handle to move the section up or down.</dd></div>
   <div><dt><?php echo $hb->icon('plus', 'Add block'); ?> Add block</dt><dd>The plus below a section inserts a new block at that point. You pick the type from a list with a search field, such as text, heading, image, list, card or YouTube.</dd></div>
 </dl>
-<?php echo $hb->shot('sections.webp', 'An image section in edit mode with its toolbar at the top right', '<b>A section’s toolbar.</b> Edit, Hide, Delete and the handle for moving.'); ?>
-<?php echo $hb->note('Saved at once', 'When you add or delete a section or list item, nibbly saves immediately, together with all your other open changes, and reloads the page. Everything else, including moving and hiding, waits for Save.'); ?>
+<?php echo $hb->shot('sections.webp', 'An image section in edit mode with its toolbar at the top right', '<b>A section’s toolbar.</b> Edit, Hide, arrows, Delete and the handle for moving. The blocks of posts have the same bar.'); ?>
+<?php echo $hb->note('Saved at once', 'When you add or delete a section or list item, or split, merge or move a section with the arrows, nibbly saves immediately, together with all your other open changes, and reloads the page. Everything else, including dragging the handle and hiding, waits for Save. In posts, the handle and the eye save at once too.'); ?>
 
 <h3>Content Editor</h3>
 <div class="hb-prose">

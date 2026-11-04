@@ -7,7 +7,8 @@
  * full: stacked at the full width of the content box. Every image links to its file
  * (data-lightbox, opened by js/lightbox.js). The optional internal key "_attrs" carries
  * extra attributes for the container (editor hooks of a post block, see news-helper.php);
- * it is never stored.
+ * it is never stored. A page section gets the same hooks in edit mode, so the visual editor
+ * treats it like a post block (enablePageBlockEditing in js/inline-editor.js).
  *
  * @param array $section Section data
  * @param bool $editable Whether in edit mode
@@ -16,6 +17,9 @@
 
 $images = is_array($section['images'] ?? null) ? $section['images'] : [];
 $attrs = (string)($section['_attrs'] ?? '');
+if ($editable) {
+    $attrs = ' data-news-block="sections.' . (int)$index . '" data-block-type="gallery"';
+}
 if (!$images && $attrs === '') {
     return '';
 }

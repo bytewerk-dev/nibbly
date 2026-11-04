@@ -55,6 +55,7 @@
     "bold": "Bold",
     "italic": "Italic",
     "insert_link": "Insert link",
+    "remove_link": "Remove link",
     "clean_formatting": "Clean formatting",
     "format_block": "Block format",
     "format_paragraph": "Paragraph",

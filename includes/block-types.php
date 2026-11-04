@@ -144,10 +144,17 @@ return [
             ['key' => 'src',     'type' => 'image',    'label' => t('block.image')],
             ['key' => 'alt',     'type' => 'input',    'label' => t('field.alt_text')],
             ['key' => 'caption', 'type' => 'input',    'label' => t('field.caption')],
+            ['key' => 'credit',  'type' => 'input',    'label' => t('field.credit')],
             ['key' => 'width',   'type' => 'select',   'label' => t('field.width'), 'options' => [
                 ['value' => 'full',   'label' => t('option.full_width')],
+                ['value' => 'half',   'label' => t('option.half_width')],
                 ['value' => 'medium', 'label' => t('option.medium_75')],
                 ['value' => 'small',  'label' => t('option.small_50')],
+            ]],
+            ['key' => 'align',   'type' => 'select',   'label' => t('field.align'), 'options' => [
+                ['value' => 'right',  'label' => t('option.align_right')],
+                ['value' => 'left',   'label' => t('option.align_left')],
+                ['value' => 'center', 'label' => t('option.align_center')],
             ]],
         ],
     ],

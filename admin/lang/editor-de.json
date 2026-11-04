@@ -55,6 +55,7 @@
     "bold": "Fett",
     "italic": "Kursiv",
     "insert_link": "Link einfügen",
+    "remove_link": "Link entfernen",
     "clean_formatting": "Formatierung bereinigen",
     "format_block": "Absatzformat",
     "format_paragraph": "Absatz",
