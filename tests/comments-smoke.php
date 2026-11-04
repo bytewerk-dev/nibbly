@@ -34,7 +34,7 @@ function commentsAssert(bool $ok, string $message): void {
 // Imported archive: file name = post id, tree with replies, owner flag
 file_put_contents($work . '/content/comments/2026-01-02-test-beitrag.json', json_encode(['target' => 'news:2026-01-02-test-beitrag', 'comments' => [
     ['id' => 'wp1', 'parent' => '', 'author' => 'Anna', 'email' => 'anna@example.org', 'date' => '2020-01-01T10:00:00', 'content' => '<p>Erster</p>', 'status' => 'approved', 'owner' => false, 'source' => 'wordpress'],
-    ['id' => 'wp2', 'parent' => 'wp1', 'author' => 'Kurt Krickler', 'email' => 'k@example.org', 'date' => '2020-01-02T10:00:00', 'content' => '<p>Antwort</p>', 'status' => 'approved', 'owner' => true, 'source' => 'wordpress'],
+    ['id' => 'wp2', 'parent' => 'wp1', 'author' => 'Site Owner', 'email' => 'owner@example.org', 'date' => '2020-01-02T10:00:00', 'content' => '<p>Antwort</p>', 'status' => 'approved', 'owner' => true, 'source' => 'wordpress'],
     ['id' => 'wp3', 'parent' => '', 'author' => 'Spam', 'email' => 's@example.org', 'date' => '2020-01-03T10:00:00', 'content' => '<p>Hidden</p>', 'status' => 'pending', 'owner' => false, 'source' => 'form'],
 ]]));
 $tree = nibblyCommentsTree(nibblyCommentsLoad('news', '2026-01-02-test-beitrag'));
