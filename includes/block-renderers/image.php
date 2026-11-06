@@ -49,7 +49,7 @@ if ($editable) {
     $html .= '    ' . nibblyAiLabelFrame(editableImageSplit($page, "sections.$index.src", "sections.$index.alt", $src, $rawAlt)) . "\n";
     $html .= '    <figcaption>' . editableText($page, "sections.$index.caption", $caption) . '</figcaption>' . "\n";
 } else {
-    $img = nibblyAiLabelAttach('<img src="' . htmlspecialchars($src) . '" alt="' . htmlspecialchars($rawAlt) . '" loading="lazy">', (string)$src, true);
+    $img = nibblyAiLabelAttach(nibblyImageTag((string)$src, (string)$rawAlt), (string)$src, true);
     $isImageFile = (bool)preg_match('/\.(jpe?g|png|gif|webp|avif|svg)$/i', (string)(parse_url((string)$src, PHP_URL_PATH) ?: ''));
     if (!empty($section['lightbox']) && $isImageFile) {
         $html .= '    <a href="' . htmlspecialchars($src) . '" data-lightbox="image">' . $img . '</a>' . "\n";

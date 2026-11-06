@@ -36,9 +36,11 @@ $imageStyle = in_array($section['imageStyle'] ?? '', ['shadow', 'plain'], true) 
 $figure = '';
 if ($imageSrc !== '' && preg_match('#^(/|https?://)#i', $imageSrc)) {
     $imageAlt = (string)($section['imageAlt'] ?? '');
+    // srcset/sizes from media-sizes.php; the figure is 25 to 50 % wide on wide screens (css/style.css)
+    $sizes = '(min-width: 40rem) ' . ['medium' => '40vw', 'small' => '25vw', 'hang' => '50vw'][$imageSize] . ', 100vw';
     $img = $editable
-        ? editableImageSplit($page, "sections.$index.image", "sections.$index.imageAlt", $imageSrc, $imageAlt)
-        : nibblyAiLabelAttach('<img src="' . htmlspecialchars($imageSrc) . '" alt="' . htmlspecialchars($imageAlt) . '" loading="lazy">', $imageSrc, true);
+        ? editableImageSplit($page, "sections.$index.image", "sections.$index.imageAlt", $imageSrc, $imageAlt, '', ['sizes' => $sizes])
+        : nibblyAiLabelAttach(nibblyImageTag($imageSrc, $imageAlt, ['sizes' => $sizes]), $imageSrc, true);
     if (function_exists('siteTextBlockFigure')) {
         $figure = siteTextBlockFigure($section, $imagePosition, $img);
     } else {

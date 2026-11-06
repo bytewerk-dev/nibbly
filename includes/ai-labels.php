@@ -38,7 +38,9 @@ function nibblyMediaMeta(bool $reload = false): array {
 
 /** Media type and name relative to the type folder for a public source, e.g. /assets/images/a/b.webp. */
 function nibblyMediaRefFromSrc(string $src): ?array {
-    $path = rawurldecode((string)(parse_url($src, PHP_URL_PATH) ?? ''));
+    // Not parse_url(): it mangles combining characters (file names in NFD, e.g. "ü" as u + U+0308 on macOS)
+    $path = (string)preg_replace('/[?#].*$/s', '', trim($src));
+    $path = rawurldecode((string)preg_replace('#^(?:[a-z][a-z0-9+.-]*:)?//[^/]*#i', '', $path));
     foreach (['image' => 'assets/images/', 'video' => 'assets/videos/'] as $type => $marker) {
         $position = strpos($path, $marker);
         if ($position === false) continue;
