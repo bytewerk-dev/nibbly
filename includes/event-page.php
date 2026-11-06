@@ -67,7 +67,7 @@ include $_includeBase . 'includes/header.php';
 
                 <?php if (!empty($event['image'])): ?>
                 <div class="news-post-page__hero">
-                    <img src="<?php echo htmlspecialchars((string)$event['image']); ?>" alt="<?php echo htmlspecialchars($pageTitle); ?>"><?php echo nibblyAiLabelHtml((string)$event['image']); ?>
+                    <?php echo nibblyImageTag((string)$event['image'], (string)$pageTitle, ['lazy' => false]) . nibblyAiLabelHtml((string)$event['image']); ?>
                 </div>
                 <?php endif; ?>
 

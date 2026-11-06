@@ -49,7 +49,7 @@ timelineAssert(str_contains($html, 'id="zr-1980"') && str_contains($html, 'id="z
 timelineAssert(str_contains($html, '<h2 class="news-timeline__group-title">1980</h2>') && str_contains($html, 'aria-label="Springe zu"'), 'group heading and jump bar label in German');
 timelineAssert(str_contains($html, 'href="/1980/01/29/gruendung"') && str_contains($html, '>Zum Beitrag<span class="visually-hidden">: Station gruendung</span></a>'), 'links follow the URL pattern, accessible link label');
 timelineAssert(str_contains($html, 'datetime="1980-01-29">29. Jänner 1980</time>'), 'date formatted in the page language');
-timelineAssert(str_contains($html, '<img class="news-timeline__image" src="/wp-content/uploads/1980/gruendung.webp" alt="Station gruendung" loading="lazy">') && str_contains($html, '<figcaption class="news-timeline__caption">Foto: Archiv</figcaption>'), 'post image with caption');
+timelineAssert(str_contains($html, '<img src="/wp-content/uploads/1980/gruendung.webp" alt="Station gruendung" class="news-timeline__image" loading="lazy" decoding="async">') && str_contains($html, '<figcaption class="news-timeline__caption">Foto: Archiv</figcaption>'), 'post image with caption');
 timelineAssert(substr_count($html, 'news-timeline__gallery-item') === 2 && str_contains($html, 'data-lightbox="zr-1980-04-26-demo"') && str_contains($html, '<figcaption>Erste</figcaption>'), 'gallery with two valid images');
 timelineAssert(str_contains($html, '<em>Link</em>') && str_contains($html, '<a href="/x">hier</a>') && !str_contains($html, '<script>'), 'excerpt markup sanitised: ' . $html);
 timelineAssert(!str_contains($html, 'Text gruendung'), 'post text hidden by default');

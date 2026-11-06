@@ -2,6 +2,8 @@
 if (!defined('NIBBLY_ADMIN_DIR')) { http_response_code(404); exit; }
 
 require_once NIBBLY_ADMIN_DIR . '/../includes/svg-sanitizer.php';
+require_once NIBBLY_ADMIN_DIR . '/../includes/media-states.php';
+require_once NIBBLY_ADMIN_DIR . '/../includes/media-local-tools.php';
 
 // Authenticated dispatcher supplies shared helpers and request context.
 switch ($action) {
@@ -36,6 +38,10 @@ switch ($action) {
             // What the server lets through and what Nibbly allows, so the library
             // can check before sending and say which limit applies
             'limits' => nibblyMediaUploadLimits(),
+            // Registered media states for the library's properties panel (includes/media-states.php)
+            'states' => nibblyMediaStatesPublic(),
+            // Reveal/open/path on the editor's own machine, null on a web host (includes/media-local-tools.php)
+            'localTools' => nibblyLocalToolsInfo(),
             'types' => array_values(array_map(function($config) {
                 return [
                     'type' => $config['type'],
@@ -127,6 +133,9 @@ switch ($action) {
             if ($aiLabel !== '') {
                 nibblySetMediaAiLabel($type, $relativeName, $aiLabel);
             }
+            // Responsive sizes next to the library, see includes/media-sizes.php
+            $sizes = nibblyMediaSizesGenerate($relativeName);
+            nibblyMediaEvent('uploaded', $type, $relativeName);
             jsonResponse(true, [
                 'type' => $type,
                 'name' => $relativeName,
@@ -134,6 +143,7 @@ switch ($action) {
                 'aiLabel' => $aiLabel,
                 'webVersion' => $stored['webVersion'],
                 'original' => nibblyMediaOriginalFor($relativeName),
+                'sizes' => $sizes,
             ], 'Media uploaded');
         }
 
@@ -148,6 +158,7 @@ switch ($action) {
             if ($aiLabel !== '') {
                 nibblySetMediaAiLabel($type, $relativeName, $aiLabel);
             }
+            nibblyMediaEvent('uploaded', $type, $relativeName);
             jsonResponse(true, [
                 'type' => $type,
                 'name' => $relativeName,
@@ -258,7 +269,7 @@ switch ($action) {
         $targetRelative = uniqueMediaRelativePath($config['path'], $targetRelative);
         if (rename($sourcePath, $config['path'] . $targetRelative)) {
             nibblyMoveMediaMeta($type, $filename, $type, $targetRelative);
-            if ($type === 'image') nibblyMediaOriginalRelocate($filename, false, $targetRelative, false);
+            if ($type === 'image') { nibblyMediaOriginalRelocate($filename, false, $targetRelative, false); nibblyMediaSizesRelocate($filename, false, $targetRelative, false); }
             jsonResponse(true, [
                 'type' => $type,
                 'name' => $targetRelative,
@@ -344,7 +355,7 @@ switch ($action) {
 
         if (rename($sourcePath, $targetPath)) {
             nibblyMoveMediaMeta($type, $filename, $type, $targetRelative);
-            if ($type === 'image') nibblyMediaOriginalRelocate($filename, false, $targetRelative, false);
+            if ($type === 'image') { nibblyMediaOriginalRelocate($filename, false, $targetRelative, false); nibblyMediaSizesRelocate($filename, false, $targetRelative, false); }
             jsonResponse(true, [
                 'type' => $type,
                 'name' => $targetRelative,
@@ -382,6 +393,69 @@ switch ($action) {
         jsonResponse(true, ['type' => $type, 'name' => $filename, 'aiLabel' => $aiLabel], 'AI label saved');
         break;
 
+    case 'set-media-states':
+        // Flags and properties per file (includes/media-states.php): states = JSON object id => value;
+        // true / an option value sets, false / "" / null removes; other states keep their values
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+
+        $type = normalizeMediaType($_POST['type'] ?? 'image');
+        $filename = $_POST['filename'] ?? '';
+        $config = getMediaConfig($type);
+        if (!$config || !validateMediaFilename($filename, $type)) {
+            jsonResponse(false, null, 'Invalid media file');
+        }
+        $changes = json_decode((string)($_POST['states'] ?? ''), true);
+        if (!is_array($changes) || !$changes) {
+            jsonResponse(false, null, 'Invalid media states');
+        }
+        foreach ($changes as $stateId => $value) {
+            $state = nibblyMediaStates()[$stateId] ?? null;
+            if ($state === null || !in_array($type, $state['media'], true)) {
+                jsonResponse(false, null, 'Invalid media states');
+            }
+        }
+        if (!is_file($config['path'] . $filename)) {
+            jsonResponse(false, null, 'File not found');
+        }
+        if (!nibblySetMediaStates($type, $filename, $changes)) {
+            jsonResponse(false, null, 'Invalid media states');
+        }
+
+        jsonResponse(true, [
+            'type' => $type,
+            'name' => $filename,
+            'states' => (object)nibblyMediaStatesFor($type, $filename),
+            'aiLabel' => nibblyMediaAiLabelFor($type, $filename),
+        ], 'Media states saved');
+        break;
+
+    case 'local-media':
+        // Local tools (includes/media-local-tools.php): do = reveal | open | path, only on the editor's own machine
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        if (!nibblyLocalToolsEnabled()) {
+            jsonResponse(false, null, 'Local tools are not available here');
+        }
+        $type = normalizeMediaType($_POST['type'] ?? '');
+        $filename = $_POST['filename'] ?? '';
+        $do = $_POST['do'] ?? '';
+        $config = getMediaConfig($type);
+        if (!$config || !validateMediaFilename($filename, $type) || !in_array($do, ['reveal', 'open', 'path'], true)) {
+            jsonResponse(false, null, 'Invalid media file');
+        }
+        $absolute = nibblyLocalToolsPath($config['path'], $filename);
+        if ($absolute === null) {
+            jsonResponse(false, null, 'File not found');
+        }
+        if ($do !== 'path' && !nibblyLocalToolsRun($do, $absolute)) {
+            jsonResponse(false, ['path' => $absolute], 'Could not run the local command');
+        }
+        jsonResponse(true, ['path' => $absolute, 'do' => $do]);
+        break;
+
     case 'delete-media':
         if (!validateCsrfToken()) {
             jsonResponse(false, null, 'Invalid CSRF token');
@@ -410,7 +484,7 @@ switch ($action) {
         }
         if (rename($sourcePath, $config['trashPath'] . $targetFilename)) {
             nibblyMoveMediaMeta($type, $filename, $type . '-trash', $targetFilename);
-            if ($type === 'image') nibblyMediaOriginalRelocate($filename, false, $targetFilename, true);
+            if ($type === 'image') { nibblyMediaOriginalRelocate($filename, false, $targetFilename, true); nibblyMediaSizesRelocate($filename, false, $targetFilename, true); }
             jsonResponse(true, null, 'Media moved to trash');
         }
 
@@ -441,7 +515,7 @@ switch ($action) {
         }
         if (rename($sourcePath, $config['path'] . $targetFilename)) {
             nibblyMoveMediaMeta($type . '-trash', $filename, $type, $targetFilename);
-            if ($type === 'image') nibblyMediaOriginalRelocate($filename, true, $targetFilename, false);
+            if ($type === 'image') { nibblyMediaOriginalRelocate($filename, true, $targetFilename, false); nibblyMediaSizesRelocate($filename, true, $targetFilename, false); }
             jsonResponse(true, [
                 'type' => $type,
                 'name' => $targetFilename,
@@ -471,7 +545,7 @@ switch ($action) {
 
         if (unlink($path)) {
             nibblyForgetMediaMeta($type . '-trash', $filename);
-            if ($type === 'image') nibblyMediaOriginalForget($filename, true);
+            if ($type === 'image') { nibblyMediaOriginalForget($filename, true); nibblyMediaSizesForget($filename, true); }
             jsonResponse(true, null, 'Media permanently deleted');
         }
 
@@ -494,7 +568,7 @@ switch ($action) {
                 $path = $config['trashPath'] . $media['name'];
                 if (is_file($path) && unlink($path)) {
                     nibblyForgetMediaMeta($type . '-trash', $media['name']);
-                    if ($type === 'image') nibblyMediaOriginalForget($media['name'], true);
+                    if ($type === 'image') { nibblyMediaOriginalForget($media['name'], true); nibblyMediaSizesForget($media['name'], true); }
                     $deleted++;
                 }
             }
@@ -661,6 +735,7 @@ switch ($action) {
             if ($detectedAiLabel !== '') {
                 nibblySetMediaAiLabel('image', $filename, $detectedAiLabel);
             }
+            nibblyMediaEvent('uploaded', 'image', $filename);
             jsonResponse(true, [
                 'name' => $filename,
                 'path' => '../assets/images/' . $filename,
