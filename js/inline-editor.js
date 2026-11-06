@@ -5780,7 +5780,10 @@
             const listKey = listContainer.dataset.listKey;
             const defaults = JSON.parse(listContainer.dataset.listDefaults || '{}');
 
-            const items = listContainer.querySelectorAll('[data-list-index]');
+            // Only this list's own items: a list nested inside an item (e.g. rows
+            // inside a card) gets its own handlers with its own key.
+            const items = Array.from(listContainer.querySelectorAll('[data-list-index]'))
+                .filter(el => el.closest('[data-editable-list]') === listContainer);
 
             items.forEach(item => {
                 const index = parseInt(item.dataset.listIndex, 10);
@@ -5840,6 +5843,8 @@
 
                 // Drag events — use dynamic index from dataset (survives reorder)
                 item.addEventListener('dragstart', (e) => {
+                    // Drags of a nested list's items bubble up here; leave them alone.
+                    if (e.target !== item) return;
                     if (!EditorConfig.editMode) { e.preventDefault(); return; }
                     if (item.dataset.dragArmed !== 'true') { e.preventDefault(); return; }
                     const currentIndex = parseInt(item.dataset.listIndex, 10);
@@ -5851,7 +5856,8 @@
                     document.querySelectorAll('iframe').forEach(f => f.style.pointerEvents = 'none');
                 });
 
-                item.addEventListener('dragend', () => {
+                item.addEventListener('dragend', (e) => {
+                    if (e.target !== item) return;
                     item.classList.remove('dragging');
                     document.querySelectorAll('.editable-list-item').forEach(el => {
                         el.classList.remove('drag-over', 'drag-over-top', 'drag-over-bottom');

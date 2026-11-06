@@ -2721,8 +2721,8 @@ body.edit-mode-active .editable-list-item.is-overlay-active {
     border-radius: 4px;
 }
 
-body.edit-mode-active .editable-list-item:hover .editable-list-overlay,
-body.edit-mode-active .editable-list-item.is-overlay-active .editable-list-overlay,
+body.edit-mode-active .editable-list-item:hover > .editable-list-overlay,
+body.edit-mode-active .editable-list-item.is-overlay-active > .editable-list-overlay,
 body.edit-mode-active .editable-list-overlay:hover {
     opacity: 1;
     pointer-events: auto;
@@ -2819,8 +2819,8 @@ body.edit-mode-active .nibbly-editor-list-overlay {
     pointer-events: none !important;
 }
 
-body.edit-mode-active .editable-list-item:hover .nibbly-editor-list-overlay,
-body.edit-mode-active .editable-list-item.is-overlay-active .nibbly-editor-list-overlay,
+body.edit-mode-active .editable-list-item:hover > .nibbly-editor-list-overlay,
+body.edit-mode-active .editable-list-item.is-overlay-active > .nibbly-editor-list-overlay,
 body.edit-mode-active .nibbly-editor-list-overlay:hover {
     pointer-events: auto !important;
 }
@@ -2952,7 +2952,7 @@ body.edit-mode-active .nibbly-editor-drag-handle:focus-visible {
     fill: currentColor;
 }
 
-body.edit-mode-active .editable-list-item:hover .list-item-add-btn {
+body.edit-mode-active .editable-list-item:hover > .list-item-add-btn {
     opacity: 1;
     pointer-events: auto;
 }
