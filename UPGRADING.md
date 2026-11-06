@@ -3,7 +3,37 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
-## Upgrading from 2.7.0 to 2.8.0
+## Upgrading from 2.8.0 to 2.8.1
+
+Version 2.8.1 brings responsive image sizes with one central `<img>` renderer, media states, media
+hooks and local tools in the media library, the unified block tools of the Visual Editor, a shared
+rich-text module, dashboard search for posts, a photo credit per post and site maintenance tasks in
+the system status. All defaults reproduce the previous behaviour; no data migration is needed.
+
+1. Deploy the complete core. New: `includes/media-sizes.php`, `includes/media-states.php`,
+   `includes/media-local-tools.php`, `includes/site-tasks.php`, `js/rich-editor.js`,
+   `css/rich-editor.css`, `cli/media-sizes.php`. Changed, among others: `includes/footer.php`,
+   `includes/content-loader.php`, `includes/media-web-version.php`, `includes/search-helper.php`,
+   `includes/news-helper.php`, `includes/news-post.php`, `includes/system-status.php`,
+   `includes/block-types.php`, `includes/block-renderers/*.php`, `admin/api/*.php`,
+   `admin/dashboard/scripts/*.php`, `admin/lang/*.json`, `admin/style.css`, `css/*.css`,
+   `js/inline-editor.js`, `js/image-manager.js`.
+2. Responsive sizes: run `php cli/media-sizes.php --action=generate` once on the server so the
+   existing library gets its 640 and 1280 px WebP copies in `assets/images-sizes/` (new uploads
+   get them automatically). The folder is not versioned; add `assets/images-sizes/` and
+   `assets/images-sizes-trash/` to the site's `.gitignore` or deployment excludes, like
+   `content/media-dimensions.json` (pixel-size cache).
+3. Sites with their own `includes/footer.php`: the core footer loads `js/rich-editor.js` and
+   `css/rich-editor.css` for logged-in admins, and `js/audio-player.js` only when an audio block
+   was rendered (`$GLOBALS['nibblyAudioRendered']`) or an admin is logged in. Copy those lines.
+4. Site templates that print images: `editableImage()` and `editableImageSplit()` take an options
+   array as a new last parameter (`sizes`, `class`, `lazy`); existing calls keep working.
+   `nibblyImageTag($src, $alt, $options)` renders visitor images with `srcset`/`sizes`.
+5. Optional: `NIBBLY_LOCAL_TOOLS` in `admin/config.php` (default `true` when missing) enables the
+   "Show in Finder" / "Open" / "Copy local path" buttons of the media library on loopback requests
+   only; it has no effect on a web host. Sites may add `includes/site-media-states.php`,
+   `includes/site-media-hooks.php` and `includes/site-maintenance.php` (all optional).
+
 
 Version 2.8.0 builds posts from blocks (gallery, kicker, cover, sidebar, footnotes, backups per
 post), lets pages be moved with their subpages, restructures the page editor and adds nested
