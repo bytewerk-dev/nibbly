@@ -142,6 +142,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
     <meta name="csrf-token" content="<?php echo htmlspecialchars($csrfToken); ?>">
     <link rel="stylesheet" href="fonts.css?v=<?php echo @filemtime(__DIR__ . '/fonts.css') ?: time(); ?>">
     <link rel="stylesheet" href="style.css?v=<?php echo @filemtime(__DIR__ . '/style.css') ?: time(); ?>">
+    <link rel="stylesheet" href="../css/rich-editor.css?v=<?php echo @filemtime(__DIR__ . '/../css/rich-editor.css') ?: time(); ?>">
     <link rel="stylesheet" href="../css/image-manager.css?v=<?php echo @filemtime(__DIR__ . '/../css/image-manager.css') ?: time(); ?>">
     <link rel="stylesheet" href="../css/nb-select.css?v=<?php echo @filemtime(__DIR__ . '/../css/nb-select.css') ?: time(); ?>">
     <?php if ($_aiDashboardCopilotAvailable && is_file(__DIR__ . '/../css/ai-copilot.css')): ?>
@@ -3343,6 +3344,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
     <script src="../js/revision-client.js?v=<?php echo filemtime(__DIR__ . '/../js/revision-client.js'); ?>"></script>
     <script src="../js/nb-select.js?v=<?php echo @filemtime(__DIR__ . '/../js/nb-select.js') ?: time(); ?>"></script>
     <script src="../js/image-manager.js?v=<?php echo @filemtime(__DIR__ . '/../js/image-manager.js') ?: time(); ?>"></script>
+    <script src="../js/rich-editor.js?v=<?php echo @filemtime(__DIR__ . '/../js/rich-editor.js') ?: time(); ?>"></script>
     <script>
     <?php require __DIR__ . '/dashboard/scripts/bootstrap.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/page-writing.php'; ?>

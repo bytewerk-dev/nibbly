@@ -1,13 +1,14 @@
 <?php
 /**
  * Block renderer: gallery
- * Data: images => [{src, alt, caption, credit}], layout => column|grid|full
+ * Data: images => [{src, alt, caption, credit}], layout => column|grid|natural|full
  *
  * column: image column the text flows around (a swipeable strip on phones), grid: tiles,
- * full: stacked at the full width of the content box. Every image links to its file
- * (data-lightbox, opened by js/lightbox.js). The optional internal key "_attrs" carries
- * extra attributes for the container (editor hooks of a post block, see news-helper.php);
- * it is never stored.
+ * natural: tiles that keep each image's aspect ratio (covers, portraits), full: stacked at
+ * the full width of the content box. Every image links to its file (data-lightbox, opened by
+ * js/lightbox.js). The optional internal key "_attrs" carries extra attributes for the
+ * container (editor hooks of a post block, see news-helper.php); it is never stored. A page
+ * section gets the same hooks in edit mode, so the visual editor edits it in place.
  *
  * @param array $section Section data
  * @param bool $editable Whether in edit mode
@@ -16,10 +17,13 @@
 
 $images = is_array($section['images'] ?? null) ? $section['images'] : [];
 $attrs = (string)($section['_attrs'] ?? '');
+if ($editable && $attrs === '' && $page !== '') {
+    $attrs = ' data-news-block="sections.' . (int)$index . '" data-block-type="gallery"';
+}
 if (!$images && $attrs === '') {
     return '';
 }
-$layout = in_array($section['layout'] ?? '', ['grid', 'full'], true) ? $section['layout'] : 'column';
+$layout = in_array($section['layout'] ?? '', ['grid', 'natural', 'full'], true) ? $section['layout'] : 'column';
 
 $html = '<div class="block-gallery block-gallery--' . $layout . '"' . $attrs . '>' . "\n";
 foreach ($images as $i => $image) {

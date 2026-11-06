@@ -176,7 +176,6 @@
         currentSection: null,
         currentSectionIndex: null,
         currentContentPage: null,
-        isHtmlMode: false,
         contentData: {},
         contentRevisions: {},
         saving: false,
@@ -280,6 +279,7 @@
         extract: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M16.96 20.883 H2.714 c-1.09 0 -1.974 -0.884 -1.974 -1.974 V5.09 C0.74 4 1.624 3.117 2.714 3.117 h13.818 c1.09 0 1.974 0.884 1.974 1.974 V14.961 M6.17 7.065 c0.817 0 1.481 0.663 1.481 1.481 s-0.663 1.481 -1.481 1.481 s-1.481 -0.663 -1.481 -1.481 S5.351 7.065 6.17 7.065 z M18.507 14.961 L13.572 10.026 L2.714 20.883 M15.149 17.253 h8.111 M21.461 15.454 l1.799 1.799 M21.461 19.052 l1.799 -1.799"/></g></svg>',
         image: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></g></svg>',
         link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></g></svg>',
+        unlink: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/><path d="m3 3 18 18"/></g></svg>',
         card: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></g></svg>',
         upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/></g></svg>',
         folder: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"/></g></svg>',
@@ -1250,6 +1250,8 @@
         // Enable news post inline editing
         if (EditorConfig.isNewsPost) {
             enableNewsPostEditing();
+        } else {
+            enablePageBlockEditing();
         }
 
         // Register keyboard shortcuts
@@ -1285,6 +1287,8 @@
         // Disable news post editing
         if (EditorConfig.isNewsPost) {
             disableNewsPostEditing();
+        } else {
+            disablePageBlockEditing();
         }
 
         // If there were unsaved changes, reload to restore original content
@@ -1775,22 +1779,11 @@
                 </div>`;
 
             case 'wysiwyg':
-                return `<div class="editor-field" id="${fid}" style="display:none;">
-                    <label>${field.label}</label>
-                    <div class="editor-toolbar">
-                        <button type="button" onclick="InlineEditor.execCommand('bold')" title="${t('bold')}"><b>B</b></button>
-                        <button type="button" onclick="InlineEditor.execCommand('italic')" title="${t('italic')}"><i>I</i></button>
-                        <button type="button" onclick="InlineEditor.insertLink()" title="${t('insert_link')}">🔗</button>
-                        <button type="button" onclick="InlineEditor.toggleFootnote()" title="${t('insert_footnote')}">${FOOTNOTE_ICON}</button>
-                        <button type="button" onclick="InlineEditor.cleanHtml()" title="${t('clean_formatting')}" class="editor-toolbar-eraser">${Icons.eraser}</button>
-                        <span class="editor-toolbar-separator"></span>
-                        <label class="editor-toggle">
-                            <input type="checkbox" id="editor-html-toggle" onchange="InlineEditor.toggleHtmlMode()">
-                            <span>HTML</span>
-                        </label>
-                    </div>
-                    <div id="editor-wysiwyg" class="editor-wysiwyg" contenteditable="true"></div>
-                    <textarea id="editor-html" class="editor-html" style="display:none;"></textarea>
+                // The same Visual / Code editor as the dashboard (js/rich-editor.js) takes over the
+                // field once the dialog is in the DOM; the textarea stays the source that is read back
+                return `<div class="editor-field html-editor" id="${fid}" style="display:none;">
+                    <label for="${iid}">${field.label}</label>
+                    <textarea id="${iid}" class="section-field" data-key="${escHtml(field.key)}" rows="8"></textarea>
                 </div>`;
 
             case 'select':
@@ -1826,10 +1819,11 @@
                 return `<div class="editor-field" id="${fid}" style="display:none;">
                     <label>${field.label}</label>
                     <div class="editor-image-row">
-                        <input type="text" id="${iid}" placeholder="${escHtml(t('image.path_placeholder'))}" readonly>
+                        <input type="text" id="${iid}" placeholder="${escHtml(t('image.path_placeholder'))}" oninput="InlineEditor.updateImagePreview('${iid}')">
                         <button type="button" class="editor-btn editor-btn-secondary" onclick="InlineEditor.openImageManager(null, '${iid}')">
                             ${Icons.folder} ${t('image_manager')}
                         </button>
+                        <button type="button" class="editor-btn editor-btn-secondary editor-btn-icon" onclick="InlineEditor.clearImageField('${iid}')" aria-label="${escHtml(t('image.remove'))}" data-editor-tooltip="${escHtml(t('image.remove'))}">${Icons.delete}</button>
                     </div>
                     <div id="editor-image-preview-${field.key}" class="editor-image-preview"></div>
                 </div>`;
@@ -1837,7 +1831,7 @@
             case 'audio':
                 return `<div class="editor-field" id="${fid}" style="display:none;">
                     <label>${field.label}</label>
-                    <input type="text" id="${iid}" placeholder="${escHtml(t('audio.path_placeholder'))}" readonly>
+                    <input type="text" id="${iid}" placeholder="${escHtml(t('audio.path_placeholder'))}" oninput="InlineEditor.updateAudioPreview()">
                     <div class="editor-audio-buttons">
                         <label class="editor-btn editor-btn-primary editor-btn-inline">
                             <input type="file" id="editor-audio-upload-input" accept=".mp3,.wav,.ogg,.m4a,.aac,.flac,audio/*" style="display:none;">
@@ -2324,10 +2318,11 @@
                         <div id="group-editor-image-preview-${index}" class="editor-image-preview group-image-preview"></div>
                         <div class="group-image-controls">
                             <div class="editor-image-row group-image-path-row">
-                                <input type="text" id="${srcId}" placeholder="${escHtml(t('image.path_placeholder'))}" readonly>
+                                <input type="text" id="${srcId}" placeholder="${escHtml(t('image.path_placeholder'))}" data-group-image-src="${index}">
                                 <button type="button" class="editor-btn editor-btn-secondary" data-group-image-pick="${index}">
                                     ${Icons.folder} ${t('image_manager')}
                                 </button>
+                                <button type="button" class="editor-btn editor-btn-secondary editor-btn-icon" data-group-image-clear="${index}" aria-label="${escHtml(t('image.remove'))}" data-editor-tooltip="${escHtml(t('image.remove'))}">${Icons.delete}</button>
                             </div>
                             <input type="text" id="${altId}" placeholder="${escHtml(t('image.alt_text'))}" class="group-image-alt">
                         </div>
@@ -2382,6 +2377,8 @@
             </div>
         `;
         document.body.appendChild(modal);
+        modal.querySelector('.editor-modal-content').classList.add('nb-rich-host');
+        modal.querySelectorAll('.editor-field.html-editor').forEach((fieldEl, i) => window.NbRichEditor?.richEditor(fieldEl, 'dialog-' + i, { markDirty() {}, pushUndoSnapshot() {} }));
         setupDialogA11y(modal, 'editor-modal-title', '.editor-modal-body input, .editor-modal-body textarea, .editor-modal-body select, .editor-close-btn');
 
         modal.querySelector('.editor-modal-backdrop').addEventListener('click', closeModal);
@@ -2530,6 +2527,20 @@
                     if (srcInput) srcInput.value = imagePath;
                     updateGroupImagePreview(index, imagePath);
                 }, null, currentSrcInput ? currentSrcInput.value : null);
+            });
+        });
+        // Typed path: preview follows; clear button empties path, alt text and preview
+        body.querySelectorAll('[data-group-image-src]').forEach(input => {
+            input.addEventListener('input', () => updateGroupImagePreview(parseInt(input.dataset.groupImageSrc, 10), input.value.trim()));
+        });
+        body.querySelectorAll('[data-group-image-clear]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const index = parseInt(btn.dataset.groupImageClear, 10);
+                const srcInput = document.getElementById(groupFieldIds(index, 'src').id);
+                const altInput = document.getElementById(groupFieldIds(index, 'alt').id);
+                if (srcInput) srcInput.value = '';
+                if (altInput) altInput.value = '';
+                updateGroupImagePreview(index, '');
             });
         });
 
@@ -2847,6 +2858,10 @@
                 <button type="button" class="overlay-btn overlay-btn-delete nibbly-editor-control-btn" data-editor-tooltip="${escHtml(t('delete'))}" aria-label="${escHtml(t('delete'))}" data-action="delete">${Icons.delete}</button>
                 <span class="overlay-drag-handle nibbly-editor-drag-handle" data-editor-tooltip="${escHtml(t('drag_reorder'))}" aria-label="${escHtml(t('drag_reorder'))}">${Icons.drag}</span>
             `;
+            pageBlockPage = contentPage;
+            overlay.querySelector('.overlay-btn-delete').before(...pageSectionTools(wrapper, type, contentPage));
+            // gallery, divider: no fields, nothing for the dialog
+            if (!(BlockTypes[type]?.fields || []).length) overlay.querySelector('.overlay-btn-edit').remove();
             wrapper.appendChild(overlay);
             keepOverlayOpenWhileCrossing(wrapper, overlay);
 
@@ -2900,7 +2915,11 @@
 
                 const currentIndex = parseInt(wrapper.dataset.sectionIndex, 10);
                 const action = btn.dataset.action;
-                if (action === 'edit') {
+                if (action === 'edit' && wrapper.querySelector('[data-news-block]')) {
+                    // rendered with the post block markup: same dialog, saved and re-rendered like the other block tools
+                    pageBlockPage = contentPage;
+                    editNewsBlockAt('sections', currentIndex);
+                } else if (action === 'edit') {
                     const pageData = EditorConfig.contentData[contentPage];
                     if (pageData && pageData.sections && pageData.sections[currentIndex]) {
                         openEditor(currentIndex, pageData.sections[currentIndex], contentPage);
@@ -3078,6 +3097,73 @@
     // DRAG & DROP
     // ============================================================
 
+    // Above this height a dragged element is shown as a small label: its full image would hide the drop position
+    const DRAG_COMPACT_HEIGHT = 240;
+    const DRAG_SCROLL_ZONE = 80;
+    const DRAG_SCROLL_MAX_SPEED = 1000; // px per second, independent of the display's frame rate
+    const DRAG_SCROLL_MIN_SPEED = 120;
+
+    // Lower edge of the fixed bars: the scroll zone starts below them, a pointer on them is no drop position
+    function dragScrollTopEdge() {
+        let edge = 0;
+        document.querySelectorAll('#admin-bar, header').forEach(bar => {
+            const position = getComputedStyle(bar).position;
+            if (position === 'fixed' || position === 'sticky') edge = Math.max(edge, bar.getBoundingClientRect().bottom);
+        });
+        return edge;
+    }
+
+    // Sets the drag image and scrolls the page while the pointer is near the top or bottom edge.
+    // Runs on its own frames because browsers send dragover irregularly while the pointer rests.
+    function beginDragAssist(event, element, type) {
+        const rect = element.getBoundingClientRect();
+        let marker = null;
+        if (rect.height > DRAG_COMPACT_HEIGHT) {
+            marker = document.createElement('div');
+            marker.className = 'nibbly-drag-marker';
+            marker.textContent = element.textContent.trim().replace(/\s+/g, ' ').slice(0, 60) || BlockTypes[type]?.label || t('drag_reorder');
+            document.body.appendChild(marker); // has to be rendered to serve as drag image; the CSS keeps it off-screen
+            event.dataTransfer.setDragImage(marker, 14, 14);
+        } else {
+            event.dataTransfer.setDragImage(element, 20, 20);
+        }
+
+        let pointerY = null;
+        let frame = null;
+        let lastTime = null;
+        let carry = 0; // fractions of a pixel, or slow scrolling would be lost to rounding
+        const onOver = e => { pointerY = e.clientY; };
+        const tick = time => {
+            const elapsed = lastTime === null ? 0 : Math.min(time - lastTime, 100);
+            lastTime = time;
+            if (pointerY !== null) {
+                const top = dragScrollTopEdge() + DRAG_SCROLL_ZONE;
+                const bottom = window.innerHeight - DRAG_SCROLL_ZONE;
+                const depth = pointerY < top ? pointerY - top : pointerY > bottom ? pointerY - bottom : 0;
+                if (depth) {
+                    const speed = Math.max(DRAG_SCROLL_MIN_SPEED, DRAG_SCROLL_MAX_SPEED * Math.min(1, Math.abs(depth) / DRAG_SCROLL_ZONE));
+                    carry += Math.sign(depth) * speed * elapsed / 1000;
+                    const step = Math.trunc(carry);
+                    carry -= step;
+                    // not the page's smooth scrolling: it would restart on every frame and hardly move
+                    if (step) window.scrollBy({ top: step, behavior: 'instant' });
+                }
+            }
+            frame = requestAnimationFrame(tick);
+        };
+        const stop = () => {
+            cancelAnimationFrame(frame);
+            document.removeEventListener('dragover', onOver, true);
+            document.removeEventListener('drop', stop, true);
+            document.removeEventListener('dragend', stop, true);
+            marker?.remove();
+        };
+        document.addEventListener('dragover', onOver, true);
+        document.addEventListener('drop', stop, true);
+        document.addEventListener('dragend', stop, true);
+        frame = requestAnimationFrame(tick);
+    }
+
     function handleDragStart(e) {
         if (!EditorConfig.editMode) { e.preventDefault(); return; }
         const wrapper = e.target.closest('.editable-section');
@@ -3101,10 +3187,7 @@
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', EditorConfig.draggedIndex.toString());
 
-        // For better visual feedback
-        if (e.dataTransfer.setDragImage && wrapper) {
-            e.dataTransfer.setDragImage(wrapper, 20, 20);
-        }
+        beginDragAssist(e, wrapper, wrapper.dataset.sectionType);
     }
 
     function handleDragEnd(e) {
@@ -3213,9 +3296,13 @@
                 refEl.parentNode.insertBefore(movedEl, refEl);
             }
             // Update indices
+            disablePageBlockEditing();
             document.querySelectorAll(`.editable-section[data-content-page="${contentPage}"]`).forEach((el, i) => {
                 el.dataset.sectionIndex = i;
+                const hook = el.querySelector('[data-news-block]');
+                if (hook) hook.dataset.newsBlock = 'sections.' + i;
             });
+            enablePageBlockEditing();
         }
 
         showToast(t('toast.order_changed'), 'success');
@@ -3364,6 +3451,7 @@
 
         if (EditorConfig.editMode) {
             document.body.classList.add('edit-mode-active', 'visual-editing');
+            enablePageBlockEditing();
         }
 
         const focused = newArea.querySelectorAll('.editable-section')[focusIndex];
@@ -3459,12 +3547,9 @@
                 break;
 
             case 'wysiwyg': {
-                const htmlToggle = document.getElementById('editor-html-toggle');
-                if (htmlToggle) htmlToggle.checked = false;
-                const wysiwyg = document.getElementById('editor-wysiwyg');
-                const htmlArea = document.getElementById('editor-html');
-                if (wysiwyg) { wysiwyg.style.display = 'block'; wysiwyg.innerHTML = value; }
-                if (htmlArea) { htmlArea.style.display = 'none'; htmlArea.value = value; }
+                const rich = fieldEl._nbRich;
+                if (rich) rich.setValue(value);
+                else document.getElementById(iid).value = value;
                 break;
             }
 
@@ -3506,11 +3591,12 @@
             case 'image':
                 return (document.getElementById(iid)?.value || '').trim();
 
-            case 'wysiwyg':
-                if (EditorConfig.isHtmlMode) {
-                    return document.getElementById('editor-html')?.value || '';
-                }
-                return document.getElementById('editor-wysiwyg')?.innerHTML || '';
+            case 'wysiwyg': {
+                // The rich-text module (js/rich-editor.js) renames the textarea; its API holds the current value.
+                const rich = document.getElementById(editorFieldIds(field).fid)?._nbRich;
+                if (rich) return rich.getValue() || '';
+                return document.getElementById(iid)?.value || '';
+            }
 
             case 'select':
                 return document.getElementById(iid)?.value || '';
@@ -3537,7 +3623,6 @@
         EditorConfig.currentSectionIndex = index;
         EditorConfig.currentSection = { ...section };
         EditorConfig.currentContentPage = contentPage;
-        EditorConfig.isHtmlMode = false;
 
         const modal = document.getElementById('editor-modal');
         const modalTitle = document.getElementById('editor-modal-title');
@@ -3557,7 +3642,8 @@
             return;
         }
 
-        modalTitle.textContent = formatEditorTitle(def.label);
+        // "Edit section" rather than "Edit Text": the dialog holds title, text and image, not one field
+        modalTitle.textContent = t('edit_section_title') !== 'edit_section_title' ? t('edit_section_title') : formatEditorTitle(def.label);
 
         // Show and populate fields from registry
         for (const field of (def.fields || [])) {
@@ -3588,11 +3674,6 @@
     // ============================================================
     // WYSIWYG FUNKTIONEN
     // ============================================================
-
-    function execCommand(command) {
-        document.execCommand(command, false, null);
-        document.getElementById('editor-wysiwyg').focus();
-    }
 
     /**
      * Sanitizes an HTML string: removes style/class attributes, unwraps disallowed tags.
@@ -3654,16 +3735,11 @@
         selection.addRange(next);
     }
 
-    function toggleFootnote() {
-        const wysiwyg = document.getElementById('editor-wysiwyg');
-        if (wysiwyg) { wysiwyg.focus(); toggleFootnoteIn(wysiwyg); }
-    }
-
     // Mirrors includes/html-sanitizer.php (the server's sanitizer remains final): the same tags and
     // attributes survive inline editing, so site components (classes, ids, tables, figures) keep working.
     const SANITIZE_TAGS = new Set('p br strong b em i u a ul ol li h1 h2 h3 h4 h5 h6 blockquote span div figure figcaption img table thead tbody tfoot tr th td caption sup sub hr pre code small cite q mark s del ins abbr dl dt dd details summary video audio source'.split(' '));
     const SANITIZE_DROP = new Set('script style iframe object embed svg math template form input button textarea select link meta base'.split(' '));
-    const SANITIZE_ATTRS = { a: ['href', 'target', 'rel'], img: ['src', 'alt', 'width', 'height', 'loading', 'decoding'], ol: ['start', 'reversed'], td: ['colspan', 'rowspan', 'scope'], th: ['colspan', 'rowspan', 'scope'], video: ['src', 'controls', 'preload', 'poster', 'playsinline', 'muted', 'loop'], audio: ['src', 'controls', 'preload', 'loop'], source: ['src', 'type'], details: ['open'], abbr: ['title'] };
+    const SANITIZE_ATTRS = { a: ['href', 'target', 'rel', 'download'], img: ['src', 'alt', 'width', 'height', 'loading', 'decoding'], ol: ['start', 'reversed'], td: ['colspan', 'rowspan', 'scope'], th: ['colspan', 'rowspan', 'scope'], video: ['src', 'controls', 'preload', 'poster', 'playsinline', 'muted', 'loop'], audio: ['src', 'controls', 'preload', 'loop'], source: ['src', 'type'], details: ['open'], abbr: ['title'] };
     const safeUrl = (value, schemes) => {
         const probe = value.replace(/[\x00-\x20\x7f]+/g, '');
         return !probe.includes('\\') && !probe.startsWith('//') && (!/^[a-z][a-z0-9+.-]*:/i.test(probe) || schemes.test(probe));
@@ -3694,16 +3770,13 @@
                             if (name === 'target' && !['_blank', '_self'].includes(attr.value)) child.removeAttribute(attr.name);
                         });
                         if ((tagName === 'img' || tagName === 'source') && !child.hasAttribute('src')) { node.removeChild(child); return; }
-                        // Auto-set target="_blank" for external links
+                        // External links open in a new tab unless the link dialog set target="_self";
+                        // a target chosen for an internal link stays
                         if (tagName === 'a') {
                             const href = child.getAttribute('href') || '';
-                            if (/^https?:\/\//i.test(href)) {
-                                child.setAttribute('target', '_blank');
-                                child.setAttribute('rel', 'noopener');
-                            } else {
-                                child.removeAttribute('target');
-                                child.removeAttribute('rel');
-                            }
+                            if (/^https?:\/\//i.test(href) && !child.hasAttribute('target')) child.setAttribute('target', '_blank');
+                            if (child.getAttribute('target') === '_blank') child.setAttribute('rel', 'noopener');
+                            else child.removeAttribute('rel');
                         }
                         cleanNode(child);
                     } else {
@@ -3724,13 +3797,6 @@
     /**
      * Cleans HTML in the WYSIWYG modal editor (uses sanitizeHtmlString internally)
      */
-    function cleanHtml() {
-        const wysiwyg = document.getElementById('editor-wysiwyg');
-        wysiwyg.innerHTML = sanitizeHtmlString(wysiwyg.innerHTML);
-        wysiwyg.focus();
-        showToast(t('toast.formatting_cleaned'), 'success');
-    }
-
     // ============================================================
     // FLOATING TOOLBAR (inline rich text editing)
     // ============================================================
@@ -3755,6 +3821,7 @@
             <button type="button" data-command="bold" data-editor-tooltip="${escHtml(t('bold'))} (Ctrl+B)" aria-label="${escHtml(t('bold'))} (Ctrl+B)"><b>B</b></button>
             <button type="button" data-command="italic" data-editor-tooltip="${escHtml(t('italic'))} (Ctrl+I)" aria-label="${escHtml(t('italic'))} (Ctrl+I)"><i>I</i></button>
             <button type="button" data-action="link" data-editor-tooltip="${escHtml(t('insert_link'))}" aria-label="${escHtml(t('insert_link'))}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="16" height="16"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></g></svg></button>
+            <button type="button" data-action="unlink" data-editor-tooltip="${escHtml(t('remove_link'))}" aria-label="${escHtml(t('remove_link'))}">${Icons.unlink}</button>
             <button type="button" data-action="footnote" data-editor-tooltip="${escHtml(t('insert_footnote'))}" aria-label="${escHtml(t('insert_footnote'))}">${FOOTNOTE_ICON}</button>
             <button type="button" data-command="removeFormat" data-editor-tooltip="${escHtml(t('clean_formatting'))}" aria-label="${escHtml(t('clean_formatting'))}">${Icons.eraser}</button>
             <span class="floating-toolbar-separator"></span>
@@ -3836,6 +3903,11 @@
             styleButton.setAttribute('aria-expanded', 'false');
         };
         toolbar._syncNewsStyle = (el) => {
+            const pageRef = pageTextSectionRef(el);
+            if (pageRef) {
+                setStyleState(pageRef.section.style ? String(pageRef.section.style) : '');
+                return;
+            }
             const ref = newsBlockRef(el);
             const block = Number.isInteger(ref.index) ? newsBlockList(ref.field)[ref.index] : null;
             setStyleState(block && block.style ? String(block.style) : '');
@@ -3854,6 +3926,10 @@
             e.preventDefault();
             e.stopPropagation();
             closeStyleMenu();
+            if (pageTextSectionRef(activeHtmlField)) {
+                setPageSectionStyle(activeHtmlField, item.dataset.style);
+                return;
+            }
             const ref = newsBlockRef(activeHtmlField);
             if (!Number.isInteger(ref.index)) return;
             const value = item.dataset.style;
@@ -3884,10 +3960,16 @@
                 activeHtmlField.focus();
             } else if (action === 'link') {
                 insertLinkInField(activeHtmlField);
+            } else if (action === 'unlink') {
+                removeLinkInField(activeHtmlField);
             } else if (action === 'footnote') {
                 toggleFootnoteIn(activeHtmlField);
                 activeHtmlField.focus();
             } else if (action === 'split') {
+                if (pageTextSectionRef(activeHtmlField)) {
+                    splitPageSection(activeHtmlField);
+                    return;
+                }
                 const parts = String(activeHtmlField.dataset.newsBlock || '').split('.');
                 splitNewsBlockAt(parts[0], parseInt(parts[1], 10), { el: activeHtmlField });
             } else if (action === 'html-source') {
@@ -3909,14 +3991,16 @@
 
     function insertLinkInField(field) {
         const selection = window.getSelection();
-        let savedRange = null;
-
-        if (selection.rangeCount > 0) {
-            savedRange = selection.getRangeAt(0).cloneRange();
-        }
-
+        const savedRange = selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
         const selectedText = selection.toString();
-        if (!selectedText) {
+
+        // Caret or selection inside an existing link: edit that link
+        const container = savedRange ? savedRange.commonAncestorContainer : null;
+        const containerEl = container && (container.nodeType === 1 ? container : container.parentElement);
+        const closestAnchor = containerEl ? containerEl.closest('a') : null;
+        const anchor = closestAnchor && field.contains(closestAnchor) ? closestAnchor : null;
+
+        if (!anchor && !selectedText) {
             showToast(t('toast.select_text_first'), 'error');
             return;
         }
@@ -3925,10 +4009,12 @@
         createLinkEditorDialog();
         initPagePicker('link-editor-page-select', 'link-editor-href');
 
-        document.getElementById('link-editor-text').value = selectedText;
-        document.getElementById('link-editor-text').readOnly = true;
-        document.getElementById('link-editor-text').style.opacity = '0.6';
-        syncPagePicker('link-editor-page-select', 'link-editor-href', '');
+        const originalText = anchor ? anchor.textContent : selectedText;
+        document.getElementById('link-editor-text').value = originalText;
+        syncPagePicker('link-editor-page-select', 'link-editor-href', anchor ? anchor.getAttribute('href') || '' : '');
+        document.getElementById('link-editor-target').checked = !!anchor && anchor.getAttribute('target') === '_blank';
+        document.getElementById('link-editor-download').checked = !!anchor && anchor.hasAttribute('download');
+        updateDownloadCheckboxState();
 
         const modal = document.getElementById('link-editor-modal');
         modal.classList.add('active');
@@ -3936,7 +4022,7 @@
 
         // Override save to insert link via execCommand
         modal._editTarget = null;
-        modal._inlineInsert = { field, savedRange };
+        modal._inlineInsert = { field, savedRange, anchor, originalText };
 
         setTimeout(() => {
             const select = document.getElementById('link-editor-page-select');
@@ -3944,20 +4030,79 @@
         }, 100);
     }
 
+    // With only the caret in a link the browser's unlink does nothing: select the whole link first
+    function removeLinkInField(field) {
+        const selection = window.getSelection();
+        if (selection.rangeCount && selection.isCollapsed) {
+            const node = selection.getRangeAt(0).startContainer;
+            const anchor = (node.nodeType === 1 ? node : node.parentElement).closest('a');
+            if (anchor && field.contains(anchor)) selection.selectAllChildren(anchor);
+        }
+        document.execCommand('unlink', false, null);
+        field.focus();
+    }
+
+    // Target, rel and download of a link in a text field. An external link without "new tab"
+    // gets target="_self", otherwise the sanitizer would open it in a new tab again.
+    function applyInlineLinkSettings(anchor, href, target, download) {
+        anchor.setAttribute('href', href);
+        if (target === '_blank') {
+            anchor.setAttribute('target', '_blank');
+            anchor.setAttribute('rel', 'noopener');
+        } else {
+            anchor.removeAttribute('rel');
+            if (/^https?:\/\//i.test(href)) anchor.setAttribute('target', '_self');
+            else anchor.removeAttribute('target');
+        }
+        if (download) anchor.setAttribute('download', '');
+        else anchor.removeAttribute('download');
+    }
+
+    function saveInlineLink({ field, savedRange, anchor, originalText }, text, href, target, download) {
+        field.focus();
+        const textChanged = text.trim() !== '' && text !== originalText;
+        if (anchor) {
+            if (!href) {
+                // no target left: the link goes, its text stays
+                anchor.replaceWith(...anchor.childNodes);
+            } else {
+                applyInlineLinkSettings(anchor, href, target, download);
+                if (textChanged) anchor.textContent = text;
+            }
+        } else if (href && savedRange) {
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(savedRange);
+            // A selection across elements yields several links; the marker finds all of them
+            const marker = 'nibbly-link-' + Date.now();
+            document.execCommand('createLink', false, marker);
+            const anchors = Array.from(field.querySelectorAll('a')).filter(a => a.getAttribute('href') === marker);
+            anchors.forEach(a => applyInlineLinkSettings(a, href, target, download));
+            if (textChanged && anchors.length) {
+                anchors[0].textContent = text;
+                anchors.slice(1).forEach(a => a.remove());
+            }
+        }
+        // attribute changes fire no input event; post blocks mark themselves dirty on it
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
     function positionFloatingToolbar(field) {
         const toolbar = createFloatingToolbar();
         const rect = field.getBoundingClientRect();
         const isNewsBlock = field.hasAttribute('data-news-block');
-        toolbar.querySelectorAll('[data-news-only]').forEach(node => { node.hidden = !isNewsBlock; });
-        if (isNewsBlock && toolbar._syncNewsStyle) toolbar._syncNewsStyle(field);
+        const hasBlockTools = isNewsBlock || !!pageTextSectionRef(field);
+        toolbar.querySelectorAll('[data-news-only]').forEach(node => { node.hidden = !hasBlockTools; });
+        if (hasBlockTools && toolbar._syncNewsStyle) toolbar._syncNewsStyle(field);
         toolbar.style.display = 'flex';
 
         // Measure toolbar
         const tbRect = toolbar.getBoundingClientRect();
         const gap = 8;
 
-        // Center horizontally above field
-        let left = rect.left + (rect.width / 2) - (tbRect.width / 2);
+        // The block's own bar sits at the top right: start at the field's left edge instead of centering
+        const blockBar = floatingToolbarBlockBar(field);
+        let left = blockBar ? rect.left : rect.left + (rect.width / 2) - (tbRect.width / 2);
         let top = rect.top - tbRect.height - gap;
 
         // If no room above, place below; a field taller than the viewport gets the
@@ -3973,8 +4118,23 @@
         // Keep within viewport horizontally
         left = Math.max(8, Math.min(left, window.innerWidth - tbRect.width - 8));
 
+        // Narrow fields: both bars still collide, so this one moves above the block bar (below it when the admin bar is in the way)
+        if (blockBar) {
+            const bar = blockBar.getBoundingClientRect();
+            if (left < bar.right && left + tbRect.width > bar.left && top < bar.bottom && top + tbRect.height > bar.top) {
+                top = bar.top - tbRect.height - gap;
+                if (top < 50) top = bar.bottom + gap;
+            }
+        }
+
         toolbar.style.left = left + 'px';
         toolbar.style.top = top + 'px';
+    }
+
+    function floatingToolbarBlockBar(field) {
+        return field.closest('[data-news-block]')?.querySelector(':scope > .news-block-tools')
+            || field.closest('.editable-section')?.querySelector(':scope > .nibbly-editor-section-overlay')
+            || null;
     }
 
     function hideFloatingToolbar() {
@@ -4031,7 +4191,7 @@
                 // Check if focus moved to toolbar or prompt dialog
                 const active = document.activeElement;
                 if (floatingToolbar && floatingToolbar.contains(active)) return;
-                if (document.querySelector('.prompt-dialog-overlay')) return;
+                if (document.querySelector('.prompt-dialog-overlay, #link-editor-modal.active')) return;
                 if (field.isContentEditable) {
                     finishInlineHtmlEdit(field, originalHtml, false);
                 }
@@ -4089,60 +4249,6 @@
         }
         delete field._originalHtml;
         delete field._scrollHandler;
-    }
-
-    function insertLink() {
-        const wysiwyg = document.getElementById('editor-wysiwyg');
-
-        // Save current selection before dialog opens
-        const selection = window.getSelection();
-        let savedRange = null;
-
-        if (selection.rangeCount > 0) {
-            savedRange = selection.getRangeAt(0).cloneRange();
-        }
-
-        // Check if text is selected
-        const selectedText = selection.toString();
-        if (!selectedText) {
-            showToast(t('toast.select_text_first'), 'error');
-            return;
-        }
-
-        showPromptDialog(t('insert_link'), t('insert_link'), 'https://', (url) => {
-            if (url && savedRange) {
-                // Set focus on editor
-                wysiwyg.focus();
-
-                // Selektion wiederherstellen
-                const newSelection = window.getSelection();
-                newSelection.removeAllRanges();
-                newSelection.addRange(savedRange);
-
-                // Link erstellen
-                document.execCommand('createLink', false, url);
-            }
-        });
-    }
-
-    function toggleHtmlMode() {
-        const wysiwyg = document.getElementById('editor-wysiwyg');
-        const html = document.getElementById('editor-html');
-        const toggle = document.getElementById('editor-html-toggle');
-
-        EditorConfig.isHtmlMode = toggle.checked;
-
-        if (EditorConfig.isHtmlMode) {
-            html.value = formatHtml(wysiwyg.innerHTML);
-            wysiwyg.style.display = 'none';
-            html.style.display = 'block';
-            html.focus();
-        } else {
-            wysiwyg.innerHTML = html.value;
-            html.style.display = 'none';
-            wysiwyg.style.display = 'block';
-            wysiwyg.focus();
-        }
     }
 
     // ============================================================
@@ -4307,6 +4413,7 @@
                 if ((field.type === 'select' && value === '') || (field.type === 'checkbox' && !value)) delete section[field.key];
                 else section[field.key] = value;
             }
+            if (!section.title) delete section.titleTag;
             const onSave = EditorConfig.newsEditorSave;
             closeModal();
             onSave(section);
@@ -4397,6 +4504,22 @@
                 if (titleField) titleField.textContent = section.title || '';
                 const contentField = sectionEl.querySelector(fieldSelector('content'));
                 if (contentField && section.content !== undefined) contentField.innerHTML = section.content;
+                // Block image (optional field "image"): swap source and alt text in place. Position, size and
+                // style classes come from the site's renderer and only change after the page is reloaded.
+                const blockImg = sectionEl.querySelector('img' + fieldSelector('image'));
+                if (blockImg) {
+                    if (section.image) {
+                        if (blockImg.getAttribute('src') !== section.image) {
+                            blockImg.src = section.image;
+                            ['srcset', 'sizes', 'width', 'height'].forEach(a => blockImg.removeAttribute(a));
+                            const link = blockImg.closest('a');
+                            if (link && sectionEl.contains(link)) link.href = section.image;
+                        }
+                        blockImg.alt = section.imageAlt || '';
+                    } else {
+                        (blockImg.closest('figure') || blockImg).remove();
+                    }
+                }
                 break;
             }
             case 'quote': {
@@ -5360,6 +5483,14 @@
             // Reset text input state
             const textInput = document.getElementById('link-editor-text');
             if (textInput) { textInput.readOnly = false; textInput.style.opacity = '1'; }
+            // Back to the text field with its selection; it stays in edit mode while the dialog is open
+            const inlineInsert = modal._inlineInsert;
+            if (inlineInsert && inlineInsert.savedRange) {
+                inlineInsert.field.focus();
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(inlineInsert.savedRange);
+            }
             modal._inlineInsert = null;
         }
     }
@@ -5383,26 +5514,7 @@
 
         // Mode: inline insert (from floating toolbar)
         if (inlineInsert) {
-            const { field, savedRange } = inlineInsert;
-            if (newHref && savedRange) {
-                field.focus();
-                const sel = window.getSelection();
-                sel.removeAllRanges();
-                sel.addRange(savedRange);
-                document.execCommand('createLink', false, newHref);
-                // Apply target/download to the freshly-created <a>. execCommand
-                // wraps the selection; find the anchor at the current cursor.
-                const anchor = sel.anchorNode && sel.anchorNode.parentElement
-                    ? sel.anchorNode.parentElement.closest('a')
-                    : null;
-                if (anchor) {
-                    if (newTarget === '_blank') {
-                        anchor.setAttribute('target', '_blank');
-                        anchor.setAttribute('rel', 'noopener');
-                    }
-                    if (newDownload) anchor.setAttribute('download', '');
-                }
-            }
+            saveInlineLink(inlineInsert, newText, newHref, newTarget, newDownload);
             return;
         }
 
@@ -5722,6 +5834,7 @@
                     item.classList.add('dragging');
                     e.dataTransfer.effectAllowed = 'move';
                     e.dataTransfer.setData('text/plain', currentIndex.toString());
+                    beginDragAssist(e, item);
                     document.querySelectorAll('iframe').forEach(f => f.style.pointerEvents = 'none');
                 });
 
@@ -6580,7 +6693,7 @@
             if (m) previewId = 'editor-image-preview-' + m[1];
         } else {
             // Fallback: find any visible image input in the editor modal
-            input = document.querySelector('.editor-field[style*="block"] input[id^="editor-input-"][readonly]');
+            input = document.querySelector('.editor-field[style*="block"] input[id^="editor-input-"][id$="-image"]');
             if (input) {
                 inputId = input.id;
                 const m = inputId.match(/^editor-input-(.+?)-[^-]+$/);
@@ -6617,6 +6730,17 @@
         // The library preselects the current image
         const current = currentPath || (currentInput ? currentInput.value : null);
         NbImageManager.open(cb, current, { types: ['image'], type: 'image' });
+    }
+
+    /** Empties a block image field (path, preview and the matching alt-text field) so the block has no image. */
+    function clearImageField(inputId) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        input.value = '';
+        updateImagePreview(inputId);
+        const m = inputId.match(/^editor-input-(.+?)-image$/);
+        const alt = m ? (document.getElementById(`editor-input-${m[1]}Alt-input`) || document.getElementById('editor-input-alt-input')) : null;
+        if (alt) alt.value = '';
     }
 
     function closeImageManager() { NbImageManager.close(); }
@@ -6994,6 +7118,8 @@
     // data-news-blocks. Text, captions and the excerpt are edited in place and saved with "Speichern";
     // adding, moving and deleting blocks saves at once and reloads in edit mode (like page sections).
     // ------------------------------------------------------------
+    let pageBlockPage = null; // page whose sections the block tools work on (null on post pages)
+
     function newsBlockRefs(postEl) {
         return Array.from(postEl.querySelectorAll('[data-news-block]')).map(el => {
             const parts = String(el.dataset.newsBlock).split('.');
@@ -7002,6 +7128,7 @@
     }
 
     function newsBlockList(field) {
+        if (pageBlockPage) return EditorConfig.contentData[pageBlockPage].sections;
         if (!Array.isArray(EditorConfig.newsPostData[field])) EditorConfig.newsPostData[field] = [];
         return EditorConfig.newsPostData[field];
     }
@@ -7032,7 +7159,11 @@
         if (contentEl) data.content = newsEditableHtml(contentEl);
         if (authorEl) data.author = authorEl.textContent.trim().replace(/^by\s+/i, '');
         if (excerptEl) data.excerpt = newsUnwrapParagraph(newsEditableHtml(excerptEl));
-        newsBlockRefs(postEl).forEach(ref => {
+        collectNewsBlockFields(postEl);
+    }
+
+    function collectNewsBlockFields(container) {
+        newsBlockRefs(container).forEach(ref => {
             const block = newsBlockList(ref.field)[ref.index];
             if (!block) return;
             if (ref.type === 'text') {
@@ -7062,6 +7193,12 @@
     }
 
     async function newsStructuralChange(mutate) {
+        if (pageBlockPage) {
+            const area = pageBlockArea();
+            if (area) collectNewsBlockFields(area);
+            savePageSectionChange(pageBlockPage, mutate);
+            return;
+        }
         const postEl = document.querySelector('[data-news-post]');
         if (!postEl || !EditorConfig.newsPostData) return;
         collectNewsPostFields(postEl);
@@ -7128,6 +7265,38 @@
         openEditor(-1, block, '__news_post__');
     }
 
+    // The registry's defaults ("New text block", "Image caption") are for new blocks; an existing one opens with what it holds
+    function newsBlockForDialog(block) {
+        const copy = Object.assign({}, block);
+        (BlockTypes[block.type]?.fields || []).forEach(field => {
+            if (field.type !== 'select' && field.type !== 'checkbox' && copy[field.key] === undefined) copy[field.key] = '';
+        });
+        return copy;
+    }
+
+    function editNewsBlockAt(field, index) {
+        // unsaved typing goes into the dialog; saving collects from the DOM again, then the dialog's block replaces the stored one
+        if (pageBlockPage) {
+            const area = pageBlockArea();
+            if (area) collectNewsBlockFields(area);
+        } else {
+            const postEl = document.querySelector('[data-news-post]');
+            if (postEl) collectNewsPostFields(postEl);
+        }
+        const current = newsBlockList(field)[index];
+        if (!current) return;
+        openNewsBlockEditor(newsBlockForDialog(current), block => newsStructuralChange(() => { newsBlockList(field)[index] = block; }));
+    }
+
+    function toggleNewsBlockHiddenAt(field, index) {
+        newsStructuralChange(() => {
+            const block = newsBlockList(field)[index];
+            if (!block) return;
+            if (block.hidden) delete block.hidden;
+            else block.hidden = true;
+        });
+    }
+
     function moveNewsBlockAt(field, index, direction) {
         const list = newsBlockList(field);
         const target = index + direction;
@@ -7176,6 +7345,102 @@
             if (!block) return;
             block.content = before;
             list.splice(index + 1, 0, newsNewBlock('text', { content: after }));
+        });
+    }
+
+    // ------------------------------------------------------------
+    // The same tools for text sections of pages (field "sections.N.content"): split at the
+    // caret, merge with the next section, block style. They save at once and reload in edit
+    // mode, like adding and deleting page sections.
+    // ------------------------------------------------------------
+    function pageTextSectionRef(field) {
+        const match = /^sections\.(\d+)\.content$/.exec(field?.dataset?.field || '');
+        if (!match || field.hasAttribute('data-news-block')) return null;
+        const page = field.dataset.page;
+        const index = parseInt(match[1], 10);
+        const section = EditorConfig.contentData[page]?.sections?.[index];
+        return section && section.type === 'text' ? { page, index, section } : null;
+    }
+
+    function savePageSectionChange(page, mutate) {
+        if (activeHtmlField && !activeHtmlField.classList.contains('news-editable')) {
+            finishInlineHtmlEdit(activeHtmlField, activeHtmlField._originalHtml, false);
+        }
+        pushUndoState();
+        mutate(EditorConfig.contentData[page].sections);
+        EditorConfig.dirtyPages.add(page);
+        updateUndoRedoButtons();
+        saveStructuralChange(page, t('toast.saved'));
+    }
+
+    function splitPageSection(field) {
+        const ref = pageTextSectionRef(field);
+        const node = ref && newsSplitElement(field);
+        const before = node && node.previousElementSibling ? newsChildrenHtml(field, node, true) : '';
+        const after = before ? newsChildrenHtml(field, node, false) : '';
+        if (!before || !after) {
+            showToast(t('news_block.split_hint'), 'error');
+            return;
+        }
+        finishInlineHtmlEdit(field, field._originalHtml, false);
+        savePageSectionChange(ref.page, sections => {
+            sections[ref.index].content = before;
+            sections.splice(ref.index + 1, 0, Object.assign(createNewSection('text'), { title: '', content: after }));
+        });
+    }
+
+    function pageBlockArea() {
+        return document.querySelector(`.editable-content-area[data-content-page="${CSS.escape(pageBlockPage || '')}"]`);
+    }
+
+    // Image and gallery sections carry the hooks of post blocks (includes/block-renderers): same in-place editing
+    function enablePageBlockEditing() {
+        const area = pageBlockArea();
+        if (area) enableNewsBlockEditing(area, true);
+    }
+
+    function disablePageBlockEditing() {
+        const area = pageBlockArea();
+        if (area) disableNewsBlockEditing(area);
+    }
+
+    // Buttons of a page section's bar that it shares with post blocks; index read from the wrapper (survives reorder)
+    function pageSectionTools(wrapper, type, contentPage) {
+        const indexOf = () => parseInt(wrapper.dataset.sectionIndex, 10);
+        const sections = EditorConfig.contentData[contentPage]?.sections || [];
+        const up = newsToolButton(Icons.arrowUp, t('news_block.move_up'), () => moveNewsBlockAt('sections', indexOf(), -1));
+        const down = newsToolButton(Icons.arrowDown, t('news_block.move_down'), () => moveNewsBlockAt('sections', indexOf(), 1));
+        if (indexOf() === 0) up.disabled = true;
+        if (indexOf() >= sections.length - 1) down.disabled = true;
+        const tools = [up, down];
+        if (type === 'text') {
+            const merge = newsToolButton(NEWS_MERGE_ICON, t('news_block.merge'), () => mergePageSectionWithNext(contentPage, indexOf()));
+            if (sections[indexOf() + 1]?.type !== 'text') merge.disabled = true;
+            tools.push(merge);
+        }
+        if (wrapper.querySelector('[data-news-block]')) {
+            tools.push(...newsBlockTypeButtons({ field: 'sections', get index() { return indexOf(); }, type }));
+        }
+        return tools;
+    }
+
+    function setPageSectionStyle(field, value) {
+        const ref = pageTextSectionRef(field);
+        if (!ref) return;
+        finishInlineHtmlEdit(field, field._originalHtml, false);
+        savePageSectionChange(ref.page, sections => {
+            if (value) sections[ref.index].style = value; else delete sections[ref.index].style;
+        });
+    }
+
+    function mergePageSectionWithNext(page, index) {
+        const sections = EditorConfig.contentData[page]?.sections;
+        if (sections?.[index]?.type !== 'text' || sections[index + 1]?.type !== 'text') return;
+        savePageSectionChange(page, list => {
+            const next = list[index + 1];
+            const title = next.title ? '<' + (next.titleTag || 'h2') + '>' + escHtml(next.title) + '</' + (next.titleTag || 'h2') + '>' : '';
+            list[index].content = [list[index].content || '', title, next.content || ''].filter(Boolean).join('\n');
+            list.splice(index + 1, 1);
         });
     }
 
@@ -7243,9 +7508,9 @@
         sections: ['text', 'image', 'gallery', 'youtube', 'audio', 'divider', 'spacer'],
         aside: ['text', 'image', 'gallery', 'divider', 'spacer']
     };
-    const NEWS_INLINE_TYPES = ['text', 'image', 'gallery']; // edited in place; the others use the field dialog
     const NEWS_GALLERY_GRID_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></g></svg>';
     const NEWS_GALLERY_FULL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="14" width="18" height="7" rx="1"/></g></svg>';
+    const NEWS_GALLERY_NATURAL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="10" rx="1"/><rect x="14" y="3" width="7" height="6" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/></g></svg>';
     const NEWS_GALLERY_COLUMN_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h8M3 10h8M3 15h8M3 20h8"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></g></svg>';
     // Title image: full width (wide frame) / hidden uses Icons.eyeClosed / column uses the column icon
     const NEWS_IMAGE_FULL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="1.5"/></g></svg>';
@@ -7296,6 +7561,12 @@
         const tools = document.createElement('div');
         tools.className = 'news-block-tools editable-overlay-buttons';
         tools.contentEditable = 'false';
+        // same order as the bar of a page section: edit, hide, arrows, merge and type tools, delete, drag
+        if ((BlockTypes[ref.type]?.fields || []).length) {
+            tools.append(newsToolButton(Icons.edit, t('edit'), () => editNewsBlockAt(ref.field, ref.index), 'overlay-btn-edit'));
+        }
+        const isHidden = !!newsBlockList(ref.field)[ref.index]?.hidden;
+        tools.append(newsToolButton(isHidden ? Icons.eyeClosed : Icons.eyeOpen, t(isHidden ? 'show' : 'hide'), () => toggleNewsBlockHiddenAt(ref.field, ref.index), 'overlay-btn-hide'));
         const up = newsToolButton(Icons.arrowUp, t('news_block.move_up'), () => moveNewsBlockAt(ref.field, ref.index, -1));
         const down = newsToolButton(Icons.arrowDown, t('news_block.move_down'), () => moveNewsBlockAt(ref.field, ref.index, 1));
         if (ref.index === 0) up.disabled = true;
@@ -7308,39 +7579,117 @@
             if (!next || next.type !== 'text') merge.disabled = true;
             tools.append(merge);
         }
+        tools.append(...newsBlockTypeButtons(ref));
+        tools.append(newsToolButton(Icons.delete, t('news_block.delete'), () => deleteNewsBlockAt(ref.field, ref.index), 'overlay-btn-delete'));
+        tools.append(newsBlockDragHandle(ref));
+        return tools;
+    }
+
+    // Drag handle of a post block. Draggable itself (the block may be contenteditable); the custom data
+    // type keeps a stray drop from typing the value into a text block.
+    function newsBlockDragHandle(ref) {
+        const handle = document.createElement('span');
+        handle.className = 'overlay-drag-handle nibbly-editor-drag-handle';
+        handle.draggable = true;
+        handle.dataset.editorTooltip = t('drag_reorder');
+        handle.setAttribute('aria-label', t('drag_reorder'));
+        handle.innerHTML = Icons.drag;
+        handle.addEventListener('dragstart', event => startNewsBlockDrag(event, ref, handle));
+        return handle;
+    }
+
+    function startNewsBlockDrag(event, ref, handle) {
+        const postEl = ref.el.closest('[data-news-post]');
+        if (!postEl) { event.preventDefault(); return; }
+        event.stopPropagation();
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/x-nibbly-block', String(ref.index));
+        beginDragAssist(event, ref.el, ref.type);
+        ref.el.classList.add('dragging');
+
+        const clearMarks = () => postEl.querySelectorAll('.news-drag-over-top, .news-drag-over-bottom')
+            .forEach(el => el.classList.remove('news-drag-over-top', 'news-drag-over-bottom'));
+        const dropTarget = e => {
+            const area = e.target.closest?.('[data-news-blocks]');
+            if (area && area.dataset.newsBlocks !== ref.field) return null; // sections and aside stay apart
+            const refs = newsBlockRefs(postEl).filter(other => other.field === ref.field);
+            const over = e.target.closest?.('[data-news-block]');
+            let target = refs.find(other => other.el === over);
+            if (!target) {
+                // in a gap between blocks: the one closest in height
+                let best = Infinity;
+                refs.forEach(other => {
+                    const box = other.el.getBoundingClientRect();
+                    const distance = e.clientY < box.top ? box.top - e.clientY : Math.max(0, e.clientY - box.bottom);
+                    if (distance < best) { best = distance; target = other; }
+                });
+            }
+            if (!target) return null;
+            const box = target.el.getBoundingClientRect();
+            return { el: target.el, index: target.index, after: e.clientY > box.top + box.height / 2 };
+        };
+        const onOver = e => {
+            const target = dropTarget(e);
+            clearMarks();
+            if (!target) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            target.el.classList.add(target.after ? 'news-drag-over-bottom' : 'news-drag-over-top');
+        };
+        const onDrop = e => {
+            const target = dropTarget(e);
+            clearMarks();
+            if (!target) return;
+            e.preventDefault();
+            // indices come from the hooks: hidden blocks of visitors' lists may leave gaps
+            let to = target.after ? target.index + 1 : target.index;
+            if (to > ref.index) to--;
+            if (to === ref.index) return;
+            newsStructuralChange(() => {
+                const list = newsBlockList(ref.field);
+                const [moved] = list.splice(ref.index, 1);
+                list.splice(to, 0, moved);
+            });
+        };
+        const onEnd = () => {
+            clearMarks();
+            ref.el.classList.remove('dragging');
+            postEl.removeEventListener('dragover', onOver);
+            postEl.removeEventListener('drop', onDrop);
+            handle.removeEventListener('dragend', onEnd);
+        };
+        postEl.addEventListener('dragover', onOver);
+        postEl.addEventListener('drop', onDrop);
+        handle.addEventListener('dragend', onEnd);
+    }
+
+    // Tools of image and gallery blocks, for the bars of post blocks and page sections
+    function newsBlockTypeButtons(ref) {
+        const buttons = [];
         if (ref.type === 'gallery') {
             // layout: column (text flows around) / grid / full width; the active one is filled
             const block = newsBlockList(ref.field)[ref.index] || {};
-            const current = ['grid', 'full'].includes(block.layout) ? block.layout : 'column';
-            [['column', NEWS_GALLERY_COLUMN_ICON], ['grid', NEWS_GALLERY_GRID_ICON], ['full', NEWS_GALLERY_FULL_ICON]].forEach(([layout, icon]) => {
+            const current = ['grid', 'full', 'natural'].includes(block.layout) ? block.layout : 'column';
+            [['column', NEWS_GALLERY_COLUMN_ICON], ['grid', NEWS_GALLERY_GRID_ICON], ['natural', NEWS_GALLERY_NATURAL_ICON], ['full', NEWS_GALLERY_FULL_ICON]].forEach(([layout, icon]) => {
                 const button = newsToolButton(icon, t('gallery.layout_' + layout),
                     () => newsStructuralChange(() => { const b = newsBlockList(ref.field)[ref.index]; if (b) b.layout = layout; }),
                     layout === current ? 'is-active' : '');
                 button.setAttribute('aria-pressed', layout === current ? 'true' : 'false');
-                tools.appendChild(button);
+                buttons.push(button);
             });
             // a gallery down to one image can become a single image block again
             if (Array.isArray(block.images) && block.images.length === 1) {
-                tools.append(newsToolButton(Icons.image, t('news_block.to_image'), () => convertNewsGalleryToImage(ref.field, ref.index)));
+                buttons.push(newsToolButton(Icons.image, t('news_block.to_image'), () => convertNewsGalleryToImage(ref.field, ref.index)));
             }
         }
         if (ref.type === 'image') {
             const n = newsFollowingImageCount(ref.field, ref.index);
-            tools.append(newsToolButton(NEWS_GALLERY_GRID_ICON, n ? t('news_block.to_gallery_merge') : t('news_block.to_gallery'), () => convertNewsImageToGallery(ref.field, ref.index)));
+            buttons.push(newsToolButton(NEWS_GALLERY_GRID_ICON, n ? t('news_block.to_gallery_merge') : t('news_block.to_gallery'), () => convertNewsImageToGallery(ref.field, ref.index)));
         }
-        if (!NEWS_INLINE_TYPES.includes(ref.type) && (BlockTypes[ref.type]?.fields || []).length) {
-            // youtube, audio, spacer: fields in the dialog, then saved and re-rendered
-            tools.append(newsToolButton(Icons.edit, t('edit'), () => {
-                const current = newsBlockList(ref.field)[ref.index];
-                if (!current) return;
-                openNewsBlockEditor(Object.assign({}, current), block => newsStructuralChange(() => { newsBlockList(ref.field)[ref.index] = block; }));
-            }));
-        }
-        tools.append(newsToolButton(Icons.delete, t('news_block.delete'), () => deleteNewsBlockAt(ref.field, ref.index), 'overlay-btn-delete'));
-        return tools;
+        return buttons;
     }
 
-    function enableNewsBlockEditing(postEl) {
+    function enableNewsBlockEditing(postEl, sectionBars) {
         newsBlockRefs(postEl).forEach(ref => {
             ref.el.classList.add('news-block-editing');
             if (ref.type === 'text') {
@@ -7375,9 +7724,11 @@
             } else if (ref.type === 'gallery') {
                 enableNewsGalleryEditing(ref);
             }
+            if (sectionBars) return; // on pages the section bar and its "+" do this
             ref.el.appendChild(newsBlockTools(ref, newsBlockList(ref.field).length));
             ref.el.appendChild(newsAddButton(ref.field, () => ref.index + 1));
         });
+        if (sectionBars) return;
         postEl.querySelectorAll('[data-news-blocks]').forEach(container => {
             const field = container.dataset.newsBlocks;
             if (newsBlockList(field).length > 0) return;
@@ -7681,6 +8032,13 @@
     }
 
     function markNewsPostDirty() {
+        if (pageBlockPage) {
+            const area = pageBlockArea();
+            if (area) collectNewsBlockFields(area);
+            EditorConfig.dirtyPages.add(pageBlockPage);
+            updateUndoRedoButtons();
+            return;
+        }
         EditorConfig.dirtyPages.add('__news_post__');
         updateUndoRedoButtons();
     }
@@ -7758,14 +8116,9 @@
         init: initEditor,
         openEditor: openEditor,
         closeModal: closeModal,
-        execCommand: execCommand,
-        insertLink: insertLink,
-        toggleFootnote: toggleFootnote,
-        toggleHtmlMode: toggleHtmlMode,
         saveSection: saveSection,
         closeGroupEditor: closeGroupEditor,
         saveGroupEditor: saveGroupEditor,
-        cleanHtml: cleanHtml,
         // Add
         openAddModal: openAddModal,
         closeAddModal: closeAddModal,
@@ -7799,6 +8152,9 @@
         redo: redo,
         // Image manager
         openImageManager: openImageManager,
+        clearImageField: clearImageField,
+        updateImagePreview: updateImagePreview,
+        updateAudioPreview: updateAudioPreview,
         openImageManagerForEvent: openImageManagerForEvent,
         closeImageManager: closeImageManager,
         confirmImageSelection: confirmImageSelection,

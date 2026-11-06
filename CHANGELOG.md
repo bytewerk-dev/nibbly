@@ -15,6 +15,63 @@ Git milestones and the gaps in publication records.
   Each answer has a labeled row, message paragraphs keep their line breaks, and sites can
   supply a custom layout in `templates/contact-email.php`.
 
+### Changed
+
+- **Block tools for page sections.** The Visual Editor offers text sections of a page what post
+  blocks already had: "Split block here" and the style menu in the floating toolbar, "Merge with
+  next block" in the section bar. Image and gallery sections carry the hooks of post blocks in
+  edit mode (`data-news-block`, `data-block-type`) and are edited in place: the image opens the
+  library, captions are typed into, the bar offers the gallery layouts and "Convert to gallery" /
+  "Convert to image". These changes save at once and reload in edit mode, like adding and
+  deleting sections. Dragging a section renumbers the hooks.
+- **One bar for pages and posts.** Both block bars have the same order and sit above the block:
+  edit, hide, arrows, merge and type tools, delete, drag handle. Post blocks gain the drag handle
+  (saves and reloads like the arrows; `sections` and `aside` stay apart), the edit dialog for every
+  type with fields, and hiding; `nibblyNewsRenderBlocks()` renders hidden blocks for logged-in
+  admins marked `data-hidden="true"`, visitors still never see them. The image dialog knows
+  credit, half width and alignment. The floating text toolbar starts at the field's left edge and
+  moves out of the block bar's way on narrow fields. The drop line while dragging is a `::before`
+  element, so it is no longer hidden behind images.
+- **Frames and bars in two colours.** Blocks, groups and cards use `--editor-block` (green),
+  fields and list items `--editor-field` (blue); the block frame of a page section stays visible
+  while editing inside it. Section, block, group and event bars are green, the text toolbar with
+  its menus, gallery image and list item bars blue.
+- **Link dialog in text fields repaired.** The field stays in edit mode while the dialog is open,
+  so the link is inserted again. The link text is editable, a click with the caret in an existing
+  link loads its values, an empty target removes the link. Both sanitizers keep `download`; the
+  browser one respects the dialog's target (an external link without "new tab" gets
+  `target="_self"`, otherwise `_blank` stays automatic). The toolbars have "Remove link", which
+  also removes a link that only holds the caret; the dashboard editors use the same line icons as
+  the Visual Editor.
+- **Scrolling at the window edge while dragging.** All three drag functions (page sections, list
+  items, post blocks) scroll the page when the pointer nears the top or bottom edge: a zone of
+  80 px below the fixed bars and above the bottom edge, faster the closer to the edge (120 to
+  1000 px/s, independent of the frame rate). Elements taller than 240 px are dragged as a small
+  label with the start of their text.
+- **Text block with an optional image.** The text block has the fields `image`, `imageAlt`,
+  `imagePosition` (`right`, `left`, `end`), `imageSize` (`medium`, `small`, `hang`) and
+  `imageStyle` (`shadow`, `plain`). The renderer outputs the figure after the title and before the
+  content as `.block-text__image` with one modifier class per option (base rules in
+  `css/style.css`); a site can supply its own markup through `siteTextBlockFigure(array $section,
+  string $position, string $img)`. Dashboard and block dialog show the fields automatically; the
+  Visual Editor swaps the image in place when the dialog is saved.
+- **Gallery layout "grid, uncropped".** Gallery blocks know `natural` beside `column`, `grid` and
+  `full`: tiles like the grid, every image in its own aspect ratio (covers, portraits).
+- **Shared rich-text module.** The Visual / Code editor of block content (`richEditor`), the
+  one-line teaser variant (`inlineEditor`), the HTML code field with colours and line numbers and
+  the sanitizer in front of the editing surface moved from `page-writing.php` to `js/rich-editor.js`
+  (`window.NbRichEditor`) with their styles in `css/rich-editor.css`; `page-writing.php` keeps the
+  writing view and still hands `richEditor` / `inlineEditor` on through `window.NbPageEditor`.
+  `richEditor()` returns an API (`setValue`, `getValue`, `focus`, also as `field._nbRich`). The
+  block dialog of the Visual Editor uses the same editor for its text field instead of its own
+  toolbar and HTML toggle; dashboard and site load both files.
+- **Block dialog.** The path fields of image and audio pickers can be typed into, the preview
+  follows; a trash button beside the library button empties path, preview and alt text so a block
+  can be saved without an image. The dialog is titled "Edit section" (`edit_section_title`) since
+  it holds title, text and image, not one field.
+- **Agent scanner.** `nibblyAgentScanHtml()` reads image sections of a page from their block hooks
+  (`sections.N.src`, `sections.N.caption`), so capability scans and render checks keep working.
+
 ## [2.8.0] — 2026-11-02
 
 ### Added

@@ -100,7 +100,7 @@ blocksAssert(str_contains($admin, '<div class="news-post-page__block" data-news-
 blocksAssert(str_contains($admin, '<figure class="block-image block-image--half block-image--left" data-news-block="sections.3" data-block-type="image">'), 'image hook on the figure');
 blocksAssert(str_contains($admin, '<div class="block-gallery block-gallery--grid" data-news-block="sections.5" data-block-type="gallery">'), 'gallery hook on the container');
 blocksAssert(str_contains($admin, '<div class="news-post-page__block" data-news-block="sections.6" data-block-type="divider">'), 'other blocks wrapped with hook');
-blocksAssert(!str_contains($admin, 'sections.2') && !str_contains($admin, 'sections.7'), 'hidden and unknown blocks keep their index but render nothing');
+blocksAssert(str_contains($admin, 'data-news-block="sections.2" data-block-type="text" data-hidden="true"') && !str_contains($admin, 'sections.7'), 'hidden blocks render for admins marked data-hidden, unknown blocks render nothing');
 blocksAssert(substr_count($admin, '<figcaption>') === 3 && str_contains($admin, '<figcaption></figcaption>'), 'empty caption element for the editor');
 blocksAssert(str_contains(nibblyNewsRenderBlocks([['type' => 'text', 'content' => '']], 'aside'), 'data-news-block="aside.0" data-block-type="text"><p></p></div>'), 'empty text block gets a paragraph to type into');
 blocksAssert(nibblyNewsRenderBlocks([['type' => 'image', 'src' => ''], ['type' => 'gallery', 'images' => []]]) === '', 'empty media blocks render nothing for visitors');

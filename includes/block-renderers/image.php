@@ -8,6 +8,11 @@
  * a post block, see news-helper.php); it is never stored. In posts, reduced widths float
  * (css/components.css); on pages they keep their plain max-width (css/style.css).
  *
+ * A page section with an image gets the same hooks in edit mode (data-news-block="sections.N",
+ * data-block-type): the visual editor then edits image and caption in place and offers the block
+ * tools (js/inline-editor.js, enablePageBlockEditing). Without an image file the core placeholder
+ * of the page editor stays.
+ *
  * @param array $section Section data
  * @param bool $editable Whether in edit mode
  * @return string HTML output
@@ -32,6 +37,11 @@ if (in_array($width, ['half', 'medium', 'small'], true)) {
 
 if (empty($src) && !$editable && $attrs === '') {
     return '';
+}
+
+if ($editable && !empty($src) && $attrs === '' && $page !== '') {
+    $attrs = ' data-news-block="sections.' . (int)$index . '" data-block-type="image"';
+    $editable = false;
 }
 
 $html .= '<figure class="' . implode(' ', $classes) . '"' . $attrs . '>' . "\n";
