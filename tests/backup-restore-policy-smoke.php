@@ -67,6 +67,7 @@ foreach ([
     'includes/footer.php',
     'includes/nav-config.php',
     'includes/site-page-hook.php',
+    'includes/site-maintenance.php',
     'includes/site-menus.php',
     'includes/site-handbook/chapters.php',
     'includes/site-handbook/img/speaker.webp',

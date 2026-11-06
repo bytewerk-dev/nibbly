@@ -14,6 +14,41 @@ Git milestones and the gaps in publication records.
 - JSON form notifications send formatted HTML and plain text through SMTP and PHP mail().
   Each answer has a labeled row, message paragraphs keep their line breaks, and sites can
   supply a custom layout in `templates/contact-email.php`.
+- **Dashboard search for posts, title or content scope.** The post list gets the search field of the
+  page list (title and kicker, umlauts folded). A toggle beside both fields switches to *Content*:
+  the read actions `list-page-matches` and `list-news-matches` return the pages and posts whose text
+  contains the words (blocks, sidebar, captions, photo credit, author, tags), via the new
+  `nibblySearchContains()`. Empty results name the scope.
+- **Photo credit for the whole post.** The post field `photoCredit` (plain text) covers the title image
+  and every image without a credit of its own. It is edited below the excerpt in the dashboard and in
+  place in the Visual Editor; `includes/news-post.php` prints it below the body as “Photo:” or
+  “Photos:” (`nibblyNewsImageCount()`).
+- **Site maintenance tasks in the system status.** A site file `includes/site-maintenance.php` returns
+  jobs (`label`, `description`, `run`); the system tab lists them with a *Run* button (POST
+  `run-site-task`, admins only, up to ten minutes). Loader: `includes/site-tasks.php`. The file is
+  site-owned and restored by the content-only backup mode.
+
+### Changed
+
+- **Pages with a custom template in the writing view.** Pages without `sections` now open in the
+  content editor's sidebar layout as well; their field groups stay the main content. Fields the
+  template prints with `editableHtml()` get the rich-text toolbar and Visual/Code, detected from the
+  rendered page. The section list can be collapsed (remembered in the browser), *Expand all* sits in
+  the header of the field groups, and *View* of the start page opens `/` instead of `/home`. The
+  `path` key is no longer shown as an editable field group.
+- **Sidebar colour checked against its real text.** In Classic and Pop, whose light-mode sidebar carries
+  light text, the sidebar colour is now checked for contrast against light text (browser and server),
+  so dark colours can be saved. New token `--nb-topbar-text-hover` keeps *View site* and the handbook
+  link readable on a dark top bar.
+- **Hidden content stays out of search.** `nibblySearchPageText()` skips blocks, sections and items
+  marked `hidden`. Delete `content/search-index.json` once (or save any content) to rebuild the index.
+- **Pagination arrows in their own element.** `nibblyNewsPagination()` wraps ← and → in
+  `<span class="pagination__arrow" aria-hidden="true">`, so a site can replace them with CSS.
+- **Media library everywhere.** Every button and dialog that opens the media manager is labelled
+  “Mediathek” / “Media library” (previously “Durchsuchen”/“Browse”, “Bildverwaltung”, “Bild Manager”).
+- **Audio player only where needed.** `includes/footer.php` loads `js/audio-player.js` only when an
+  audio block was rendered (`$GLOBALS['nibblyAudioRendered']`) or an admin is logged in. Existing sites
+  keep their own `includes/footer.php`; copy the condition there to benefit.
 
 ### Changed
 

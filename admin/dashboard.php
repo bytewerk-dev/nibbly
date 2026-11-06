@@ -462,8 +462,13 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                     <input type="hidden" id="pageListLang" value="<?php echo htmlspecialchars(SITE_LANG_DEFAULT); ?>">
                     <label class="page-list-search" for="pageListSearch">
                         <span class="sr-only"><?php echo t('pages.search_title'); ?></span>
-                        <input type="search" id="pageListSearch" class="page-list-search-input" placeholder="<?php echo htmlspecialchars(t('pages.search_title')); ?>…" autocomplete="off" oninput="handlePageListSearch(this.value)">
+                        <input type="search" id="pageListSearch" class="page-list-search-input" placeholder="<?php echo htmlspecialchars(t('pages.search')); ?>…" autocomplete="off" oninput="handlePageListSearch(this.value)">
                     </label>
+                    <!-- Scope of the search: titles only, or the whole content (list-page-matches) -->
+                    <div class="segmented segmented--sm" role="radiogroup" aria-label="<?php echo htmlspecialchars(t('search.scope')); ?>">
+                        <label title="<?php echo htmlspecialchars(t('search.scope_title_hint')); ?>"><input type="radio" name="pageListSearchScope" value="title" checked onchange="setPageListSearchScope(this.value)"><span><?php echo t('search.scope_title'); ?></span></label>
+                        <label title="<?php echo htmlspecialchars(t('search.scope_content_hint')); ?>"><input type="radio" name="pageListSearchScope" value="content" onchange="setPageListSearchScope(this.value)"><span><?php echo t('search.scope_content'); ?></span></label>
+                    </div>
                 </div>
             </div>
             <div class="admin-list-footer admin-list-footer--top" id="pageListFooterTop"></div>
@@ -668,7 +673,20 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                     <button class="btn btn-primary btn-sm" onclick="addNewPost()"><?php echo t('news.new_post'); ?></button>
                 </div>
             </div>
-            <div class="nb-filter-bar"><div class="nb-filter-bar__links" id="newsFilterLinks"></div></div>
+            <div class="nb-filter-bar">
+                <div class="nb-filter-bar__links" id="newsFilterLinks"></div>
+                <div class="nb-filter-bar__actions">
+                    <label class="page-list-search" for="newsListSearch">
+                        <span class="sr-only"><?php echo t('news.search'); ?></span>
+                        <input type="search" id="newsListSearch" class="page-list-search-input" placeholder="<?php echo htmlspecialchars(t('news.search')); ?>…" autocomplete="off" oninput="handleNewsSearch(this.value)">
+                    </label>
+                    <!-- Scope of the search: titles only, or the whole post (list-news-matches) -->
+                    <div class="segmented segmented--sm" role="radiogroup" aria-label="<?php echo htmlspecialchars(t('search.scope')); ?>">
+                        <label title="<?php echo htmlspecialchars(t('search.scope_title_hint')); ?>"><input type="radio" name="newsSearchScope" value="title" checked onchange="setNewsSearchScope(this.value)"><span><?php echo t('search.scope_title'); ?></span></label>
+                        <label title="<?php echo htmlspecialchars(t('search.scope_content_hint')); ?>"><input type="radio" name="newsSearchScope" value="content" onchange="setNewsSearchScope(this.value)"><span><?php echo t('search.scope_content'); ?></span></label>
+                    </div>
+                </div>
+            </div>
             <div class="admin-list-footer admin-list-footer--top" id="newsListFooterTop"></div>
             <div class="page-list-table-wrap">
                 <table class="page-list-table" id="newsListTable">
