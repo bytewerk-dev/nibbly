@@ -737,6 +737,11 @@
             if (sessionStorage.getItem('site-edit-mode') === 'true') {
                 sessionStorage.removeItem('site-edit-mode');
                 enterEditMode();
+                if (sessionStorage.getItem('site-edit-saved') === 'true') {
+                    sessionStorage.removeItem('site-edit-saved');
+                    EditorConfig.savedBeforeReload = true;
+                    showToast(t('toast.saved'), 'success');
+                }
             }
             attachEditModeHint();
         });
@@ -1310,7 +1315,10 @@
         const hasPageChanges = Array.from(EditorConfig.dirtyPages).some(p => p !== '__news_post__');
 
         if (EditorConfig.dirtyPages.size === 0) {
-            showToast(t('toast.no_changes'), 'info');
+            // A block or section change (layout, order, new block) saved everything at once and
+            // reloaded the page, so there is nothing left to save, but it was saved, not "no changes"
+            if (EditorConfig.savedBeforeReload) showToast(t('toast.saved'), 'success');
+            else showToast(t('toast.no_changes'), 'info');
             if (exitAfterSave) {
                 exitEditModeClean();
             } else {
@@ -1441,6 +1449,7 @@
 
     function exitEditModeClean() {
         EditorConfig.editMode = false;
+        EditorConfig.savedBeforeReload = false;
         EditorConfig.dirtyPages = new Set();
         EditorConfig.undoStack = [];
         EditorConfig.redoStack = [];
@@ -3524,7 +3533,7 @@
                 pageData.sections.splice(index, 1);
                 EditorConfig.dirtyPages.add(contentPage);
                 updateUndoRedoButtons();
-                saveStructuralChange(contentPage, 'Section deleted');
+                saveStructuralChange(contentPage);
             }
         );
     }
@@ -6226,7 +6235,7 @@
                 EditorConfig.dirtyPages.add(page);
                 updateUndoRedoButtons();
 
-                saveStructuralChange(page, 'Item deleted');
+                saveStructuralChange(page);
             }
         );
     }
@@ -6249,7 +6258,7 @@
         EditorConfig.dirtyPages.add(page);
         updateUndoRedoButtons();
 
-        saveStructuralChange(page, 'Item added');
+        saveStructuralChange(page);
     }
 
     function addListItemAfter(page, listKey, defaults, afterIndex) {
@@ -6266,7 +6275,7 @@
         EditorConfig.dirtyPages.add(page);
         updateUndoRedoButtons();
 
-        saveStructuralChange(page, 'Item added');
+        saveStructuralChange(page);
     }
 
     // --- Hide / Show list items ---
@@ -6310,7 +6319,9 @@
      * because PHP templates render the HTML server-side.
      * Saves ALL dirty pages first, then reloads with edit-mode auto-restore.
      */
-    async function saveStructuralChange(page, description) {
+    // Saves every dirty page and reloads; the "saved" toast is shown after the reload (see the
+    // edit-mode restore on load), a toast before it was gone in 300 ms
+    async function saveStructuralChange(page) {
         try {
             // Collect all dirty pages (including the structural change page)
             const pagesToSave = new Set(EditorConfig.dirtyPages);
@@ -6337,7 +6348,7 @@
 
             // Persist edit-mode flag so it auto-restores after reload
             sessionStorage.setItem('site-edit-mode', 'true');
-            showToast(description, 'success');
+            sessionStorage.setItem('site-edit-saved', 'true'); // the toast is shown after the reload
             // Detach beforeunload guard before the programmatic reload —
             // otherwise the browser shows its native "leave page?" dialog
             // even though the editor itself is triggering the reload and
@@ -7237,6 +7248,7 @@
             }
             EditorConfig.dirtyPages.delete('__news_post__');
             sessionStorage.setItem('site-edit-mode', 'true');
+            sessionStorage.setItem('site-edit-saved', 'true'); // toast after the reload
             // the editor itself reloads: without this the browser asks "leave page?" although everything is saved
             window.removeEventListener('beforeunload', beforeUnloadGuard);
             location.reload();
@@ -7392,7 +7404,7 @@
         mutate(EditorConfig.contentData[page].sections);
         EditorConfig.dirtyPages.add(page);
         updateUndoRedoButtons();
-        saveStructuralChange(page, t('toast.saved'));
+        saveStructuralChange(page);
     }
 
     function splitPageSection(field) {
