@@ -9,6 +9,16 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+## [2.8.1] — 2026-11-06
+
+### Fixed
+
+- **Large images got no responsive sizes.** `nibblyMediaImageFitsMemory()` raised `memory_limit`
+  to the bare need of the image, which its own 10 % safety margin then rejected, so images of
+  roughly 30 megapixels and more (scans, large photos) were skipped on upload and by
+  `cli/media-sizes.php --action=generate` with a `memory_limit` of 128M. The new limit now
+  covers the margin.
+
 ### Added
 
 - JSON form notifications send formatted HTML and plain text through SMTP and PHP mail().

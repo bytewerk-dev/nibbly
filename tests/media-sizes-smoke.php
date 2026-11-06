@@ -33,6 +33,15 @@ try {
     sizesAssert(nibblyMediaSizeName('logo.png', 1280) === 'logo-1280.webp', 'sizes are always WebP');
     sizesAssert(!nibblyMediaSizesEligible('anim.gif') && !nibblyMediaSizesEligible('icon.svg'), 'GIF and SVG get no sizes');
 
+    // A large image raises memory_limit far enough for the check's own margin (4916 x 6600 px needs
+    // about 310 MiB; with a limit sized for the bare need the check failed again and the image was skipped)
+    $limitBefore = ini_get('memory_limit');
+    if ($limitBefore !== false && $limitBefore !== '-1' && @ini_set('memory_limit', '128M') !== false) {
+        sizesAssert(nibblyMediaImageFitsMemory(4916, 6600), 'memory_limit is raised enough for a 4916 x 6600 px image');
+        sizesAssert(nibblyIniBytes((string)ini_get('memory_limit')) >= 352 * 1048576, 'raised limit covers need plus margin: ' . ini_get('memory_limit'));
+        @ini_set('memory_limit', $limitBefore);
+    }
+
     // A wide image gets both sizes, a narrow one only the smaller, a tiny one none
     sizesImage(IMAGES_PATH . 'team/wide.webp', 2000, 1000);
     sizesImage(IMAGES_PATH . 'medium.webp', 900, 1200);
