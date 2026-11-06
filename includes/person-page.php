@@ -50,7 +50,7 @@ include $_includeBase . 'includes/header.php';
                 <div class="person-page__layout">
                     <?php if (!empty($person['photo'])): ?>
                     <figure class="person-page__portrait">
-                        <img src="<?php echo $_e(nibblySanitizeHref(nibblyPeopleAsset($person['photo']))); ?>" alt="<?php echo $_e($person['alt'] ?: $person['name']); ?>">
+                        <?php echo nibblyImageTag((string)nibblySanitizeHref(nibblyPeopleAsset($person['photo'])), (string)($person['alt'] ?: $person['name']), ['lazy' => false]); ?>
                         <?php if (!empty($person['credit'])): ?><figcaption><?php echo $_e($person['credit']); ?></figcaption><?php endif; ?>
                     </figure>
                     <?php endif; ?>

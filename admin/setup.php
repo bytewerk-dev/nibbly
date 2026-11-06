@@ -344,6 +344,11 @@ define('SITE_NAME', '{$escapedSiteName}');
 // hosts even if accidentally left enabled. Set false to disable it locally too.
 define('NIBBLY_DEV_LOGIN', true);
 
+// Local tools in the media library (reveal in Finder/Explorer, open with the default app, copy the
+// absolute path). Only offered on loopback requests, i.e. when Nibbly runs on your own machine; on a
+// web host this is ignored. Set false to hide the buttons locally too.
+define('NIBBLY_LOCAL_TOOLS', true);
+
 // ============================================================
 // LANGUAGES
 // ============================================================

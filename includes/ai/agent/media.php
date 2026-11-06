@@ -293,6 +293,8 @@ function nibblyAgentApplyMedia(array $cs, array $changed): array {
             $name = substr($media['finalPath'], strlen('/assets/images/'));
             $moved[] = ['ref' => $ref, 'name' => $name, 'path' => $to, 'staging' => $from];
             if (!empty($media['ai']) && !nibblySetMediaAiLabel('image', $name, (string)$media['ai'])) throw new RuntimeException('Could not store the AI label.');
+            require_once __DIR__ . '/../../media-states.php';
+            nibblyMediaEvent('uploaded', 'image', $name);
             if ($media['credit'] && !nibblySetMediaCredit('image', $name, $media['credit'] + ['importedAt' => $media['importedAt'], 'importedBy' => $media['importedBy']])) {
                 throw new RuntimeException('Could not store the image credit.');
             }

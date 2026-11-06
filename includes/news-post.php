@@ -171,7 +171,11 @@ $_showImage = !empty($post['image']) && ($_imageLayout !== 'hidden' || $_isAdmin
 
                 <?php if ($_showImage): ?>
                 <figure class="news-post-page__hero news-post-page__hero--<?php echo $_imageLayout; ?>"<?php echo $_newsField('image'); ?><?php echo $_imageLayout === 'hidden' ? ' data-hidden-label="' . htmlspecialchars(nibblyPublicString('news_image_hidden', $currentLang)) . '"' : ''; ?>>
-                    <img src="<?php echo htmlspecialchars($post['image']); ?>" alt="<?php echo htmlspecialchars((string)($post['imageAlt'] ?? $pageTitle)); ?>"><?php echo nibblyAiLabelHtml((string)$post['image']); ?>
+                    <?php // visitors get sizes and srcset; admins keep a plain tag, the visual editor swaps its src
+                    echo $_isAdmin
+                        ? '<img src="' . htmlspecialchars((string)$post['image']) . '" alt="' . htmlspecialchars((string)($post['imageAlt'] ?? $pageTitle)) . '">'
+                        : nibblyImageTag((string)$post['image'], (string)($post['imageAlt'] ?? $pageTitle), ['lazy' => false]);
+                    echo nibblyAiLabelHtml((string)$post['image']); ?>
                     <?php if (!empty($post['imageCaption'])): ?>
                     <figcaption><?php echo htmlspecialchars((string)$post['imageCaption']); ?></figcaption>
                     <?php endif; ?>

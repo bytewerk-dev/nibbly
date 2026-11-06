@@ -25,7 +25,7 @@ if ($editable) {
 } else {
     if (!empty($image)) {
         $alt = !empty($section['alt']) ? $section['alt'] : ($title !== '' ? $title : 'Image');
-        $html .= '    ' . nibblyAiLabelAttach('<img src="' . htmlspecialchars($image) . '" alt="' . htmlspecialchars($alt) . '">', (string)$image, true) . "\n";
+        $html .= '    ' . nibblyAiLabelAttach(nibblyImageTag((string)$image, (string)$alt), (string)$image, true) . "\n";
     }
     if ($title !== '') {
         $html .= '    <h3>' . htmlspecialchars($title) . '</h3>' . "\n";

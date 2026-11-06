@@ -103,6 +103,8 @@ return [
     'move-media' => 'media',
     'rename-media' => 'media',
     'set-media-ai-label' => 'media',
+    'set-media-states' => 'media',
+    'local-media' => 'media',
     'delete-media' => 'media',
     'restore-media' => 'media',
     'delete-media-trash' => 'media',
