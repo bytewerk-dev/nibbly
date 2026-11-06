@@ -23,6 +23,12 @@ Git milestones and the gaps in publication records.
   the outer item, and hovering an item shows only that item's controls and add button instead of
   those of every nested item.
 
+- **"Saved" instead of "no changes" after a block or section change.** A layout, order, new-block or
+  split change saves every open edit at once and reloads the page; "Save & exit" afterwards then
+  reported "No changes to save", and the confirmation of the change itself was shown 300 ms before the
+  reload (pages) or not at all (posts). The "Saved" toast now appears after the reload, and saving
+  again without new changes repeats it instead of "no changes".
+
 ## [2.8.1] — 2026-11-06
 
 ### Fixed
