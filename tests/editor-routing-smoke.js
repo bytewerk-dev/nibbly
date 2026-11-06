@@ -8,6 +8,7 @@ const source = execFileSync('php', ['-r', `
     define('NIBBLY_DASHBOARD', true);
     define('SITE_LANG_DEFAULT', 'de');
     $validDashboardTabs = ['home', 'content', 'settings'];
+    function nbIcon(string $name): string { return ''; } // admin/dashboard.php provides the icons
     include 'admin/dashboard/scripts/pages.php';
     include 'admin/dashboard/scripts/navigation.php';
 `], {cwd: resolve(__dirname, '..'), encoding: 'utf8'})
@@ -77,6 +78,7 @@ async function checkRoute(lang, slug, hashRoute, listFirst) {
     const context = vm.createContext({
         console, URLSearchParams,
         localStorage: {getItem() { return null; }},
+        DOMParser: class { parseFromString() { return {querySelectorAll: () => []}; } },
         document: {getElementById: get, createElement: tag => new Element(tag), querySelectorAll: () => [], querySelector: () => null, addEventListener() {}},
         window: {location, addEventListener() {}, fetch: async url => {
             if (url.includes('action=list-pages')) {
@@ -90,6 +92,8 @@ async function checkRoute(lang, slug, hashRoute, listFirst) {
                 await contentReply.promise;
                 return response(content);
             }
+            // Custom-template pages fetch their rendered markup to find HTML fields (loadHtmlFieldPaths)
+            if (url.startsWith('../')) return {text: async () => ''};
             throw new Error(`Unexpected request: ${url}`);
         }},
         history: {replaceState(state, title, url) { location.search = ''; location.hash = url.slice(url.indexOf('#')); }},

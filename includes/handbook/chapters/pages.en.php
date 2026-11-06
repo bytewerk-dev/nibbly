@@ -2,6 +2,9 @@
 <div class="hb-prose">
   <p>Under <?php echo $hb->nav('Pages', 'pages'); ?> in the dashboard you see all pages of the website. Above each title is the page's address (such as <code>/contact</code>), next to it the SEO rating. On multilingual websites each further language has its own column.</p>
 </div>
+<div class="hb-prose">
+  <p>The search field above the list finds pages by title. Switch the toggle beside it to <?php echo $hb->ui('Content'); ?> and nibbly also searches the description, texts, sections and captions of the pages.</p>
+</div>
 <?php echo $hb->shot('pages.webp', 'Page list with title, address, SEO rating and date of change; one row is marked', '<b>Page list.</b> Move the mouse over a row and Edit, View, Duplicate and Trash appear.'); ?>
 <dl class="hb-fields">
   <div><dt>Edit</dt><dd>Opens the page in the dashboard's Content Editor (see below).</dd></div>
@@ -26,6 +29,8 @@
 <?php echo $hb->shot('page-editor.webp', 'Content Editor of the home page with title, text field and page actions', '<b>Content Editor.</b> The same content as on the website, field by field.'); ?>
 <dl class="hb-fields">
   <div><dt>Sections</dt><dd>Expand to edit, drag the handle to sort, <?php echo $hb->ui('Insert here'); ?> to add a new section at a spot. Hints such as “alt text missing” show where something is missing.</dd></div>
+  <div><dt>Section list</dt><dd>Left of the sections, with a search field and a filter. The icon in its header collapses it so the fields use the full width; nibbly remembers this in the browser. <?php echo $hb->ui('Expand All'); ?> opens every section at once.</dd></div>
+  <div><dt>Pages with their own template</dt><dd>Some pages have field groups of their own, such as “hero” or “content”, instead of sections. They appear in the same view; fields that show formatted text on the website get a toolbar and the <?php echo $hb->ui('Visual'); ?> / <?php echo $hb->ui('Code'); ?> switch.</dd></div>
   <div><dt>Navigation, breadcrumb</dt><dd>Two expandable rows right below the title: which menus the page appears in, and the breadcrumb.</dd></div>
   <div><dt>Page image</dt><dd>In the sidebar: the page's title image with alt text. It also appears on the overview cards of the parent page.</dd></div>
   <div><dt>Description</dt><dd>Below the sections, ahead of SEO / AEO: the card text on the parent page and the meta description at once. The field takes bold, italic and links, but no paragraphs; <?php echo $hb->ui('Code'); ?> shows the HTML. The meta tags get the plain text.</dd></div>

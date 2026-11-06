@@ -1183,7 +1183,7 @@
     }
 
     // Read-only meta keys that should not be editable
-    const META_KEYS = new Set(['page', 'lang', 'lastModified']);
+    const META_KEYS = new Set(['page', 'path', 'lang', 'lastModified']); // path changes via "Move / rename"
     // Keys that get their own special renderer
     const SPECIAL_KEYS = new Set(['sections']);
     // Keys rendered in the dedicated "Page Settings" panel

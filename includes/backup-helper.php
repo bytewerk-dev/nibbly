@@ -1687,6 +1687,7 @@ function backupRestoreContentEntryAllowed(string $entry): bool {
         'includes/footer.php',
         'includes/nav-config.php',
         'includes/site-page-hook.php',
+        'includes/site-maintenance.php',
         'includes/site-menus.php',
         'css/fonts.css',
         'css/website.css',

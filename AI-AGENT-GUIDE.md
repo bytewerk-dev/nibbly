@@ -2158,6 +2158,10 @@ These are the exact field names each block renderer reads. Using different names
 | `spacer` | `height` (sm/md/lg/xl) |
 | `divider` | *(none)* |
 
+`js/audio-player.js` is only loaded by `includes/footer.php` when an audio block was rendered
+(`$GLOBALS['nibblyAudioRendered']`, set by `includes/block-renderers/audio.php`) or an admin is logged
+in. A site template that prints its own player markup sets the flag before including the footer.
+
 ### Lists use numbered objects, not arrays
 
 ```json
@@ -2212,7 +2216,9 @@ puts its own `{lang}/news-archive.php` next to it to restyle them (it receives `
   `includes/search.php` at `search.base` (default `/search`, `?q=`), overridden by `{lang}/search.php`;
   `nibblySearchForm()` renders the form (the core header shows it when search is enabled). Settings:
   `search.enabled|base|param|perPage|minLength`. A page stays out of the index with
-  `"seo": {"searchable": false}` or a `noindex` robots value.
+  `"seo": {"searchable": false}` or a `noindex` robots value. Blocks, sections and list items marked
+  `"hidden": true` are not indexed. `nibblySearchContains($text, $query)` is the folded substring test
+  behind the dashboard's content search of pages and posts (`list-page-matches`, `list-news-matches`).
 - **RSS**: `/feed.xml` (`includes/feed.php`, `nibblyNewsFeedXml()`), switched off with
   `news.feed: false`; `news.feedItems` caps the items. `nibblyNewsFeedHeadLink()` is printed in the
   core header.
@@ -2230,7 +2236,9 @@ A post stores its body either as one HTML string `content` (older posts) or as a
 gallery, youtube, audio, divider, spacer). Further fields: `subtitle` (kicker above the title, also
 in cards and the timeline), `cover` (`{src, alt, label}`, shown in the sidebar, opens in the
 lightbox), `sidebar` (show the sidebar without a cover), `imageLayout` (`column`, `full`, `hidden`
-for the title image) and `comments: false` (closes the comments of this post; `includes/comments.php`
+for the title image), `photoCredit` (plain-text credit for every image of the post without a credit of
+its own; `includes/news-post.php` prints it below the body as "Photo:"/"Photos:", the label chosen by
+`nibblyNewsImageCount($post)`) and `comments: false` (closes the comments of this post; `includes/comments.php`
 refuses submissions). Helpers in `includes/news-helper.php`:
 
 - `nibblyNewsRenderBlocks(array $blocks, string $field = '')` renders a block list; with `$field`
@@ -2241,7 +2249,7 @@ refuses submissions). Helpers in `includes/news-helper.php`:
 - `nibblyNewsSanitizeBlocks($blocks)` cleans a saved block list (known types only, sanitized HTML).
 
 `includes/news-post.php` marks editable fields with `data-news-field` (`title`, `subtitle`,
-`excerpt`, `cover`, `author`, legacy `content`) and block lists with `data-news-blocks="sections|aside"`;
+`excerpt`, `photoCredit`, `cover`, `author`, legacy `content`) and block lists with `data-news-blocks="sections|aside"`;
 a site's `{lang}/news-post.php` keeps those hooks to stay editable. Every save of a post keeps the
 previous JSON in `backups/` (`list-news-backups`, `load-news-backup`, `restore-news-backup`,
 `delete-news-backup`); the dashboard shows them in the backups panel at the bottom of the sidebar.
