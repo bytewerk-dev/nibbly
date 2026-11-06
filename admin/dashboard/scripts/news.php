@@ -8,6 +8,13 @@
     let editingPostId = null;
     let editingPost = null; // the complete record of the post in the editor (api load-news-post)
     let newsStatusFilter = 'all';
+    // Search field above the list: "title" filters in the browser, "content" asks the server
+    // (list-news-matches, debounced) which posts contain the words
+    let newsSearchRaw = '';
+    let newsSearchQuery = ''; // folded for the title comparison
+    let newsSearchScope = 'title';
+    let newsContentMatches = null; // Set of post ids for the current query, null = not loaded
+    let newsSearchTimer = null;
     let newsCategoryFilter = 'all'; // Rubrik-Slug oder 'all'
     // View language of the list: its posts are the rows, the other languages are columns (as on pages)
     let newsViewLang = '<?php echo SITE_LANG_DEFAULT; ?>';
@@ -66,6 +73,47 @@
         }
     }
 
+    function nbNewsFold(value) {
+        return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+    }
+
+    function handleNewsSearch(value) {
+        newsSearchRaw = String(value || '');
+        newsSearchQuery = nbNewsFold(value);
+        dashboardListPages.news = 1;
+        if (newsSearchScope === 'content') {
+            window.clearTimeout(newsSearchTimer);
+            if (!newsSearchQuery) { newsContentMatches = null; renderNewsList(); return; }
+            newsSearchTimer = window.setTimeout(async () => {
+                const query = newsSearchRaw;
+                try {
+                    const result = await (await fetch('api.php?action=list-news-matches&q=' + encodeURIComponent(query) + '&_=' + Date.now())).json();
+                    if (query !== newsSearchRaw) return; // a newer query is on its way
+                    newsContentMatches = new Set(result.success ? result.data : []);
+                } catch (error) {
+                    newsContentMatches = new Set();
+                }
+                renderNewsList();
+            }, 250);
+            return;
+        }
+        renderNewsList();
+    }
+
+    function setNewsSearchScope(scope) {
+        newsSearchScope = scope === 'content' ? 'content' : 'title';
+        newsContentMatches = null;
+        handleNewsSearch(newsSearchRaw);
+    }
+
+    // Does the post pass the search field? Title scope compares title and subtitle in the browser;
+    // content scope trusts the server's id list (while it is pending, nothing is hidden)
+    function newsMatchesSearch(post) {
+        if (!newsSearchQuery) return true;
+        if (newsSearchScope === 'content') return !newsContentMatches || newsContentMatches.has(post.id);
+        return nbNewsFold((post.title || '') + ' ' + (post.subtitle || '')).includes(newsSearchQuery);
+    }
+
     function renderNewsList() {
         const tbody = document.getElementById('newsListBody');
         const defaultLang = '<?php echo SITE_LANG_DEFAULT; ?>';
@@ -95,7 +143,7 @@
         // Sort groups by date descending (use primary lang post date, or any available)
         const primaryPost = slug => slugGroups[slug][newsViewLang];
         const inCategory = post => newsCategoryFilter === 'all' || (post.categories || []).includes(newsCategoryFilter);
-        const sortedSlugs = Object.keys(slugGroups).filter(slug => primaryPost(slug) && inCategory(primaryPost(slug)) && (newsStatusFilter === 'all' || !!primaryPost(slug).hidden === (newsStatusFilter === 'draft'))).sort((a, b) => {
+        const sortedSlugs = Object.keys(slugGroups).filter(slug => primaryPost(slug) && inCategory(primaryPost(slug)) && newsMatchesSearch(primaryPost(slug)) && (newsStatusFilter === 'all' || !!primaryPost(slug).hidden === (newsStatusFilter === 'draft'))).sort((a, b) => {
             const aPost = primaryPost(a);
             const bPost = primaryPost(b);
             return (bPost.date || '').localeCompare(aPost.date || '');
@@ -105,6 +153,9 @@
         const pageSize = getDashboardPageSize();
         const paged = pageSlice(sortedSlugs, 'news', pageSize);
         renderAdminListFooter('newsListFooter', 'news', sortedSlugs.length, pageSize, renderNewsList, 'newsListFooterTop');
+        if (sortedSlugs.length === 0) {
+            nbRenderEmptyRow(tbody, colCount, newsSearchQuery ? t(newsSearchScope === 'content' ? 'news.search_none_content' : 'news.search_none_title') : t('news.no_posts'));
+        }
 
         paged.items.forEach(slug => {
             const group = slugGroups[slug];
@@ -329,6 +380,13 @@
                         <div class="section-fields">
                             <label for="newsExcerpt">${t('news.post_excerpt')}</label>
                             <textarea id="newsExcerpt" class="editor-textarea" rows="3">${escapeHtml(post.excerpt)}</textarea>
+                        </div>
+                    </div>
+                    <div class="section-item nb-news-photo-credit">
+                        <div class="section-fields">
+                            <label for="newsPhotoCredit">${t('news.photo_credit')}</label>
+                            <input type="text" id="newsPhotoCredit" class="editor-input" value="${escapeHtml(post.photoCredit || '')}" placeholder="${escapeHtml(t('news.photo_credit_placeholder'))}" autocomplete="off">
+                            <small class="field-hint">${t('news.photo_credit_hint')}</small>
                         </div>
                     </div>
                     <details class="nb-news-aside-panel" id="newsAsidePanel" ${(post.aside || []).length ? 'open' : ''}>
@@ -750,12 +808,13 @@
                 </div>
             </div>`;
         }).join('');
-        const layout = ['grid', 'full'].includes(block.layout) ? block.layout : 'column';
+        const layout = ['grid', 'natural', 'full'].includes(block.layout) ? block.layout : 'column';
         return `<div class="nb-news-gallery" data-gallery>
             <label class="nb-news-gallery-layout">${escapeHtml(t('news.gallery_layout'))}
                 <select class="ce-input nb-news-gallery-layout-select">
                     <option value="column"${layout === 'column' ? ' selected' : ''}>${escapeHtml(t('news.gallery_layout_column'))}</option>
                     <option value="grid"${layout === 'grid' ? ' selected' : ''}>${escapeHtml(t('news.gallery_layout_grid'))}</option>
+                    <option value="natural"${layout === 'natural' ? ' selected' : ''}>${escapeHtml(t('news.gallery_layout_natural'))}</option>
                     <option value="full"${layout === 'full' ? ' selected' : ''}>${escapeHtml(t('news.gallery_layout_full'))}</option>
                 </select>
             </label>
@@ -1023,7 +1082,7 @@
 
     // The post as it stands in the editor; also compared with newsSavedState to spot unsaved changes
     // Keys the form edits; everything else of the loaded record (imageAlt, wpId, ...) is passed through
-    const NEWS_FORM_KEYS = ['id', 'lang', 'title', 'subtitle', 'slug', 'date', 'author', 'excerpt', 'image', 'imageLayout', 'cover', 'sidebar', 'content', 'sections', 'aside', 'categories', 'tags', 'flags', 'hidden', 'comments', 'url', 'lastModified'];
+    const NEWS_FORM_KEYS = ['id', 'lang', 'title', 'subtitle', 'slug', 'date', 'author', 'excerpt', 'image', 'imageLayout', 'photoCredit', 'cover', 'sidebar', 'content', 'sections', 'aside', 'categories', 'tags', 'flags', 'hidden', 'comments', 'url', 'lastModified'];
 
     function collectNewsPost() {
         const extras = {};
@@ -1043,6 +1102,7 @@
             excerpt: document.getElementById('newsExcerpt').value.trim(),
             image: document.getElementById('newsImage').value.trim(),
             imageLayout: document.getElementById('newsImageLayout')?.value || 'column',
+            photoCredit: (document.getElementById('newsPhotoCredit')?.value || '').trim(),
             cover: coverSrc ? {
                 src: coverSrc,
                 alt: (document.getElementById('newsCoverAlt')?.value || '').trim(),

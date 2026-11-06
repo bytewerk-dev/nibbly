@@ -2579,6 +2579,8 @@ function nibblyAiStoreGeneratedImage(string $binary, string $hint, string $size 
     }
     if ($storageDir === '') {
         nibblyAiLabelStoredImage($filename);
+        require_once __DIR__ . '/../media-states.php';
+        nibblyMediaEvent('uploaded', 'image', 'generated/' . $filename);
     }
     return $publicBase . $filename;
 }

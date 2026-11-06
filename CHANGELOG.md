@@ -9,11 +9,140 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+## [2.8.1] — 2026-11-06
+
+### Fixed
+
+- **Large images got no responsive sizes.** `nibblyMediaImageFitsMemory()` raised `memory_limit`
+  to the bare need of the image, which its own 10 % safety margin then rejected, so images of
+  roughly 30 megapixels and more (scans, large photos) were skipped on upload and by
+  `cli/media-sizes.php --action=generate` with a `memory_limit` of 128M. The new limit now
+  covers the margin.
+
 ### Added
 
 - JSON form notifications send formatted HTML and plain text through SMTP and PHP mail().
   Each answer has a labeled row, message paragraphs keep their line breaks, and sites can
   supply a custom layout in `templates/contact-email.php`.
+- **Dashboard search for posts, title or content scope.** The post list gets the search field of the
+  page list (title and kicker, umlauts folded). A toggle beside both fields switches to *Content*:
+  the read actions `list-page-matches` and `list-news-matches` return the pages and posts whose text
+  contains the words (blocks, sidebar, captions, photo credit, author, tags), via the new
+  `nibblySearchContains()`. Empty results name the scope.
+- **Photo credit for the whole post.** The post field `photoCredit` (plain text) covers the title image
+  and every image without a credit of its own. It is edited below the excerpt in the dashboard and in
+  place in the Visual Editor; `includes/news-post.php` prints it below the body as “Photo:” or
+  “Photos:” (`nibblyNewsImageCount()`).
+- **Site maintenance tasks in the system status.** A site file `includes/site-maintenance.php` returns
+  jobs (`label`, `description`, `run`); the system tab lists them with a *Run* button (POST
+  `run-site-task`, admins only, up to ten minutes). Loader: `includes/site-tasks.php`. The file is
+  site-owned and restored by the content-only backup mode.
+
+### Changed
+
+- **Pages with a custom template in the writing view.** Pages without `sections` now open in the
+  content editor's sidebar layout as well; their field groups stay the main content. Fields the
+  template prints with `editableHtml()` get the rich-text toolbar and Visual/Code, detected from the
+  rendered page. The section list can be collapsed (remembered in the browser), *Expand all* sits in
+  the header of the field groups, and *View* of the start page opens `/` instead of `/home`. The
+  `path` key is no longer shown as an editable field group.
+- **Sidebar colour checked against its real text.** In Classic and Pop, whose light-mode sidebar carries
+  light text, the sidebar colour is now checked for contrast against light text (browser and server),
+  so dark colours can be saved. New token `--nb-topbar-text-hover` keeps *View site* and the handbook
+  link readable on a dark top bar.
+- **Hidden content stays out of search.** `nibblySearchPageText()` skips blocks, sections and items
+  marked `hidden`. Delete `content/search-index.json` once (or save any content) to rebuild the index.
+- **Pagination arrows in their own element.** `nibblyNewsPagination()` wraps ← and → in
+  `<span class="pagination__arrow" aria-hidden="true">`, so a site can replace them with CSS.
+- **Media library everywhere.** Every button and dialog that opens the media manager is labelled
+  “Mediathek” / “Media library” (previously “Durchsuchen”/“Browse”, “Bildverwaltung”, “Bild Manager”).
+- **Audio player only where needed.** `includes/footer.php` loads `js/audio-player.js` only when an
+  audio block was rendered (`$GLOBALS['nibblyAudioRendered']`) or an admin is logged in. Existing sites
+  keep their own `includes/footer.php`; copy the condition there to benefit.
+
+### Changed
+
+- **Block tools for page sections.** The Visual Editor offers text sections of a page what post
+  blocks already had: "Split block here" and the style menu in the floating toolbar, "Merge with
+  next block" in the section bar. Image and gallery sections carry the hooks of post blocks in
+  edit mode (`data-news-block`, `data-block-type`) and are edited in place: the image opens the
+  library, captions are typed into, the bar offers the gallery layouts and "Convert to gallery" /
+  "Convert to image". These changes save at once and reload in edit mode, like adding and
+  deleting sections. Dragging a section renumbers the hooks.
+- **One bar for pages and posts.** Both block bars have the same order and sit above the block:
+  edit, hide, arrows, merge and type tools, delete, drag handle. Post blocks gain the drag handle
+  (saves and reloads like the arrows; `sections` and `aside` stay apart), the edit dialog for every
+  type with fields, and hiding; `nibblyNewsRenderBlocks()` renders hidden blocks for logged-in
+  admins marked `data-hidden="true"`, visitors still never see them. The image dialog knows
+  credit, half width and alignment. The floating text toolbar starts at the field's left edge and
+  moves out of the block bar's way on narrow fields. The drop line while dragging is a `::before`
+  element, so it is no longer hidden behind images.
+- **Frames and bars in two colours.** Blocks, groups and cards use `--editor-block` (green),
+  fields and list items `--editor-field` (blue); the block frame of a page section stays visible
+  while editing inside it. Section, block, group and event bars are green, the text toolbar with
+  its menus, gallery image and list item bars blue.
+- **Link dialog in text fields repaired.** The field stays in edit mode while the dialog is open,
+  so the link is inserted again. The link text is editable, a click with the caret in an existing
+  link loads its values, an empty target removes the link. Both sanitizers keep `download`; the
+  browser one respects the dialog's target (an external link without "new tab" gets
+  `target="_self"`, otherwise `_blank` stays automatic). The toolbars have "Remove link", which
+  also removes a link that only holds the caret; the dashboard editors use the same line icons as
+  the Visual Editor.
+- **Scrolling at the window edge while dragging.** All three drag functions (page sections, list
+  items, post blocks) scroll the page when the pointer nears the top or bottom edge: a zone of
+  80 px below the fixed bars and above the bottom edge, faster the closer to the edge (120 to
+  1000 px/s, independent of the frame rate). Elements taller than 240 px are dragged as a small
+  label with the start of their text.
+- **Text block with an optional image.** The text block has the fields `image`, `imageAlt`,
+  `imagePosition` (`right`, `left`, `end`), `imageSize` (`medium`, `small`, `hang`) and
+  `imageStyle` (`shadow`, `plain`). The renderer outputs the figure after the title and before the
+  content as `.block-text__image` with one modifier class per option (base rules in
+  `css/style.css`); a site can supply its own markup through `siteTextBlockFigure(array $section,
+  string $position, string $img)`. Dashboard and block dialog show the fields automatically; the
+  Visual Editor swaps the image in place when the dialog is saved.
+- **Gallery layout "grid, uncropped".** Gallery blocks know `natural` beside `column`, `grid` and
+  `full`: tiles like the grid, every image in its own aspect ratio (covers, portraits).
+- **Shared rich-text module.** The Visual / Code editor of block content (`richEditor`), the
+  one-line teaser variant (`inlineEditor`), the HTML code field with colours and line numbers and
+  the sanitizer in front of the editing surface moved from `page-writing.php` to `js/rich-editor.js`
+  (`window.NbRichEditor`) with their styles in `css/rich-editor.css`; `page-writing.php` keeps the
+  writing view and still hands `richEditor` / `inlineEditor` on through `window.NbPageEditor`.
+  `richEditor()` returns an API (`setValue`, `getValue`, `focus`, also as `field._nbRich`). The
+  block dialog of the Visual Editor uses the same editor for its text field instead of its own
+  toolbar and HTML toggle; dashboard and site load both files.
+- **Block dialog.** The path fields of image and audio pickers can be typed into, the preview
+  follows; a trash button beside the library button empties path, preview and alt text so a block
+  can be saved without an image. The dialog is titled "Edit section" (`edit_section_title`) since
+  it holds title, text and image, not one field.
+- **Agent scanner.** `nibblyAgentScanHtml()` reads image sections of a page from their block hooks
+  (`sections.N.src`, `sections.N.caption`), so capability scans and render checks keep working.
+- **Responsive image sizes and one place for public `<img>` tags.** Every JPEG, PNG or WebP in the
+  library gets two smaller WebP copies, 640 and 1280 px wide, in `assets/images-sizes/` (made on
+  upload, moved with rename, move, trash and restore, deleted with the image; `includes/media-sizes.php`).
+  `php cli/media-sizes.php --action=generate|status|prune` handles existing libraries.
+  `nibblyImageTag($src, $alt, $options)` renders visitor images with `width`/`height`, lazy loading
+  (or `fetchpriority="high"` for hero images) and `srcset`/`sizes` when sizes exist; `editableImage()`
+  and `editableImageSplit()` take its options as a new last parameter, and the image and card
+  blocks, news cards, timeline, events, people and the post, event and person pages use it.
+  `nibblyImageHtmlEnrich()` completes images inside stored HTML (`editableHtml()` for visitors).
+- **Media states.** Files in the media library carry flags and properties, several at once
+  (`includes/media-states.php`). The AI disclosure label is the core state `ai`; a site registers
+  more in `includes/site-media-states.php`. The library replaces the AI label button and dialog with
+  a "Properties" button and panel, saves each change at once and shows active states as badges.
+  New API action `set-media-states`; `list-media` returns the registry and each file's states;
+  the library dispatches `nibbly:media-state-change`.
+- **Media hooks.** `includes/site-media-hooks.php` (site file) returns `event => callable`;
+  `nibblyMediaEvent('uploaded', $type, $name)` runs after uploads in the media library, AI agent
+  imports and AI image generation. Hook errors are logged and never break the request.
+- **Local tools in the media library.** On loopback requests the library offers "Show in Finder"
+  (Explorer, file manager), "Open with default application" and "Copy local path"
+  (`includes/media-local-tools.php`, API action `local-media`). New constant `NIBBLY_LOCAL_TOOLS`
+  (default `true`) in `admin/config.example.php` and the setup template; it has no effect on a web host.
+- **Media library listing.** The list view shows square 92 px thumbnails and the pixel size under
+  the file size; the grid view shows size, pixel size and date under each file name. Pixel sizes
+  are cached in `content/media-dimensions.json` (not versioned).
+- Media paths with combining characters (file names in NFD, as macOS stores them) are resolved
+  correctly; `nibblyMediaRefFromSrc()` no longer uses `parse_url()`, which mangled them.
 
 ## [2.8.0] — 2026-11-02
 

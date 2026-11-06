@@ -26,6 +26,22 @@ switch ($action) {
         ignore_user_abort(true);
         jsonResponse(true, nibblySeoCheckStatus((string)($_POST['scheme'] ?? ''), true, ($_POST['force'] ?? '') === '1'));
         break;
+    case 'run-site-task':
+        // Site maintenance task (includes/site-maintenance.php, see includes/site-tasks.php); may run for minutes
+        if (!isAdmin()) jsonResponse(false, null, 'Forbidden');
+        require_once NIBBLY_ADMIN_DIR . '/../includes/site-tasks.php';
+        $taskId = (string)($_POST['task'] ?? '');
+        if (!isset(nibblySiteTasks()[$taskId])) jsonResponse(false, null, 'Unknown task');
+        session_write_close();
+        ignore_user_abort(true);
+        @set_time_limit(600);
+        try {
+            $message = nibblySiteTaskRun($taskId);
+        } catch (Throwable $e) {
+            jsonResponse(false, null, $e->getMessage());
+        }
+        jsonResponse(true, ['message' => $message]);
+        break;
     case 'keepalive':
         if (!validateCsrfToken()) {
             jsonResponse(false, null, 'Invalid CSRF token');

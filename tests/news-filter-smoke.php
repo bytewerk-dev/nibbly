@@ -107,6 +107,8 @@ $html = nibblyNewsPagination(10, 2, 4, '/blog/a?x=1', 'en');
 newsAssert(str_contains($html, 'aria-label="Pagination"') && str_contains($html, 'rel="prev"') && str_contains($html, 'rel="next"'), 'pagination landmarks');
 newsAssert(str_contains($html, 'href="/blog/a?x=1"') && str_contains($html, 'href="/blog/a?x=1&amp;seite=3"') && !str_contains($html, 'seite=2"'), 'page 1 is the bare URL, other query keys kept: ' . $html);
 newsAssert(str_contains($html, 'aria-current="page" aria-label="Page 2">2<') && str_contains($html, 'Page 2 of 3'), 'current page and summary');
+newsAssert(substr_count($html, 'class="pagination__arrow" aria-hidden="true"') === 2, 'pagination arrows in their own span');
+newsAssert(nibblyNewsImageCount(['image' => '/a.jpg']) === 1 && nibblyNewsImageCount(['image' => '/a.jpg', 'sections' => [['type' => 'gallery', 'images' => [['src' => '/b.jpg'], ['src' => '/c.jpg']]], ['type' => 'image', 'src' => '/d.jpg', 'hidden' => true]]]) === 3 && nibblyNewsImageCount([]) === 0, 'image count for the photo credit label');
 newsAssert(nibblyNewsPagination(4, 1, 4, '/blog') === '' && nibblyNewsPagination(0, 1, 4, '/blog') === '', 'no pagination for a single page');
 $long = nibblyNewsPagination(100, 10, 4, '/blog', 'de');
 newsAssert(substr_count($long, 'pagination__item--gap') === 2 && str_contains($long, '>25<') && str_contains($long, 'Seite 10 von 25') && str_contains($long, 'aria-label="Seitennavigation"'), 'gaps and German labels');

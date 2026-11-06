@@ -10,6 +10,7 @@
 <h3>Systemstatus</h3>
 <div class="hb-prose">
   <p>Unter <?php echo $hb->nav('Systemstatus', 'shield'); ?> prüft nibbly den Server: ob interne Ordner von außen erreichbar sind, ob die Website über https läuft, ob Suchmaschinen sie finden dürfen, wann das letzte Backup war und welche Upload-Grenzen gelten. Zu jedem Problem steht dort, wie man es behebt. Ernste Probleme zeigt das Dashboard zusätzlich oben als Warnung.</p>
+  <p>Bringt die Website eigene <b>Wartungsaufgaben</b> mit, etwa einen Zwischenspeicher neu aufzubauen, stehen sie am Ende des Systemstatus. <?php echo $hb->ui('Ausführen'); ?> startet eine Aufgabe sofort; sie kann einige Minuten dauern, das Ergebnis erscheint darunter.</p>
 </div>
 <?php echo $hb->shot('system.webp', 'Systemstatus mit den Bereichen Sicherheit, Suchmaschinen, PHP, Speicher und Uploads', '<b>Systemstatus.</b> Ein Hinweis am Menüpunkt zeigt, wenn etwas zu prüfen ist.'); ?>
 <?php endif; ?>

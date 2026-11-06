@@ -10,6 +10,7 @@
 <h3>System status</h3>
 <div class="hb-prose">
   <p>Under <?php echo $hb->nav('System status', 'shield'); ?> nibbly checks the server: whether internal folders can be reached from outside, whether the website runs on https, whether search engines may find it, when the last backup was and which upload limits apply. For each problem it shows how to fix it. The dashboard also shows serious problems as a warning at the top.</p>
+  <p>If the website brings <b>maintenance tasks</b> of its own, such as rebuilding a cache, they appear at the end of the system status. <?php echo $hb->ui('Run'); ?> starts a task at once; it may take a few minutes, and the result appears below it.</p>
 </div>
 <?php echo $hb->shot('system.webp', 'System status with the areas security, search engines, PHP, storage and uploads', '<b>System status.</b> A badge on the menu item shows when something needs checking.'); ?>
 <?php endif; ?>

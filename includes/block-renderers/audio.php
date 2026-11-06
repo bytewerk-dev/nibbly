@@ -9,6 +9,7 @@
 $html = '';
 
 if (!empty($section['src'])) {
+    $GLOBALS['nibblyAudioRendered'] = true; // footer.php loads js/audio-player.js only when an audio block was rendered
     $audioSrc = htmlspecialchars($section['src']);
     $rawTitle = $section['title'] ?? '';
     $playerId = 'player-' . uniqid();

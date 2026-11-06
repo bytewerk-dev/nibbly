@@ -131,4 +131,10 @@ searchAssert($fresh['total'] === 1 && $fresh['results'][0]['id'] === '2026-09-01
 $form = nibblySearchForm(['lang' => 'de', 'basePath' => '../', 'value' => 'x"y']);
 searchAssert(str_contains($form, 'action="../suche"') && str_contains($form, 'name="q"') && str_contains($form, 'value="x&quot;y"') && str_contains($form, 'role="search"'), 'search form markup: ' . $form);
 
+// Dashboard content search: substring match with both umlaut foldings; hidden blocks are not indexed
+searchAssert(nibblySearchContains('Gespräch mit Jörg', 'jorg') && nibblySearchContains('Gespräch mit Jörg', 'joerg') && nibblySearchContains('x', ''), 'nibblySearchContains folds umlauts');
+searchAssert(!nibblySearchContains('Gespräch mit Jörg', 'haider'), 'nibblySearchContains misses');
+$hiddenText = nibblySearchPageText(['sections' => [['type' => 'text', 'content' => '<p>sichtbar</p>'], ['type' => 'text', 'hidden' => true, 'content' => '<p>versteckt</p>']]]);
+searchAssert(str_contains($hiddenText, 'sichtbar') && !str_contains($hiddenText, 'versteckt'), 'hidden blocks skipped: ' . $hiddenText);
+
 echo "PASS search-smoke\n";

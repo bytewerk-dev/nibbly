@@ -25,6 +25,10 @@ This is the canonical, tool-neutral guide for AI coding agents. `AGENTS.md` and 
 | Migration redirects | `content/redirects.json` (copy from `content/redirects.example.json`) |
 | Redirect helper | `includes/redirect-helper.php` |
 | Site page hook | `includes/site-page-hook.php` (optional, survives core updates) |
+| Site maintenance tasks | `includes/site-maintenance.php` (optional, survives core updates; buttons in the system tab) |
+| Media states | `includes/media-states.php` (core), `includes/site-media-states.php` (optional, survives core updates; flags per media file) |
+| Media hooks | `includes/site-media-hooks.php` (optional, survives core updates; e.g. `uploaded`) |
+| Responsive image sizes | `includes/media-sizes.php` (`nibblyImageTag()`), `cli/media-sizes.php` |
 | Editorial guide | `admin/handbook.php` (route `/admin/handbook`), `includes/handbook.php`, `includes/handbook/` |
 | Site guide chapters | `includes/site-handbook/chapters.php` (optional, site-owned) |
 | Dashboard theme defaults | `includes/theme-defaults.php` (Pop for new installs, Soft for themes saved without a preset) |
@@ -1289,6 +1293,39 @@ keep originals in step with rename, move, trash, restore and permanent deletion
 stores every upload as it is. The system status lists the PHP limits, `memory_limit` and the
 web-version state; re-encoding raises `memory_limit` for the request when the server allows it.
 
+### Responsive Image Sizes
+
+`includes/media-sizes.php` makes two smaller copies of every JPEG, PNG or WebP in the library,
+640 and 1280 px wide (`NIBBLY_MEDIA_SIZE_WIDTHS`), WebP with `media.webQuality`, only for widths
+the image exceeds. They live in `assets/images-sizes/` next to the library under the image's
+relative name plus the width (`team/portrait.webp` → `images-sizes/team/portrait-640.webp`), so the
+library never lists them; `listMediaFiles()` reports the widths that exist as `sizes`.
+`upload-media` makes them right after `nibblyMediaStoreImage()`, and
+`nibblyMediaSizesRelocate()` / `nibblyMediaSizesForget()` keep them in step with rename, move,
+trash, restore and permanent deletion (`assets/images-sizes-trash/`), the same pattern as the
+originals. Images that were in the library before get theirs from
+`php cli/media-sizes.php --action=generate` (`--dry-run`, `--folder=`, `--limit=`, `--force`);
+`--action=status` counts what is missing and `--action=prune` deletes sizes whose image is gone.
+
+Rendering never writes files. `nibblyImageTag($src, $alt, $options)` is the one place that
+builds a public `<img>`: `width`/`height` from the file, `loading="lazy" decoding="async"` (or
+`fetchpriority="high"` with `lazy => false` for the hero image), and `srcset` with width
+descriptors plus a `sizes` attribute (`sizes` option, default `100vw`) when sizes exist; an
+image without sizes gets a plain tag with its dimensions. `editableImage()` and
+`editableImageSplit()` take the options as their last parameter and use it for visitors (the
+admin markup stays bare, the inline editor swaps `src`); the news card, timeline, gallery,
+events, people, person and event pages and the image and card block renderers use it too.
+`nibblyImageHtmlEnrich($html, $sizes)` completes the `<img>` tags inside stored or imported HTML
+after `sanitizeHtml()` (which drops `srcset`), and `editableHtml()` runs it for visitors. A site
+passes a `sizes` value that matches the layout, for example `(max-width: 40rem) 100vw, 20rem`
+for a card column.
+
+The library listing also shows each image's pixel size: `nibblyMediaDimensions($file)` reads it
+with `getimagesize()` and caches it in `content/media-dimensions.json` (not versioned; key is the
+absolute path, stamp mtime and bytes, written once per request), and `listMediaFiles()` returns
+`width`/`height` for every image except SVG.
+
+
 ### AI Disclosure Labels
 
 Images created or modified with AI must be disclosed (EU AI Act, Art. 50). Editors
@@ -1329,6 +1366,95 @@ custom viewBox values are preserved. `getIconSvg($iconKey)` remains available
 for legacy code that needs only inner SVG markup. The dashboard Icon Manager can
 import selected icons from a whitelisted Iconify set; imports are copied into the
 site-owned iconset JSON, so visitor pages do not depend on Iconify at runtime.
+
+### Media States
+
+A media file can carry several states at once: flags and properties set per file in the
+media library (button "Properties" next to the action buttons, in the grid and the list;
+active states show as badges on the thumbnail). The AI disclosure label is the core's own
+state (`ai`: generated | modified); a site registers more in
+`includes/site-media-states.php`, a site file that survives core updates and returns
+`id => definition`:
+
+```php
+return [
+    'no-shadow' => [
+        'label' => ['de' => 'Kein Schatten', 'en' => 'No shadow'],   // string or per language
+        'description' => ['de' => '…', 'en' => '…'],                 // optional, under the label
+        'badge' => ['de' => 'Ohne Schatten', 'en' => 'No shadow'],  // optional, on the thumbnail
+        'media' => ['image'],                                        // default: image and video
+    ],
+    'tone' => [                                                      // a choice instead of a flag
+        'label' => 'Tone', 'type' => 'choice',
+        'options' => ['warm' => ['label' => 'Warm', 'badge' => 'W'], 'cool' => ['label' => 'Cool']],
+    ],
+];
+```
+
+`includes/media-states.php` holds the registry (`nibblyMediaStates()`, labels resolved
+to the admin language) and the storage in `content/media-meta.json`: the `ai` state stays
+at the file entry's `ai` key, every other state lives under `states`, so existing data
+needs no migration and `nibblyMediaAiLabelFor()` keeps working. Read states when rendering
+with `nibblyMediaStateForSrc($src, 'no-shadow')` (true, the chosen option, or null) or
+`nibblyMediaStatesFor($type, $name)`; set them with `nibblySetMediaStates($type, $name,
+['no-shadow' => true, 'ai' => ''])` (false, '' or null removes a state). The media API
+action `set-media-states` (POST `type`, `filename`, `states` as a JSON object, CSRF token)
+does the same for the library; `list-media` delivers the registry (`states`) and each
+item's active states (`item.states`). `set-media-ai-label` remains for the AI label alone.
+States follow the file when it is renamed, moved, trashed or restored. The library
+dispatches `nibbly:media-state-change` (`detail.type`, `detail.name`, `detail.states`)
+after every change, and `nibbly:ai-label-change` when the AI label changed.
+
+Icon keys are resolved through `content/settings/iconset.json` first. That file
+is site-owned and upgrade-safe. Nibbly also ships `includes/default-iconset.json`
+as the core fallback, and unknown icon keys render the `default` icon. Icon
+definitions may include an optional `viewBox`; if omitted, Nibbly uses
+`0 0 24 24`. Prefer `renderIconSvg($iconKey)` when rendering complete icons so
+custom viewBox values are preserved. `getIconSvg($iconKey)` remains available
+for legacy code that needs only inner SVG markup. The dashboard Icon Manager can
+import selected icons from a whitelisted Iconify set; imports are copied into the
+site-owned iconset JSON, so visitor pages do not depend on Iconify at runtime.
+
+### Media Hooks
+
+A site reacts to media library events in `includes/site-media-hooks.php`, a site file that
+survives core updates and returns `event => callable`:
+
+```php
+<?php
+return [
+    // a new file is in the library: suggest a state, write a cache, notify someone …
+    'uploaded' => function (string $type, string $name): void {
+        if ($type === 'image' && str_starts_with($name, 'press/')) {
+            nibblySetMediaStates('image', $name, ['no-shadow' => true]);
+        }
+    },
+];
+```
+
+`nibblyMediaHooks()` loads the file once, `nibblyMediaEvent($event, ...$args)` calls the hook
+of an event; a failing hook is logged and never breaks the request. The only event so far is
+`uploaded(string $type, string $name)` (`$name` relative to the type's folder). It fires after
+a successful upload in the media library (every media type, including the legacy image upload
+and replace), after the AI agent moved an imported image into the library, and after AI image
+generation stored a file (`generated/<file>`).
+
+### Local Tools in the Media Library
+
+When Nibbly runs on the editor's own machine, the library offers three more actions per file,
+behind their own separator after "Properties": reveal the file in Finder / Explorer / the file
+manager, open it with the default application, and copy its absolute local path.
+`includes/media-local-tools.php` decides: `nibblyLocalToolsEnabled()` requires
+`NIBBLY_LOCAL_TOOLS` not to be `false` (default `true` in `admin/config.php`) and a request from
+a loopback address to a loopback host, the same check as the dev login, so the actions never
+appear on a web host. `nibblyLocalToolsInfo()` (`{platform, commands}` or null) is returned by
+`list-media` as `localTools`; `commands` is false when PHP may not run `exec()`, and then only
+"copy path" is offered. The API action `local-media` (POST `type`, `filename`, `do` = `reveal` |
+`open` | `path`, CSRF token) resolves the file with `nibblyLocalToolsPath()` (realpath, only inside
+the media folder) and runs `open -R` / `open` on macOS, `explorer /select,` / `start` on Windows
+and `xdg-open` on Linux, with every argument passed through `escapeshellarg()`. If the command
+fails, the answer still carries the path so the library can show it.
+
 
 ### Editable Groups
 
@@ -1627,6 +1753,23 @@ if (in_array($slug, ['home', 'contact'])) {
 
 This file survives core updates since it's not part of the Nibbly distribution.
 
+## Site Maintenance Tasks
+
+A site can offer administrators jobs to run from the dashboard's system tab (`includes/site-tasks.php`, API action `run-site-task`). Create `includes/site-maintenance.php` returning an array of tasks; the file is a site file and survives core updates:
+
+```php
+<?php
+return [
+    'rebuild-cache' => [
+        'label' => 'Rebuild the image cache',
+        'description' => 'Run after uploading many images.',
+        'run' => static fn(): string => mySiteRebuildCache()['message'],
+    ],
+];
+```
+
+`run()` returns the message shown under the button (a string or `['message' => …]`) and throws on failure. The request keeps the session lock released and allows up to ten minutes.
+
 ## Editorial Guide (`/admin/handbook`)
 
 Nibbly ships an end-user guide ("Handbuch" / "Handbook") for editors who know
@@ -1884,6 +2027,10 @@ the request host and remote address are loopback (`localhost`, `127.0.0.1`, or
 left enabled. Set `NIBBLY_DEV_LOGIN` to `false` to disable it locally too. Older
 local configs without the constant use the same loopback-only behavior.
 
+`NIBBLY_LOCAL_TOOLS` (default `true`) follows the same rule for the media library's local tools
+(reveal in Finder/Explorer, open with the default application, copy the local path); see
+"Local Tools in the Media Library".
+
 ### Breadcrumbs
 
 Optional `"breadcrumb"` array in page JSON. Each entry has `label` (required) and `href` (optional):
@@ -2082,7 +2229,7 @@ CSS file roles:
 
 **Whitelist** (safely overwritable on upgrade):
 - `admin/` except `admin/config.php`
-- `includes/` except `includes/header.php`, `includes/footer.php`, `includes/nav-config.php`, `includes/site-page-hook.php`, `includes/site-menus.php`, `includes/site-handbook/`
+- `includes/` except `includes/header.php`, `includes/footer.php`, `includes/nav-config.php`, `includes/site-page-hook.php`, `includes/site-maintenance.php`, `includes/site-menus.php`, `includes/site-media-states.php`, `includes/site-media-hooks.php`, `includes/site-handbook/`
 - Core JS: `js/inline-editor.js`, `js/image-manager.js`, `js/revision-client.js`, `js/ai-copilot.js`
 - All Nibbly-Core CSS files (see table above)
 - `api/`, `cli/`, `examples/`
@@ -2093,7 +2240,7 @@ CSS file roles:
 - Everything in `assets/` (images, fonts, audio)
 - All language directories (`/de/`, `/en/`, etc.)
 - `admin/config.php`
-- Custom `includes/header.php`, `includes/footer.php`, `includes/nav-config.php`, `includes/site-page-hook.php`, `includes/site-menus.php`
+- Custom `includes/header.php`, `includes/footer.php`, `includes/nav-config.php`, `includes/site-page-hook.php`, `includes/site-menus.php`, `includes/site-media-states.php`, `includes/site-media-hooks.php`
 - `includes/site-handbook/` (site chapters for the editorial guide)
 - Site frontend JS (e.g. `js/main.js`, if present)
 - `css/website.css`, `css/fonts.css`, `css/page-*.css`
@@ -2139,6 +2286,10 @@ These are the exact field names each block renderer reads. Using different names
 | `audio` | `src`, `title` |
 | `spacer` | `height` (sm/md/lg/xl) |
 | `divider` | *(none)* |
+
+`js/audio-player.js` is only loaded by `includes/footer.php` when an audio block was rendered
+(`$GLOBALS['nibblyAudioRendered']`, set by `includes/block-renderers/audio.php`) or an admin is logged
+in. A site template that prints its own player markup sets the flag before including the footer.
 
 ### Lists use numbered objects, not arrays
 
@@ -2194,7 +2345,9 @@ puts its own `{lang}/news-archive.php` next to it to restyle them (it receives `
   `includes/search.php` at `search.base` (default `/search`, `?q=`), overridden by `{lang}/search.php`;
   `nibblySearchForm()` renders the form (the core header shows it when search is enabled). Settings:
   `search.enabled|base|param|perPage|minLength`. A page stays out of the index with
-  `"seo": {"searchable": false}` or a `noindex` robots value.
+  `"seo": {"searchable": false}` or a `noindex` robots value. Blocks, sections and list items marked
+  `"hidden": true` are not indexed. `nibblySearchContains($text, $query)` is the folded substring test
+  behind the dashboard's content search of pages and posts (`list-page-matches`, `list-news-matches`).
 - **RSS**: `/feed.xml` (`includes/feed.php`, `nibblyNewsFeedXml()`), switched off with
   `news.feed: false`; `news.feedItems` caps the items. `nibblyNewsFeedHeadLink()` is printed in the
   core header.
@@ -2212,7 +2365,9 @@ A post stores its body either as one HTML string `content` (older posts) or as a
 gallery, youtube, audio, divider, spacer). Further fields: `subtitle` (kicker above the title, also
 in cards and the timeline), `cover` (`{src, alt, label}`, shown in the sidebar, opens in the
 lightbox), `sidebar` (show the sidebar without a cover), `imageLayout` (`column`, `full`, `hidden`
-for the title image) and `comments: false` (closes the comments of this post; `includes/comments.php`
+for the title image), `photoCredit` (plain-text credit for every image of the post without a credit of
+its own; `includes/news-post.php` prints it below the body as "Photo:"/"Photos:", the label chosen by
+`nibblyNewsImageCount($post)`) and `comments: false` (closes the comments of this post; `includes/comments.php`
 refuses submissions). Helpers in `includes/news-helper.php`:
 
 - `nibblyNewsRenderBlocks(array $blocks, string $field = '')` renders a block list; with `$field`
@@ -2223,7 +2378,7 @@ refuses submissions). Helpers in `includes/news-helper.php`:
 - `nibblyNewsSanitizeBlocks($blocks)` cleans a saved block list (known types only, sanitized HTML).
 
 `includes/news-post.php` marks editable fields with `data-news-field` (`title`, `subtitle`,
-`excerpt`, `cover`, `author`, legacy `content`) and block lists with `data-news-blocks="sections|aside"`;
+`excerpt`, `photoCredit`, `cover`, `author`, legacy `content`) and block lists with `data-news-blocks="sections|aside"`;
 a site's `{lang}/news-post.php` keeps those hooks to stay editable. Every save of a post keeps the
 previous JSON in `backups/` (`list-news-backups`, `load-news-backup`, `restore-news-backup`,
 `delete-news-backup`); the dashboard shows them in the backups panel at the bottom of the sidebar.

@@ -2078,6 +2078,57 @@ hr, .divider hr {
 }
 
 /* ============================================
+   BLOCK: TEXT – optional image (fields image, imageAlt, imagePosition, imageSize, imageStyle)
+   ============================================ */
+.block-text__image {
+    margin: 0 0 var(--spacing-sm);
+}
+
+.block-text__image img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+}
+
+.block-text__image--shadow img {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+@media (min-width: 40rem) {
+    .block-text__image--right,
+    .block-text__image--end {
+        float: right;
+        max-width: 40%;
+        margin: 0.25em 0 var(--spacing-sm) var(--spacing-md);
+    }
+
+    .block-text__image--left {
+        float: left;
+        max-width: 40%;
+        margin: 0.25em var(--spacing-md) var(--spacing-sm) 0;
+    }
+
+    .block-text__image--small {
+        max-width: 25%;
+    }
+
+    /* "hang": larger, reaching into the margin of the content box */
+    .block-text__image--hang {
+        max-width: 50%;
+    }
+
+    .block-text__image--hang.block-text__image--right,
+    .block-text__image--hang.block-text__image--end {
+        margin-right: calc(-1 * var(--spacing-md));
+    }
+
+    .block-text__image--hang.block-text__image--left {
+        margin-left: calc(-1 * var(--spacing-md));
+    }
+}
+
+/* ============================================
    BLOCK: IMAGE
    ============================================ */
 .block-image {
@@ -2175,6 +2226,17 @@ hr, .divider hr {
     margin-top: 0.75em;
     font-size: 0.8rem;
     color: var(--color-text-secondary);
+}
+
+/* "natural": tiles like the grid, every image in its own aspect ratio (covers, portraits) */
+.block-gallery--natural .block-gallery__item > a {
+    aspect-ratio: auto;
+    background: none;
+}
+
+.block-gallery--natural .block-gallery__item img {
+    height: auto;
+    object-fit: contain;
 }
 
 /* "full": every image stacked at the width of the content box, uncropped, at most 600px high */

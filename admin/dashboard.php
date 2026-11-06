@@ -142,6 +142,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
     <meta name="csrf-token" content="<?php echo htmlspecialchars($csrfToken); ?>">
     <link rel="stylesheet" href="fonts.css?v=<?php echo @filemtime(__DIR__ . '/fonts.css') ?: time(); ?>">
     <link rel="stylesheet" href="style.css?v=<?php echo @filemtime(__DIR__ . '/style.css') ?: time(); ?>">
+    <link rel="stylesheet" href="../css/rich-editor.css?v=<?php echo @filemtime(__DIR__ . '/../css/rich-editor.css') ?: time(); ?>">
     <link rel="stylesheet" href="../css/image-manager.css?v=<?php echo @filemtime(__DIR__ . '/../css/image-manager.css') ?: time(); ?>">
     <link rel="stylesheet" href="../css/nb-select.css?v=<?php echo @filemtime(__DIR__ . '/../css/nb-select.css') ?: time(); ?>">
     <?php if ($_aiDashboardCopilotAvailable && is_file(__DIR__ . '/../css/ai-copilot.css')): ?>
@@ -462,8 +463,13 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                     <input type="hidden" id="pageListLang" value="<?php echo htmlspecialchars(SITE_LANG_DEFAULT); ?>">
                     <label class="page-list-search" for="pageListSearch">
                         <span class="sr-only"><?php echo t('pages.search_title'); ?></span>
-                        <input type="search" id="pageListSearch" class="page-list-search-input" placeholder="<?php echo htmlspecialchars(t('pages.search_title')); ?>…" autocomplete="off" oninput="handlePageListSearch(this.value)">
+                        <input type="search" id="pageListSearch" class="page-list-search-input" placeholder="<?php echo htmlspecialchars(t('pages.search')); ?>…" autocomplete="off" oninput="handlePageListSearch(this.value)">
                     </label>
+                    <!-- Scope of the search: titles only, or the whole content (list-page-matches) -->
+                    <div class="segmented segmented--sm" role="radiogroup" aria-label="<?php echo htmlspecialchars(t('search.scope')); ?>">
+                        <label title="<?php echo htmlspecialchars(t('search.scope_title_hint')); ?>"><input type="radio" name="pageListSearchScope" value="title" checked onchange="setPageListSearchScope(this.value)"><span><?php echo t('search.scope_title'); ?></span></label>
+                        <label title="<?php echo htmlspecialchars(t('search.scope_content_hint')); ?>"><input type="radio" name="pageListSearchScope" value="content" onchange="setPageListSearchScope(this.value)"><span><?php echo t('search.scope_content'); ?></span></label>
+                    </div>
                 </div>
             </div>
             <div class="admin-list-footer admin-list-footer--top" id="pageListFooterTop"></div>
@@ -668,7 +674,20 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                     <button class="btn btn-primary btn-sm" onclick="addNewPost()"><?php echo t('news.new_post'); ?></button>
                 </div>
             </div>
-            <div class="nb-filter-bar"><div class="nb-filter-bar__links" id="newsFilterLinks"></div></div>
+            <div class="nb-filter-bar">
+                <div class="nb-filter-bar__links" id="newsFilterLinks"></div>
+                <div class="nb-filter-bar__actions">
+                    <label class="page-list-search" for="newsListSearch">
+                        <span class="sr-only"><?php echo t('news.search'); ?></span>
+                        <input type="search" id="newsListSearch" class="page-list-search-input" placeholder="<?php echo htmlspecialchars(t('news.search')); ?>…" autocomplete="off" oninput="handleNewsSearch(this.value)">
+                    </label>
+                    <!-- Scope of the search: titles only, or the whole post (list-news-matches) -->
+                    <div class="segmented segmented--sm" role="radiogroup" aria-label="<?php echo htmlspecialchars(t('search.scope')); ?>">
+                        <label title="<?php echo htmlspecialchars(t('search.scope_title_hint')); ?>"><input type="radio" name="newsSearchScope" value="title" checked onchange="setNewsSearchScope(this.value)"><span><?php echo t('search.scope_title'); ?></span></label>
+                        <label title="<?php echo htmlspecialchars(t('search.scope_content_hint')); ?>"><input type="radio" name="newsSearchScope" value="content" onchange="setNewsSearchScope(this.value)"><span><?php echo t('search.scope_content'); ?></span></label>
+                    </div>
+                </div>
+            </div>
             <div class="admin-list-footer admin-list-footer--top" id="newsListFooterTop"></div>
             <div class="page-list-table-wrap">
                 <table class="page-list-table" id="newsListTable">
@@ -3343,6 +3362,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
     <script src="../js/revision-client.js?v=<?php echo filemtime(__DIR__ . '/../js/revision-client.js'); ?>"></script>
     <script src="../js/nb-select.js?v=<?php echo @filemtime(__DIR__ . '/../js/nb-select.js') ?: time(); ?>"></script>
     <script src="../js/image-manager.js?v=<?php echo @filemtime(__DIR__ . '/../js/image-manager.js') ?: time(); ?>"></script>
+    <script src="../js/rich-editor.js?v=<?php echo @filemtime(__DIR__ . '/../js/rich-editor.js') ?: time(); ?>"></script>
     <script>
     <?php require __DIR__ . '/dashboard/scripts/bootstrap.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/page-writing.php'; ?>

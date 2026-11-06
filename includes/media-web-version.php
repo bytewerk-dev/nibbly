@@ -137,7 +137,9 @@ function nibblyMediaImageFitsMemory(int $width, int $height): bool {
         return $needed < (nibblyIniBytes($limit) - memory_get_usage()) * 0.9;
     };
     if ($fits()) return true;
-    $wanted = (int)ceil(($needed + memory_get_usage()) / 1048576 / 64) * 64;
+    // The check keeps a 10 % margin, so the new limit is computed from needed / 0.9 (a limit sized
+    // for the bare need fails the check again and the image is skipped although it would fit)
+    $wanted = (int)ceil(($needed / 0.9 + memory_get_usage()) / 1048576 / 64) * 64;
     @ini_set('memory_limit', max($wanted, 256) . 'M');
     return $fits();
 }

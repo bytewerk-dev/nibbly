@@ -197,6 +197,21 @@ function nibblyPublicString(string $key, ?string $lang = null): string {
             'de' => 'Titelbild: nicht im Beitrag, nur in Vorschauen',
             'es' => 'Imagen de portada: solo en las vistas previas',
         ],
+        'news_photo_credit' => [
+            'en' => 'Photo:',
+            'de' => 'Foto:',
+            'es' => 'Foto:',
+        ],
+        'news_photo_credits' => [
+            'en' => 'Photos:',
+            'de' => 'Fotos:',
+            'es' => 'Fotos:',
+        ],
+        'news_photo_credit_placeholder' => [
+            'en' => 'Photo credit for all images …',
+            'de' => 'Fotonachweis für alle Bilder …',
+            'es' => 'Créditos de todas las fotos …',
+        ],
         'pagination_label' => [
             'en' => 'Pagination',
             'de' => 'Seitennavigation',

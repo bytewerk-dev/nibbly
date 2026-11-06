@@ -493,6 +493,7 @@
         --nb-topbar-bg: #1d2327;
         --nb-topbar-text: #f0f0f1;
         --nb-topbar-text-muted: #c3c4c7;
+        --nb-topbar-text-hover: #ffffff; /* the primary colour would vanish on dark chrome */
         --nb-topbar-border: transparent;
         --nb-radius-sm: 3px;
         --nb-radius-md: 4px;
@@ -765,6 +766,7 @@
         --nb-topbar-bg: var(--nb-sidebar-bg);
         --nb-topbar-text: #ffffff;
         --nb-topbar-text-muted: oklch(from var(--nb-base) 0.82 min(c, 0.02) h);
+        --nb-topbar-text-hover: #ffffff; /* the primary colour would vanish on dark chrome */
         --nb-topbar-border: transparent;
         --nb-topbar-divider: rgba(255, 255, 255, 0.14);
         /* Cards on the stage are white sheets; grouped surfaces a shade below */

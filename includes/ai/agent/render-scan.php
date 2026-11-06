@@ -56,8 +56,38 @@ function nibblyAgentScanHtml(string $html, string $page): array {
         return $out;
     };
 
-    foreach ($xpath->query('//*[@data-field and @data-page]') as $element) {
+    // Image sections of a page carry the hooks of post blocks in edit mode instead of data-field markers
+    // (includes/block-renderers/image.php): the image and its caption are fields of the page as well.
+    $isSectionHook = static fn(DOMElement $element): bool => $element->getAttribute('data-block-type') === 'image'
+        && preg_match('/^sections\.\d+$/', trim($element->getAttribute('data-news-block')))
+        && $xpath->query('ancestor::*[contains(concat(" ", normalize-space(@class), " "), " editable-section ")]', $element)->length > 0;
+    foreach ($xpath->query('//*[(@data-field and @data-page) or (@data-news-block and @data-block-type)]') as $element) {
         /** @var DOMElement $element */
+        if (!$element->hasAttribute('data-field')) {
+            if (!$isSectionHook($element)) continue;
+            $base = trim($element->getAttribute('data-news-block'));
+            $hidden = $element->getAttribute('data-hidden') === 'true';
+            $img = $xpath->query('.//img', $element)->item(0);
+            if ($img instanceof DOMElement) {
+                $result['fields'][$page . '|' . $base . '.src'] ??= [
+                    'path' => $base . '.src', 'page' => $page, 'hidden' => $hidden, 'shared' => false, 'type' => 'image',
+                    'value' => ['src' => $img->getAttribute('src'), 'alt' => $img->getAttribute('alt')],
+                    'format' => 'split', 'altPath' => $base . '.alt',
+                ];
+            }
+            $caption = $xpath->query('./figcaption', $element)->item(0);
+            if ($caption instanceof DOMElement) {
+                $text = '';
+                foreach ($caption->childNodes as $child) {
+                    if ($child instanceof DOMElement && str_contains(' ' . $child->getAttribute('class') . ' ', ' block-image__credit ')) continue;
+                    $text .= $child->textContent;
+                }
+                $result['fields'][$page . '|' . $base . '.caption'] ??= [
+                    'path' => $base . '.caption', 'page' => $page, 'hidden' => $hidden, 'shared' => false, 'type' => 'text', 'value' => trim($text),
+                ];
+            }
+            continue;
+        }
         $path = trim($element->getAttribute('data-field'));
         $owner = trim($element->getAttribute('data-page'));
         if ($path === '' || $owner === '') continue;

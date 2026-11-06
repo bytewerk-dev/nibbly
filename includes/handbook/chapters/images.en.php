@@ -1,6 +1,6 @@
 <?php defined('NIBBLY_HANDBOOK') || exit; ?>
 <div class="hb-prose">
-  <p>To replace an image, click it in edit mode. The <?php echo $hb->ui('Image manager'); ?> opens with the current image already selected.</p>
+  <p>To replace an image, click it in edit mode. The <?php echo $hb->ui('Media library'); ?> opens with the current image already selected.</p>
 </div>
 <ol class="hb-steps">
   <li><span>In edit mode, click the image you want to replace.</span></li>
@@ -9,13 +9,14 @@
   <li><span>nibbly asks for the <b>alt text</b>: a short description of the image for people who can't see it and for search engines, such as “Team at the summer party in the courtyard”.</span></li>
   <li><span>Like all changes, the new image goes online only after <?php echo $hb->bar('Save', 'save', 'check'); ?>.</span></li>
 </ol>
-<?php echo $hb->shot('image-manager.webp', 'Image manager with folders on the left, image previews and the upload area at the bottom', '<b>Image manager.</b> Folders on the left, the images in the middle, the upload area at the bottom and the select button at the bottom right.'); ?>
+<?php echo $hb->shot('image-manager.webp', 'Media library with folders on the left, image previews and the upload area at the bottom', '<b>Media library.</b> Folders on the left, the images in the middle, the upload area at the bottom and the select button at the bottom right.'); ?>
 
-<h3>Keeping the image manager tidy</h3>
+<h3>Keeping the media library tidy</h3>
 <dl class="hb-fields">
   <div><dt>Folders</dt><dd>On the left, the folder symbol creates new folders, for example for a project or a year. With a folder selected, the new one is created inside it, so you can build “2026/October”. Folders with subfolders collapse and expand with the arrow. Empty folders can be deleted again.</dd></div>
-  <div><dt>Search and view</dt><dd>At the top you search by file name and switch between grid and list.</dd></div>
-  <div><dt>Below each image</dt><dd>Small symbols for download, copy path, move to another folder, rename, replace, AI label and delete. Move the mouse over a symbol to see what it does. A click on the image selects it; the magnifier that appears top left on hover shows it large.</dd></div>
+  <div><dt>Search and view</dt><dd>At the top you search by file name and switch between grid and list. Both show the file size, the pixel size (width × height) and the date of each image.</dd></div>
+  <div><dt>Below each image</dt><dd>Small symbols for download, copy path, move to another folder, rename, replace and delete, followed by <?php echo $hb->ui('Properties'); ?>. Move the mouse over a symbol to see what it does. A click on the image selects it; the magnifier that appears top left on hover shows it large.</dd></div>
+  <div><dt>Properties</dt><dd>The symbol with the sliders opens a small panel with the properties of the file, such as the AI label (AI-generated or AI-modified). Every change is saved at once, and active properties show as badges at the top left of the image. They belong to the file, so they apply wherever the image is used and stay when you rename or move it. Depending on the website there are more properties.</dd></div>
   <div><dt>Trash</dt><dd>Deleted images go to the <?php echo $hb->ui('Trash'); ?> first (at the top next to <?php echo $hb->ui('Library'); ?>). From there you bring them back with <?php echo $hb->ui('Restore'); ?> or delete them for good.</dd></div>
   <div><dt>Same file name</dt><dd>If the name already exists, nibbly asks whether to overwrite the old file or save the new one under a different name.</dd></div>
 </dl>
@@ -23,14 +24,16 @@
 <h3>Allowed files and size</h3>
 <div class="hb-prose">
   <p>For images, JPG, PNG, WebP, GIF and SVG are allowed. The maximum size per file is shown in the upload area. You don't have to shrink large photos yourself: on upload nibbly automatically creates a <b>web version</b> that loads quickly (at most 2000 pixels on the longest side). The original is kept; the <?php echo $hb->ui('Original'); ?> badge on the image leads to it.</p>
+  <p>nibbly also makes two smaller versions of every photo (640 and 1280 pixels wide). They don't appear in the image manager; browsers use them to load the right size on small screens.</p>
   <p>nibbly can't crop images or set a focal point. Prepare the image in an image editor beforehand.</p>
 </div>
 
 <?php if ($hb->isAdmin): ?>
 <h3>The Media Library</h3>
 <div class="hb-prose">
-  <p>In the dashboard, <?php echo $hb->nav('Media Library', 'image'); ?> manages all files of the website in one place: images, audio, video and documents such as PDFs. At the top you filter by file type; otherwise everything works as in the image manager.</p>
+  <p>In the dashboard, <?php echo $hb->nav('Media library', 'image'); ?> manages all files of the website in one place: images, audio, video and documents such as PDFs. At the top you filter by file type; otherwise everything works as in the image manager.</p>
 </div>
+<?php echo $hb->note('On your own computer', 'When nibbly runs locally on your computer, the Media Library shows three more symbols after the properties: <b>Show in Finder</b> (on Windows “Show in Explorer”), <b>Open with default application</b>, for example to open a photo in your image editor, and <b>Copy local path</b>. They never appear on the website on the internet.'); ?>
 <?php echo $hb->shot('media.webp', 'The Media Library in the dashboard with file type filter, folders and files', '<b>Media Library.</b> All files of the website, filtered by type.'); ?>
 <?php endif; ?>
 <?php echo $hb->note('Don’t forget the alt text', 'It describes the image for screen readers and search engines. If it’s missing, the page’s SEO check lists it as a hint.'); ?>

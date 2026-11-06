@@ -153,6 +153,21 @@ tokenization or cleanup:
 
 ---
 
+## media-sizes.php — Responsive Image Sizes
+
+Makes the 640 and 1280 px sizes (`includes/media-sizes.php`) for images that were in the
+library before uploads started making them, reports the state, and removes orphaned sizes.
+
+```bash
+php cli/media-sizes.php --action=status
+php cli/media-sizes.php --action=generate --dry-run      # list what would be made
+php cli/media-sizes.php --action=generate [--folder=2019] [--limit=200] [--force]
+php cli/media-sizes.php --action=prune [--dry-run]       # sizes whose image is gone
+```
+
+`--images=PATH` works on another images folder (tests, a copy); its sizes folder sits next to it.
+Exit codes: 0 success, 1 failure (or at least one image that could not be encoded), 2 invalid arguments.
+
 ## backup.php — Site Backup Runner
 
 Creates full-site ZIP backups for cron jobs and ad-hoc maintenance. The dashboard writes backup policy to `content/settings.json`; the CLI reads the same settings. If a hosting plan does not allow server cron jobs, the dashboard can also generate a secret web-cron URL for external schedulers.

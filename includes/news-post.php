@@ -171,7 +171,11 @@ $_showImage = !empty($post['image']) && ($_imageLayout !== 'hidden' || $_isAdmin
 
                 <?php if ($_showImage): ?>
                 <figure class="news-post-page__hero news-post-page__hero--<?php echo $_imageLayout; ?>"<?php echo $_newsField('image'); ?><?php echo $_imageLayout === 'hidden' ? ' data-hidden-label="' . htmlspecialchars(nibblyPublicString('news_image_hidden', $currentLang)) . '"' : ''; ?>>
-                    <img src="<?php echo htmlspecialchars($post['image']); ?>" alt="<?php echo htmlspecialchars((string)($post['imageAlt'] ?? $pageTitle)); ?>"><?php echo nibblyAiLabelHtml((string)$post['image']); ?>
+                    <?php // visitors get sizes and srcset; admins keep a plain tag, the visual editor swaps its src
+                    echo $_isAdmin
+                        ? '<img src="' . htmlspecialchars((string)$post['image']) . '" alt="' . htmlspecialchars((string)($post['imageAlt'] ?? $pageTitle)) . '">'
+                        : nibblyImageTag((string)$post['image'], (string)($post['imageAlt'] ?? $pageTitle), ['lazy' => false]);
+                    echo nibblyAiLabelHtml((string)$post['image']); ?>
                     <?php if (!empty($post['imageCaption'])): ?>
                     <figcaption><?php echo htmlspecialchars((string)$post['imageCaption']); ?></figcaption>
                     <?php endif; ?>
@@ -181,6 +185,16 @@ $_showImage = !empty($post['image']) && ($_imageLayout !== 'hidden' || $_isAdmin
                 <div class="news-post-page__content"<?php echo $_hasBlocks ? ($_isAdmin ? ' data-news-blocks="sections"' : '') : $_newsField('content'); ?>>
                     <?php echo $_postBody; ?>
                 </div>
+
+                <?php
+                // Photo credit for the whole post (field "photoCredit"): "Photo:" / "Photos:" by the number of images;
+                // admins see the empty line to fill it in the visual editor
+                $_photoCredit = trim((string)($post['photoCredit'] ?? ''));
+                if ($_photoCredit !== '' || $_isAdmin):
+                    $_photoLabel = nibblyPublicString(nibblyNewsImageCount($post) === 1 ? 'news_photo_credit' : 'news_photo_credits', $currentLang);
+                ?>
+                <p class="news-post-page__photo-credit<?php echo $_photoCredit === '' ? ' news-post-page__photo-credit--empty' : ''; ?>"><span class="news-post-page__photo-credit-label"><?php echo htmlspecialchars($_photoLabel); ?></span> <span class="news-post-page__photo-credit-text"<?php echo $_newsField('photoCredit'); ?> data-placeholder="<?php echo htmlspecialchars(nibblyPublicString('news_photo_credit_placeholder', $currentLang)); ?>"><?php echo htmlspecialchars($_photoCredit); ?></span></p>
+                <?php endif; ?>
 
                 <footer class="news-post-page__footer">
                     <?php $_tags = nibblyNewsSlugList($post['tags'] ?? []); if ($_tags): ?>

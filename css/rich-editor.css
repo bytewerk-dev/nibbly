@@ -1,0 +1,118 @@
+/*
+ * Rich text fields (js/rich-editor.js): Visual / Code tabs, toolbar, editing surface, link panel and the
+ * HTML code field. Loaded by the dashboard (after admin/style.css, which defines the --nb-* variables) and
+ * by the site's inline editor for the block dialog, where .nb-rich-host supplies the variables below.
+ */
+.nb-rich-host {
+    --nb-border: #d9dde3;
+    --nb-border-subtle: #e8ebef;
+    --nb-bg-elevated: #fff;
+    --nb-bg-sunken: #f3f4f6;
+    --nb-text: #1a1a1a;
+    --nb-text-muted: #6b7280;
+    --nb-text-secondary: #4b5563;
+    --nb-primary: var(--editor-primary, #2563eb);
+    --nb-primary-muted: color-mix(in srgb, var(--editor-primary, #2563eb) 18%, #fff);
+    --nb-space-0-5: 2px;
+    --nb-space-1: 4px;
+    --nb-space-1-5: 6px;
+    --nb-space-2: 8px;
+    --nb-space-3: 12px;
+    --nb-space-4: 16px;
+    --nb-space-5: 20px;
+    --nb-radius-sm: 4px;
+    --nb-radius-md: 6px;
+    --nb-control-h: 36px;
+    --nb-control-h-sm: 30px;
+    --nb-text-xs: 11px;
+    --nb-text-sm: 13px;
+    --nb-text-md: 13px;
+    --nb-text-base: 14px;
+    --nb-font-mono: 'SF Mono', 'Fira Code', Menlo, Consolas, ui-monospace, monospace;
+}
+
+/* Base of the segmented choice, the toolbar and the small buttons where admin/style.css is not loaded */
+.nb-rich-host .segmented { display: inline-flex; max-width: 100%; }
+.nb-rich-host .segmented label { position: relative; display: inline-flex; align-items: center; gap: var(--nb-space-2); margin: 0; padding: 0 var(--nb-space-3); font-weight: 500; cursor: pointer; white-space: nowrap; } /* margin: 0 overrides the block dialog's .editor-field label spacing (gap below the tabs) */
+.nb-rich-host .segmented input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+.nb-rich-host .segmented label:has(input:focus-visible) { outline: 2px solid var(--nb-primary); outline-offset: 1px; }
+.nb-rich-host .nb-page-rich-toolbar > button:where(:not(.btn)) { display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; cursor: pointer; }
+.nb-rich-host .nb-page-rich-toolbar > button:where(:not(.btn)):hover { background: color-mix(in srgb, var(--nb-text) 8%, transparent); }
+.nb-rich-host .btn { display: inline-flex; align-items: center; justify-content: center; min-height: var(--nb-control-h-sm); padding: 0 var(--nb-space-3); border: 1px solid var(--nb-border); border-radius: var(--nb-radius-sm); background: var(--nb-bg-elevated); color: var(--nb-text); font: inherit; font-size: var(--nb-text-sm); cursor: pointer; }
+.nb-rich-host .btn-primary { background: var(--nb-primary); border-color: var(--nb-primary); color: #fff; }
+.nb-rich-host .nb-page-link-panel input[type="text"] { width: 100%; box-sizing: border-box; min-height: var(--nb-control-h-sm); padding: 0 var(--nb-space-2); border: 1px solid var(--nb-border); border-radius: var(--nb-radius-sm); font: inherit; }
+.nb-rich .nb-page-rich-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--nb-space-3); flex-wrap: wrap; }
+.nb-rich .nb-page-rich-head > label { margin: 0; padding-bottom: var(--nb-space-2); font-weight: 600; }
+.nb-rich [hidden] { display: none !important; }
+.nb-rich textarea.nb-page-html-source { display: block; }
+
+.nb-page-modes.segmented{position:relative;z-index:1;gap:2px;margin-bottom:-1px;padding:0;border:0;border-radius:0;background:none}
+.nb-page-modes.segmented label{height:calc(var(--nb-control-h-sm) - 2px);font-size:var(--nb-text-sm);border:1px solid var(--nb-border);border-bottom:0;border-radius:var(--nb-radius-sm) var(--nb-radius-sm) 0 0;background:var(--nb-bg-elevated);color:var(--nb-text-muted)}
+.nb-page-modes.segmented label:has(input:checked){height:calc(var(--nb-control-h-sm) - 1px);box-shadow:none;color:var(--nb-text);background:color-mix(in srgb,var(--nb-primary) 12%,var(--nb-bg-elevated))}
+:is(#editorContainer, #newsEditorContainer, #eventsEditorView, #peopleTab, .nb-rich-host) :is(.nb-page-rich-toolbar, .nb-code-field){border-top-right-radius:0}
+:is(#editorContainer, #newsEditorContainer, #eventsEditorView, #peopleTab, .nb-rich-host) .nb-page-rich-toolbar{display:flex;flex-wrap:wrap;gap:var(--nb-space-1);padding:var(--nb-space-2);background:color-mix(in srgb,var(--nb-primary) 12%,var(--nb-bg-elevated));border:1px solid var(--nb-border);border-radius:var(--nb-radius-sm) var(--nb-radius-sm) 0 0}
+:is(#editorContainer, #newsEditorContainer, #eventsEditorView, #peopleTab, .nb-rich-host) .nb-page-rich-toolbar select{width:auto;max-width:100%;font:inherit;font-size:var(--nb-text-sm);padding:var(--nb-space-2);margin:0}
+:is(#editorContainer, #newsEditorContainer, #eventsEditorView, #peopleTab, .nb-rich-host) .nb-page-rich-toolbar>button:where(:not(.btn)){color:var(--nb-text);font:inherit;font-size:var(--nb-text-sm);padding:var(--nb-space-2);min-height:var(--nb-control-h-sm);border-radius:var(--nb-radius-sm)}
+:is(#editorContainer, #newsEditorContainer, #eventsEditorView, #peopleTab, .nb-rich-host) .nb-page-rich-toolbar button[aria-pressed="true"]{background:var(--nb-primary-muted)}
+:is(#editorContainer, #newsEditorContainer, #eventsEditorView, #peopleTab, .nb-rich-host) .nb-page-rich-editor{background:var(--nb-bg-elevated);color:var(--nb-text);border:1px solid var(--nb-border);border-top:0;border-radius:0 0 var(--nb-radius-sm) var(--nb-radius-sm);padding:var(--nb-space-5);min-height:28.125rem;max-height:68vh;overflow:auto;overflow-wrap:anywhere;font-size:var(--nb-text-base);line-height:1.7;caret-color:var(--nb-primary)}
+.nb-page-rich-editor p{margin:0 0 1em}
+.nb-page-rich-editor :is(h1,h2,h3,h4,h5,h6){margin:1.5em 0 .6em;font-weight:600;line-height:1.3;color:var(--nb-text)}
+.nb-page-rich-editor h2{font-size:1.5em}.nb-page-rich-editor h3{font-size:1.3em}.nb-page-rich-editor h4{font-size:1.15em}
+.nb-page-rich-editor :is(ul,ol){padding-inline-start:1.6em;margin:0 0 1em}
+.nb-page-rich-editor a{color:var(--nb-primary);text-decoration:underline;text-underline-offset:.15em}
+.nb-page-rich-editor>:first-child{margin-top:0}
+.nb-page-link-panel{display:flex;gap:var(--nb-space-2);align-items:end;flex-wrap:wrap;padding:var(--nb-space-3);border:1px solid var(--nb-border);background:var(--nb-bg-elevated)}
+.nb-page-link-panel label{flex:1;min-width:10rem;display:grid;gap:var(--nb-space-1)}
+.nb-page-rich-editor:focus-visible{outline:0.125rem solid var(--nb-primary);outline-offset:0.125rem}
+:is(#editorContainer, #newsEditorContainer, #eventsEditorView, #peopleTab, .nb-rich-host) .nb-page-rich-toolbar>button:where(:not(.btn)){width:auto;height:auto;flex:none;white-space:nowrap}
+
+:is(#editorContainer, #newsEditorContainer, #eventsEditorView, #peopleTab, .nb-rich-host) .nb-page-rich-toolbar .nb-select{width:10rem;flex:none;max-width:100%}
+
+/* Inline-editor symbols retain the dashboard theme and accessible button labels. */
+:is(#editorContainer, #newsEditorContainer, #eventsEditorView, #peopleTab, .nb-rich-host) .nb-page-rich-toolbar>button[data-command]{min-width:var(--nb-control-h-sm);display:inline-flex;align-items:center;justify-content:center}
+:is(#editorContainer, #newsEditorContainer, #eventsEditorView, #peopleTab, .nb-rich-host) .nb-page-rich-toolbar>button svg{width:1rem;height:1rem;flex:none}
+.nb-inline-rich{display:block;min-width:0}
+.nb-inline-rich .nb-page-rich-head>label{flex:none;width:auto;margin:0;padding:0 0 var(--nb-space-2);text-align:left;color:inherit;font-size:inherit;font-weight:600;word-break:normal}
+.nb-inline-rich [hidden]{display:none}
+:is(#editorContainer, #newsEditorContainer, .nb-rich-host) .nb-inline-rich-toolbar{padding:var(--nb-space-1) var(--nb-space-1-5)}
+:is(#editorContainer, #newsEditorContainer, .nb-rich-host) .nb-inline-rich-editor{min-height:4.5rem;max-height:none;padding:var(--nb-space-2) var(--nb-space-3);font-size:var(--nb-text-sm);line-height:1.55}
+:is(#editorContainer, #newsEditorContainer, .nb-rich-host) .nb-inline-rich-editor a{color:var(--nb-primary);text-decoration:underline}
+:is(#editorContainer, #newsEditorContainer, .nb-rich-host) .nb-inline-rich .nb-code-field{min-height:4.5rem;max-height:none}
+:is(#editorContainer, #newsEditorContainer, .nb-rich-host) .nb-inline-rich .nb-code-field>.nb-code-input{min-height:4.5rem}
+/* ---- HTML code field (js/rich-editor.js codeField): coloured layer behind a transparent textarea ----
+   Both layers share every metric that affects line breaks, so wrapped lines match exactly. */
+.nb-code-field{
+    --code-gutter:3rem;--code-pad:.75rem;
+    --code-text:var(--nb-text);--code-tag:#0b5fbf;--code-attr:#8a2bb8;--code-value:#b04a00;--code-comment:#6a737d;--code-entity:#c0262d;--code-number:var(--nb-text-muted);
+    position:relative;min-height:18.75rem;max-height:68vh;overflow:auto;
+    border:1px solid var(--nb-border);border-radius:var(--nb-radius-sm);
+    background:linear-gradient(to right,var(--nb-bg-sunken) var(--code-gutter),var(--nb-border-subtle) var(--code-gutter),var(--nb-border-subtle) calc(var(--code-gutter) + 1px),var(--nb-bg-elevated) calc(var(--code-gutter) + 1px)) local;
+}
+.nb-code-field[hidden]{display:none}
+.nb-code-field:focus-within{border-color:var(--nb-primary);box-shadow:0 0 0 3px var(--nb-primary-muted)}
+:is(#editorContainer, #newsEditorContainer, #eventsEditorView, #peopleTab, .nb-rich-host) .nb-code-field > :is(.nb-code-view, .nb-code-input){
+    box-sizing:border-box;width:100%;margin:0;border:0;border-radius:0;
+    padding:var(--code-pad) var(--code-pad) var(--code-pad) calc(var(--code-gutter) + var(--code-pad));
+    font-family:var(--nb-font-mono,ui-monospace,monospace);font-size:.8125rem;line-height:1.6;font-weight:400;letter-spacing:0;tab-size:2;
+    white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;text-align:left;
+}
+:is(#editorContainer, #newsEditorContainer, #eventsEditorView, #peopleTab, .nb-rich-host) .nb-code-field > .nb-code-view{position:absolute;inset:0 0 auto 0;color:var(--code-text);pointer-events:none;counter-reset:line}
+:is(#editorContainer, #newsEditorContainer, #eventsEditorView, #peopleTab, .nb-rich-host) .nb-code-field > .nb-code-input{
+    position:relative;display:block;min-height:18.75rem;resize:none;overflow:hidden;outline:0;box-shadow:none;
+    background:transparent;color:transparent;-webkit-text-fill-color:transparent;caret-color:var(--nb-text);
+}
+.nb-code-input::selection{background:color-mix(in srgb,var(--nb-primary) 28%,transparent);color:transparent}
+.nb-code-line{position:relative;counter-increment:line}
+.nb-code-line::before{content:counter(line);position:absolute;right:calc(100% + var(--code-pad) + .5rem);width:calc(var(--code-gutter) - 1rem);text-align:right;color:var(--code-number);font-size:.75rem;user-select:none}
+/* Tag names and their brackets: blue and bold (the mono font has no 500, it falls back to 400) */
+.nb-code-tag,.nb-code-punct{color:var(--code-tag);font-weight:600}.nb-code-attr{color:var(--code-attr)}.nb-code-value{color:var(--code-value)}
+.nb-code-comment{color:var(--code-comment);font-style:italic}.nb-code-entity,.nb-code-doctype{color:var(--code-entity)}
+[data-site-theme="dark"] .nb-code-field{--code-tag:#6cb6ff;--code-attr:#d2a8ff;--code-value:#ffa657;--code-comment:#8b949e;--code-entity:#ff7b72}
+/* Code toolbar (js/rich-editor.js codeToolbar): same box as the visual toolbar, the code field hangs below it */
+:is(#editorContainer, #newsEditorContainer, #eventsEditorView, #peopleTab, .nb-rich-host) .nb-code-toolbar{align-items:center}
+:is(#editorContainer, #newsEditorContainer, #eventsEditorView, #peopleTab, .nb-rich-host) .nb-code-toolbar>button.nb-code-toolbar__text{font-family:var(--nb-font-mono,ui-monospace,monospace);font-size:var(--nb-text-xs);padding-inline:var(--nb-space-2)}
+.nb-code-toolbar>.nb-code-toolbar__format{margin-left:auto}
+:is(#editorContainer, #newsEditorContainer, #eventsEditorView, #peopleTab, .nb-rich-host) .nb-code-toolbar:not([hidden]) ~ .nb-code-field{border-top:0;border-radius:0 0 var(--nb-radius-sm) var(--nb-radius-sm)}
+.nb-code-toolbar[hidden],.nb-code-link-panel[hidden]{display:none}
+.nb-code-link-panel{border-top:0}
+.nb-page-link-panel label.nb-code-link-tab{flex:none;min-width:0;display:flex;align-items:center;gap:var(--nb-space-2);padding-bottom:var(--nb-space-2)}

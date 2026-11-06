@@ -48,7 +48,7 @@ function nibblySanitizeRichHtml(string $html): string {
                 $value = $attribute->value;
                 $allowed = in_array($name, ['class', 'title', 'lang', 'dir'], true)
                     || ($name === 'id' && preg_match('/^[A-Za-z][\w:.-]{0,80}$/', $value))
-                    || ($tag === 'a' && in_array($name, ['href', 'target', 'rel'], true))
+                    || ($tag === 'a' && in_array($name, ['href', 'target', 'rel', 'download'], true))
                     || ($tag === 'ol' && in_array($name, ['start', 'reversed'], true))
                     || ($tag === 'img' && in_array($name, ['src', 'alt', 'width', 'height', 'loading', 'decoding'], true))
                     || (in_array($tag, ['td', 'th'], true) && in_array($name, ['colspan', 'rowspan', 'scope'], true))

@@ -5,7 +5,7 @@
 <div class="hb-cards">
   <div class="hb-card"><h4>Assistent</h4><p>Ein Chat auf der Startseite des Dashboards und, wenn eingeschaltet, im Visuellen Editor. Er beantwortet Fragen und bereitet Änderungen vor, die du prüfst und mit „Änderungen übernehmen“ freigibst. „Rückgängig“ nimmt sie wieder zurück.</p></div>
   <div class="hb-card"><h4>Text und SEO</h4><p>Füllt SEO-Titel, Meta-Beschreibung und Kurzantwort einer Seite aus, schlägt Texte vor und übersetzt Seiten, News, Termine und Profile in eine weitere Sprache.</p></div>
-  <div class="hb-card"><h4>Bildgenerator</h4><p>Erzeugt Bilder aus einer Beschreibung, im Dashboard und in der Bildverwaltung. KI-Bilder bekommen eine Kennzeichnung, wie sie das EU-Recht verlangt.</p></div>
+  <div class="hb-card"><h4>Bildgenerator</h4><p>Erzeugt Bilder aus einer Beschreibung, im Dashboard und in der Mediathek. KI-Bilder bekommen eine Kennzeichnung, wie sie das EU-Recht verlangt.</p></div>
 </div>
 <?php if ($hb->isAdmin): ?>
 <?php echo $hb->shot('settings-ai.webp', 'KI-Einstellungen mit Anbieter, API-Schlüssel, Funktionen und Limits', '<b>KI-Einstellungen.</b> Anbieter und Schlüssel, welche Funktionen aktiv sind, Monatsbudget und was Redakteure dürfen.'); ?>

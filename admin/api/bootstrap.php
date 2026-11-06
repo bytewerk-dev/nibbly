@@ -18,6 +18,8 @@ require_once NIBBLY_ADMIN_DIR . '/../includes/ai/image-job-runner.php';
 require_once NIBBLY_ADMIN_DIR . '/../includes/analytics-helper.php';
 require_once NIBBLY_ADMIN_DIR . '/../includes/forms.php';
 require_once NIBBLY_ADMIN_DIR . '/../includes/media-web-version.php';
+require_once NIBBLY_ADMIN_DIR . '/../includes/media-sizes.php';
+require_once NIBBLY_ADMIN_DIR . '/../includes/media-states.php';
 ensureUsersFile();
 
 // Prevent PHP HTML error output from corrupting JSON responses. The security
@@ -256,8 +258,12 @@ function nibblySanitizeThemeContrast(array $theme): array {
         $theme['darkAccentColor'] = nibblyAdjustColorForContrast((string)$theme['accentColor'], '#0b0d12', $minReadable, 'lighter');
     }
 
+    // Classic and Pop have dark chrome with light text in light mode (css/nibbly-admin-tokens.css);
+    // same rule as sidebarContrastRule() in dashboard/scripts/settings.php
     if (!empty($theme['sidebarBg'])) {
-        $theme['sidebarBg'] = nibblyAdjustColorForContrast((string)$theme['sidebarBg'], '#1a1a1a', $minReadable, 'lighter');
+        $theme['sidebarBg'] = in_array($theme['preset'] ?? '', ['classic', 'pop'], true)
+            ? nibblyAdjustColorForContrast((string)$theme['sidebarBg'], '#e5e5e5', $minReadable, 'darker')
+            : nibblyAdjustColorForContrast((string)$theme['sidebarBg'], '#1a1a1a', $minReadable, 'lighter');
     }
 
     if (!empty($theme['darkSidebarBg'])) {
@@ -1509,6 +1515,8 @@ function listMediaFiles(string $type, bool $trash = false): array {
             'dateFormatted' => date('d.m.Y H:i', $modified),
             'extension' => strtolower(pathinfo($relativePath, PATHINFO_EXTENSION)),
             'aiLabel' => nibblyMediaAiLabelFor($trash ? $type . '-trash' : $type, $relativePath),
+            // Flags and properties set in the library (includes/media-states.php): id => true | option
+            'states' => (object)nibblyMediaStatesFor($trash ? $type . '-trash' : $type, $relativePath),
         ];
         if ($type === 'image') {
             $entry = &$media[count($media) - 1];
@@ -1517,6 +1525,11 @@ function listMediaFiles(string $type, bool $trash = false): array {
             $original = $trash ? null : nibblyMediaOriginalFor($relativePath, false);
             if ($original !== null) $entry['original'] = $original;
             $entry['large'] = $sizeBytes > NIBBLY_MEDIA_LARGE_BYTES && in_array($entry['extension'], ['jpg', 'jpeg', 'png', 'webp'], true);
+            // Widths of the responsive sizes that exist (includes/media-sizes.php)
+            $entry['sizes'] = $trash ? [] : array_keys(nibblyMediaSizesFor($relativePath));
+            // Pixel size for the listing (cached, includes/media-sizes.php); SVG has none
+            $dimensions = $entry['extension'] === 'svg' ? null : nibblyMediaDimensions($path);
+            if ($dimensions !== null) { $entry['width'] = $dimensions['width']; $entry['height'] = $dimensions['height']; }
             unset($entry);
         }
     }

@@ -1042,7 +1042,7 @@ button.nb-imgmgr-folder-item-toggle:hover {
 .nb-imgmgr-list-header,
 .nb-imgmgr-row {
     display: grid;
-    grid-template-columns: 36px 60px 1fr 90px 130px 124px;
+    grid-template-columns: 36px 92px 1fr 100px 130px 124px;
     gap: var(--nb-space-2-5, 10px);
     padding: var(--nb-space-2, 8px) var(--nb-space-3, 12px);
     align-items: center;
@@ -1229,6 +1229,27 @@ button.nb-imgmgr-folder-item-toggle:hover {
 .nb-imgmgr-list-size,
 .nb-imgmgr-list-date {
     font-size: 12px;
+    color: var(--nb-text-muted, #6e6e6e);
+}
+
+.nb-imgmgr-list-dims {
+    display: block;
+    font-variant-numeric: tabular-nums;
+}
+
+.nb-imgmgr-meta {
+    /* Size · width × height · date under the file name of a tile: text in the normal colour, separators muted */
+    padding: 0 var(--nb-space-2-5, 10px) var(--nb-space-1-5, 6px);
+    font-size: 11px;
+    color: var(--nb-text, #1a1a1a);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: var(--nb-bg-elevated, #fff);
+    font-variant-numeric: tabular-nums;
+}
+
+.nb-imgmgr-meta-sep {
     color: var(--nb-text-muted, #6e6e6e);
 }
 
@@ -1489,12 +1510,22 @@ button.nb-imgmgr-folder-item-toggle:hover {
     margin: 0 0 var(--nb-space-3-5, 14px);
 }
 
-/* AI disclosure label: badge on thumbnails, active action and dialog */
-.nb-imgmgr-ai-badge {
+/* Media states (includes/media-states.php): badges on thumbnails for active states,
+   e.g. the AI disclosure label; the properties button opens the panel below */
+.nb-imgmgr-state-badges {
+    /* Bottom left: the top left corner belongs to the zoom button and the selection circle */
     position: absolute;
-    top: 6px;
+    bottom: 6px;
     left: 6px;
     z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    max-width: calc(100% - 12px);
+    pointer-events: none;
+}
+
+.nb-imgmgr-state-badge {
     padding: 1px 7px;
     border-radius: 999px;
     background: rgba(17, 24, 39, 0.82);
@@ -1503,7 +1534,7 @@ button.nb-imgmgr-folder-item-toggle:hover {
     font-weight: 700;
     letter-spacing: 0.06em;
     line-height: 1.6;
-    pointer-events: none;
+    white-space: nowrap;
 }
 
 /* Size badges: "Original" when the upload got a web version, "large" for big files */
@@ -1581,9 +1612,13 @@ button.nb-imgmgr-folder-item-toggle:hover {
     color: var(--nb-warning-text);
 }
 
-.nb-imgmgr-list-thumb .nb-imgmgr-ai-badge {
-    top: 2px;
+.nb-imgmgr-list-thumb .nb-imgmgr-state-badges {
+    bottom: 2px;
     left: 2px;
+    gap: 2px;
+}
+
+.nb-imgmgr-list-thumb .nb-imgmgr-state-badge {
     padding: 0 var(--nb-space-1, 4px);
     font-size: 8px;
 }
@@ -1592,23 +1627,133 @@ button.nb-imgmgr-folder-item-toggle:hover {
     color: var(--nb-imgmgr-accent);
 }
 
-.nb-imgmgr-ai-dialog .nb-imgmgr-replace-options {
-    margin-bottom: 0;
+/* The properties button sets states, the others run actions: a thin separator keeps them apart */
+.nb-imgmgr-actions__sep {
+    align-self: center;
+    width: 1px;
+    height: 16px;
+    margin: 0 var(--nb-space-0-5, 2px);
+    background: var(--nb-border, #d2d2d2);
 }
 
-/* The dialog reuses the move dialog frame: keep the option layout of the replace dialog */
-.nb-imgmgr-ai-dialog .nb-imgmgr-replace-option {
+/* Properties panel: popover at the button (js: openStatesPanel) */
+.nb-imgmgr-states {
+    --nb-imgmgr-accent: var(--editor-primary, var(--nb-primary, #2563eb));
+    --nb-imgmgr-accent-subtle: color-mix(in srgb, var(--nb-imgmgr-accent) 10%, transparent);
+    position: fixed;
+    z-index: 25001;
+    box-sizing: border-box;
+    width: min(320px, calc(100vw - 16px));
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
+    padding: var(--nb-space-3, 12px) var(--nb-space-3-5, 14px) var(--nb-space-3-5, 14px);
+    border: 1px solid var(--nb-border, #d2d2d2);
+    border-radius: var(--nb-radius-md, 8px);
+    background: var(--nb-bg-elevated, #fff);
+    color: var(--nb-text, #1a1a1a);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+    font-size: 13px;
+    line-height: 1.4;
+    text-align: left;
+}
+
+.nb-imgmgr-states.is-saving {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.nb-imgmgr-states__head {
     display: flex;
-    margin-bottom: 0;
-    font-size: inherit;
-    font-weight: inherit;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--nb-space-2, 8px);
 }
 
-.nb-imgmgr-ai-hint {
-    margin: var(--nb-space-3-5, 14px) 0 0;
-    font-size: 12px;
-    line-height: 1.5;
+.nb-imgmgr-states__head strong {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.nb-imgmgr-states__close {
+    width: 26px;
+    height: 26px;
+    margin-right: -6px;
+    border: 0;
+    border-radius: var(--nb-radius-sm, 4px);
+    background: transparent;
     color: var(--nb-text-muted, #6e6e6e);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.nb-imgmgr-states__close:hover {
+    background: var(--nb-bg-hover, #f5f5f5);
+    color: var(--nb-text, #1a1a1a);
+}
+
+.nb-imgmgr-states__file {
+    margin: 2px 0 var(--nb-space-2-5, 10px);
+    font-size: 12px;
+    color: var(--nb-text-muted, #6e6e6e);
+    word-break: break-all;
+}
+
+.nb-imgmgr-states__group {
+    margin: 0 0 var(--nb-space-2, 8px);
+    padding: var(--nb-space-2, 8px) 0 0;
+    border: 0;
+    border-top: 1px solid var(--nb-border, #d2d2d2);
+    min-inline-size: 0;
+}
+
+.nb-imgmgr-states__group-title {
+    padding: 0;
+    margin-bottom: var(--nb-space-1, 4px);
+    font-weight: 600;
+    color: var(--nb-text, #1a1a1a);
+}
+
+.nb-imgmgr-states__option {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--nb-space-2, 8px);
+    padding: 5px var(--nb-space-1-5, 6px);
+    margin: 0 calc(-1 * var(--nb-space-1-5, 6px));
+    border-radius: var(--nb-radius-sm, 4px);
+    cursor: pointer;
+}
+
+.nb-imgmgr-states__option:hover,
+.nb-imgmgr-states__option.is-active {
+    background: var(--nb-imgmgr-accent-subtle);
+}
+
+.nb-imgmgr-states__option input {
+    flex-shrink: 0;
+    margin: 2px 0 0;
+    accent-color: var(--nb-imgmgr-accent);
+}
+
+.nb-imgmgr-states__text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.nb-imgmgr-states__title {
+    font-weight: 500;
+}
+
+.nb-imgmgr-states__desc,
+.nb-imgmgr-states__hint {
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--nb-text-muted, #6e6e6e);
+}
+
+.nb-imgmgr-states__hint {
+    margin: var(--nb-space-1-5, 6px) 0 0;
 }
 
 .nb-imgmgr-replace-body,
@@ -1984,9 +2129,12 @@ button.nb-imgmgr-folder-item-toggle:hover {
 
 /* List view: the zoom button sits centred over the thumbnail and appears when the row is hovered */
 .nb-imgmgr-list-thumb-wrap {
+    /* Square: as wide as the row is high (actions are two rows of four), so landscape images show larger */
     position: relative;
     display: flex;
-    align-self: stretch;
+    align-self: center;
+    width: 92px;
+    height: 92px;
 }
 
 .nb-imgmgr-list-thumb-wrap .nb-imgmgr-list-thumb {
@@ -2000,7 +2148,10 @@ button.nb-imgmgr-folder-item-toggle:hover {
 }
 
 .nb-imgmgr-row:hover .nb-imgmgr-zoom,
-.nb-imgmgr-row:focus-within .nb-imgmgr-zoom,
+.nb-imgmgr-row:focus-within .nb-imgmgr-zoom {
+    opacity: 1;
+}
+
 .nb-imgmgr-item:hover .nb-imgmgr-zoom,
 .nb-imgmgr-item:focus-within .nb-imgmgr-zoom {
     opacity: 1;
