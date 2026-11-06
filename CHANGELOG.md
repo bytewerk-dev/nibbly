@@ -9,6 +9,15 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+### Fixed
+
+- **"Save & exit" from a post text.** With the caret in a post text, the Visual Editor closed that
+  always-editable field like a page field and called `saveField()` without a field key; the error
+  stopped the first click, left the floating text toolbar on screen and needed a second click.
+  Post texts are now skipped there (they are collected on save), the toolbar is hidden, and
+  leaving edit mode without changes switches the fields and block tools off as well, since no
+  reload follows in that case.
+
 ## [2.8.1] — 2026-11-06
 
 ### Fixed

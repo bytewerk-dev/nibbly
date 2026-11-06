@@ -1425,7 +1425,9 @@
     }
 
     function flushActiveInlineEdits() {
-        if (activeHtmlField && activeHtmlField.isContentEditable) {
+        // Post texts (.news-editable) stay editable and are collected by collectNewsPostFields() on save;
+        // closing them like a page field would call saveField() without a field key and throw
+        if (activeHtmlField && activeHtmlField.isContentEditable && !activeHtmlField.classList.contains('news-editable')) {
             finishInlineHtmlEdit(activeHtmlField, activeHtmlField._originalHtml || '', false);
         }
 
@@ -1450,11 +1452,22 @@
         cleanupActiveEditorState();
         document.body.classList.remove('edit-mode-active', 'visual-editing');
         updateAdminBarMode(false);
+        // Without changes there is no reload, so the fields and block tools must be switched off here
+        if (EditorConfig.isNewsPost) {
+            disableNewsPostEditing();
+        } else {
+            disablePageBlockEditing();
+        }
     }
 
     function cleanupActiveEditorState() {
-        if (activeHtmlField && activeHtmlField.isContentEditable) {
+        if (activeHtmlField && activeHtmlField.isContentEditable && !activeHtmlField.classList.contains('news-editable')) {
             finishInlineHtmlEdit(activeHtmlField, activeHtmlField._originalHtml || '', false);
+        }
+        // A focused post text keeps its floating toolbar open; blur it so the toolbar does not outlive edit mode
+        if (activeHtmlField && activeHtmlField.classList.contains('news-editable')) {
+            if (document.activeElement === activeHtmlField) activeHtmlField.blur();
+            hideFloatingToolbar();
         }
         activeHtmlField = null;
         document.querySelectorAll('.editable-field-editing').forEach(field => {
