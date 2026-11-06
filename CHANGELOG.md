@@ -18,6 +18,11 @@ Git milestones and the gaps in publication records.
   leaving edit mode without changes switches the fields and block tools off as well, since no
   reload follows in that case.
 
+- **Nested editable lists.** Lists can be nested, for example rows inside a card of an outer list.
+  Each list now takes only its own items, a drag inside the inner list is no longer cancelled by
+  the outer item, and hovering an item shows only that item's controls and add button instead of
+  those of every nested item.
+
 ## [2.8.1] — 2026-11-06
 
 ### Fixed
