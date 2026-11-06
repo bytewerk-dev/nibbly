@@ -596,7 +596,8 @@ function nibblyNewsBodyHtml(array $post): string {
  * Block list of a post ("sections" or "aside") as HTML for visitors; hidden blocks stay out.
  * With $field (the list's name, only for logged-in admins) every block gets the hooks of the
  * visual editor (js/inline-editor.js, enableNewsBlockEditing): data-news-block="field.index" and
- * data-block-type. Text blocks get them on a wrapper around their content, image and gallery
+ * data-block-type; hidden blocks are rendered too, marked data-hidden="true", so they can be
+ * shown again. Text blocks get them on a wrapper around their content, image and gallery
  * blocks directly on their root element (so floated figures keep floating); every other type is
  * wrapped like a text block. Text styles come from includes/text-styles.php (textStyleClass()).
  */
@@ -604,17 +605,19 @@ function nibblyNewsRenderBlocks(array $blocks, string $field = ''): string {
     if (!function_exists('renderSection')) require_once __DIR__ . '/content-loader.php';
     $html = '';
     foreach ($blocks as $i => $block) {
-        if (!is_array($block) || !empty($block['hidden'])) continue;
+        if (!is_array($block)) continue;
+        $hiddenAttr = !empty($block['hidden']) ? ' data-hidden="true"' : '';
+        if ($hiddenAttr !== '' && $field === '') continue;
         $type = (string)($block['type'] ?? '');
         if ($type === 'project') $type = 'card';
         if ($type === '' || !isset(getBlockTypes()[$type])) continue;
-        $hook = $field !== '' ? ' data-news-block="' . htmlspecialchars($field) . '.' . (int)$i . '" data-block-type="' . htmlspecialchars($type) . '"' : '';
+        $hook = $field !== '' ? ' data-news-block="' . htmlspecialchars($field) . '.' . (int)$i . '" data-block-type="' . htmlspecialchars($type) . '"' . $hiddenAttr : '';
         if ($type === 'text') {
             $title = trim((string)($block['title'] ?? ''));
             $tag = in_array($block['titleTag'] ?? '', ['h2', 'h3', 'h4', 'h5', 'h6'], true) ? $block['titleTag'] : 'h2';
             $boxClass = textStyleClass($block['style'] ?? '');
             if ($boxClass !== '') $html .= '<div class="' . htmlspecialchars($boxClass) . '">' . "\n";
-            if ($title !== '') $html .= "<{$tag}>" . htmlspecialchars($title) . "</{$tag}>\n";
+            if ($title !== '') $html .= "<{$tag}{$hiddenAttr}>" . htmlspecialchars($title) . "</{$tag}>\n";
             $text = trim((string)($block['content'] ?? ''));
             if ($text !== '' && !str_starts_with($text, '<')) $text = '<p>' . $text . '</p>'; // bare text from the editor
             if ($hook !== '') $html .= '<div class="news-post-page__block"' . $hook . '>' . ($text === '' ? '<p></p>' : sanitizeHtml($text)) . "</div>\n";

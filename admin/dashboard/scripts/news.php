@@ -808,12 +808,13 @@
                 </div>
             </div>`;
         }).join('');
-        const layout = ['grid', 'full'].includes(block.layout) ? block.layout : 'column';
+        const layout = ['grid', 'natural', 'full'].includes(block.layout) ? block.layout : 'column';
         return `<div class="nb-news-gallery" data-gallery>
             <label class="nb-news-gallery-layout">${escapeHtml(t('news.gallery_layout'))}
                 <select class="ce-input nb-news-gallery-layout-select">
                     <option value="column"${layout === 'column' ? ' selected' : ''}>${escapeHtml(t('news.gallery_layout_column'))}</option>
                     <option value="grid"${layout === 'grid' ? ' selected' : ''}>${escapeHtml(t('news.gallery_layout_grid'))}</option>
+                    <option value="natural"${layout === 'natural' ? ' selected' : ''}>${escapeHtml(t('news.gallery_layout_natural'))}</option>
                     <option value="full"${layout === 'full' ? ' selected' : ''}>${escapeHtml(t('news.gallery_layout_full'))}</option>
                 </select>
             </label>

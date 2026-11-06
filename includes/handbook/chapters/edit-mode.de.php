@@ -20,12 +20,15 @@
 <dl class="hb-fields">
   <div><dt><?php echo $hb->icon('edit', 'Bearbeiten'); ?> Bearbeiten</dt><dd>Öffnet alle Felder des Abschnitts in einem Formular, auch solche, die man auf der Seite nicht direkt anklicken kann.</dd></div>
   <div><dt><?php echo $hb->icon('eye', 'Ausblenden'); ?> Ausblenden</dt><dd>Versteckt den Abschnitt vor Besuchern, ohne ihn zu löschen. Ein zweiter Klick blendet ihn wieder ein. Einzelne Felder und Listeneinträge haben dasselbe Auge.</dd></div>
+  <div><dt>↑ ↓ Pfeile</dt><dd>Setzen den Abschnitt einen Platz nach oben oder unten.</dd></div>
+  <div><dt>Mit folgendem Block verbinden</dt><dd>Bei Textblöcken: hängt den nächsten Textblock samt Überschrift an diesen an. Teilen geht über die Werkzeugleiste im Text, siehe <?php echo $hb->ref('texts'); ?>.</dd></div>
+  <div><dt>Bild- und Galeriewerkzeuge</dt><dd>Bild- und Galerieabschnitte bearbeitest du direkt auf der Seite: ein Klick auf das Bild öffnet die Mediathek, Bildunterschriften tippst du ein. Die Leiste bietet die Darstellung der Galerie (Bildspalte, Raster, Raster unbeschnitten, vollbreit), macht aus einem Bild eine Galerie und aus einer Galerie mit einem Bild wieder ein Bild.</dd></div>
   <div><dt><?php echo $hb->icon('trash', 'Löschen'); ?> Löschen</dt><dd>Entfernt den Abschnitt nach einer Rückfrage.</dd></div>
   <div><dt><?php echo $hb->icon('grip', 'Ziehen zum Umsortieren'); ?> Verschieben</dt><dd>Am Griff ziehen, um den Abschnitt weiter nach oben oder unten zu setzen.</dd></div>
   <div><dt><?php echo $hb->icon('plus', 'Block hinzufügen'); ?> Block hinzufügen</dt><dd>Das Plus unter einem Abschnitt fügt an dieser Stelle einen neuen Block ein. Du wählst den Typ aus einer Liste mit Suchfeld, etwa Text, Überschrift, Bild, Liste, Karte oder YouTube.</dd></div>
 </dl>
-<?php echo $hb->shot('sections.webp', 'Ein Bildabschnitt im Bearbeitungsmodus mit seiner Werkzeugleiste oben rechts', '<b>Werkzeugleiste eines Abschnitts.</b> Bearbeiten, Ausblenden, Löschen und der Griff zum Verschieben.'); ?>
-<?php echo $hb->note('Sofort gespeichert', 'Wenn du einen Abschnitt oder Listeneintrag hinzufügst oder löschst, speichert nibbly sofort, zusammen mit allen anderen offenen Änderungen, und lädt die Seite neu. Alles andere, auch Verschieben und Ausblenden, wartet auf Speichern.'); ?>
+<?php echo $hb->shot('sections.webp', 'Ein Bildabschnitt im Bearbeitungsmodus mit seiner Werkzeugleiste oben rechts', '<b>Werkzeugleiste eines Abschnitts.</b> Bearbeiten, Ausblenden, Pfeile, Verbinden oder Bildwerkzeuge, Löschen und der Griff zum Verschieben; Beitragsblöcke haben dieselbe Leiste.'); ?>
+<?php echo $hb->note('Sofort gespeichert', 'Wenn du einen Abschnitt oder Listeneintrag hinzufügst oder löschst, einen Textblock teilst, verbindest oder seinen Stil wechselst oder die Bild- und Galeriewerkzeuge nutzt, speichert nibbly sofort, zusammen mit allen anderen offenen Änderungen, und lädt die Seite neu. Alles andere, auch Verschieben und Ausblenden, wartet auf Speichern.'); ?>
 
 <h3>Inhaltseditor</h3>
 <div class="hb-prose">

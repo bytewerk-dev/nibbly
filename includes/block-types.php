@@ -44,6 +44,24 @@ return [
             ['key' => 'content',  'type' => 'wysiwyg',  'label' => t('field.content')],
             // styles from includes/text-styles.php plus the site's content/text-styles.json
             ['key' => 'style',    'type' => 'select',   'label' => t('field.style'), 'options' => textStyleOptions()],
+            // optional image rendered by the text renderer: floated right/left in the text, or at the
+            // bottom right as tall as the text (for boxed styles); sites style .block-text__image
+            ['key' => 'image',         'type' => 'image',  'label' => t('field.image_optional')],
+            ['key' => 'imageAlt',      'type' => 'input',  'label' => t('field.alt_text')],
+            ['key' => 'imagePosition', 'type' => 'select', 'label' => t('field.image_position'), 'options' => [
+                ['value' => 'right', 'label' => t('option.image_right')],
+                ['value' => 'left',  'label' => t('option.image_left')],
+                ['value' => 'end',   'label' => t('option.image_end')],
+            ]],
+            ['key' => 'imageSize',     'type' => 'select', 'label' => t('field.image_size'), 'options' => [
+                ['value' => 'medium', 'label' => t('option.image_size_medium')],
+                ['value' => 'small',  'label' => t('option.image_size_small')],
+                ['value' => 'hang',   'label' => t('option.image_size_hang')],
+            ]],
+            ['key' => 'imageStyle',    'type' => 'select', 'label' => t('field.image_style'), 'options' => [
+                ['value' => 'shadow', 'label' => t('option.image_style_shadow')],
+                ['value' => 'plain',  'label' => t('option.image_style_plain')],
+            ]],
         ],
     ],
 
@@ -144,10 +162,17 @@ return [
             ['key' => 'src',     'type' => 'image',    'label' => t('block.image')],
             ['key' => 'alt',     'type' => 'input',    'label' => t('field.alt_text')],
             ['key' => 'caption', 'type' => 'input',    'label' => t('field.caption')],
+            ['key' => 'credit',  'type' => 'input',    'label' => t('field.credit')],
             ['key' => 'width',   'type' => 'select',   'label' => t('field.width'), 'options' => [
                 ['value' => 'full',   'label' => t('option.full_width')],
+                ['value' => 'half',   'label' => t('option.half_width')],
                 ['value' => 'medium', 'label' => t('option.medium_75')],
                 ['value' => 'small',  'label' => t('option.small_50')],
+            ]],
+            ['key' => 'align',   'type' => 'select',   'label' => t('field.align'), 'options' => [
+                ['value' => 'right',  'label' => t('option.align_right')],
+                ['value' => 'left',   'label' => t('option.align_left')],
+                ['value' => 'center', 'label' => t('option.align_center')],
             ]],
         ],
     ],

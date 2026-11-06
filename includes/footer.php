@@ -724,6 +724,7 @@ if (trim($_footerSummaryHtml) === '') {
     <link rel="stylesheet" href="<?php echo $basePath; ?>css/nibbly-admin-tokens.css">
     <link rel="stylesheet" href="<?php echo $_v('css/image-manager.css'); ?>">
     <link rel="stylesheet" href="<?php echo $_v('css/inline-editor.css'); ?>">
+    <link rel="stylesheet" href="<?php echo $_v('css/rich-editor.css'); ?>">
     <link rel="stylesheet" href="<?php echo $_v('css/nb-select.css'); ?>">
     <?php if ($_aiCopilotAvailable && file_exists(__DIR__ . '/../css/ai-copilot.css')): ?>
     <link rel="stylesheet" href="<?php echo $_v('css/ai-copilot.css'); ?>">
@@ -838,6 +839,7 @@ if (trim($_footerSummaryHtml) === '') {
     <script src="<?php echo $_v('js/image-manager.js'); ?>"></script>
     <link rel="stylesheet" href="<?php echo $_v('css/revision-client.css'); ?>">
     <script src="<?php echo $_v('js/revision-client.js'); ?>"></script>
+    <script src="<?php echo $_v('js/rich-editor.js'); ?>"></script>
     <script src="<?php echo $_v('js/inline-editor.js'); ?>"></script>
     <?php if ($_aiCopilotAvailable && file_exists(__DIR__ . '/../js/ai-copilot.js')): ?>
     <script src="<?php echo $_v('js/ai-copilot.js'); ?>"></script>
