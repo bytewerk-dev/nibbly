@@ -25,6 +25,7 @@ This is the canonical, tool-neutral guide for AI coding agents. `AGENTS.md` and 
 | Migration redirects | `content/redirects.json` (copy from `content/redirects.example.json`) |
 | Redirect helper | `includes/redirect-helper.php` |
 | Site page hook | `includes/site-page-hook.php` (optional, survives core updates) |
+| Site maintenance tasks | `includes/site-maintenance.php` (optional, survives core updates; buttons in the system tab) |
 | Media states | `includes/media-states.php` (core), `includes/site-media-states.php` (optional, survives core updates; flags per media file) |
 | Media hooks | `includes/site-media-hooks.php` (optional, survives core updates; e.g. `uploaded`) |
 | Responsive image sizes | `includes/media-sizes.php` (`nibblyImageTag()`), `cli/media-sizes.php` |
@@ -1752,6 +1753,23 @@ if (in_array($slug, ['home', 'contact'])) {
 
 This file survives core updates since it's not part of the Nibbly distribution.
 
+## Site Maintenance Tasks
+
+A site can offer administrators jobs to run from the dashboard's system tab (`includes/site-tasks.php`, API action `run-site-task`). Create `includes/site-maintenance.php` returning an array of tasks; the file is a site file and survives core updates:
+
+```php
+<?php
+return [
+    'rebuild-cache' => [
+        'label' => 'Rebuild the image cache',
+        'description' => 'Run after uploading many images.',
+        'run' => static fn(): string => mySiteRebuildCache()['message'],
+    ],
+];
+```
+
+`run()` returns the message shown under the button (a string or `['message' => …]`) and throws on failure. The request keeps the session lock released and allows up to ten minutes.
+
 ## Editorial Guide (`/admin/handbook`)
 
 Nibbly ships an end-user guide ("Handbuch" / "Handbook") for editors who know
@@ -2211,7 +2229,7 @@ CSS file roles:
 
 **Whitelist** (safely overwritable on upgrade):
 - `admin/` except `admin/config.php`
-- `includes/` except `includes/header.php`, `includes/footer.php`, `includes/nav-config.php`, `includes/site-page-hook.php`, `includes/site-menus.php`, `includes/site-media-states.php`, `includes/site-media-hooks.php`, `includes/site-handbook/`
+- `includes/` except `includes/header.php`, `includes/footer.php`, `includes/nav-config.php`, `includes/site-page-hook.php`, `includes/site-maintenance.php`, `includes/site-menus.php`, `includes/site-media-states.php`, `includes/site-media-hooks.php`, `includes/site-handbook/`
 - Core JS: `js/inline-editor.js`, `js/image-manager.js`, `js/revision-client.js`, `js/ai-copilot.js`
 - All Nibbly-Core CSS files (see table above)
 - `api/`, `cli/`, `examples/`
@@ -2269,6 +2287,10 @@ These are the exact field names each block renderer reads. Using different names
 | `spacer` | `height` (sm/md/lg/xl) |
 | `divider` | *(none)* |
 
+`js/audio-player.js` is only loaded by `includes/footer.php` when an audio block was rendered
+(`$GLOBALS['nibblyAudioRendered']`, set by `includes/block-renderers/audio.php`) or an admin is logged
+in. A site template that prints its own player markup sets the flag before including the footer.
+
 ### Lists use numbered objects, not arrays
 
 ```json
@@ -2323,7 +2345,9 @@ puts its own `{lang}/news-archive.php` next to it to restyle them (it receives `
   `includes/search.php` at `search.base` (default `/search`, `?q=`), overridden by `{lang}/search.php`;
   `nibblySearchForm()` renders the form (the core header shows it when search is enabled). Settings:
   `search.enabled|base|param|perPage|minLength`. A page stays out of the index with
-  `"seo": {"searchable": false}` or a `noindex` robots value.
+  `"seo": {"searchable": false}` or a `noindex` robots value. Blocks, sections and list items marked
+  `"hidden": true` are not indexed. `nibblySearchContains($text, $query)` is the folded substring test
+  behind the dashboard's content search of pages and posts (`list-page-matches`, `list-news-matches`).
 - **RSS**: `/feed.xml` (`includes/feed.php`, `nibblyNewsFeedXml()`), switched off with
   `news.feed: false`; `news.feedItems` caps the items. `nibblyNewsFeedHeadLink()` is printed in the
   core header.
@@ -2341,7 +2365,9 @@ A post stores its body either as one HTML string `content` (older posts) or as a
 gallery, youtube, audio, divider, spacer). Further fields: `subtitle` (kicker above the title, also
 in cards and the timeline), `cover` (`{src, alt, label}`, shown in the sidebar, opens in the
 lightbox), `sidebar` (show the sidebar without a cover), `imageLayout` (`column`, `full`, `hidden`
-for the title image) and `comments: false` (closes the comments of this post; `includes/comments.php`
+for the title image), `photoCredit` (plain-text credit for every image of the post without a credit of
+its own; `includes/news-post.php` prints it below the body as "Photo:"/"Photos:", the label chosen by
+`nibblyNewsImageCount($post)`) and `comments: false` (closes the comments of this post; `includes/comments.php`
 refuses submissions). Helpers in `includes/news-helper.php`:
 
 - `nibblyNewsRenderBlocks(array $blocks, string $field = '')` renders a block list; with `$field`
@@ -2352,7 +2378,7 @@ refuses submissions). Helpers in `includes/news-helper.php`:
 - `nibblyNewsSanitizeBlocks($blocks)` cleans a saved block list (known types only, sanitized HTML).
 
 `includes/news-post.php` marks editable fields with `data-news-field` (`title`, `subtitle`,
-`excerpt`, `cover`, `author`, legacy `content`) and block lists with `data-news-blocks="sections|aside"`;
+`excerpt`, `photoCredit`, `cover`, `author`, legacy `content`) and block lists with `data-news-blocks="sections|aside"`;
 a site's `{lang}/news-post.php` keeps those hooks to stay editable. Every save of a post keeps the
 previous JSON in `backups/` (`list-news-backups`, `load-news-backup`, `restore-news-backup`,
 `delete-news-backup`); the dashboard shows them in the backups panel at the bottom of the sidebar.

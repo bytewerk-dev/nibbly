@@ -394,6 +394,31 @@
                 }
                 article.append(actions); requests.append(article);
             }
+            if (Array.isArray(data.siteTasks) && data.siteTasks.length) {
+                const tasks = group(t('system.site_tasks'));
+                const intro = document.createElement('p'); intro.textContent = t('system.site_tasks_hint'); tasks.append(intro);
+                for (const task of data.siteTasks) {
+                    const article = document.createElement('article'); article.className = 'system-request';
+                    const head = document.createElement('div'); head.className = 'system-status-row';
+                    const name = document.createElement('strong'); name.textContent = task.label;
+                    const button = document.createElement('button'); button.type = 'button'; button.className = 'btn btn-secondary btn-sm';
+                    button.textContent = t('system.site_task_run');
+                    head.append(name, button); article.append(head);
+                    if (task.description) { const text = document.createElement('p'); text.textContent = task.description; article.append(text); }
+                    const output = document.createElement('p'); output.className = 'system-task-output'; output.hidden = true; output.setAttribute('aria-live', 'polite'); article.append(output);
+                    button.onclick = async () => {
+                        button.disabled = true; output.hidden = false; output.textContent = t('system.site_task_running');
+                        const form = new FormData(); form.set('action', 'run-site-task'); form.set('csrf_token', CSRF_TOKEN); form.set('task', task.id);
+                        try {
+                            const result = await (await fetch('api.php', { method: 'POST', body: form })).json();
+                            if (!result.success) throw new Error(result.message);
+                            output.textContent = (result.data && result.data.message) || t('system.site_task_done');
+                        } catch (error) { output.textContent = t('system.site_task_failed', { error: error.message }); }
+                        finally { button.disabled = false; }
+                    };
+                    tasks.append(article);
+                }
+            }
         } catch (_) { target.textContent = t('system.load_failed'); }
     }
 

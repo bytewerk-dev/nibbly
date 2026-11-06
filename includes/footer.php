@@ -649,8 +649,9 @@ if (trim($_footerSummaryHtml) === '') {
     <?php endforeach; ?>
     <?php endif; ?>
 
-    <!-- Custom Audio Player -->
+    <?php if (!empty($GLOBALS['nibblyAudioRendered']) || $isAdminLoggedIn): // custom audio player only with an audio block on the page; admins always (blocks added in the editor) ?>
     <script src="<?php echo $basePath; ?>js/audio-player.js"></script>
+    <?php endif; ?>
 
     <?php if (isset($pageClass) && strpos($pageClass, 'page-landing') !== false && file_exists(__DIR__ . '/../js/landing-effects.js')): ?>
     <script src="<?php echo $basePath; ?>js/landing-effects.js"></script>

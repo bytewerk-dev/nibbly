@@ -7102,7 +7102,7 @@
     // NEWS POST INLINE EDITING
     // ============================================================
 
-    // Editable parts of a post page. A site template marks them with data-news-field="title|content|author|image|excerpt|cover"
+    // Editable parts of a post page. A site template marks them with data-news-field="title|content|author|image|excerpt|photoCredit|cover"
     // (on the image itself or its figure); without the attribute the classes of includes/news-post.php apply.
     function newsPostField(postEl, name) {
         const marked = postEl.querySelector('[data-news-field="' + name + '"]');
@@ -7159,6 +7159,9 @@
         if (contentEl) data.content = newsEditableHtml(contentEl);
         if (authorEl) data.author = authorEl.textContent.trim().replace(/^by\s+/i, '');
         if (excerptEl) data.excerpt = newsUnwrapParagraph(newsEditableHtml(excerptEl));
+        // photo credit for the whole post (data-news-field="photoCredit", the "Photos:" label is not part of it)
+        const photoCreditEl = newsPostField(postEl, 'photoCredit');
+        if (photoCreditEl) data.photoCredit = photoCreditEl.textContent.trim();
         collectNewsBlockFields(postEl);
     }
 
@@ -7925,7 +7928,7 @@
         const postEl = document.querySelector('[data-news-post]');
         if (!postEl) return;
 
-        ['title', 'subtitle', 'content', 'author', 'excerpt'].forEach(name => {
+        ['title', 'subtitle', 'content', 'author', 'excerpt', 'photoCredit'].forEach(name => {
             const el = newsPostField(postEl, name);
             if (!el) return;
             el.contentEditable = 'true';
@@ -7997,7 +8000,7 @@
         const postEl = document.querySelector('[data-news-post]');
         if (!postEl) return;
 
-        ['title', 'subtitle', 'content', 'author', 'excerpt'].forEach(name => {
+        ['title', 'subtitle', 'content', 'author', 'excerpt', 'photoCredit'].forEach(name => {
             const el = newsPostField(postEl, name);
             if (!el) return;
             el.contentEditable = 'false';

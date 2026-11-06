@@ -2,6 +2,9 @@
 <div class="hb-prose">
   <p>Unter <?php echo $hb->nav('Seiten', 'pages'); ?> im Dashboard siehst du alle Seiten der Website. Über jedem Titel steht die Adresse der Seite (etwa <code>/kontakt</code>), daneben die SEO-Bewertung. Bei mehrsprachigen Websites hat jede weitere Sprache eine eigene Spalte.</p>
 </div>
+<div class="hb-prose">
+  <p>Das Suchfeld über der Liste findet Seiten nach ihrem Titel. Stellst du den Umschalter daneben auf <?php echo $hb->ui('Inhalt'); ?>, sucht nibbly auch in Beschreibung, Texten, Abschnitten und Bildunterschriften der Seiten.</p>
+</div>
 <?php echo $hb->shot('pages.webp', 'Seitenliste mit Titel, Adresse, SEO-Bewertung und Änderungsdatum; eine Zeile ist markiert', '<b>Seitenliste.</b> Fährst du mit der Maus über eine Zeile, erscheinen Bearbeiten, Ansehen, Duplizieren und Papierkorb.'); ?>
 <dl class="hb-fields">
   <div><dt>Bearbeiten</dt><dd>Öffnet die Seite im Inhaltseditor des Dashboards (siehe unten).</dd></div>
@@ -26,6 +29,8 @@
 <?php echo $hb->shot('page-editor.webp', 'Inhaltseditor der Startseite mit Titel, Textfeld und Seitenaktionen', '<b>Inhaltseditor.</b> Dieselben Inhalte wie auf der Website, Feld für Feld.'); ?>
 <dl class="hb-fields">
   <div><dt>Abschnitte</dt><dd>Aufklappen zum Bearbeiten, am Griff ziehen zum Sortieren, mit <?php echo $hb->ui('Hier einfügen'); ?> einen neuen Abschnitt an einer Stelle einfügen. Hinweise wie „Alt-Text fehlt“ zeigen, wo etwas fehlt.</dd></div>
+  <div><dt>Abschnittsliste</dt><dd>Links neben den Abschnitten, mit Suchfeld und Filter. Über das Symbol in ihrer Kopfzeile klappst du sie ein, dann nutzen die Felder die volle Breite; nibbly merkt sich das im Browser. <?php echo $hb->ui('Alle aufklappen'); ?> öffnet alle Abschnitte auf einmal.</dd></div>
+  <div><dt>Seiten mit eigener Vorlage</dt><dd>Manche Seiten haben statt Abschnitten eigene Feldgruppen, etwa „hero“ oder „content“. Sie erscheinen in derselben Ansicht; Felder, die auf der Website formatierten Text zeigen, haben eine Werkzeugleiste und den Umschalter <?php echo $hb->ui('Visuell'); ?> / <?php echo $hb->ui('Code'); ?>.</dd></div>
   <div><dt>Navigation, Breadcrumb</dt><dd>Zwei aufklappbare Zeilen direkt unter dem Titel: in welchen Menüs die Seite erscheint, und der Brotkrumenpfad.</dd></div>
   <div><dt>Seitenbild</dt><dd>In der Seitenleiste: das Titelbild der Seite mit Alt-Text. Es erscheint auch auf den Übersichtskarten der übergeordneten Seite.</dd></div>
   <div><dt>Beschreibung</dt><dd>Unter den Abschnitten, vor SEO / AEO: der Kartentext auf der übergeordneten Seite und zugleich die Meta-Beschreibung. Das Feld kennt Fett, Kursiv und Links, aber keine Absätze; über <?php echo $hb->ui('Code'); ?> siehst du das HTML. In den Meta-Angaben landet der reine Text.</dd></div>

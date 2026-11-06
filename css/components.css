@@ -1175,6 +1175,27 @@ body.edit-mode-active .news-post-page__kicker:empty::before {
     opacity: 0.6;
 }
 
+/* Photo credit for the whole post (field "photoCredit"), below the body */
+.news-post-page__photo-credit {
+    margin: var(--spacing-md) 0 0;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    line-height: 1.4;
+}
+
+.news-post-page__photo-credit-label {
+    font-weight: 600;
+}
+
+/* Empty: only in edit mode, to fill it in place */
+.news-post-page__photo-credit--empty {
+    display: none;
+}
+
+body.edit-mode-active .news-post-page__photo-credit--empty {
+    display: block;
+}
+
 /* Title image inside the post: column (floats right, the text flows around), full width, hidden */
 .news-post-page__hero--hidden {
     display: none;

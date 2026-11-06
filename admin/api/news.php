@@ -117,6 +117,24 @@ switch ($action) {
         jsonResponse(true, $posts);
         break;
 
+    // Content search of the post list (dashboard, scope "content"): ids of the posts whose title, subtitle,
+    // excerpt, blocks, gallery captions, photo credit or tags contain ?q= (folded, see nibblySearchContains())
+    case 'list-news-matches':
+        $query = trim((string)($_GET['q'] ?? ''));
+        $matches = [];
+        if ($query !== '') {
+            foreach (glob(dirname(CONTENT_PATH) . '/news/*.json') ?: [] as $file) {
+                $post = json_decode((string)file_get_contents($file), true);
+                if (!is_array($post)) continue;
+                $parts = [(string)($post['title'] ?? ''), (string)($post['subtitle'] ?? ''), (string)($post['excerpt'] ?? ''), (string)($post['photoCredit'] ?? ''), (string)($post['author'] ?? '')];
+                $parts[] = is_string($post['content'] ?? null) ? $post['content'] : nibblySearchPageText(array_intersect_key($post, array_flip(['sections', 'aside', 'gallery'])));
+                $parts[] = implode(' ', array_map('strval', is_array($post['tags'] ?? null) ? $post['tags'] : []));
+                if (nibblySearchContains(implode(' ', $parts), $query)) $matches[] = (string)($post['id'] ?? basename($file, '.json'));
+            }
+        }
+        jsonResponse(true, $matches);
+        break;
+
     // One complete post for the editor (also the source of a translation or copy)
     case 'load-news-post':
         $postId = $_GET['id'] ?? '';
@@ -204,6 +222,8 @@ switch ($action) {
             'author' => trim($post['author'] ?? ''),
             'excerpt' => trim($post['excerpt'] ?? ''),
             'image' => trim($post['image'] ?? ''),
+            // Photo credit for every image of the post without a credit of its own (plain text)
+            'photoCredit' => trim(strip_tags((string)($post['photoCredit'] ?? ''))),
             // Title image inside the post: column (image column), full (full width), hidden (previews only)
             'imageLayout' => in_array($post['imageLayout'] ?? '', ['full', 'hidden'], true) ? $post['imageLayout'] : 'column',
             'content' => sanitizeHtml((string)($post['content'] ?? '')),

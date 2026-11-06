@@ -115,6 +115,21 @@ function nibblySearchNormalize(string $text, bool $strip = false): string {
     return trim((string)$text);
 }
 
+/**
+ * Does $query occur in $text? Both are folded with nibblySearchNormalize(), umlauts in both spellings
+ * ("Jörg" is found by "jorg" and "joerg"). Used by the dashboard's content search (list-page-matches,
+ * list-news-matches); the public search ranks via the index instead.
+ */
+function nibblySearchContains(string $text, string $query): bool {
+    $query = trim($query);
+    if ($query === '') return true;
+    foreach ([true, false] as $strip) {
+        $q = nibblySearchNormalize($query, $strip);
+        if ($q !== '' && str_contains(nibblySearchNormalize($text, $strip), $q)) return true;
+    }
+    return false;
+}
+
 /** Plain text of HTML: tags and entities removed, whitespace collapsed. */
 function nibblySearchPlainText(string $html): string {
     $text = preg_replace('#<(script|style)\b[^>]*>.*?</\1>#is', ' ', $html) ?? $html;
@@ -134,6 +149,7 @@ function nibblySearchPageText(array $data): string {
     $parts = [];
     $walk = function ($value, string $key = '') use (&$walk, &$parts, $skip): void {
         if (is_array($value)) {
+            if (!empty($value['hidden'])) return;
             foreach ($value as $k => $v) {
                 if (is_string($k) && in_array($k, $skip, true)) continue;
                 $walk($v, is_string($k) ? $k : $key);

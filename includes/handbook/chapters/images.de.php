@@ -1,6 +1,6 @@
 <?php defined('NIBBLY_HANDBOOK') || exit; ?>
 <div class="hb-prose">
-  <p>Ein Bild tauschst du im Bearbeitungsmodus mit einem Klick darauf. Es öffnet sich die <?php echo $hb->ui('Bildverwaltung'); ?>, das aktuelle Bild ist schon ausgewählt.</p>
+  <p>Ein Bild tauschst du im Bearbeitungsmodus mit einem Klick darauf. Es öffnet sich die <?php echo $hb->ui('Mediathek'); ?>, das aktuelle Bild ist schon ausgewählt.</p>
 </div>
 <ol class="hb-steps">
   <li><span>Klick im Bearbeitungsmodus auf das Bild, das du ersetzen möchtest.</span></li>
@@ -9,9 +9,9 @@
   <li><span>nibbly fragt nach dem <b>Alternativtext</b>: eine kurze Beschreibung des Bildes für Menschen, die es nicht sehen, und für Suchmaschinen, etwa „Team beim Sommerfest im Innenhof“.</span></li>
   <li><span>Wie alle Änderungen ist das neue Bild erst nach <?php echo $hb->bar('Speichern', 'save', 'check'); ?> online.</span></li>
 </ol>
-<?php echo $hb->shot('image-manager.webp', 'Bildverwaltung mit Ordnern links, Bildvorschauen und dem Upload-Bereich unten', '<b>Bildverwaltung.</b> Links die Ordner, in der Mitte die Bilder, unten der Upload-Bereich und rechts unten „Bild auswählen“.'); ?>
+<?php echo $hb->shot('image-manager.webp', 'Mediathek mit Ordnern links, Bildvorschauen und dem Upload-Bereich unten', '<b>Mediathek.</b> Links die Ordner, in der Mitte die Bilder, unten der Upload-Bereich und rechts unten „Bild auswählen“.'); ?>
 
-<h3>Ordnung in der Bildverwaltung</h3>
+<h3>Ordnung in der Mediathek</h3>
 <dl class="hb-fields">
   <div><dt>Ordner</dt><dd>Links legst du mit dem Ordner-Symbol neue Ordner an, etwa für ein Projekt oder ein Jahr. Ist ein Ordner ausgewählt, entsteht der neue darin; so baust du etwa „2026/Oktober“. Ordner mit Unterordnern klappst du mit dem Pfeil zu und auf. Leere Ordner lassen sich wieder löschen.</dd></div>
   <div><dt>Suche und Ansicht</dt><dd>Oben suchst du nach Dateinamen und wechselst zwischen Raster und Liste. Beide zeigen zu jedem Bild Dateigröße, Pixelmaße (Breite × Höhe) und Datum.</dd></div>

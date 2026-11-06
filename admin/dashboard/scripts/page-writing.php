@@ -57,8 +57,9 @@
     function enhance(content, hooks) {
         const root = document.getElementById('editorContainer'); const sections = document.getElementById('sectionsContainer');
         if (!root || !sections) return;
-        const enabled = Array.isArray(content.sections);
-        root.classList.toggle('nb-writing-view', enabled);
+        // Pages of a custom template have field groups instead of a block list
+        const hasBlocks = Array.isArray(content.sections);
+        root.classList.add('nb-writing-view');
         let layout = root.querySelector('.nb-writing-layout');
         if (!layout) {
             layout = document.createElement('div'); layout.className = 'nb-writing-layout'; sections.before(layout); layout.append(sections);
@@ -68,22 +69,18 @@
             layout.append(aside);
         }
         const actions = root.querySelector('.editor-header-right');
-        if (actions) {
-            if (enabled) layout.querySelector('.nb-page-save-controls').append(actions);
-            else root.querySelector('.editor-header').append(actions);
-        }
+        if (actions) layout.querySelector('.nb-page-save-controls').append(actions);
         root.classList.remove('nb-writing-single');
         const aside = layout.querySelector('.nb-page-sidebar'); const nav = layout.querySelector('.nb-page-navigation');
         aside.querySelectorAll('.nb-page-panel--meta').forEach(el => el.remove());
-        nav.replaceChildren(); nav.hidden = enabled;
-        if (!enabled) return;
+        nav.replaceChildren(); nav.hidden = true;
         sections.querySelector('.ce-editor-tabs')?.remove();
         const panel = sections.querySelector('[data-editor-panel="content"]');
         const title = sections.querySelector('[data-path="title"]');
         if (title && panel) { title.autocomplete='off'; title.name='page-title'; title.id='nb-page-title'; const field=title.closest('.ce-field'); field.classList.add('nb-page-title-field'); field.querySelector('label').htmlFor=title.id; panel.prepend(field); }
         inlineEditor(sections.querySelector('textarea[data-path="description"]'), 'page-description', hooks);
         if (panel) placeSettings(sections, panel, nav);
-        const single = content.sections.length === 1 && content.sections[0].type === 'text'; root.classList.toggle('nb-writing-single', single);
+        const single = hasBlocks && content.sections.length === 1 && content.sections[0].type === 'text'; root.classList.toggle('nb-writing-single', single);
         if (single) sections.querySelector('.section-item')?.classList.add('is-open');
         sections.querySelectorAll('.html-editor').forEach((field,index) => richEditor(field,index,hooks));
         sections.querySelectorAll('.section-item[data-type="text"]').forEach(section => {
@@ -93,6 +90,7 @@
             fields.append(options);
             section.querySelectorAll('input').forEach(input=>{input.autocomplete='off'; input.name='page-section-'+section.dataset.index+'-'+input.dataset.key;});
         });
+        if (!hasBlocks) return; // the field groups are the page's content, not "further fields"
         const add = sections.querySelector('.add-section-container');
         if (add) { const disclosure=details(t('editor.writing.add_sections')); disclosure.open = content.sections.length === 0; add.before(disclosure); disclosure.append(add); }
         const groups=[...sections.querySelectorAll('.ce-section-editor>.ce-group')];
