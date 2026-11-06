@@ -124,7 +124,7 @@ function nibblyRenderPerson(array $person, string $lang = '', bool $full = true)
     $html = '<article class="person-card">';
     if (!empty($person['photo'])) {
         $src = nibblySanitizeHref(nibblyPeopleAsset($person['photo']));
-        $html .= '<figure class="person-card__portrait"><img loading="lazy" src="'.$e($src).'" alt="'.$e($person['alt'] ?: $person['name']).'">';
+        $html .= '<figure class="person-card__portrait">' . nibblyImageTag((string)$src, (string)($person['alt'] ?: $person['name']));
         if (!empty($person['credit'])) $html .= '<figcaption>'.$e($person['credit']).'</figcaption>';
         $html .= '</figure>';
     }

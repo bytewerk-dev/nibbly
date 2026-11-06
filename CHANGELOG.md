@@ -50,6 +50,36 @@ Git milestones and the gaps in publication records.
   audio block was rendered (`$GLOBALS['nibblyAudioRendered']`) or an admin is logged in. Existing sites
   keep their own `includes/footer.php`; copy the condition there to benefit.
 
+### Changed
+
+- **Responsive image sizes and one place for public `<img>` tags.** Every JPEG, PNG or WebP in the
+  library gets two smaller WebP copies, 640 and 1280 px wide, in `assets/images-sizes/` (made on
+  upload, moved with rename, move, trash and restore, deleted with the image; `includes/media-sizes.php`).
+  `php cli/media-sizes.php --action=generate|status|prune` handles existing libraries.
+  `nibblyImageTag($src, $alt, $options)` renders visitor images with `width`/`height`, lazy loading
+  (or `fetchpriority="high"` for hero images) and `srcset`/`sizes` when sizes exist; `editableImage()`
+  and `editableImageSplit()` take its options as a new last parameter, and the image and card
+  blocks, news cards, timeline, events, people and the post, event and person pages use it.
+  `nibblyImageHtmlEnrich()` completes images inside stored HTML (`editableHtml()` for visitors).
+- **Media states.** Files in the media library carry flags and properties, several at once
+  (`includes/media-states.php`). The AI disclosure label is the core state `ai`; a site registers
+  more in `includes/site-media-states.php`. The library replaces the AI label button and dialog with
+  a "Properties" button and panel, saves each change at once and shows active states as badges.
+  New API action `set-media-states`; `list-media` returns the registry and each file's states;
+  the library dispatches `nibbly:media-state-change`.
+- **Media hooks.** `includes/site-media-hooks.php` (site file) returns `event => callable`;
+  `nibblyMediaEvent('uploaded', $type, $name)` runs after uploads in the media library, AI agent
+  imports and AI image generation. Hook errors are logged and never break the request.
+- **Local tools in the media library.** On loopback requests the library offers "Show in Finder"
+  (Explorer, file manager), "Open with default application" and "Copy local path"
+  (`includes/media-local-tools.php`, API action `local-media`). New constant `NIBBLY_LOCAL_TOOLS`
+  (default `true`) in `admin/config.example.php` and the setup template; it has no effect on a web host.
+- **Media library listing.** The list view shows square 92 px thumbnails and the pixel size under
+  the file size; the grid view shows size, pixel size and date under each file name. Pixel sizes
+  are cached in `content/media-dimensions.json` (not versioned).
+- Media paths with combining characters (file names in NFD, as macOS stores them) are resolved
+  correctly; `nibblyMediaRefFromSrc()` no longer uses `parse_url()`, which mangled them.
+
 ## [2.8.0] — 2026-11-02
 
 ### Added

@@ -11389,7 +11389,7 @@ label.toggle-label > .toggle-switch,
     .ai-usage-budget__value, .ai-usage-budget__bar, .ai-usage-budget__fill,
     .ai-card__badge, .mail-flag-btn,
     .nb-copilot-toggle, .nb-copilot-image-modes, .nb-copilot-image-mode,
-    .nb-copilot-bool, .nb-agent-chip, .nb-agent-tag, .nb-imgmgr-ai-badge, .nb-imgmgr-check
+    .nb-copilot-bool, .nb-agent-chip, .nb-agent-tag, .nb-imgmgr-state-badge, .nb-imgmgr-check
 ) {
     border-radius: var(--nb-radius-sm);
 }

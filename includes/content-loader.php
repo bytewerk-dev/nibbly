@@ -6,6 +6,7 @@
 require_once __DIR__ . '/../admin/lang/i18n.php';
 require_once __DIR__ . '/access-guard.php';
 require_once __DIR__ . '/ai-labels.php';
+require_once __DIR__ . '/media-sizes.php';
 require_once __DIR__ . '/public-strings.php';
 require_once __DIR__ . '/html-sanitizer.php';
 require_once __DIR__ . '/news-helper.php';
@@ -462,7 +463,7 @@ function editableHtml($page, $fieldKey, $default = '') {
     }
 
     if ($hidden) return '';
-    return sanitizeHtml($value);
+    return nibblyImageHtmlEnrich(sanitizeHtml($value));
 }
 
 /**
@@ -547,9 +548,10 @@ function editableLink($page, $fieldKey, $defaultText = '', $defaultHref = '#', $
  * @param string $defaultSrc Fallback image path — becomes initial JSON value
  * @param string $defaultAlt Fallback alt text — becomes initial JSON value
  * @param string $class      CSS classes for the <img> tag
+ * @param array  $options    Visitor markup (nibblyImageTag): lazy (default true), sizes, srcset, attrs
  * @return string HTML output
  */
-function editableImage($page, $fieldKey, $defaultSrc = '', $defaultAlt = '', $class = '') {
+function editableImage($page, $fieldKey, $defaultSrc = '', $defaultAlt = '', $class = '', array $options = []) {
     $data = loadContentCached($page);
     $imgData = getNestedValue($data, $fieldKey);
 
@@ -580,7 +582,7 @@ function editableImage($page, $fieldKey, $defaultSrc = '', $defaultAlt = '', $cl
     }
 
     if ($hidden) return '';
-    return '<img src="' . htmlspecialchars($src) . '" alt="' . htmlspecialchars($alt) . '"' . $classAttr . '>'
+    return nibblyImageTag((string)$src, (string)$alt, $options + ['class' => (string)$class])
         . nibblyAiLabelHtml((string)$src);
 }
 
@@ -597,9 +599,10 @@ function editableImage($page, $fieldKey, $defaultSrc = '', $defaultAlt = '', $cl
  * @param string $defaultSrc  Fallback image path
  * @param string $defaultAlt  Fallback alt text
  * @param string $class       CSS classes for the <img> tag
+ * @param array  $options     Visitor markup (nibblyImageTag): lazy (default true), sizes, srcset, attrs
  * @return string HTML output
  */
-function editableImageSplit($page, $srcFieldKey, $altFieldKey, $defaultSrc = '', $defaultAlt = '', $class = '') {
+function editableImageSplit($page, $srcFieldKey, $altFieldKey, $defaultSrc = '', $defaultAlt = '', $class = '', array $options = []) {
     $data = loadContentCached($page);
     $src = getNestedValue($data, $srcFieldKey);
     $alt = getNestedValue($data, $altFieldKey);
@@ -621,7 +624,7 @@ function editableImageSplit($page, $srcFieldKey, $altFieldKey, $defaultSrc = '',
     }
 
     if ($hidden) return '';
-    return '<img src="' . htmlspecialchars($src) . '" alt="' . htmlspecialchars($alt) . '"' . $classAttr . '>'
+    return nibblyImageTag((string)$src, (string)$alt, $options + ['class' => (string)$class])
         . nibblyAiLabelHtml((string)$src);
 }
 
@@ -2015,7 +2018,7 @@ function renderNewsList($limit = 0, $lang = 'en', array $options = []) {
         $_isAdmin = isAdminLoggedIn();
         if ($image) {
             $html .= '<div class="news-card__image">';
-            $html .= '<img src="' . $image . '" alt="' . $title . '" loading="lazy">' . nibblyAiLabelHtml((string)($post['image'] ?? ''));
+            $html .= nibblyImageTag((string)($post['image'] ?? ''), (string)($post['title'] ?? '')) . nibblyAiLabelHtml((string)($post['image'] ?? ''));
             $html .= '</div>';
         } elseif ($_isAdmin) {
             $html .= '<div class="news-card__image">';
@@ -2151,7 +2154,7 @@ function renderNewsTimeline($lang = 'en', array $options = []) {
             }
             if (!empty($post['image'])) {
                 $html .= '<figure class="news-timeline__figure"><a href="' . $url . '" class="news-timeline__image-link" tabindex="-1" aria-hidden="true">';
-                $html .= '<img class="news-timeline__image" src="' . htmlspecialchars((string)$post['image']) . '" alt="' . htmlspecialchars((string)($post['imageAlt'] ?? $post['title'] ?? '')) . '" loading="lazy">' . nibblyAiLabelHtml((string)$post['image']);
+                $html .= nibblyImageTag((string)$post['image'], (string)($post['imageAlt'] ?? $post['title'] ?? ''), ['class' => 'news-timeline__image']) . nibblyAiLabelHtml((string)$post['image']);
                 $html .= '</a>';
                 if (!empty($post['imageCaption'])) $html .= '<figcaption class="news-timeline__caption">' . htmlspecialchars((string)$post['imageCaption']) . '</figcaption>';
                 $html .= '</figure>';
@@ -2161,7 +2164,7 @@ function renderNewsTimeline($lang = 'en', array $options = []) {
                 foreach ($gallery as $image) {
                     $html .= '<figure class="news-timeline__gallery-item">';
                     $html .= '<a href="' . htmlspecialchars((string)$image['src']) . '" class="news-timeline__gallery-link" data-lightbox="' . htmlspecialchars($id . '-' . (string)($post['id'] ?? '')) . '">';
-                    $html .= '<img src="' . htmlspecialchars((string)($image['thumb'] ?? $image['src'])) . '" alt="' . htmlspecialchars((string)($image['alt'] ?? '')) . '" loading="lazy">';
+                    $html .= nibblyImageTag((string)($image['thumb'] ?? $image['src']), (string)($image['alt'] ?? ''));
                     $html .= '</a>';
                     if (!empty($image['caption'])) $html .= '<figcaption>' . htmlspecialchars((string)$image['caption']) . '</figcaption>';
                     $html .= '</figure>';
@@ -2419,7 +2422,7 @@ function renderEvent($event, $lang = 'de', $showImage = true, $editable = false)
         if ($editable) {
             $html .= '<img src="' . $imgSrc . '" alt="' . $imgAlt . '" data-editable-image data-page="events" data-field="' . $eventIdHtml . '.image">';
         } else {
-            $html .= '<img src="' . $imgSrc . '" alt="' . $imgAlt . '">';
+            $html .= nibblyImageTag((string)$event['image'], (string)$title);
         }
         $html .= nibblyAiLabelHtml((string)($event['image'] ?? ''));
         $html .= '</div>';
