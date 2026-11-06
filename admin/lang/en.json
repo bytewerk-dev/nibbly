@@ -80,6 +80,8 @@
     "editor.select_image": "Select Image",
     "editor.tab_content": "Content",
     "editor.sections": "Sections",
+    "editor.section_nav_collapse": "Collapse section list",
+    "editor.section_nav_expand": "Show section list",
     "editor.page_settings": "Page Settings",
     "editor.meta_title": "Title",
     "editor.meta_description": "Description",

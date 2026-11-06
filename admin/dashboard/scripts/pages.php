@@ -71,6 +71,7 @@
     let currentPage = null;
     let currentContent = null;
     let sectionCounter = 0;
+    let htmlFieldPaths = new Set(); // fields of a custom template that it outputs as HTML (editableHtml)
     const DASHBOARD_LIST_DEFAULT_PAGE_SIZE = 50;
     const dashboardListPages = {
         pages: 1,
@@ -1116,6 +1117,21 @@
         return result.data;
     }
 
+    // A custom template's JSON has no field types: its rendered editor markup tells which fields
+    // are HTML. Without that answer they stay plain text boxes, the value is not touched either way.
+    async function loadHtmlFieldPaths(url) {
+        htmlFieldPaths = new Set();
+        if (Array.isArray(currentContent.sections)) return;
+        try {
+            const html = await fetch(url, { cache: 'no-store' }).then(r => r.text());
+            new DOMParser().parseFromString(html, 'text/html').querySelectorAll('.editable-field-html[data-field]').forEach(el => {
+                if (el.dataset.page === currentPage) htmlFieldPaths.add(el.dataset.field);
+            });
+        } catch (error) {
+            console.warn('HTML fields not detected:', error);
+        }
+    }
+
     // Load content
     async function loadContent(pushHistory = true) {
         const lang = document.getElementById('langSelect').value;
@@ -1128,6 +1144,10 @@
 
             if (result.success) {
                 currentContent = result.data;
+                const _defLang = '<?php echo SITE_LANG_DEFAULT; ?>';
+                const _viewPath = page === 'home' ? '' : page; // the start page lives at the root, /home is not a page
+                const _viewUrl = (lang === _defLang) ? '../' + _viewPath : '../' + lang + '/' + _viewPath;
+                await loadHtmlFieldPaths(_viewUrl);
                 currentSeoHealth = getPageSeoHealth(lang, page);
                 clearUndoHistory();
                 renderEditor();
@@ -1143,8 +1163,6 @@
                 const topbarTitle = document.getElementById('topbarTitle');
                 if (topbarTitle) topbarTitle.textContent = t('editor.title');
                 // Update View button URL
-                const _defLang = '<?php echo SITE_LANG_DEFAULT; ?>';
-                const _viewUrl = (lang === _defLang) ? '../' + page : '../' + lang + '/' + page;
                 const viewBtn = document.getElementById('editorViewBtn');
                 if (viewBtn) {
                     viewBtn.href = _viewUrl;
@@ -1999,6 +2017,26 @@
         return link;
     }
 
+    // Section navigation of the content panel: can be collapsed so the fields get the full width,
+    // remembered per browser like the sidebar. One button in the navigation, one beside the heading.
+    const SECTION_NAV_KEY = 'nibblySectionNavCollapsed';
+    function sectionNavCollapsed() {
+        try { return window.localStorage.getItem(SECTION_NAV_KEY) === '1'; } catch (e) { return false; }
+    }
+    function sectionNavToggleHtml(inNav) {
+        const label = escapeHtml(t(inNav ? 'editor.section_nav_collapse' : 'editor.section_nav_expand'));
+        return `<button type="button" class="ce-section-nav-toggle ce-section-nav-toggle--${inNav ? 'collapse' : 'expand'}" title="${label}" aria-label="${label}" onclick="toggleSectionNav()"><?php echo nbIcon('collapse'); ?></button>`;
+    }
+    function toggleSectionNav() {
+        const collapsed = !sectionNavCollapsed();
+        try { window.localStorage.setItem(SECTION_NAV_KEY, collapsed ? '1' : '0'); } catch (e) {}
+        const layout = document.querySelector('#sectionsContainer .ce-content-layout');
+        if (!layout) return;
+        layout.classList.toggle('ce-content-layout--nav-collapsed', collapsed);
+        // the other button replaces the one that had the focus
+        layout.querySelector(`.ce-section-nav-toggle--${collapsed ? 'expand' : 'collapse'}`)?.focus();
+    }
+
     function renderContentPanel(panel, customContentKeys = []) {
         panel.innerHTML = '';
         const sections = Array.isArray(currentContent.sections) ? currentContent.sections : [];
@@ -2012,11 +2050,11 @@
         const itemCount = hasLegacySections ? sections.length : navigableGroups.length;
 
         const layout = document.createElement('div');
-        layout.className = 'ce-content-layout';
+        layout.className = 'ce-content-layout' + (sectionNavCollapsed() ? ' ce-content-layout--nav-collapsed' : '');
 
         const nav = document.createElement('aside');
         nav.className = 'ce-section-nav';
-        nav.innerHTML = `<div class="ce-section-nav__title">${t('editor.sections')}</div>
+        nav.innerHTML = `<div class="ce-section-nav__title">${t('editor.sections')}${sectionNavToggleHtml(true)}</div>
             <div class="ce-section-nav__tools">
                 <input type="search" id="sectionSearchInput" class="ce-section-nav__search" placeholder="${t('editor.search_sections')}">
                 <select id="sectionTypeFilter" class="ce-section-nav__select">
@@ -2053,10 +2091,10 @@
         editor.className = 'ce-section-editor';
         const header = document.createElement('div');
         header.className = 'ce-section-editor__header';
-        header.innerHTML = `<h3>${t('editor.sections')}</h3>
+        header.innerHTML = `<div class="ce-section-editor__title">${sectionNavToggleHtml(false)}<h3>${t('editor.sections')}</h3></div>
             <div class="ce-section-editor__tools">
                 <span>${hasLegacySections ? t('editor.items', {count: itemCount}) : t('editor.field_groups_count', {count: itemCount})}</span>
-                ${hasLegacySections ? `<a href="#" class="ce-section-toggle-all" id="sectionToggleAll" onclick="toggleAllSections(); return false;">${t('editor.collapse_all')}</a>` : ''}
+                ${hasLegacySections ? `<a href="#" class="ce-section-toggle-all" id="sectionToggleAll" onclick="toggleAllSections(); return false;">${t('editor.collapse_all')}</a>` : customGroups.length ? `<a href="#" class="ce-section-toggle-all" id="groupToggleAll" onclick="toggleAllGroups(); return false;">${t(allExpanded ? 'editor.collapse_all' : 'editor.expand_all')}</a>` : ''}
             </div>`;
         editor.appendChild(header);
 
@@ -2297,8 +2335,10 @@
     let allExpanded = false;
     function toggleAllGroups() {
         allExpanded = !allExpanded;
-        const btn = document.getElementById('toggleAllBtn');
-        btn.textContent = allExpanded ? t('editor.collapse_all') : t('editor.expand_all');
+        const label = allExpanded ? t('editor.collapse_all') : t('editor.expand_all');
+        document.getElementById('toggleAllBtn').textContent = label;
+        const link = document.getElementById('groupToggleAll');
+        if (link) link.textContent = label;
 
         document.querySelectorAll('#sectionsContainer .ce-group-header').forEach(header => {
             const body = header.nextElementSibling;
@@ -2531,6 +2571,15 @@
                 });
                 inputRow.appendChild(browseBtn);
                 row.appendChild(inputRow);
+            } else if (htmlFieldPaths.has(path)) {
+                // same markup as a wysiwyg field of a block: scripts/page-writing.php adds toolbar and code view
+                row.classList.add('html-editor');
+                const ta = document.createElement('textarea');
+                ta.className = 'ce-textarea section-field';
+                ta.value = strVal;
+                ta.dataset.path = path;
+                ta.addEventListener('input', function() { markDirty(); });
+                row.appendChild(ta);
             } else if (isLong) {
                 const ta = document.createElement('textarea');
                 ta.className = 'ce-textarea';

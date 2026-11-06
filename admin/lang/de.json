@@ -80,6 +80,8 @@
     "editor.select_image": "Bild auswählen",
     "editor.tab_content": "Inhalt",
     "editor.sections": "Abschnitte",
+    "editor.section_nav_collapse": "Abschnittsliste einklappen",
+    "editor.section_nav_expand": "Abschnittsliste einblenden",
     "editor.page_settings": "Seiteneinstellungen",
     "editor.meta_title": "Titel",
     "editor.meta_description": "Beschreibung",
