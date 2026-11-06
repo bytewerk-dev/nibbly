@@ -519,8 +519,8 @@ function nibblyNewsPagination(int $total, int $page, int $perPage, string $baseU
     $html .= '<ul class="pagination__list">';
     $html .= '<li class="pagination__item pagination__item--prev">';
     $html .= $page > 1
-        ? $link($page - 1, '&larr; <span>' . htmlspecialchars($label('pagination_prev')) . '</span>', 'pagination__link--prev', 'prev')
-        : '<span class="pagination__link pagination__link--prev pagination__link--disabled" aria-disabled="true">&larr; <span>' . htmlspecialchars($label('pagination_prev')) . '</span></span>';
+        ? $link($page - 1, '<span class="pagination__arrow" aria-hidden="true">&larr;</span> <span>' . htmlspecialchars($label('pagination_prev')) . '</span>', 'pagination__link--prev', 'prev')
+        : '<span class="pagination__link pagination__link--prev pagination__link--disabled" aria-disabled="true"><span class="pagination__arrow" aria-hidden="true">&larr;</span> <span>' . htmlspecialchars($label('pagination_prev')) . '</span></span>';
     $html .= '</li>';
     $previous = 0;
     foreach ($show as $number) {
@@ -536,12 +536,29 @@ function nibblyNewsPagination(int $total, int $page, int $perPage, string $baseU
     }
     $html .= '<li class="pagination__item pagination__item--next">';
     $html .= $page < $pages
-        ? $link($page + 1, '<span>' . htmlspecialchars($label('pagination_next')) . '</span> &rarr;', 'pagination__link--next', 'next')
-        : '<span class="pagination__link pagination__link--next pagination__link--disabled" aria-disabled="true"><span>' . htmlspecialchars($label('pagination_next')) . '</span> &rarr;</span>';
+        ? $link($page + 1, '<span>' . htmlspecialchars($label('pagination_next')) . '</span> <span class="pagination__arrow" aria-hidden="true">&rarr;</span>', 'pagination__link--next', 'next')
+        : '<span class="pagination__link pagination__link--next pagination__link--disabled" aria-disabled="true"><span>' . htmlspecialchars($label('pagination_next')) . '</span> <span class="pagination__arrow" aria-hidden="true">&rarr;</span></span>';
     $html .= '</li></ul>';
     $html .= '<p class="pagination__summary">' . htmlspecialchars($label('pagination_summary', ['page' => (string)$page, 'pages' => (string)$pages])) . '</p>';
     $html .= '</nav>';
     return $html;
+}
+
+/**
+ * Number of images a post shows: the title image plus image blocks and gallery images of "sections"
+ * and "aside". Decides between the labels "Photo:" and "Photos:" of the photo credit (field "photoCredit").
+ */
+function nibblyNewsImageCount(array $post): int {
+    $count = !empty($post['image']) ? 1 : 0;
+    foreach (['sections', 'aside'] as $field) {
+        foreach (is_array($post[$field] ?? null) ? $post[$field] : [] as $block) {
+            if (!is_array($block) || !empty($block['hidden'])) continue;
+            $type = (string)($block['type'] ?? '');
+            if ($type === 'image' && !empty($block['src'] ?? $block['image'] ?? '')) $count++;
+            elseif ($type === 'gallery') $count += count(array_filter(is_array($block['images'] ?? null) ? $block['images'] : [], 'is_array'));
+        }
+    }
+    return $count;
 }
 
 /** <link rel="prev"/"next"> for the document head of a paginated list. */

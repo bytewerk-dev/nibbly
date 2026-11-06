@@ -14,6 +14,24 @@ switch ($action) {
         jsonResponse(true, buildPageList());
         break;
 
+    // Content search of the page list (dashboard, scope "content"): pages whose title, description or
+    // editable content contains ?q= (folded, see nibblySearchContains()), as "lang|path" keys
+    case 'list-page-matches':
+        $query = trim((string)($_GET['q'] ?? ''));
+        $matches = [];
+        if ($query !== '') {
+            foreach (glob(CONTENT_PATH . '*.json') ?: [] as $file) {
+                $page = nibblyPageParseContentKey(basename($file, '.json'));
+                if ($page === null) continue;
+                $data = json_decode((string)file_get_contents($file), true);
+                if (!is_array($data)) continue;
+                $text = (string)($data['title'] ?? '') . ' ' . (string)($data['description'] ?? '') . ' ' . nibblySearchPageText($data);
+                if (nibblySearchContains($text, $query)) $matches[] = $page['lang'] . '|' . $page['path'];
+            }
+        }
+        jsonResponse(true, $matches);
+        break;
+
     case 'create-page':
         if (!validateCsrfToken()) {
             jsonResponse(false, null, 'Invalid CSRF token');

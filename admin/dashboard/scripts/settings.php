@@ -616,6 +616,15 @@
 
     // Keep the base colour readable as button text background; the dark
     // variant is lifted by the stylesheet itself (max(l, 0.72) in OKLCH).
+    // Presets whose light mode has dark chrome with light text (css/nibbly-admin-tokens.css);
+    // a sidebar colour is checked against the text that really sits on it
+    var DARK_CHROME_PRESETS = ['classic', 'pop'];
+    function sidebarContrastRule(preset) {
+        return DARK_CHROME_PRESETS.indexOf(preset) !== -1
+            ? {background: '#e5e5e5', direction: 'darker'}
+            : {background: '#1a1a1a', direction: 'lighter'};
+    }
+
     function sanitizeThemeContrast(theme) {
         var result = Object.assign({}, theme);
         var warnings = [];
@@ -644,7 +653,8 @@
         enforceAgainstText('dangerColor', 'settings.danger_color');
         enforceAgainstText('warningColor', 'settings.warning_color');
         enforceAgainstText('successColor', 'settings.success_color');
-        enforce('sidebarBg', '#1a1a1a', 'lighter', 'settings.sidebar_bg_light');
+        var sidebarRule = sidebarContrastRule(result.preset);
+        enforce('sidebarBg', sidebarRule.background, sidebarRule.direction, 'settings.sidebar_bg_light');
         enforce('darkSidebarBg', '#e5e5e5', 'darker', 'settings.sidebar_bg_dark');
 
         return { theme: result, warnings: warnings };
@@ -664,7 +674,7 @@
         var checks = {
             primaryColor: {background: null, textContrast: true},
             accentColor: {background: null, textContrast: true},
-            sidebarBg: {background: '#1a1a1a', textContrast: true},
+            sidebarBg: {background: sidebarContrastRule(document.getElementById('settingsThemePreset').value).background, textContrast: true},
             darkSidebarBg: {background: '#e5e5e5', textContrast: true},
             dangerColor: {background: null, textContrast: true},
             warningColor: {background: null, textContrast: true},

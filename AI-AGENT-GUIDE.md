@@ -25,6 +25,7 @@ This is the canonical, tool-neutral guide for AI coding agents. `AGENTS.md` and 
 | Migration redirects | `content/redirects.json` (copy from `content/redirects.example.json`) |
 | Redirect helper | `includes/redirect-helper.php` |
 | Site page hook | `includes/site-page-hook.php` (optional, survives core updates) |
+| Site maintenance tasks | `includes/site-maintenance.php` (optional, survives core updates; buttons in the system tab) |
 | Editorial guide | `admin/handbook.php` (route `/admin/handbook`), `includes/handbook.php`, `includes/handbook/` |
 | Site guide chapters | `includes/site-handbook/chapters.php` (optional, site-owned) |
 | Dashboard theme defaults | `includes/theme-defaults.php` (Pop for new installs, Soft for themes saved without a preset) |
@@ -1627,6 +1628,23 @@ if (in_array($slug, ['home', 'contact'])) {
 
 This file survives core updates since it's not part of the Nibbly distribution.
 
+## Site Maintenance Tasks
+
+A site can offer administrators jobs to run from the dashboard's system tab (`includes/site-tasks.php`, API action `run-site-task`). Create `includes/site-maintenance.php` returning an array of tasks; the file is a site file and survives core updates:
+
+```php
+<?php
+return [
+    'rebuild-cache' => [
+        'label' => 'Rebuild the image cache',
+        'description' => 'Run after uploading many images.',
+        'run' => static fn(): string => mySiteRebuildCache()['message'],
+    ],
+];
+```
+
+`run()` returns the message shown under the button (a string or `['message' => …]`) and throws on failure. The request keeps the session lock released and allows up to ten minutes.
+
 ## Editorial Guide (`/admin/handbook`)
 
 Nibbly ships an end-user guide ("Handbuch" / "Handbook") for editors who know
@@ -2082,7 +2100,7 @@ CSS file roles:
 
 **Whitelist** (safely overwritable on upgrade):
 - `admin/` except `admin/config.php`
-- `includes/` except `includes/header.php`, `includes/footer.php`, `includes/nav-config.php`, `includes/site-page-hook.php`, `includes/site-menus.php`, `includes/site-handbook/`
+- `includes/` except `includes/header.php`, `includes/footer.php`, `includes/nav-config.php`, `includes/site-page-hook.php`, `includes/site-maintenance.php`, `includes/site-menus.php`, `includes/site-handbook/`
 - Core JS: `js/inline-editor.js`, `js/image-manager.js`, `js/revision-client.js`, `js/ai-copilot.js`
 - All Nibbly-Core CSS files (see table above)
 - `api/`, `cli/`, `examples/`

@@ -1125,7 +1125,7 @@ svg.topbar-logo {
 
 .topbar-handbook:hover,
 .topbar-handbook:focus-visible {
-    color: var(--nb-primary);
+    color: var(--nb-topbar-text-hover, var(--nb-primary));
 }
 
 /* Narrow screens: the book icon alone, so the page title keeps its room */
@@ -1201,8 +1201,9 @@ svg.topbar-logo {
     white-space: nowrap;
 }
 
-.topbar-viewsite:hover {
-    color: var(--nb-primary);
+.topbar-viewsite:hover,
+.topbar-viewsite:focus-visible {
+    color: var(--nb-topbar-text-hover, var(--nb-primary));
 }
 
 .sidebar-toggle {
@@ -1354,6 +1355,18 @@ svg.topbar-logo {
     transition: border-color var(--nb-duration-fast) var(--nb-ease),
                 box-shadow var(--nb-duration-fast) var(--nb-ease),
                 background var(--nb-duration-fast) var(--nb-ease);
+}
+
+/* Search scope beside a list search field: the segmented control at the small control height */
+.nb-filter-bar__actions .segmented--sm {
+    flex: 0 0 auto;
+    padding: 2px;
+}
+
+.nb-filter-bar__actions .segmented--sm label {
+    height: calc(var(--nb-control-h-sm) - 6px);
+    padding: 0 var(--nb-space-2);
+    font-size: 0.8125rem;
 }
 
 .page-list-search-input::placeholder {

@@ -256,8 +256,12 @@ function nibblySanitizeThemeContrast(array $theme): array {
         $theme['darkAccentColor'] = nibblyAdjustColorForContrast((string)$theme['accentColor'], '#0b0d12', $minReadable, 'lighter');
     }
 
+    // Classic and Pop have dark chrome with light text in light mode (css/nibbly-admin-tokens.css);
+    // same rule as sidebarContrastRule() in dashboard/scripts/settings.php
     if (!empty($theme['sidebarBg'])) {
-        $theme['sidebarBg'] = nibblyAdjustColorForContrast((string)$theme['sidebarBg'], '#1a1a1a', $minReadable, 'lighter');
+        $theme['sidebarBg'] = in_array($theme['preset'] ?? '', ['classic', 'pop'], true)
+            ? nibblyAdjustColorForContrast((string)$theme['sidebarBg'], '#e5e5e5', $minReadable, 'darker')
+            : nibblyAdjustColorForContrast((string)$theme['sidebarBg'], '#1a1a1a', $minReadable, 'lighter');
     }
 
     if (!empty($theme['darkSidebarBg'])) {

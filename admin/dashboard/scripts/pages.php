@@ -301,9 +301,43 @@
             .toLowerCase();
     }
 
+    // Search scope: "title" filters the loaded list in the browser, "content" asks the server for the
+    // pages whose text contains the words (list-page-matches, debounced) and shows only those
+    let pageListSearchScope = 'title';
+    let pageListSearchRaw = '';
+    let pageListContentMatches = null; // Set of "lang|slug" for the current query, null = not loaded
+    let pageListSearchTimer = null;
+
     function handlePageListSearch(value) {
+        pageListSearchRaw = String(value || '');
         pageListSearchQuery = normalizePageListSearchValue(value);
         dashboardListPages.pages = 1;
+        if (pageListSearchScope === 'content') {
+            window.clearTimeout(pageListSearchTimer);
+            if (!pageListSearchQuery) { pageListContentMatches = null; rerenderPageList(); return; }
+            pageListSearchTimer = window.setTimeout(async () => {
+                const query = pageListSearchRaw;
+                try {
+                    const result = await (await fetch('api.php?action=list-page-matches&q=' + encodeURIComponent(query) + '&_=' + Date.now())).json();
+                    if (query !== pageListSearchRaw) return; // a newer query is on its way
+                    pageListContentMatches = new Set(result.success ? result.data : []);
+                } catch (error) {
+                    pageListContentMatches = new Set();
+                }
+                rerenderPageList();
+            }, 250);
+            return;
+        }
+        rerenderPageList();
+    }
+
+    function setPageListSearchScope(scope) {
+        pageListSearchScope = scope === 'content' ? 'content' : 'title';
+        pageListContentMatches = null;
+        handlePageListSearch(pageListSearchRaw);
+    }
+
+    function rerenderPageList() {
         if (pageListCache) {
             const viewLang = document.getElementById('pageListLang').value;
             renderPageList(pageListCache, viewLang);
@@ -363,8 +397,13 @@
             if (!viewInfo) return false;
             if (pageStatusFilter !== 'all' && (viewInfo.visibility || 'public') !== pageStatusFilter) return false;
             const titleText = viewInfo.title || pageVersionSlug(page, viewLang);
-            if (pageListSearchQuery && !normalizePageListSearchValue(titleText).includes(pageListSearchQuery)) {
-                return false;
+            if (pageListSearchQuery) {
+                if (pageListSearchScope === 'content') {
+                    // server answer pending: keep the list as it is until the matches arrive
+                    if (pageListContentMatches && !pageListContentMatches.has(viewLang + '|' + pageVersionSlug(page, viewLang))) return false;
+                } else if (!normalizePageListSearchValue(titleText).includes(pageListSearchQuery)) {
+                    return false;
+                }
             }
             return true;
         });
@@ -545,8 +584,8 @@
 
         if (visiblePages.length === 0) {
             nbRenderEmptyRow(tbody, 2 + otherLangs.length, pageListSearchQuery
-                ? 'Keine Seiten mit diesem Titel gefunden.'
-                : 'Keine Seiten vorhanden.');
+                ? t(pageListSearchScope === 'content' ? 'pages.search_none_content' : 'pages.search_none_title')
+                : t('pages.no_pages'));
         }
 
         // Update sort indicators

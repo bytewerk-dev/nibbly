@@ -4209,6 +4209,12 @@ body.edit-mode-active figcaption.news-editable:empty::before {
     color: #999;
 }
 
+/* Photo credit of a post (data-news-field="photoCredit"): placeholder while empty */
+body.edit-mode-active .news-editable[data-news-field="photoCredit"]:empty::before {
+    content: attr(data-placeholder);
+    color: #999;
+}
+
 /* Editor-only media title label (youtube, soundcloud).
    Rendered only for admins to expose the "title" metadata field inline
    — not visible to visitors. */
