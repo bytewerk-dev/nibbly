@@ -17,6 +17,20 @@ Git milestones and the gaps in publication records.
   source with the tag bar and "Format" in Code. It opens in Code, since the button says HTML; the
   textarea stays the value the dialog returns. `richEditor()`'s API gains `setMode(html)`.
 
+- **Comment list grouped by post or page.** The dashboard shows one table per target with its
+  linked title and a count; entries are compact, long ones fold with "show more", and a reply
+  shows its parent. `load-comments` returns `targetTitle` and `targetUrl` for every entry
+  (`admin/api/comments.php`).
+- **Handbook.** The pages chapter mentions the collapsible section list and template pages in the
+  writing view; the screenshots of the section bar, the text toolbar and the page editor show the
+  current bars.
+
+### Added
+
+- **Browser check of the Visual Editor.** `tests/visual-editor-check.py` drives the block tools of
+  pages and posts, the link and image dialogs, the comment list and the content editor in Chromium;
+  CI runs it with the other browser checks.
+
 ### Fixed
 
 - **"Save & exit" from a post text.** With the caret in a post text, the Visual Editor closed that
