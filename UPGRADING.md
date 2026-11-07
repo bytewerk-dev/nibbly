@@ -3,6 +3,29 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.8.1 to 2.8.2
+
+Version 2.8.2 is a patch release for the Visual Editor and the dashboard: the HTML dialog of the
+text toolbar uses the shared rich-text module, the comment list is grouped by post or page, and
+four editor fixes ("Save & exit" from a post text, nested editable lists, the "Saved" toast after
+a block or section change, the hidden image generator button). All defaults reproduce the previous
+behaviour; no data migration is needed.
+
+1. Deploy the complete core. Changed: `js/inline-editor.js`, `js/rich-editor.js`,
+   `css/inline-editor.css`, `css/image-manager.css`, `admin/api/comments.php`,
+   `admin/dashboard.php`, `admin/dashboard/scripts/comments.php`, `admin/style.css`,
+   `admin/lang/de.json`, `admin/lang/en.json`, `includes/handbook/chapters/pages.*.php` and
+   the handbook screenshots in `includes/handbook/img/`. New: `tests/visual-editor-check.py`,
+   `tests/visual-editor-check.js` (CI only).
+2. Comment list: the dashboard reads `targetTitle` and `targetUrl` from `load-comments`; both
+   come from the core API, site code needs no change. The four new strings
+   (`comments.group_count`, `comments.show_more`, `comments.show_less`,
+   `comments.target_missing`) exist in German and English; other admin languages fall back to
+   English until translated.
+3. Sites with their own `includes/footer.php` keep the lines from 2.8.1 (`js/rich-editor.js`,
+   `css/rich-editor.css` for logged-in admins): the HTML dialog of the text toolbar needs the
+   module; without it the dialog falls back to the plain textarea.
+
 ## Upgrading from 2.8.0 to 2.8.1
 
 Version 2.8.1 brings responsive image sizes with one central `<img>` renderer, media states, media

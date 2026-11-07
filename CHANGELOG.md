@@ -9,6 +9,8 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+## [2.8.2] — 2026-11-07
+
 ### Changed
 
 - **HTML dialog of the Visual Editor's text toolbar.** The dialog behind the toolbar's "HTML" button
