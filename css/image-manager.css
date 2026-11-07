@@ -712,6 +712,11 @@ button.nb-imgmgr-folder-item-toggle:hover {
                 color var(--nb-duration-fast, 150ms) ease;
 }
 
+/* display on the class would otherwise override the browser's [hidden] */
+.nb-imgmgr-ai-generator-btn[hidden] {
+    display: none;
+}
+
 .nb-imgmgr-ai-generator-btn:hover {
     border-color: var(--nb-border-strong, var(--nb-imgmgr-accent));
     background-color: var(--nb-hover-tint-settle, var(--nb-imgmgr-accent-subtle));

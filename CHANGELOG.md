@@ -9,6 +9,14 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+### Changed
+
+- **HTML dialog of the Visual Editor's text toolbar.** The dialog behind the toolbar's "HTML" button
+  was a bare textarea. It now has the same frame as the content field of the block dialog and the
+  dashboard (`js/rich-editor.js`): Visual / Code tabs, the formatting toolbar in Visual, highlighted
+  source with the tag bar and "Format" in Code. It opens in Code, since the button says HTML; the
+  textarea stays the value the dialog returns. `richEditor()`'s API gains `setMode(html)`.
+
 ### Fixed
 
 - **"Save & exit" from a post text.** With the caret in a post text, the Visual Editor closed that
@@ -28,6 +36,11 @@ Git milestones and the gaps in publication records.
   reported "No changes to save", and the confirmation of the change itself was shown 300 ms before the
   reload (pages) or not at all (posts). The "Saved" toast now appears after the reload, and saving
   again without new changes repeats it instead of "no changes".
+
+- **"Image generator" button shown although hidden.** The media manager hides the button with the
+  `hidden` attribute when no image generation is configured, but the button's class set `display`
+  and overrode the browser's `display: none` for `[hidden]`, so the button always sat in the drop
+  zone. A `[hidden]` rule like the one of the other media manager controls fixes it.
 
 ## [2.8.1] — 2026-11-06
 
