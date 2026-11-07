@@ -272,7 +272,12 @@ const boxesOverlap = (a, b) => a.x < b.x + b.width && b.x < a.x + a.width && a.y
         step('page: caption typed in place reaches the save');
         const caption = sections.nth(2).locator('figcaption');
         await clickInView(caption);
-        await page.keyboard.press('End');
+        // The credit span follows the caption text; "End" would land behind it when both fit on one
+        // line (Linux fonts), so put the caret at the end of the caption's own text node
+        await page.evaluate(() => {
+            const text = [...document.activeElement.childNodes].find(node => node.nodeType === 3);
+            getSelection().setBaseAndExtent(text, text.data.length, text, text.data.length);
+        });
         await page.keyboard.type(' more');
         await page.locator('#admin-btn-save').click();
         // Not the button's state: "has-changes" may not be set yet when the click lands, so wait for the file

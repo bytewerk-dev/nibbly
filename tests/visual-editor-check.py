@@ -59,7 +59,7 @@ with tempfile.TemporaryDirectory(prefix="nibbly-visual-editor-") as folder:
              "status": "pending", "date": "2026-02-01T10:00:00+00:00"},
             {"id": "c2", "parent": "c1", "author": "Ben", "email": "", "content": "<p>Short</p>",
              "status": "approved", "date": "2026-02-02T10:00:00+00:00"}]})
-    screenshots = Path(tempfile.mkdtemp(prefix="nibbly-visual-editor-evidence-"))
+    screenshots = Path(tempfile.mkdtemp(prefix="nibbly-browser-evidence-visual-editor-")  # the CI uploads nibbly-browser-evidence-*)
     try:
         environment = dict(os.environ, REVIEW_PASSWORD=site.password, REVIEW_ROOT=str(site.root),
                            REVIEW_URL=f"http://127.0.0.1:{site.port}", REVIEW_SCREENSHOTS=str(screenshots))
