@@ -27,7 +27,7 @@
   <div><dt><?php echo $hb->icon('grip', 'Drag to reorder'); ?> Move</dt><dd>Drag the handle to move the section up or down.</dd></div>
   <div><dt><?php echo $hb->icon('plus', 'Add block'); ?> Add block</dt><dd>The plus below a section inserts a new block at that point. You pick the type from a list with a search field, such as text, heading, image, list, card or YouTube.</dd></div>
 </dl>
-<?php echo $hb->shot('sections.webp', 'An image section in edit mode with its toolbar at the top right', '<b>A section’s toolbar.</b> Edit, Hide, arrows, Merge or image tools, Delete and the handle for moving; post blocks have the same bar.'); ?>
+<?php echo $hb->shot('sections.webp', 'An image section in edit mode with its toolbar at the top right', '<b>A section’s toolbar.</b> The bar starts with the type name and a short hint (the title or first words of a text, the width of an image), then Edit, Hide, arrows, Merge or image tools, Delete and the handle for moving; post blocks have the same bar.'); ?>
 <?php echo $hb->note('Saved at once', 'When you add or delete a section or list item, split or merge a text block or change its style, or use the image and gallery tools, nibbly saves immediately, together with all your other open changes, and reloads the page. Everything else, including moving and hiding, waits for Save.'); ?>
 
 <h3>Content Editor</h3>

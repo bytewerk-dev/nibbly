@@ -518,6 +518,55 @@ body.edit-mode-active .editable-overlay:hover {
     pointer-events: auto;
 }
 
+/* The bar of the section under the pointer wins over a neighbour's bar that is still fading out
+   (both sit in the page's stacking context, so a later sibling would otherwise paint on top) */
+body.edit-mode-active .editable-section:hover > .editable-overlay,
+body.edit-mode-active .editable-section.is-overlay-active > .editable-overlay {
+    z-index: 12;
+}
+
+/* Label at the start of a block bar (js: blockBarLabel): type name in small caps, below it the hint in
+   normal case, both left-aligned. Two lines fit the height of the buttons, so the bar does not grow;
+   hardened against site CSS like the bar itself. */
+body.edit-mode-active .nibbly-editor-bar-label {
+    display: inline-flex !important;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    max-width: 160px;
+    height: 28px;
+    padding: 0 7px 0 5px !important;
+    line-height: 1.15 !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.05em !important;
+    text-transform: uppercase !important;
+    white-space: nowrap;
+    overflow: hidden;
+    color: rgba(255, 255, 255, 0.9) !important;
+    cursor: default;
+    user-select: none;
+}
+
+body.edit-mode-active .nibbly-editor-bar-hint {
+    max-width: 100%;
+    font-weight: 500 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    opacity: 0.85;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Section holding only a floated figure (image block "half" in running text, js: markFloated): its wrapper
+   has no height, so the bar would lie exactly on the bar of the following text block. At the left edge it
+   stays apart from that bar and reachable. */
+body.edit-mode-active .editable-section-floated > .editable-overlay {
+    right: auto;
+    left: 0;
+    border-radius: 4px 4px 4px 0;
+}
+
 /* Button-Overlay Variante */
 .editable-overlay-buttons {
     display: flex;

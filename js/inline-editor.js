@@ -2819,6 +2819,37 @@
         return EditorConfig.currentPage;
     }
 
+    // Label at the start of a block bar: the type name, for text and image blocks with a short hint
+    // (title or first words; chosen width). Two bars close together, e.g. a floated image and the text
+    // beside it, are told apart at a glance. Shared by page sections and post blocks.
+    function blockBarLabel(type, data) {
+        const label = document.createElement('span');
+        label.className = 'overlay-label nibbly-editor-bar-label';
+        label.contentEditable = 'false';
+        const typeName = document.createElement('span');
+        typeName.className = 'nibbly-editor-bar-type';
+        typeName.textContent = SectionTypes[type]?.label || type;
+        label.appendChild(typeName);
+        let hint = '';
+        if (data && type === 'text') {
+            hint = String(data.title || '').trim();
+            if (!hint) hint = new DOMParser().parseFromString(String(data.content || ''), 'text/html').body.textContent || '';
+            hint = hint.replace(/\s+/g, ' ').trim();
+            if (hint.length > 15) hint = hint.slice(0, 14).trimEnd() + '…';
+        } else if (data && type === 'image') {
+            const field = (BlockTypes.image?.fields || []).find(f => f.key === 'width');
+            const option = (field?.options || []).find(o => o.value === (data.width || 'full'));
+            hint = String(option?.label || '').replace(/\s*\(.*\)\s*$/, '');
+        }
+        if (hint) {
+            const hintEl = document.createElement('span');
+            hintEl.className = 'nibbly-editor-bar-hint';
+            hintEl.textContent = hint;
+            label.appendChild(hintEl);
+        }
+        return label;
+    }
+
     function keepOverlayOpenWhileCrossing(owner, overlay) {
         let hideTimer = null;
 
@@ -2880,12 +2911,26 @@
                 <button type="button" class="overlay-btn overlay-btn-delete nibbly-editor-control-btn" data-editor-tooltip="${escHtml(t('delete'))}" aria-label="${escHtml(t('delete'))}" data-action="delete">${Icons.delete}</button>
                 <span class="overlay-drag-handle nibbly-editor-drag-handle" data-editor-tooltip="${escHtml(t('drag_reorder'))}" aria-label="${escHtml(t('drag_reorder'))}">${Icons.drag}</span>
             `;
+            overlay.prepend(blockBarLabel(type, sectionData));
             pageBlockPage = contentPage;
             overlay.querySelector('.overlay-btn-delete').before(...pageSectionTools(wrapper, type, contentPage));
             // gallery, divider: no fields, nothing for the dialog
             if (!(BlockTypes[type]?.fields || []).length) overlay.querySelector('.overlay-btn-edit').remove();
             wrapper.appendChild(overlay);
             keepOverlayOpenWhileCrossing(wrapper, overlay);
+
+            // Section holding only a floated figure (image block "half" in running text): the wrapper has no
+            // height, so its bar would sit exactly on the bar of the following text block and be covered by it.
+            // The class moves the bar to the left edge (css .editable-section-floated); checked again on every
+            // hover, since whether the figure floats depends on the viewport width.
+            const markFloated = () => {
+                const block = wrapper.firstElementChild;
+                const floated = !!block && !block.classList.contains('editable-overlay')
+                    && getComputedStyle(block).float !== 'none' && wrapper.offsetHeight < block.offsetHeight;
+                wrapper.classList.toggle('editable-section-floated', floated);
+            };
+            markFloated();
+            wrapper.addEventListener('mouseenter', markFloated);
 
             // Apply hidden state
             if (isHidden) {
@@ -7605,6 +7650,7 @@
         const tools = document.createElement('div');
         tools.className = 'news-block-tools editable-overlay-buttons';
         tools.contentEditable = 'false';
+        tools.appendChild(blockBarLabel(ref.type, newsBlockList(ref.field)[ref.index]));
         // same order as the bar of a page section: edit, hide, arrows, merge and type tools, delete, drag
         if ((BlockTypes[ref.type]?.fields || []).length) {
             tools.append(newsToolButton(Icons.edit, t('edit'), () => editNewsBlockAt(ref.field, ref.index), 'overlay-btn-edit'));
@@ -7999,6 +8045,12 @@
                 const tools = document.createElement('div');
                 tools.className = 'news-block-tools editable-overlay-buttons';
                 tools.contentEditable = 'false';
+                const heroLabel = document.createElement('span');
+                heroLabel.className = 'overlay-label nibbly-editor-bar-label';
+                heroLabel.contentEditable = 'false';
+                heroLabel.innerHTML = '<span class="nibbly-editor-bar-type"></span>';
+                heroLabel.firstChild.textContent = t('news.post_image');
+                tools.appendChild(heroLabel);
                 const current = ['full', 'hidden'].includes(EditorConfig.newsPostData.imageLayout) ? EditorConfig.newsPostData.imageLayout : 'column';
                 [['column', NEWS_GALLERY_COLUMN_ICON], ['full', NEWS_IMAGE_FULL_ICON], ['hidden', Icons.eyeClosed]].forEach(([layout, icon]) => {
                     const button = newsToolButton(icon, t('post_image.layout_' + layout), () => newsStructuralChange(data => { data.imageLayout = layout; }), layout === current ? 'is-active' : '');

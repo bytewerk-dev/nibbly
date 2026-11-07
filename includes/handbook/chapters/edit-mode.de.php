@@ -27,7 +27,7 @@
   <div><dt><?php echo $hb->icon('grip', 'Ziehen zum Umsortieren'); ?> Verschieben</dt><dd>Am Griff ziehen, um den Abschnitt weiter nach oben oder unten zu setzen.</dd></div>
   <div><dt><?php echo $hb->icon('plus', 'Block hinzufügen'); ?> Block hinzufügen</dt><dd>Das Plus unter einem Abschnitt fügt an dieser Stelle einen neuen Block ein. Du wählst den Typ aus einer Liste mit Suchfeld, etwa Text, Überschrift, Bild, Liste, Karte oder YouTube.</dd></div>
 </dl>
-<?php echo $hb->shot('sections.webp', 'Ein Bildabschnitt im Bearbeitungsmodus mit seiner Werkzeugleiste oben rechts', '<b>Werkzeugleiste eines Abschnitts.</b> Bearbeiten, Ausblenden, Pfeile, Verbinden oder Bildwerkzeuge, Löschen und der Griff zum Verschieben; Beitragsblöcke haben dieselbe Leiste.'); ?>
+<?php echo $hb->shot('sections.webp', 'Ein Bildabschnitt im Bearbeitungsmodus mit seiner Werkzeugleiste oben rechts', '<b>Werkzeugleiste eines Abschnitts.</b> Am Anfang der Leiste stehen der Typname und ein Kurzhinweis (bei Text der Titel oder die ersten Wörter, bei Bildern die Breite), dann Bearbeiten, Ausblenden, Pfeile, Verbinden oder Bildwerkzeuge, Löschen und der Griff zum Verschieben; Beitragsblöcke haben dieselbe Leiste.'); ?>
 <?php echo $hb->note('Sofort gespeichert', 'Wenn du einen Abschnitt oder Listeneintrag hinzufügst oder löschst, einen Textblock teilst, verbindest oder seinen Stil wechselst oder die Bild- und Galeriewerkzeuge nutzt, speichert nibbly sofort, zusammen mit allen anderen offenen Änderungen, und lädt die Seite neu. Alles andere, auch Verschieben und Ausblenden, wartet auf Speichern.'); ?>
 
 <h3>Inhaltseditor</h3>
