@@ -18,10 +18,13 @@ async function until(condition, message) {
     throw Error('Timed out: ' + message);
 }
 
-// Class names of a bar's controls, in order, reduced to what each one is
+// Class names of a bar's controls, in order, reduced to what each one is (the label comes first)
 const barOrder = bar => bar.evaluate(el => [...el.children].map(c =>
-    /overlay-btn-edit/.test(c.className) ? 'edit' : /overlay-btn-hide/.test(c.className) ? 'hide'
-        : /overlay-btn-delete/.test(c.className) ? 'delete' : /drag-handle/.test(c.className) ? 'drag' : 'tool'));
+    /nibbly-editor-bar-label/.test(c.className) ? 'label' : /overlay-btn-edit/.test(c.className) ? 'edit'
+        : /overlay-btn-hide/.test(c.className) ? 'hide' : /overlay-btn-delete/.test(c.className) ? 'delete'
+            : /drag-handle/.test(c.className) ? 'drag' : 'tool'));
+// Type name and hint of a bar's label
+const barLabel = bar => bar.locator('.nibbly-editor-bar-label > span').allTextContents();
 
 async function editMode(page, url) {
     await page.goto(base + url);
@@ -154,11 +157,16 @@ const boxesOverlap = (a, b) => a.x < b.x + b.width && b.x < a.x + a.width && a.y
         assert.strictEqual(await sections.count(), 5);
         const bar = i => sections.nth(i).locator(':scope > .nibbly-editor-section-overlay');
         await sections.nth(0).hover();
-        assert.deepStrictEqual(await barOrder(bar(0)), ['edit', 'hide', 'tool', 'tool', 'tool', 'delete', 'drag']);
+        assert.deepStrictEqual(await barOrder(bar(0)), ['label', 'edit', 'hide', 'tool', 'tool', 'tool', 'delete', 'drag']);
+        assert.deepStrictEqual(await barLabel(bar(0)), ['Text', 'Paragraph numb…'], 'type name and the first words, cut to 15 characters');
+        assert.deepStrictEqual(await barLabel(bar(1)), ['Text', 'Second'], 'a title wins over the content');
         await page.screenshot({ path: shots + '/page-text-bar.png' });
         await sections.nth(2).hover();
-        assert.deepStrictEqual(await barOrder(bar(2)), ['edit', 'hide', 'tool', 'tool', 'tool', 'delete', 'drag'], 'image section');
+        assert.deepStrictEqual(await barOrder(bar(2)), ['label', 'edit', 'hide', 'tool', 'tool', 'tool', 'delete', 'drag'], 'image section');
         assert.strictEqual(await sections.nth(2).locator(':scope > figure[data-news-block="sections.2"]').count(), 1, 'image hook');
+        assert.deepStrictEqual(await barLabel(bar(2)), ['Image', 'Full Width'], 'the chosen width without the bracket note');
+        assert.deepStrictEqual(await barLabel(bar(3)), ['Gallery'], 'no hint for a gallery');
+        assert.strictEqual(await page.evaluate(() => document.querySelector('.nibbly-editor-section-overlay').getBoundingClientRect().height), 36, 'the label does not make the bar taller');
         await page.screenshot({ path: shots + '/page-image-bar.png' });
         await sections.nth(3).hover();
         assert.strictEqual(await bar(3).locator('.overlay-btn-edit').count(), 0, 'gallery has no fields for the dialog');
@@ -298,7 +306,8 @@ const boxesOverlap = (a, b) => a.x < b.x + b.width && b.x < a.x + a.width && a.y
         assert.strictEqual(await blocks.count(), 4);
         const tools = i => blocks.nth(i).locator(':scope > .news-block-tools');
         await blocks.nth(1).hover();
-        assert.deepStrictEqual(await barOrder(tools(1)), ['edit', 'hide', 'tool', 'tool', 'tool', 'delete', 'drag']);
+        assert.deepStrictEqual(await barOrder(tools(1)), ['label', 'edit', 'hide', 'tool', 'tool', 'tool', 'delete', 'drag']);
+        assert.deepStrictEqual(await barLabel(tools(1)), ['Text', 'Beta block'], 'post block label');
         const toolsBox = await tools(1).boundingBox();
         const blockBox = await blocks.nth(1).boundingBox();
         assert.ok(toolsBox.y + toolsBox.height <= blockBox.y + 4, 'post bar sits above the block');

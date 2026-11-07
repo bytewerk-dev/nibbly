@@ -9,6 +9,26 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+## [2.8.3] — 2026-11-07
+
+### Changed
+
+- **Label in every block bar of the Visual Editor.** The bar of a page section or post block starts
+  with the type name in small capitals and, below it, a short hint: the title or first words of a
+  text block, the chosen width of an image block. Two bars close together, such as a floated image
+  and the text beside it, are told apart at a glance; the bar keeps its height. The layout bar of a
+  post's cover image says "Cover image" (`blockBarLabel()` in `js/inline-editor.js`,
+  `.nibbly-editor-bar-label` in `css/inline-editor.css`). The browser check reads the labels, and
+  the handbook's section-bar screenshot and caption show them.
+
+### Fixed
+
+- **Bar of a floated image block.** A page section holding only a floated figure (an image block
+  "half" in running text) has no height, so its bar lay exactly on the bar of the following text
+  block and was covered by it. The editor marks such a section (`editable-section-floated`) and
+  moves its bar to the left edge; the bar of the section under the pointer now also paints over a
+  neighbour's bar that is still fading out.
+
 ## [2.8.2] — 2026-11-07
 
 ### Changed
