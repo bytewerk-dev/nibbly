@@ -13119,3 +13119,96 @@ html[data-theme-preset="pop"] .settings-subnav .settings-nav-group h3 {
     justify-content: center;
     flex: none;
 }
+
+/* Comments: one table per post or page, its title in the header bar; compact entries */
+.nb-comment-groups {
+    display: grid;
+    gap: var(--nb-space-4);
+}
+
+.nb-comment-table__title {
+    font-weight: 600;
+    font-size: var(--nb-text-sm);
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--nb-text);
+}
+
+a.nb-comment-table__title:hover {
+    color: var(--nb-primary);
+    text-decoration: underline;
+}
+
+.nb-comment-table__count {
+    margin-left: var(--nb-space-3);
+    font-weight: 500;
+    font-size: var(--nb-text-xs);
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--nb-text-muted);
+}
+
+.nb-comment-admin {
+    gap: 0;
+}
+
+.nb-comment-admin__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 var(--nb-space-2);
+}
+
+.nb-comment-admin__email,
+.nb-comment-admin__reply {
+    font-size: var(--nb-text-xs);
+    color: var(--nb-text-muted);
+}
+
+.nb-comment-admin__reply::before {
+    content: "· ";
+}
+
+.nb-comment-admin__text {
+    margin-top: var(--nb-space-1);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    overflow: hidden;
+}
+
+.nb-comment-admin--open .nb-comment-admin__text {
+    display: block;
+    -webkit-line-clamp: none;
+    overflow: visible;
+}
+
+.nb-comment-admin__text p {
+    margin: 0 0 0.35em;
+}
+
+.nb-comment-admin__text p:last-child {
+    margin-bottom: 0;
+}
+
+.nb-comment-admin__more {
+    display: none;
+    margin-top: var(--nb-space-1);
+    font-size: var(--nb-text-xs);
+    color: var(--nb-primary);
+}
+
+.nb-comment-admin--clamped .nb-comment-admin__more {
+    display: inline-block;
+}
+
+.nb-comment-admin__reason {
+    margin-top: var(--nb-space-1);
+    font-size: var(--nb-text-xs);
+    color: var(--nb-text-muted);
+}
+
+.nb-comment-admin .page-list-row-actions {
+    margin-top: var(--nb-space-1);
+    min-height: 0;
+}

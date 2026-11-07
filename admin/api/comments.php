@@ -10,9 +10,29 @@ require_once NIBBLY_ADMIN_DIR . '/../includes/comments.php';
 
 switch ($action) {
     case 'load-comments':
+        // Title and public URL of every target once, so the dashboard can group entries by post or page
+        require_once NIBBLY_ADMIN_DIR . '/../includes/news-helper.php';
+        $defaultLang = defined('SITE_LANG_DEFAULT') ? SITE_LANG_DEFAULT : 'en';
+        $targets = [];
+        foreach (nibblyNewsAllPosts() as $post) {
+            $targets['news:' . (string)($post['id'] ?? '')] = ['title' => (string)($post['title'] ?? ''), 'url' => nibblyNewsUrl($post, (string)($post['lang'] ?? $defaultLang))];
+        }
         $comments = [];
         foreach (nibblyCommentsAll() as $comment) {
             unset($comment['ipHash']);
+            $key = (string)($comment['target'] ?? '');
+            if (!isset($targets[$key])) {
+                $targets[$key] = ['title' => '', 'url' => ''];
+                if ($comment['targetType'] === 'page' && ($parsed = nibblyPageParseContentKey((string)$comment['targetId'])) !== null) {
+                    $file = NIBBLY_ADMIN_DIR . '/../content/pages/' . $comment['targetId'] . '.json';
+                    $data = is_file($file) ? json_decode((string)file_get_contents($file), true) : null;
+                    if (is_array($data)) {
+                        $targets[$key] = ['title' => (string)($data['title'] ?? ''), 'url' => nibblyPageUrlPath($parsed['lang'], $parsed['path'], $defaultLang)];
+                    }
+                }
+            }
+            $comment['targetTitle'] = $targets[$key]['title'];
+            $comment['targetUrl'] = $targets[$key]['url'];
             $comments[] = $comment;
         }
         jsonResponse(true, ['comments' => $comments, 'pending' => nibblyCommentsCountPending(), 'settings' => nibblyCommentsSettings()]);

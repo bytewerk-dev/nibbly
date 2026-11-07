@@ -8,8 +8,7 @@
     let commentsFilter = 'pending';
 
     async function loadComments() {
-        const tbody = document.getElementById('commentsList');
-        if (!tbody) return;
+        if (!document.getElementById('commentsGroups')) return;
         try {
             const response = await fetch('api.php?action=load-comments');
             const result = await response.json();
@@ -44,10 +43,10 @@
     }
 
     function commentTargetUrl(comment) {
+        if (comment.targetUrl) return '..' + comment.targetUrl;
         if (comment.targetType === 'news') {
             const post = (typeof newsData !== 'undefined' ? newsData : []).find(p => p.id === comment.targetId);
-            if (post && post.url) return '..' + post.url;
-            return '';
+            return post && post.url ? '..' + post.url : '';
         }
         const key = String(comment.targetId || '');
         const path = key.replace(/^[a-z]{2}_/, '').replace(/__/g, '/');
@@ -55,6 +54,7 @@
     }
 
     function commentTargetLabel(comment) {
+        if (comment.targetTitle) return comment.targetTitle;
         if (comment.targetType === 'news') {
             const post = (typeof newsData !== 'undefined' ? newsData : []).find(p => p.id === comment.targetId);
             return post ? post.title : comment.targetId;
@@ -62,51 +62,130 @@
         return String(comment.targetId || '').replace(/^[a-z]{2}_/, '').replace(/__/g, ' › ');
     }
 
+    // Entries of one post or page stay together; the group with the newest entry comes first
+    function groupCommentsByTarget(comments) {
+        const groups = new Map();
+        comments.forEach(comment => {
+            const key = comment.target || (comment.targetType + ':' + comment.targetId);
+            if (!groups.has(key)) groups.set(key, {key, comment, items: []});
+            groups.get(key).items.push(comment);
+        });
+        return [...groups.values()].sort((a, b) => String(b.items[0].date || '').localeCompare(String(a.items[0].date || '')));
+    }
+
+    // One table per post or page: its title (linked) sits in the header bar in place of "Entry"
+    function commentTable(comment, count) {
+        const wrap = document.createElement('div');
+        wrap.className = 'page-list-table-wrap nb-comment-table';
+        const table = document.createElement('table');
+        table.className = 'page-list-table';
+        const thead = document.createElement('thead');
+        const row = document.createElement('tr');
+        const thTitle = document.createElement('th');
+        thTitle.className = 'page-list-col-title nb-comment-table__head';
+        const url = commentTargetUrl(comment);
+        const title = document.createElement(url ? 'a' : 'span');
+        title.className = 'nb-comment-table__title';
+        title.textContent = commentTargetLabel(comment) || t('comments.target_missing');
+        if (url) { title.href = url; title.target = '_blank'; title.rel = 'noopener'; }
+        thTitle.appendChild(title);
+        if (count) {
+            const total = document.createElement('span');
+            total.className = 'nb-comment-table__count';
+            total.textContent = t('comments.group_count', {count});
+            thTitle.appendChild(total);
+        }
+        const thStatus = document.createElement('th');
+        thStatus.textContent = t('comments.col_status');
+        const thDate = document.createElement('th');
+        thDate.className = 'page-list-col-date';
+        thDate.textContent = t('comments.col_date');
+        row.append(thTitle, thStatus, thDate);
+        thead.appendChild(row);
+        const tbody = document.createElement('tbody');
+        table.append(thead, tbody);
+        wrap.appendChild(table);
+        return {wrap, tbody};
+    }
+
     function renderComments() {
-        const tbody = document.getElementById('commentsList');
-        if (!tbody) return;
-        tbody.innerHTML = '';
+        const container = document.getElementById('commentsGroups');
+        if (!container) return;
+        container.innerHTML = '';
         const visible = commentsData.filter(c => commentsFilter === '' || (c.status || 'pending') === commentsFilter);
+        const pageSize = getDashboardPageSize();
         if (!visible.length) {
-            nbRenderEmptyRow(tbody, 4, t('comments.none'));
-            renderAdminListFooter('commentsListFooter', 'comments', 0, getDashboardPageSize(), renderComments, 'commentsListFooterTop');
+            const empty = commentTable({targetTitle: t('comments.title'), targetUrl: ''}, 0);
+            nbRenderEmptyRow(empty.tbody, 3, t('comments.none'));
+            container.appendChild(empty.wrap);
+            renderAdminListFooter('commentsListFooter', 'comments', 0, pageSize, renderComments, 'commentsListFooterTop');
             return;
         }
-        const pageSize = getDashboardPageSize();
-        const paged = pageSlice(visible, 'comments', pageSize);
-        renderAdminListFooter('commentsListFooter', 'comments', visible.length, pageSize, renderComments, 'commentsListFooterTop');
+        const groups = groupCommentsByTarget(visible);
+        const grouped = groups.flatMap(group => group.items);
+        const paged = pageSlice(grouped, 'comments', pageSize);
+        renderAdminListFooter('commentsListFooter', 'comments', grouped.length, pageSize, renderComments, 'commentsListFooterTop');
+        let current = null;
         paged.items.forEach(comment => {
+            const key = comment.target || (comment.targetType + ':' + comment.targetId);
+            if (!current || current.key !== key) {
+                const group = groups.find(g => g.key === key);
+                const table = commentTable(comment, group ? group.items.length : 0);
+                container.appendChild(table.wrap);
+                current = {key, tbody: table.tbody};
+            }
+            current.tbody.appendChild(commentRow(comment));
+        });
+        // The "show more" link only where the text really is cut off (needs the rows in the DOM)
+        container.querySelectorAll('.nb-comment-admin__text').forEach(text => {
+            if (text.scrollHeight > text.clientHeight + 1) text.parentElement.classList.add('nb-comment-admin--clamped');
+        });
+    }
+
+    function commentRow(comment) {
             const tr = document.createElement('tr');
             tr.className = 'page-list-row' + ((comment.status || 'pending') === 'pending' ? ' mail-row-unread' : '');
 
             const tdEntry = document.createElement('td');
-            tdEntry.className = 'page-list-cell-title';
+            tdEntry.className = 'page-list-cell-title nb-comment-admin';
+            const head = document.createElement('div');
+            head.className = 'nb-comment-admin__head';
             const author = document.createElement('strong');
             author.textContent = comment.author || t('comments.anonymous');
-            tdEntry.appendChild(author);
+            head.appendChild(author);
             if (comment.email) {
                 const mail = document.createElement('span');
                 mail.className = 'nb-comment-admin__email';
-                mail.textContent = ' <' + comment.email + '>';
-                tdEntry.appendChild(mail);
+                mail.textContent = comment.email;
+                head.appendChild(mail);
             }
             if (comment.parent) {
                 const reply = document.createElement('span');
                 reply.className = 'nb-comment-admin__reply';
-                reply.textContent = ' · ' + t('comments.is_reply');
-                tdEntry.appendChild(reply);
+                reply.textContent = t('comments.is_reply');
+                head.appendChild(reply);
             }
+            tdEntry.appendChild(head);
             const text = document.createElement('div');
             text.className = 'nb-comment-admin__text';
             text.innerHTML = comment.content || '';
             tdEntry.appendChild(text);
+            const more = document.createElement('a');
+            more.href = '#';
+            more.className = 'nb-comment-admin__more';
+            more.textContent = t('comments.show_more');
+            more.onclick = (e) => {
+                e.preventDefault();
+                const open = tdEntry.classList.toggle('nb-comment-admin--open');
+                more.textContent = open ? t('comments.show_less') : t('comments.show_more');
+            };
+            tdEntry.appendChild(more);
             if (comment.spamReason) {
                 const why = document.createElement('div');
                 why.className = 'nb-comment-admin__reason';
                 why.textContent = t('comments.spam_reason') + ': ' + comment.spamReason;
                 tdEntry.appendChild(why);
             }
-
             const actions = document.createElement('div');
             actions.className = 'page-list-row-actions';
             const addAction = (label, iconName, handler, danger) => {
@@ -137,9 +216,6 @@
             }
             tdEntry.appendChild(actions);
 
-            const tdTarget = document.createElement('td');
-            tdTarget.textContent = commentTargetLabel(comment);
-
             const tdStatus = document.createElement('td');
             const badge = document.createElement('span');
             badge.className = 'status-badge status-badge--' + (comment.status || 'pending');
@@ -151,10 +227,10 @@
             const date = new Date(comment.date);
             tdDate.textContent = isNaN(date) ? (comment.date || '') : nbFormatDate(date, 'date') + ' ' + nbFormatDate(date, 'time');
 
-            tr.append(tdEntry, tdTarget, tdStatus, tdDate);
-            tbody.appendChild(tr);
-        });
+            tr.append(tdEntry, tdStatus, tdDate);
+            return tr;
     }
+
 
     async function setCommentStatus(comment, status) {
         const formData = new FormData();
