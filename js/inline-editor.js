@@ -5117,31 +5117,40 @@
         const currentValue = field.innerHTML.trim();
         const label = fieldKey.split('.').pop();
 
-        createHtmlSourceDialog();
-
-        const titleEl = document.getElementById('html-source-dialog-title');
-        const textarea = document.getElementById('html-source-textarea');
-        const modal = document.getElementById('html-source-dialog-modal');
-
-        titleEl.textContent = `HTML — ${label}`;
-        textarea.value = formatHtml(currentValue);
-
+        const initial = openHtmlSourceDialog(`HTML — ${label}`, label === 'content' ? (t('editor.writing.content') || label) : label, currentValue);
         _htmlSourceCallback = (newValue) => {
-            if (newValue !== null && newValue !== currentValue) {
+            if (newValue !== null && newValue !== initial && newValue !== currentValue) {
                 saveField(page, fieldKey, newValue, field, true);
             }
         };
-
-        modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-
-        setTimeout(() => {
-            textarea.focus();
-            textarea.setSelectionRange(0, 0);
-        }, 100);
     }
 
     var _htmlSourceCallback = null;
+    var _htmlSourceRich = null; // API of the Visual / Code editor in the dialog (js/rich-editor.js)
+
+    // Fills and shows the dialog; returns the value as shown, so a callback can tell "unchanged" apart
+    function openHtmlSourceDialog(title, label, value) {
+        createHtmlSourceDialog();
+        document.getElementById('html-source-dialog-title').textContent = title;
+        const modal = document.getElementById('html-source-dialog-modal');
+        const formatted = window.NbRichEditor ? window.NbRichEditor.formatHtml(value) : formatHtml(value);
+        if (_htmlSourceRich) {
+            _htmlSourceRich.field.querySelector('label').textContent = label;
+            _htmlSourceRich.setValue(formatted);
+            _htmlSourceRich.setMode(true); // the toolbar button says "HTML": start in Code, Visual is one click away
+        } else {
+            document.getElementById('html-source-textarea').value = formatted;
+        }
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => {
+            if (_htmlSourceRich) { _htmlSourceRich.focus(); _htmlSourceRich.source.setSelectionRange(0, 0); return; }
+            const textarea = document.getElementById('html-source-textarea');
+            textarea.focus();
+            textarea.setSelectionRange(0, 0);
+        }, 100);
+        return formatted;
+    }
 
     function createHtmlSourceDialog() {
         if (document.getElementById('html-source-dialog-modal')) return;
@@ -5156,8 +5165,11 @@
                     <h3 id="html-source-dialog-title">HTML</h3>
                     <button type="button" class="editor-close-btn" onclick="InlineEditor.closeHtmlSourceDialog(null)">&times;</button>
                 </div>
-                <div class="editor-modal-body" style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
-                    <textarea id="html-source-textarea" class="html-source-textarea" spellcheck="false"></textarea>
+                <div class="editor-modal-body" style="flex:1; display:flex; flex-direction:column; overflow:auto;">
+                    <div class="editor-field html-editor" id="html-source-field">
+                        <label for="html-source-textarea">HTML</label>
+                        <textarea id="html-source-textarea" class="section-field html-source-textarea" data-key="html" rows="12" spellcheck="false"></textarea>
+                    </div>
                 </div>
                 <div class="editor-modal-footer">
                     <button type="button" class="editor-btn editor-btn-secondary" onclick="InlineEditor.closeHtmlSourceDialog(null)">${t('cancel') || 'Cancel'}</button>
@@ -5169,20 +5181,18 @@
 
         modal.querySelector('.editor-modal-backdrop').addEventListener('click', () => closeHtmlSourceDialog(null));
 
-        // Ctrl+Enter to confirm
-        document.getElementById('html-source-textarea').addEventListener('keydown', (e) => {
+        // The same Visual / Code editor as the block dialog and the dashboard (js/rich-editor.js):
+        // tabs, formatting toolbar, highlighted source with tag bar. The textarea stays the value source.
+        modal.querySelector('.editor-modal-content').classList.add('nb-rich-host');
+        _htmlSourceRich = window.NbRichEditor
+            ? window.NbRichEditor.richEditor(document.getElementById('html-source-field'), 'html-source', { markDirty() {}, pushUndoSnapshot() {} }) || null
+            : null;
+
+        // Ctrl+Enter to confirm (the code field handles Tab and Enter indentation itself)
+        modal.querySelector('.editor-modal-body').addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
                 submitHtmlSourceDialog();
-            }
-            // Tab inserts spaces instead of moving focus
-            if (e.key === 'Tab') {
-                e.preventDefault();
-                const ta = e.target;
-                const start = ta.selectionStart;
-                const end = ta.selectionEnd;
-                ta.value = ta.value.substring(0, start) + '  ' + ta.value.substring(end);
-                ta.selectionStart = ta.selectionEnd = start + 2;
             }
         });
 
@@ -5203,7 +5213,7 @@
     }
 
     function submitHtmlSourceDialog() {
-        const value = document.getElementById('html-source-textarea').value;
+        const value = _htmlSourceRich ? _htmlSourceRich.getValue() : document.getElementById('html-source-textarea').value;
         closeHtmlSourceDialog(value);
     }
 
@@ -8125,21 +8135,14 @@
     // HTML source of a post text (block or legacy content field); saved with "Speichern"
     function openNewsHtmlEditor(el) {
         const currentValue = newsEditableHtml(el);
-        createHtmlSourceDialog();
-        document.getElementById('html-source-dialog-title').textContent = 'HTML';
-        const textarea = document.getElementById('html-source-textarea');
-        textarea.value = formatHtml(currentValue);
+        const initial = openHtmlSourceDialog('HTML', t('editor.writing.content') || 'HTML', currentValue);
         _htmlSourceCallback = (newValue) => {
-            if (newValue === null || newValue === currentValue) return;
+            if (newValue === null || newValue === initial || newValue === currentValue) return;
             const tools = Array.from(el.querySelectorAll(':scope > .news-block-tools, :scope > .news-block-add'));
             el.innerHTML = sanitizeHtmlString(newValue);
             tools.forEach(node => el.appendChild(node));
             markNewsPostDirty();
         };
-        const modal = document.getElementById('html-source-dialog-modal');
-        modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-        setTimeout(() => { textarea.focus(); textarea.setSelectionRange(0, 0); }, 100);
     }
 
     // ============================================================

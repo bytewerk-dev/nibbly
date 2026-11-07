@@ -522,6 +522,7 @@
             setValue(html) { source.value = html; visual.innerHTML = cleanHtml(html); if (codeChoice.checked) code.refresh(); },
             getValue: () => source.value,
             focus() { (codeChoice.checked ? source : visual).focus(); },
+            setMode(html) { mode(html); },
         };
         field._nbRich = api;
         return api;
