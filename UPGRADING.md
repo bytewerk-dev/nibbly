@@ -3,6 +3,19 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.8.2 to 2.8.3
+
+Version 2.8.3 is a patch release for the Visual Editor: every block bar starts with a label (type
+name and a short hint), and the bar of a page section holding only a floated image block is
+reachable again. No data migration is needed.
+
+1. Deploy the complete core. Changed: `js/inline-editor.js`, `css/inline-editor.css`,
+   `includes/handbook/chapters/edit-mode.*.php` and the handbook screenshots in
+   `includes/handbook/img/`; `tests/visual-editor-check.js` (CI only).
+2. Sites whose CSS styles the editor bars: the label (`.nibbly-editor-bar-label`) is 28 px high
+   like the buttons and is hardened with `!important` like the bar itself; the bar of a floated
+   section carries `editable-section-floated` and sits at the left edge.
+
 ## Upgrading from 2.8.1 to 2.8.2
 
 Version 2.8.2 is a patch release for the Visual Editor and the dashboard: the HTML dialog of the

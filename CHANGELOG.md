@@ -9,6 +9,8 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+## [2.8.3] — 2026-11-07
+
 ### Changed
 
 - **Label in every block bar of the Visual Editor.** The bar of a page section or post block starts
