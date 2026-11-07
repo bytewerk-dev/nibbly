@@ -275,8 +275,8 @@ const boxesOverlap = (a, b) => a.x < b.x + b.width && b.x < a.x + a.width && a.y
         await page.keyboard.press('End');
         await page.keyboard.type(' more');
         await page.locator('#admin-btn-save').click();
-        await page.waitForFunction(() => !document.querySelector('#admin-btn-save.has-changes'));
-        assert.ok(pageFile().sections[2].caption.includes('more'), 'caption saved');
+        // Not the button's state: "has-changes" may not be set yet when the click lands, so wait for the file
+        await until(() => pageFile().sections[2].caption.includes('more'), 'caption saved');
 
         step('page: dragging a section renumbers the hooks');
         await dragHandle(page, sections.nth(2), bar(2).locator('.overlay-drag-handle'), sections.nth(0));
