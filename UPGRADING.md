@@ -3,6 +3,22 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.8.4 to 2.8.5
+
+Version 2.8.5 adds a dashboard banner for a missing website address and tidies the warning
+banners. No data migration is needed.
+
+1. Deploy the complete core. Changed: `admin/dashboard.php`, `admin/dashboard/scripts/settings.php`,
+   `admin/api/settings.php`, `admin/style.css`, `admin/lang/*.json`, `includes/seo-check.php`,
+   `includes/seo-helper.php`, `includes/handbook/chapters/{login,security,settings}.*.php`;
+   `tests/seo-check-smoke.php` (CI only).
+2. The website address setting now only accepts `http://` and `https://` addresses. A stored
+   value is not checked again until it is changed.
+3. `NIBBLY_SITE_URL` in `admin/config.php` now also serves as the base for canonical links,
+   hreflang and the sitemap when the website address setting is empty.
+4. The system status reports an empty website address as a warning; sites with search engine
+   checks show it until the address is set.
+
 ## Upgrading from 2.8.3 to 2.8.4
 
 Version 2.8.4 is a security release for the login page. No data migration is needed, but

@@ -11,7 +11,7 @@
 
 <h3>Forgot your password</h3>
 <div class="hb-prose">
-  <p>Once the website is allowed to send email, <?php echo $hb->ui('Forgot password?'); ?> appears below the sign-in form. Enter your account's email address and nibbly sends you a link to reset your password. The link is valid for one hour. Without email sending, or without an email address in your account, an admin resets your password.</p>
+  <p>Once the website is allowed to send email, <?php echo $hb->ui('Forgot password?'); ?> appears below the sign-in form. Enter your account's email address and nibbly sends you a link to reset your password. The link is valid for one hour. The mail is only sent once the website address is entered in the settings, so nobody can slip in links to a foreign domain. Without email sending, or without an email address in your account, an admin resets your password.</p>
   <p>After three wrong attempts you have to wait a little longer before each new try; the button shows the waiting time. After many failed attempts, nibbly blocks sign-ins from that connection for 24 hours. This protects against attacks that try out passwords.</p>
 </div>
 

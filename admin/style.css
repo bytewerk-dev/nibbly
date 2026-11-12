@@ -771,7 +771,6 @@ select:not([multiple]) {
 .security-warning-banner {
     max-width: calc(var(--nb-content-max) - (var(--nb-space-6) * 2));
     margin: 0 auto var(--nb-space-6);
-    padding-inline: 0;
     width: calc(100% - var(--nb-space-6) * 2);
 }
 
@@ -780,15 +779,28 @@ select:not([multiple]) {
     margin: 0;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: var(--nb-space-2-5);
+    gap: var(--nb-space-2-5) var(--nb-space-3);
     flex-wrap: nowrap;
-    align-items: center;
+    /* Icon at the top next to the title; the text stays indented beside it. */
+    align-items: start;
     padding-right: 0;
 }
 
 .mail-config-banner .info-banner__icon {
     display: inline-flex;
     color: var(--nb-warning-text-strong);
+}
+
+/* Larger than the inline 16 px icons; the 1px offset centres it on the title's first line. */
+.mail-config-banner .info-banner__icon svg {
+    width: 22px;
+    height: 22px;
+    margin-top: 1px;
+}
+
+.mail-config-banner .info-banner__cta,
+.mail-config-banner .info-banner__actions {
+    align-self: center;
 }
 
 .mail-config-banner .info-banner__content {
@@ -9644,12 +9656,15 @@ input.color-hex-input,
 .system-check__rules pre { flex: 1 1 26rem; min-width: 0; margin: 0; padding: 10px 12px; overflow-x: auto; background: var(--nb-bg-elevated); color: var(--nb-text); border: 1px solid var(--nb-border); border-radius: var(--nb-radius-md); font-family: var(--font-mono, ui-monospace, SF Mono, Menlo, Consolas, monospace); font-size: 0.8125rem; line-height: 1.5; }
 .system-badge { background: var(--nb-danger); box-shadow: 0 0 0 2px var(--nb-danger-subtle); }
 .admin-main:has(> .security-exposure-banner:not([hidden])) { padding-top: var(--nb-space-6); }
+.admin-main:has(> .site-url-banner:not([hidden])) { padding-top: var(--nb-space-6); }
+.info-banner__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--nb-space-2); }
 @media (max-width: 768px) {
     /* Security banners: wrap the title and place the call to action below the text. */
     .security-warning-banner { margin-inline: var(--nb-space-4); }
     .security-warning-banner .info-banner__inner { grid-template-columns: auto minmax(0, 1fr); }
     .security-warning-banner .info-banner__title { white-space: normal; }
     .security-warning-banner .info-banner__cta { grid-column: 2; justify-self: start; }
+    .security-warning-banner .info-banner__actions { grid-column: 2; justify-content: flex-start; }
 }
 
 .settings-panels, .settings-panel { min-width: 0; }

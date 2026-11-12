@@ -9,6 +9,32 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+## [2.8.5] — 2026-11-12
+
+### Added
+
+- **Dashboard banner for a missing site address.** Admins on a public address see a warning while
+  neither the site address (Settings → Branding → Search engines) nor `NIBBLY_SITE_URL` is set:
+  without it, password reset mails are not sent (2.8.4) and canonical links, hreflang and the
+  sitemap follow whichever host is visited. "Use https://…" saves the address the admin is
+  logged in under with one click, "Enter address" opens the field, "Later" hides the banner for
+  the browser session (`admin/dashboard.php`, `admin/dashboard/scripts/settings.php`).
+
+### Changed
+
+- The search engine check reports an empty site address as a warning instead of "ok".
+- `NIBBLY_SITE_URL` also serves as the base for canonical links, hreflang and the sitemap when the
+  site address setting is empty (`includes/seo-helper.php`).
+- The site address setting only accepts `http://` and `https://` addresses; its hint mentions the
+  password reset mails.
+- **Dashboard warning banners:** the icon is larger (22 px) and sits at the top next to the title,
+  the text stays indented beside it; the banners get their inner padding back, so icon and buttons
+  no longer touch the border. The "email address missing" banner uses the same layout, and the two
+  buttons of the search engine banner form one group instead of breaking the grid
+  (`admin/style.css`, `admin/dashboard.php`).
+- Handbook: the website address is described under Settings → Branding, as a condition for
+  password reset mails under Signing in, and as part of the system status under Security.
+
 ## [2.8.4] — 2026-11-12
 
 ### Security
