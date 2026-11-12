@@ -26,105 +26,11 @@ $timeoutNoticeTimestamp = isset($_GET['timeout']) ? (int)$_GET['timeout'] : 0;
 $showTimeoutNotice = $timeoutNoticeTimestamp > 0 && abs(time() - $timeoutNoticeTimestamp) <= 120;
 
 // ============================================================
-// BRUTE FORCE PROTECTION (IP-based, file-backed)
+// BRUTE FORCE PROTECTION (IP-based, file-backed, locked transactions)
 // ============================================================
 
-define('LOGIN_ATTEMPTS_FILE', __DIR__ . '/../content/login_attempts.json');
-define('BRUTE_FORCE_DELAY_STEP', 15);     // seconds per failed attempt after threshold
-define('BRUTE_FORCE_THRESHOLD', 3);       // free attempts before delay kicks in
-define('BRUTE_FORCE_MAX_ATTEMPTS', 20);   // hard lockout after this many
-define('BRUTE_FORCE_LOCKOUT_TIME', 86400); // 24 hours hard lockout
-
-function getIpHash() {
-    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    return hash('sha256', $ip . 'nibbly');
-}
-
-function loadAttempts() {
-    if (!file_exists(LOGIN_ATTEMPTS_FILE)) {
-        return [];
-    }
-    $data = json_decode(file_get_contents(LOGIN_ATTEMPTS_FILE), true);
-    return is_array($data) ? $data : [];
-}
-
-function saveAttempts($data) {
-    // Cleanup entries older than 24 hours
-    $now = time();
-    foreach ($data as $hash => $entry) {
-        if ($now - ($entry['last'] ?? 0) > BRUTE_FORCE_LOCKOUT_TIME) {
-            unset($data[$hash]);
-        }
-    }
-    $dir = dirname(LOGIN_ATTEMPTS_FILE);
-    if (!is_dir($dir)) {
-        mkdir($dir, 0755, true);
-    }
-    file_put_contents(LOGIN_ATTEMPTS_FILE, json_encode($data, JSON_PRETTY_PRINT), LOCK_EX);
-}
-
-/**
- * Check if login is allowed for this IP.
- * Returns ['allowed' => bool, 'wait' => seconds, 'locked' => bool]
- */
-function checkBruteForce() {
-    $ipHash = getIpHash();
-    $data = loadAttempts();
-    $entry = $data[$ipHash] ?? null;
-
-    if ($entry === null) {
-        return ['allowed' => true, 'wait' => 0, 'locked' => false];
-    }
-
-    $now = time();
-    $count = $entry['count'] ?? 0;
-    $lastAttempt = $entry['last'] ?? 0;
-
-    // Hard lockout after MAX_ATTEMPTS
-    if ($count >= BRUTE_FORCE_MAX_ATTEMPTS) {
-        $remaining = BRUTE_FORCE_LOCKOUT_TIME - ($now - $lastAttempt);
-        if ($remaining > 0) {
-            return ['allowed' => false, 'wait' => $remaining, 'locked' => true];
-        }
-        // Lockout expired, clean up
-        unset($data[$ipHash]);
-        saveAttempts($data);
-        return ['allowed' => true, 'wait' => 0, 'locked' => false];
-    }
-
-    // Progressive delay after threshold
-    if ($count >= BRUTE_FORCE_THRESHOLD) {
-        $delay = ($count - BRUTE_FORCE_THRESHOLD + 1) * BRUTE_FORCE_DELAY_STEP;
-        $remaining = $delay - ($now - $lastAttempt);
-        if ($remaining > 0) {
-            return ['allowed' => false, 'wait' => $remaining, 'locked' => false];
-        }
-    }
-
-    return ['allowed' => true, 'wait' => 0, 'locked' => false];
-}
-
-function recordFailedAttempt() {
-    $ipHash = getIpHash();
-    $data = loadAttempts();
-    $now = time();
-
-    if (!isset($data[$ipHash])) {
-        $data[$ipHash] = ['count' => 0, 'first' => $now, 'last' => $now];
-    }
-
-    $data[$ipHash]['count']++;
-    $data[$ipHash]['last'] = $now;
-
-    saveAttempts($data);
-}
-
-function resetAttempts() {
-    $ipHash = getIpHash();
-    $data = loadAttempts();
-    unset($data[$ipHash]);
-    saveAttempts($data);
-}
+require_once __DIR__ . '/../includes/login-throttle.php';
+require_once __DIR__ . '/../includes/site-url.php';
 
 function nibblyIsLoopbackName(string $host): bool {
     return nibblySessionIsLoopback($host);
@@ -132,54 +38,6 @@ function nibblyIsLoopbackName(string $host): bool {
 
 function nibblyDevLoginAvailable(): bool {
     return nibblySessionDevLoginAllowed();
-}
-
-/**
- * Separate rate-limiting for password reset requests.
- * Uses a "reset_" prefix to avoid sharing counters with login attempts.
- * More lenient: 5 attempts per hour.
- */
-function checkResetRateLimit() {
-    $key = 'reset_' . getIpHash();
-    $data = loadAttempts();
-    $entry = $data[$key] ?? null;
-
-    if ($entry === null) {
-        return ['allowed' => true];
-    }
-
-    $now = time();
-    $count = $entry['count'] ?? 0;
-    $firstAttempt = $entry['first'] ?? $now;
-
-    // Reset counter after 1 hour
-    if ($now - $firstAttempt > 3600) {
-        unset($data[$key]);
-        saveAttempts($data);
-        return ['allowed' => true];
-    }
-
-    // Allow 5 attempts per hour
-    if ($count >= 5) {
-        return ['allowed' => false];
-    }
-
-    return ['allowed' => true];
-}
-
-function recordResetAttempt() {
-    $key = 'reset_' . getIpHash();
-    $data = loadAttempts();
-    $now = time();
-
-    if (!isset($data[$key])) {
-        $data[$key] = ['count' => 0, 'first' => $now, 'last' => $now];
-    }
-
-    $data[$key]['count']++;
-    $data[$key]['last'] = $now;
-
-    saveAttempts($data);
 }
 
 // ============================================================
@@ -278,7 +136,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    $bruteCheck = $devLoginCandidate ? ['allowed' => true] : checkBruteForce();
+    // Check and count in one locked step, so parallel requests can not slip past the limit.
+    $bruteCheck = $devLoginCandidate ? ['allowed' => true] : reserveLoginAttempt();
 
     if (!$bruteCheck['allowed']) {
         $lockoutWait = $bruteCheck['wait'];
@@ -321,8 +180,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: ' . $redirect);
             exit;
         } else {
-            recordFailedAttempt();
-
+            // The attempt was already counted by reserveLoginAttempt().
             // Re-check to show countdown if threshold now exceeded
             $bruteCheck = checkBruteForce();
             if (!$bruteCheck['allowed']) {
@@ -345,8 +203,8 @@ $resetError = '';
 
 // Handle reset request (email form submission)
 if ($resetAction === 'reset-request' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $resetRateCheck = checkResetRateLimit();
-    if (!$resetRateCheck['allowed']) {
+    // Check and count in one locked step (separate counter from login).
+    if (!reserveResetAttempt()) {
         $resetError = t('login.reset_rate_limit');
     } else {
         $resetEmail = trim($_POST['reset_email'] ?? '');
@@ -368,11 +226,15 @@ if ($resetAction === 'reset-request' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
 
-                    if ($emailConfig) {
+                    // Never build the link from the Host header: the client controls it.
+                    $resetUrl = $emailConfig ? nibblyPasswordResetUrl($rawToken, $settingsPath) : '';
+                    if ($emailConfig && $resetUrl === '') {
+                        error_log('Nibbly: password reset mail not sent, no site address configured. '
+                            . "Set the site address in Settings or define('NIBBLY_SITE_URL', 'https://example.com') in admin/config.php.");
+                    }
+
+                    if ($emailConfig && $resetUrl !== '') {
                         require_once __DIR__ . '/../api/SmtpMailer.php';
-                        $resetUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
-                            . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost')
-                            . dirname($_SERVER['SCRIPT_NAME']) . '/index.php?action=reset&token=' . urlencode($rawToken);
 
                         $subject = t('login.reset_email_subject');
                         $body = t('login.reset_email_body', ['url' => $resetUrl, 'username' => $user['username']]);
@@ -399,8 +261,6 @@ if ($resetAction === 'reset-request' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
-        // Record attempt to rate-limit (separate counter from login)
-        recordResetAttempt();
     }
 }
 

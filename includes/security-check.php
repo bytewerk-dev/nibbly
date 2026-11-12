@@ -334,7 +334,7 @@ function nibblySecurityStatus(string $scheme = '', bool $run = false, bool $forc
     $displayErrors = defined('NIBBLY_INITIAL_DISPLAY_ERRORS') ? NIBBLY_INITIAL_DISPLAY_ERRORS : (string)ini_get('display_errors');
     $devLogin = !defined('NIBBLY_DEV_LOGIN') || NIBBLY_DEV_LOGIN === true;
     if ($local) {
-        foreach (['https', 'cookie', 'client_ip', 'errors', 'dev_login'] as $id) {
+        foreach (['https', 'cookie', 'client_ip', 'errors', 'dev_login', 'reset_link'] as $id) {
             $items[] = ['id' => $id, 'state' => 'skipped', 'reason' => 'local'];
         }
     } else {
@@ -345,6 +345,9 @@ function nibblySecurityStatus(string $scheme = '', bool $run = false, bool $forc
         $items[] = ['id' => 'errors', 'state' => strtolower($displayErrors) === 'stdout'
             || filter_var($displayErrors, FILTER_VALIDATE_BOOLEAN) ? 'warning' : 'ok'];
         $items[] = ['id' => 'dev_login', 'state' => !$devLogin ? 'ok' : (nibblySecurityIsLoopbackIp($remote) ? 'warning' : 'note')];
+        // Password reset links are built only from a configured address, never from the Host header.
+        require_once __DIR__ . '/site-url.php';
+        $items[] = ['id' => 'reset_link', 'state' => nibblyConfiguredSiteOrigin() !== '' ? 'ok' : 'warning'];
     }
 
     // End of upstream security support, https://www.php.net/supported-versions.php (extend with each PHP release).

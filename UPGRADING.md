@@ -3,6 +3,21 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.8.3 to 2.8.4
+
+Version 2.8.4 is a security release for the login page. No data migration is needed, but
+**password reset mails now need a configured site address**.
+
+1. Deploy the complete core. New: `includes/site-url.php`, `includes/login-throttle.php`,
+   `tests/login-security-smoke.php` (CI only). Changed: `admin/index.php`, `admin/setup.php`,
+   `admin/config.example.php`, `includes/security-check.php`, `admin/lang/*.json`, `.gitignore`.
+2. Set the public address of every live site, either under Settings → Branding → Search engines
+   ("Site address", e.g. `https://www.example.com`) or in `admin/config.php`:
+   `define('NIBBLY_SITE_URL', 'https://www.example.com');`. Without it, "forgot password" mails are
+   not sent (the system check shows a warning, the PHP error log names the reason).
+3. `content/login_attempts.json.lock` is created next to the counter file; the `content/` folder
+   is already protected.
+
 ## Upgrading from 2.8.2 to 2.8.3
 
 Version 2.8.3 is a patch release for the Visual Editor: every block bar starts with a label (type
