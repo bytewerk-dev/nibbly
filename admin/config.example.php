@@ -18,6 +18,11 @@ define('SITE_NAME', 'My Website');
 // If omitted, Nibbly derives it from the request host or hosting path.
 // define('NIBBLY_SITE_DOMAIN', 'example.com');
 
+// Canonical public address of the site (scheme and host, optional port). Password reset mails
+// use only this address (or the site address in Settings → Search engines), never the Host
+// header of the request, so a forged header can not redirect reset links to another domain.
+// define('NIBBLY_SITE_URL', 'https://www.example.com');
+
 // Development login. Existing admin users can log in with password "dev" only
 // from loopback hosts (localhost, 127.0.0.1, ::1). This is ignored on non-local
 // hosts even if accidentally left enabled. Set false to disable it locally too.

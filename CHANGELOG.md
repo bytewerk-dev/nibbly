@@ -9,6 +9,26 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+## [2.8.4] — 2026-11-12
+
+### Security
+
+- **Password reset links no longer follow the Host header (CWE-640, CWE-346).** The link in the
+  reset mail used to be built from `$_SERVER['HTTP_HOST']`, so a forged `Host` header on the
+  "forgot password" form could send a valid reset token to a foreign domain. The link now uses
+  only a configured address: `NIBBLY_SITE_URL` in `admin/config.php` (new, optional) or the site
+  address under Settings → Branding → Search engines (`seo.siteUrl`). Without either, the mail is
+  not sent and the reason is written to the PHP error log; only a purely local request (loopback
+  client and loopback host) may still use its own host. The system check gains a "Links in
+  password mails" item (`includes/site-url.php`, `includes/security-check.php`).
+- **Login and reset throttling is atomic (CWE-362).** Check and count of the IP-based login lockout
+  and the reset rate limit used to be separate read/write steps without a lock, so parallel
+  requests all passed the check and lost each other's counter updates. Both now run as one locked
+  transaction (`flock` plus atomic write via `includes/json-store.php`); a login attempt is counted
+  before the password is checked and cleared again after success. A damaged counter file is
+  replaced; a counter file that can not be written refuses the login instead of skipping the limit
+  (`includes/login-throttle.php`, `tests/login-security-smoke.php`).
+
 ## [2.8.3] — 2026-11-07
 
 ### Changed

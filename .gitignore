@@ -30,6 +30,7 @@ assets/images-sizes-trash/
 assets/audio-trash/*
 !assets/audio-trash/.gitkeep
 content/login_attempts.json
+content/login_attempts.json.lock
 content/mails.json
 content/users.json
 content/redirects.json
