@@ -9,6 +9,8 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+## [2.8.5] — 2026-11-12
+
 ### Added
 
 - **Dashboard banner for a missing site address.** Admins on a public address see a warning while
