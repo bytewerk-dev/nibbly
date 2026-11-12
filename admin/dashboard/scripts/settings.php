@@ -1315,6 +1315,7 @@
 
             if (result.success) {
                 currentSettings = result.data;
+                if (result.data && result.data.seo && result.data.seo.siteUrl) hideSiteUrlBanner();
                 showToast(t('toast.branding_saved'), 'success');
             } else {
                 showToast(result.message, 'error');
@@ -1326,6 +1327,73 @@
             btn.textContent = t('settings.save_branding');
         }
     });
+
+    // Banner for a missing site address (admin/dashboard.php, includes/site-url.php)
+    function hideSiteUrlBanner() {
+        var banner = document.getElementById('siteUrlWarning');
+        if (banner) banner.hidden = true;
+    }
+
+    (function initSiteUrlBanner() {
+        var banner = document.getElementById('siteUrlWarning');
+        if (!banner) return;
+        try {
+            if (sessionStorage.getItem('nbSiteUrlBannerLater') === '1') banner.hidden = true;
+        } catch (e) { /* storage blocked: keep showing it */ }
+
+        // Address of the site root as the logged-in admin reaches it (the part before /admin/).
+        var suggested = location.origin + location.pathname.replace(/\/admin(?:\/.*)?$/, '');
+        var adopt = document.getElementById('siteUrlAdopt');
+        if (/^https?:\/\//.test(suggested)) {
+            adopt.textContent = t('site_url_banner.adopt', { url: suggested });
+            adopt.hidden = false;
+        }
+
+        adopt.addEventListener('click', async function() {
+            adopt.disabled = true;
+            try {
+                // Saving needs the current settings revision (js/revision-client.js records it on load).
+                if (!window.NibblyRevisions || !window.NibblyRevisions.get('settings')) {
+                    var loaded = await (await fetch('api.php?action=load-settings')).json();
+                    if (!loaded.success) throw new Error(loaded.message || '');
+                }
+                var formData = new FormData();
+                formData.append('action', 'save-settings');
+                formData.append('settings', JSON.stringify({ seo: { siteUrl: suggested } }));
+                formData.append('csrf_token', CSRF_TOKEN);
+                var response = await fetch('api.php', { method: 'POST', body: formData });
+                var result = await response.json();
+                if (!result.success) throw new Error(result.message || '');
+                if (typeof currentSettings === 'object' && currentSettings) {
+                    currentSettings.seo = Object.assign({}, currentSettings.seo || {}, { siteUrl: result.data?.seo?.siteUrl || suggested });
+                }
+                var field = document.getElementById('settingsSiteUrl');
+                if (field) field.value = result.data?.seo?.siteUrl || suggested;
+                hideSiteUrlBanner();
+                showToast(t('site_url_banner.saved', { url: suggested }), 'success');
+            } catch (error) {
+                showToast(t('toast.error_generic', { message: error.message }), 'error');
+            } finally {
+                adopt.disabled = false;
+            }
+        });
+
+        document.getElementById('siteUrlEdit').addEventListener('click', function() {
+            switchTab('settings');
+            activateSettingsTab('branding');
+            var field = document.getElementById('settingsSiteUrl');
+            if (!field) return;
+            setTimeout(function() {
+                field.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                field.focus({ preventScroll: true });
+            }, 50);
+        });
+
+        document.getElementById('siteUrlLater').addEventListener('click', function() {
+            try { sessionStorage.setItem('nbSiteUrlBannerLater', '1'); } catch (e) { /* ignore */ }
+            hideSiteUrlBanner();
+        });
+    })();
 
     // Save theme
     onElement('themeForm', 'submit', async function(e) {

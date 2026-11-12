@@ -361,13 +361,14 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
     $emailMissing = $emailMethod !== 'inactive' && $currentUserData && empty($currentUserData['email']);
     ?>
     <?php if ($emailMissing): ?>
-    <div class="info-banner info-banner--warning" id="emailWarning">
+    <div class="info-banner info-banner--warning mail-config-banner security-warning-banner" id="emailWarning">
         <div class="info-banner__inner">
-            <strong class="info-banner__title"><?php echo nbIcon('alert'); ?> <?php echo t('settings.email_missing_title'); ?></strong>
-            <span class="info-banner__body">
-                <?php echo t('settings.email_missing_text'); ?>
-                <a href="#" class="info-banner__cta" onclick="switchTab('settings'); document.querySelector('[data-settings-tab=&quot;users&quot;]').click(); return false;"><?php echo t('settings.email_missing_link'); ?> &rarr;</a>
+            <span class="info-banner__icon"><?php echo nbIcon('alert'); ?></span>
+            <span class="info-banner__content">
+                <strong class="info-banner__title"><?php echo t('settings.email_missing_title'); ?></strong>
+                <span class="info-banner__body"><?php echo t('settings.email_missing_text'); ?></span>
             </span>
+            <a href="#" class="info-banner__cta" onclick="switchTab('settings'); document.querySelector('[data-settings-tab=&quot;users&quot;]').click(); return false;"><?php echo t('settings.email_missing_link'); ?> &rarr;</a>
         </div>
     </div>
     <?php endif; ?>
@@ -398,6 +399,30 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
             <button type="button" class="info-banner__cta info-banner__cta-button" onclick="switchTab('system');"><?php echo t('security_check.banner_cta'); ?> &rarr;</button>
         </div>
     </div>
+    <?php
+    // Without a configured site address, password reset mails are not sent and canonical links follow
+    // each request's host (includes/site-url.php). Only meaningful under a public address.
+    require_once __DIR__ . '/../includes/site-url.php';
+    require_once __DIR__ . '/../includes/security-check.php';
+    $siteUrlMissing = nibblyConfiguredSiteOrigin() === '' && !nibblySecurityIsLocalHost((string)($_SERVER['HTTP_HOST'] ?? ''));
+    ?>
+    <?php if ($siteUrlMissing): ?>
+    <!-- Buttons wired in dashboard/scripts/settings.php; "Later" hides it for this browser session only. -->
+    <div class="info-banner info-banner--warning mail-config-banner security-warning-banner site-url-banner" id="siteUrlWarning" role="status">
+        <div class="info-banner__inner">
+            <span class="info-banner__icon"><?php echo nbIcon('alert'); ?></span>
+            <span class="info-banner__content">
+                <strong class="info-banner__title"><?php echo t('site_url_banner.title'); ?></strong>
+                <span class="info-banner__body"><?php echo t('site_url_banner.text'); ?></span>
+            </span>
+            <span class="info-banner__actions">
+                <button type="button" class="info-banner__cta info-banner__cta-button" id="siteUrlAdopt" hidden></button>
+                <button type="button" class="info-banner__cta info-banner__cta-button" id="siteUrlEdit"><?php echo t('site_url_banner.edit'); ?> &rarr;</button>
+                <button type="button" class="info-banner__cta info-banner__cta-button" id="siteUrlLater"><?php echo t('site_url_banner.later'); ?></button>
+            </span>
+        </div>
+    </div>
+    <?php endif; ?>
     <!-- Filled by the background search engine check (dashboard/scripts/system.php). Always shown while the live site blocks search engines. -->
     <div class="info-banner info-banner--warning mail-config-banner security-warning-banner" id="seoBlockedWarning" role="status" hidden>
         <div class="info-banner__inner">
@@ -406,8 +431,10 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                 <strong class="info-banner__title"><?php echo t('seo_check.banner_title'); ?></strong>
                 <span class="info-banner__body" id="seoBlockedText"></span>
             </span>
-            <button type="button" class="info-banner__cta info-banner__cta-button" id="seoBlockedAllow" onclick="allowSeoIndexing(this);" hidden><?php echo t('seo_check.allow'); ?></button>
-            <button type="button" class="info-banner__cta info-banner__cta-button" onclick="switchTab('system');"><?php echo t('security_check.banner_cta'); ?> &rarr;</button>
+            <span class="info-banner__actions">
+                <button type="button" class="info-banner__cta info-banner__cta-button" id="seoBlockedAllow" onclick="allowSeoIndexing(this);" hidden><?php echo t('seo_check.allow'); ?></button>
+                <button type="button" class="info-banner__cta info-banner__cta-button" onclick="switchTab('system');"><?php echo t('security_check.banner_cta'); ?> &rarr;</button>
+            </span>
         </div>
     </div>
     <?php endif; ?>

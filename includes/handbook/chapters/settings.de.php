@@ -10,7 +10,7 @@
 </div>
 <h3>Website</h3>
 <dl class="hb-fields">
-  <div><dt>Branding</dt><dd>Name der Website, Favicon, Logos für hell und dunkel, das Bild für geteilte Links und das Logo im Dashboard. Hier lässt sich die Website auch für Suchmaschinen sperren, etwa während des Aufbaus.</dd></div>
+  <div><dt>Branding</dt><dd>Name der Website, Favicon, Logos für hell und dunkel, das Bild für geteilte Links und das Logo im Dashboard. Hier lässt sich die Website auch für Suchmaschinen sperren, etwa während des Aufbaus. Unter <b>Adresse der Website</b> steht die öffentliche Adresse mit https://; sie gilt für Canonical-Links, die Sitemap und die Links in Mails zum Zurücksetzen des Passworts. Fehlt sie, weist das Dashboard oben darauf hin und bietet an, die aktuelle Adresse zu übernehmen.</dd></div>
   <div><dt>Design</dt><dd>Das Aussehen des Dashboards, nicht der Website: Stil, hell oder dunkel, Grundfarbe, Schrift und Größe. Dazu, wie viele Einträge Listen pro Seite zeigen.</dd></div>
   <div><dt>Module</dt><dd>Bereiche ein- und ausschalten, etwa News, Termine oder dieses Handbuch. Ausgeschaltete Module verschwinden aus dem Dashboard, ihre Inhalte bleiben gespeichert. Darunter: Upload-Grenze und Webfassung für Bilder.</dd></div>
   <div><dt>Sprache</dt><dd>Die Sprache des Dashboards und die Sprachen der Website: Reihenfolge, Hauptsprache und neue Sprachen, auf Wunsch mit allen Inhalten einer bestehenden Sprache als Startpunkt.</dd></div>

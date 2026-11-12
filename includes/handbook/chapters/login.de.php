@@ -11,7 +11,7 @@
 
 <h3>Passwort vergessen</h3>
 <div class="hb-prose">
-  <p>Sobald die Website E-Mails versenden darf, steht unter dem Anmeldeformular <?php echo $hb->ui('Passwort vergessen?'); ?>. Gib die E-Mail-Adresse deines Kontos ein, nibbly schickt dir einen Link zum Zurücksetzen. Der Link gilt eine Stunde. Ohne E-Mail-Versand oder ohne E-Mail-Adresse im Konto setzt ein Admin dein Passwort zurück.</p>
+  <p>Sobald die Website E-Mails versenden darf, steht unter dem Anmeldeformular <?php echo $hb->ui('Passwort vergessen?'); ?>. Gib die E-Mail-Adresse deines Kontos ein, nibbly schickt dir einen Link zum Zurücksetzen. Der Link gilt eine Stunde. Die Mail wird nur verschickt, wenn in den Einstellungen die Adresse der Website eingetragen ist; so kann niemand Links auf eine fremde Domain unterschieben. Ohne E-Mail-Versand oder ohne E-Mail-Adresse im Konto setzt ein Admin dein Passwort zurück.</p>
   <p>Nach drei falschen Versuchen musst du vor jedem weiteren Versuch etwas länger warten; der Button zeigt die Wartezeit. Nach sehr vielen Fehlversuchen sperrt nibbly die Anmeldung von diesem Anschluss für 24 Stunden. Das schützt vor Angriffen, die Passwörter durchprobieren.</p>
 </div>
 

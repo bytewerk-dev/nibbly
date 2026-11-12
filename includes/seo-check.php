@@ -228,7 +228,7 @@ function nibblySeoCheckSettingsFacts(): array {
     }
     return [
         'noindexSite' => !empty($settings['seo']['noindexSite']),
-        'siteUrl' => trim((string)($settings['seo']['siteUrl'] ?? '')),
+        'siteUrl' => trim((string)($settings['seo']['siteUrl'] ?? '')) ?: (defined('NIBBLY_SITE_URL') ? trim((string)NIBBLY_SITE_URL) : ''),
         'maintenance' => $active,
         'pages' => ['total' => $total, 'noindex' => $noindex],
         'robotsFile' => is_file($root . '/robots.txt'),
@@ -308,7 +308,10 @@ function nibblySeoCheckEvaluate(?array $facts, array $settings, string $baseUrl)
     // Settings only, so these also work when the site cannot request itself.
     $siteUrl = $settings['siteUrl'];
     $item = ['id' => 'site_url', 'state' => 'ok', 'url' => $siteUrl];
-    if ($siteUrl !== '' && $baseUrl !== '') {
+    if ($siteUrl === '') {
+        // Without it, canonical links follow each request's host and password reset mails are not sent.
+        $item = ['id' => 'site_url', 'state' => 'warning', 'reason' => 'empty', 'fix' => 'empty'];
+    } elseif ($baseUrl !== '') {
         if (nibblySeoCheckHost($siteUrl) !== nibblySeoCheckHost($baseUrl)) {
             $item = ['id' => 'site_url', 'state' => 'warning', 'reason' => 'host', 'url' => $siteUrl, 'detail' => (string)parse_url($baseUrl, PHP_URL_HOST), 'fix' => 'host'];
         } elseif (str_starts_with($baseUrl, 'https://') && stripos($siteUrl, 'http://') === 0) {

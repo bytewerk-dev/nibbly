@@ -23,6 +23,9 @@ function nibblySeoBaseUrl(): string {
     if ($configured !== '') {
         return rtrim($configured, '/');
     }
+    if (defined('NIBBLY_SITE_URL') && trim((string)NIBBLY_SITE_URL) !== '') {
+        return rtrim(trim((string)NIBBLY_SITE_URL), '/');
+    }
 
     $host = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? '');
     if ($host === '') {

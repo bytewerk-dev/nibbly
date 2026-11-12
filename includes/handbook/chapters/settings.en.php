@@ -10,7 +10,7 @@
 </div>
 <h3>Site</h3>
 <dl class="hb-fields">
-  <div><dt>Branding</dt><dd>Site name, favicon, logos for light and dark, the image for shared links and the logo in the dashboard. Here you can also block the website for search engines, for example while it's being built.</dd></div>
+  <div><dt>Branding</dt><dd>Site name, favicon, logos for light and dark, the image for shared links and the logo in the dashboard. Here you can also block the website for search engines, for example while it's being built. <b>Website address</b> holds the public address with https://; it is used for canonical links, the sitemap and the links in password reset mails. If it's missing, the dashboard points this out at the top and offers to use the current address.</dd></div>
   <div><dt>Design</dt><dd>The look of the dashboard, not of the website: style, light or dark, base colour, font and size. Also how many entries lists show per page.</dd></div>
   <div><dt>Modules</dt><dd>Switch areas on and off, such as news, events or this handbook. Switched-off modules disappear from the dashboard; their content stays stored. Below: upload limit and web version for images.</dd></div>
   <div><dt>Language</dt><dd>The dashboard's language and the website's languages: order, main language and new languages, optionally starting with all content of an existing language.</dd></div>

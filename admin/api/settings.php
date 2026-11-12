@@ -234,7 +234,8 @@ switch ($action) {
 
                     if ($group === 'seo' && $key === 'siteUrl' && !$isStored($group, $key, $value)) {
                         $value = rtrim(trim((string)$value), '/');
-                        if ($value !== '' && filter_var($value, FILTER_VALIDATE_URL) === false) {
+                        require_once dirname(__DIR__, 2) . '/includes/site-url.php';
+                        if ($value !== '' && (filter_var($value, FILTER_VALIDATE_URL) === false || nibblySiteUrlOrigin($value) === '')) {
                             jsonResponse(false, null, 'Invalid SEO site URL');
                         }
                     }

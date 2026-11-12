@@ -54,7 +54,7 @@ $response = fn(int $status = 200, string $body = '', array $headers = [], string
 $goodRobots = "User-agent: *\nDisallow: /admin/\n\nSitemap: $base/sitemap.xml\n";
 $goodHome = '<html><head><meta name="robots" content="index, follow"></head></html>';
 $goodMap = '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>' . $base . '/</loc></url></urlset>';
-$settings = ['noindexSite' => false, 'siteUrl' => '', 'maintenance' => false, 'pages' => ['total' => 3, 'noindex' => 0],
+$settings = ['noindexSite' => false, 'siteUrl' => 'https://live.example', 'maintenance' => false, 'pages' => ['total' => 3, 'noindex' => 0],
     'robotsFile' => false, 'sitemapFile' => false];
 $evaluate = function (array $override = [], array $settingsOverride = []) use ($response, $base, $goodRobots, $goodHome, $goodMap, $settings): array {
     $responses = $override + ['robots' => $response(200, $goodRobots), 'home' => $response(200, $goodHome), 'sitemap' => $response(200, $goodMap)];
@@ -105,6 +105,8 @@ seoCheckAssert($state($items, 'sitemap') === 'note:empty_blocked', 'an empty sit
 $items = $evaluate(['sitemap' => $response(200, '<html>Wartung</html>')]);
 seoCheckAssert($state($items, 'sitemap') === 'warning:not_xml', 'HTML instead of a sitemap is found');
 
+$items = $evaluate([], ['siteUrl' => '']);
+seoCheckAssert($state($items, 'site_url') === 'warning:empty' && $items['site_url']['fix'] === 'empty', 'a missing site address is a warning');
 $items = $evaluate([], ['siteUrl' => 'https://staging.example']);
 seoCheckAssert($state($items, 'site_url') === 'warning:host', 'a siteUrl on another domain is found');
 $items = $evaluate([], ['siteUrl' => 'http://live.example']);
