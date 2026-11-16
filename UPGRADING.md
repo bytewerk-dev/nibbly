@@ -3,6 +3,29 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.8.5 to 2.9.0
+
+Version 2.9.0 adds the optional newsletter module. It is switched off by default; existing sites
+change nothing until an admin switches it on under Settings → Modules. No data migration is needed.
+
+1. Deploy the complete core. New: `includes/newsletter.php`, `api/newsletter.php`,
+   `cli/newsletter.php`, `admin/api/newsletter.php`, `admin/dashboard/scripts/newsletter.php`,
+   `includes/block-renderers/newsletter.php`, `includes/handbook/chapters/newsletter.*.php`,
+   `tests/newsletter-smoke.py` (CI only). Changed: `admin/dashboard.php`, `admin/style.css`,
+   `admin/api/routes.php`, `admin/api/bootstrap.php`, `admin/api/settings.php`,
+   `admin/dashboard/scripts/{bootstrap,navigation,settings}.php`, `admin/lang/*.json`,
+   `api/SmtpMailer.php`, `css/components.css`, `includes/block-types.php`,
+   `includes/block-icons.php`, `includes/handbook.php`, `includes/ai/nibbly-map.php`.
+2. To use it: switch the module on, set the website address (Settings → Branding → Search
+   engines; links in mails need it) and choose the delivery under Newsletter → Settings.
+3. Runtime data is written to `content/newsletter/`. The folder is covered by the existing
+   protection of `content/` and by full backups; on nginx hosts check the security status as usual.
+4. For scheduled campaigns and reminders set up one cron job per minute:
+   `php /path/to/site/cli/newsletter.php`, or call the web cron address shown under Newsletter →
+   Settings. Without it, campaigns are sent while the dashboard is open.
+5. Sites with their own `css/` overrides: the sign-up form uses the classes
+   `.nibbly-newsletter-form`, `-field`, `-consent`, `-actions`, `-message` (`css/components.css`).
+
 ## Upgrading from 2.8.4 to 2.8.5
 
 Version 2.8.5 adds a dashboard banner for a missing website address and tidies the warning

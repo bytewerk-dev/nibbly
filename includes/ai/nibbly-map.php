@@ -22,6 +22,7 @@ function nibblyMapSections(): array {
         'events' => ['nav.events', 'editor', 'events'],
         'mails' => ['nav.messages', 'editor', 'messages'],
         'comments' => ['nav.comments', 'editor', 'comments'],
+        'newsletter' => ['nav.newsletter', 'editor', 'newsletter'],
         'media' => ['nav.media_library', 'admin', ''],
         'menus' => ['nav.menus_footer', 'admin', 'menus'],
         'icons' => ['nav.icon_manager', 'admin', 'iconManager'],
@@ -65,6 +66,7 @@ function nibblyMapEntries(): array {
         'area_events' => ['events', '', 'nav.events', ['events', 'calendar', 'dates', 'termine', 'veranstaltungen', 'kalender'], 'Events with date, time and place.'],
         'area_messages' => ['mails', '', 'nav.messages', ['messages', 'inbox', 'form submissions', 'contact requests', 'nachrichten', 'anfragen', 'kontaktanfragen', 'formulareinträge'], 'Messages sent through the website forms.'],
         'area_comments' => ['comments', '', 'nav.comments', ['comments', 'guestbook', 'moderation', 'approve comment', 'kommentare', 'gästebuch', 'freigeben', 'moderieren', 'spam'], 'Comments on posts and guestbook entries: approve, hold back, mark as spam, delete.'],
+        'area_newsletter' => ['newsletter', '', 'nav.newsletter', ['newsletter', 'subscribers', 'campaign', 'mailing', 'mailing list', 'abonnenten', 'kampagne', 'rundbrief', 'rundmail', 'verteiler'], 'Newsletter: subscribers and lists, sign-up with double opt-in, campaigns with a block editor and preview, sending in batches, statistics. Switched on under Settings › Modules.'],
         'area_media' => ['media', '', 'nav.media_library', ['media', 'images', 'pictures', 'files', 'uploads', 'upload', 'bilder', 'dateien', 'medien', 'hochladen', 'fotos'], 'Media library: upload, rename, delete and reuse images and files.'],
         'area_menus' => ['menus', '', 'nav.menus_footer', ['menu', 'menus', 'navigation', 'main menu', 'footer menu', 'footer', 'footer links', 'nav', 'menü', 'hauptmenü', 'fußmenü', 'fusszeile', 'fußzeile', 'navigation der website', 'menüpunkt'], 'Main navigation, further menus, footer links and footer content: add, rename, hide, reorder and remove entries.'],
         'area_icons' => ['icons', '', 'nav.icon_manager', ['icons', 'symbols', 'symbole'], 'Icons used on the website.'],
@@ -163,6 +165,7 @@ function nibblyMapModuleEnabled(string $module): bool {
         }
         $cache = ['key' => $key, 'modules' => $modules];
     }
+    if ($module === 'newsletter') return !empty($cache['modules']['newsletter']); // starts switched off
     return !array_key_exists($module, $cache['modules']) || !empty($cache['modules'][$module]);
 }
 

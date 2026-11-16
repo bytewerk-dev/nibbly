@@ -55,6 +55,7 @@ function nibblyHandbookCoreChapters(): array {
         'events'    => ['module' => 'events',      'role' => 'all'],
         'people'    => ['module' => 'people',      'role' => 'all'],
         'messages'  => ['module' => 'messages',    'role' => 'all'],
+        'newsletter' => ['module' => 'newsletter', 'role' => 'all'],
         'icons'     => ['module' => 'iconManager', 'role' => 'admin'],
         'ai'        => ['module' => 'ai',          'role' => 'all'],
         'settings'  => ['module' => null,          'role' => 'all'],
@@ -112,6 +113,7 @@ function nibblyHandbookChapters(string $lang, bool $isAdmin, array $modules, ?ar
     $visible = static function (array $chapter) use ($isAdmin, $modules): bool {
         if (($chapter['role'] ?? 'all') === 'admin' && !$isAdmin) return false;
         $module = $chapter['module'] ?? null;
+        if ($module === 'newsletter') return !empty($modules['newsletter']); // the one module that starts switched off
         return $module === null || $module === '' || ($modules[$module] ?? true) !== false;
     };
 

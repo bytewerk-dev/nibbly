@@ -336,6 +336,9 @@
         if (moduleMessagesEl) moduleMessagesEl.checked = modules.messages !== false;
         var moduleCommentsEl = document.getElementById('moduleComments');
         if (moduleCommentsEl) moduleCommentsEl.checked = modules.comments !== false;
+        // The newsletter is the one module that starts switched off.
+        var moduleNewsletterEl = document.getElementById('moduleNewsletter');
+        if (moduleNewsletterEl) moduleNewsletterEl.checked = modules.newsletter === true;
         var moduleMenusEl = document.getElementById('moduleMenus');
         if (moduleMenusEl) moduleMenusEl.checked = modules.menus !== false;
         var moduleIconManagerEl = document.getElementById('moduleIconManager');
@@ -2942,6 +2945,7 @@
                 settings.modules.events = document.getElementById('moduleEvents').checked;
                 settings.modules.messages = document.getElementById('moduleMessages').checked;
                 if (document.getElementById('moduleComments')) settings.modules.comments = document.getElementById('moduleComments').checked;
+                if (document.getElementById('moduleNewsletter')) settings.modules.newsletter = document.getElementById('moduleNewsletter').checked;
                 settings.modules.menus = document.getElementById('moduleMenus').checked;
                 settings.modules.iconManager = document.getElementById('moduleIconManager').checked;
                 settings.modules.handbook = document.getElementById('moduleHandbook').checked;

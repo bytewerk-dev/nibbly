@@ -44,7 +44,8 @@ switch ($action) {
                 'comments' => true,
                 'menus' => true,
                 'iconManager' => true,
-                'handbook' => true
+                'handbook' => true,
+                'newsletter' => false
             ],
             'dashboard' => [
                 'itemsPerPage' => 50,

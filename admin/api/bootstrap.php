@@ -1245,6 +1245,7 @@ function sanitizeModuleSettings(array $settings): array {
         'menus' => !array_key_exists('menus', $modules) || !empty($modules['menus']),
         'iconManager' => !array_key_exists('iconManager', $modules) || !empty($modules['iconManager']),
         'handbook' => !array_key_exists('handbook', $modules) || !empty($modules['handbook']),
+        'newsletter' => !empty($modules['newsletter']), // the one module that starts switched off
     ], $modules);
 }
 

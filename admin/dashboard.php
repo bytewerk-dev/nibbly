@@ -35,7 +35,7 @@ $isAdminUser = ($userRole === 'admin');
 
 // Load settings for theme
 $_defaultFavicon = defined('NIBBLY_DEFAULT_FAVICON') ? NIBBLY_DEFAULT_FAVICON : '/assets/images/favicon.svg';
-$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => nibblyThemeDefaults(), 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'people' => true, 'messages' => true, 'comments' => true, 'menus' => true, 'iconManager' => true, 'handbook' => true], 'dashboard' => ['itemsPerPage' => 50, 'iconManagerItemsPerPage' => 50, 'mediaItemsPerPage' => 25]];
+$siteSettings = ['favicon' => $_defaultFavicon, 'favicon_png' => '', 'branding' => ['logo' => '', 'logoDark' => '', 'adminLogo' => '', 'name' => '', 'showBranding' => true, 'logoDisplay' => 'both', 'logoSize' => 'medium'], 'theme' => nibblyThemeDefaults(), 'modules' => ['ai' => true, 'news' => true, 'events' => true, 'people' => true, 'messages' => true, 'comments' => true, 'menus' => true, 'iconManager' => true, 'handbook' => true, 'newsletter' => false], 'dashboard' => ['itemsPerPage' => 50, 'iconManagerItemsPerPage' => 50, 'mediaItemsPerPage' => 25]];
 if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     $loadedSettings = json_decode(file_get_contents(SETTINGS_PATH), true);
     if (is_array($loadedSettings)) {
@@ -52,7 +52,7 @@ if (defined('SETTINGS_PATH') && file_exists(SETTINGS_PATH)) {
     }
 }
 $adminTheme = $siteSettings['theme']['adminTheme'] ?? 'light';
-$dashboardModules = array_replace(['news' => true, 'events' => true, 'people' => true, 'messages' => true, 'comments' => true, 'menus' => true, 'iconManager' => true, 'ai' => true, 'handbook' => true], is_array($siteSettings['modules'] ?? null) ? $siteSettings['modules'] : []);
+$dashboardModules = array_replace(['news' => true, 'events' => true, 'people' => true, 'messages' => true, 'comments' => true, 'menus' => true, 'iconManager' => true, 'ai' => true, 'handbook' => true, 'newsletter' => false], is_array($siteSettings['modules'] ?? null) ? $siteSettings['modules'] : []);
 $aiFeaturesEnabled = !empty($dashboardModules['ai']);
 $aiDashboardVisible = $aiFeaturesEnabled;
 $_aiDashboardPublicSettings = $aiFeaturesEnabled && function_exists('nibblyAiLoadSettings') ? nibblyAiLoadSettings(true) : [];
@@ -67,6 +67,7 @@ if (!empty($dashboardModules['events'])) $validDashboardTabs[] = 'events';
 if (!empty($dashboardModules['people'])) $validDashboardTabs[] = 'people';
 if (!empty($dashboardModules['messages'])) $validDashboardTabs[] = 'mails';
 if (!empty($dashboardModules['comments'])) $validDashboardTabs[] = 'comments';
+if (!empty($dashboardModules['newsletter'])) $validDashboardTabs[] = 'newsletter';
 if ($isAdminUser && !empty($dashboardModules['menus'])) $validDashboardTabs[] = 'menus';
 if ($isAdminUser) $validDashboardTabs[] = 'media';
 if ($isAdminUser && !empty($dashboardModules['iconManager'])) $validDashboardTabs[] = 'icons';
@@ -78,6 +79,7 @@ function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): stri
     static $paths = [
         'hamburger' => '<path d="M3 12h18M3 6h18M3 18h18"/>',
         'comment' => '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+        'newsletter' => '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>',
         'chevron-up'   => '<path d="M18 15l-6-6-6 6"/>',
         'chevron-down' => '<path d="M6 9l6 6 6-6"/>',
         'search' => '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
@@ -267,6 +269,12 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                     <?php echo nbIcon('comment'); ?>
                     <span><?php echo t('nav.comments'); ?></span>
                     <span class="mail-badge mail-badge--hidden" id="commentsBadge">0</span>
+                </button>
+                <?php endif; ?>
+                <?php if (!empty($dashboardModules['newsletter'])): ?>
+                <button class="sidebar-nav-item" onclick="switchTab('newsletter')" data-tab="newsletter" type="button">
+                    <?php echo nbIcon('newsletter'); ?>
+                    <span><?php echo t('nav.newsletter'); ?></span>
                 </button>
                 <?php endif; ?>
                 <?php if ($isAdminUser): ?>
@@ -1263,6 +1271,11 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
 
     <?php if (!empty($dashboardModules['people'])): ?>
     <div class="admin-container" id="peopleTab" style="display:none"><div id="peopleMount"></div></div>
+    <?php endif; ?>
+
+    <?php if (!empty($dashboardModules['newsletter'])): ?>
+    <!-- Newsletter: rendered by dashboard/scripts/newsletter.php -->
+    <div class="admin-container" id="newsletterTab" style="display:none"><div id="newsletterMount"></div></div>
     <?php endif; ?>
 
     <?php if ($isAdminUser): ?>
@@ -2795,6 +2808,15 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                             </div>
                             <div class="form-group access-toggle-row access-toggle-row--module">
                                 <label class="toggle-label">
+                                    <span><?php echo t('settings.module_newsletter'); ?></span>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" id="moduleNewsletter">
+                                        <span class="toggle-slider"></span>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="form-group access-toggle-row access-toggle-row--module">
+                                <label class="toggle-label">
                                     <span><?php echo t('settings.module_icon_manager'); ?></span>
                                     <div class="toggle-switch">
                                         <input type="checkbox" id="moduleIconManager" checked>
@@ -3399,6 +3421,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
     <?php require __DIR__ . '/dashboard/scripts/reset.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/events.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/people.php'; ?>
+    <?php require __DIR__ . '/dashboard/scripts/newsletter.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/users-navigation.php'; ?>
     <?php require __DIR__ . '/dashboard/scripts/system.php'; ?>
     </script>

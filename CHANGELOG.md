@@ -9,6 +9,45 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+## [2.9.0] — 2026-11-16
+
+### Added
+
+- **Newsletter module** (optional, switched off by default; Settings → Modules). A new dashboard
+  area with five tabs:
+  - **Subscribers** with the states awaiting confirmation, subscribed, unsubscribed and
+    undeliverable, lists, tags and own fields; CSV import (header detection, skip or update
+    existing addresses) and CSV export.
+  - **Sign-up** through `nibblyNewsletterForm()` or the block "Newsletter sign-up", protected by
+    the existing form protection (one-time token, honeypot, rate limit), with double opt-in,
+    automatic reminders and a stored consent text. An address that is already subscribed gets the
+    same answer as a new one.
+  - **Campaigns** built from blocks (heading, text, image, button, divider, spacer, news post) with
+    placeholders such as `{firstname|reader}`, a live preview for desktop and phone, test mail,
+    duplicate, send now or at a set time.
+  - **Sending** in batches with a limit per 24 hours, three attempts per recipient, an automatic
+    pause after repeated connection errors and "undeliverable" for refused addresses. The queue
+    runs while the dashboard is open, through `cli/newsletter.php` (server cron) or the
+    token-protected web cron `api/newsletter.php?a=cron`.
+  - **Delivery** through the website's mail setup, Gmail (SMTP with an app password) or an own
+    SMTP server.
+  - **Mails** carry `List-Unsubscribe` and `List-Unsubscribe-Post` (one-click, RFC 8058), an
+    unsubscribe link (a GET only shows a confirm button) and an optional browser version.
+  - **Statistics**: sent, failed and unsubscribed per campaign; opens and clicks only when
+    switched on (off by default). Tracking and browser links are HMAC-signed, so the click
+    redirect only follows targets this installation wrote itself.
+  - **Mail log** (tab "Log"): recipient, subject, type (campaign, confirmation, test) and result of
+    every outgoing mail, with the mail server's answer on failure; the newest 2,000 entries of the
+    last 30 days, filter for errors, search, clearing for admins; can be switched off.
+  - Data lives in `content/newsletter/` (never public); links in mails use the configured website
+    address, never the Host header (`includes/newsletter.php`, `api/newsletter.php`,
+    `admin/api/newsletter.php`, `admin/dashboard/scripts/newsletter.php`).
+- Handbook chapter "Newsletter" (de/en), shown while the module is on.
+
+### Changed
+
+- `SmtpMailer::send()` accepts extra headers (`SmtpMailer::cleanHeaders()` strips line breaks).
+
 ## [2.8.5] — 2026-11-12
 
 ### Added

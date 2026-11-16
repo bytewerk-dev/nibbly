@@ -45,6 +45,7 @@ This is the canonical, tool-neutral guide for AI coding agents. `AGENTS.md` and 
 | HTML converter | `cli/convert.php` |
 | Page scaffolding | `cli/make.php` |
 | Events | `content/events.json` |
+| Newsletter (optional module) | `includes/newsletter.php` (store, rendering, queue), `api/newsletter.php` (public links, web cron), `admin/api/newsletter.php`, `admin/dashboard/scripts/newsletter.php`, `cli/newsletter.php`; data in `content/newsletter/` |
 | Email config | `content/settings.json` → `email` section |
 | SMTP mailer | `api/SmtpMailer.php` |
 | JSON form renderer | `includes/forms.php` |
@@ -1727,6 +1728,7 @@ category, tag, year and decade pages off) and the other keys name their URL segm
 - `theme.primaryColor` / `accentColor` — used by admin dashboard color picker
 - `theme.preset` — dashboard theme; missing = Soft (see Admin UI Conventions → Default theme)
 - `modules.handbook` — the editorial guide at `/admin/handbook` (default `true`)
+- `modules.newsletter` — the newsletter module (default `false`, the only module that starts switched off). Sign-up form in templates: `require_once $_includeBase . 'includes/newsletter.php'; echo nibblyNewsletterForm(['lists' => [], 'names' => true]);` or the block type `newsletter`. Mail links are built from the configured website address (`seo.siteUrl` / `NIBBLY_SITE_URL`); set it before sending.
 
 ## Page Template Variables
 

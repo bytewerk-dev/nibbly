@@ -11,7 +11,7 @@ require_once __DIR__ . '/../admin/lang/i18n.php';
 
 require_once __DIR__ . '/people.php';
 
-return [
+$nibblyBlockTypes = [
     'person' => [
         'label' => t('people.person'), 'category' => 'cards', 'icon' => 'person',
         'defaults' => ['personId' => ''],
@@ -215,3 +215,20 @@ return [
         ],
     ],
 ];
+
+// Newsletter sign-up: only offered while the module is switched on (includes/newsletter.php).
+require_once __DIR__ . '/newsletter.php';
+if (nibblyNewsletterModuleEnabled()) {
+    $nibblyBlockTypes['newsletter'] = [
+        'label' => t('newsletter.block_signup'), 'category' => 'content', 'icon' => 'newsletter',
+        'defaults' => ['names' => 'no', 'button' => '', 'list' => ''],
+        'fields' => [
+            ['key' => 'names', 'type' => 'select', 'label' => t('newsletter.block_names'), 'options' => [['value' => 'no', 'label' => t('newsletter.no')], ['value' => 'yes', 'label' => t('newsletter.yes')]]],
+            ['key' => 'button', 'type' => 'input', 'label' => t('newsletter.block_button')],
+            ['key' => 'list', 'type' => 'select', 'label' => t('newsletter.block_list'), 'options' => array_merge([['value' => '', 'label' => '–']],
+                array_map(static fn($list) => ['value' => $list['id'], 'label' => $list['name']], nibblyNewsletterLists()))],
+        ],
+    ];
+}
+
+return $nibblyBlockTypes;

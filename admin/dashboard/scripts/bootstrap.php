@@ -46,6 +46,7 @@
     function isDashboardModuleEnabled(tab) {
         const keyByTab = { news: 'news', events: 'events', people: 'people', mails: 'messages', icons: 'iconManager', menus: 'menus', ai: 'ai' };
         const key = keyByTab[tab];
+        if (tab === 'newsletter') return DASHBOARD_MODULES.newsletter === true;
         if (!key) return true;
         return DASHBOARD_MODULES[key] !== false;
     }

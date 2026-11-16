@@ -219,6 +219,25 @@ One file per post (`{post-id}.json`) or page (`page_{page-key}.json`) with
 (reply by the site owner), `source` (`form`, `wordpress`). Written by `api/comment-submit.php`,
 `admin/api/comments.php` and `cli/import-wxr.php`; read by `includes/comments.php`.
 
+### Newsletter (`content/newsletter/`)
+
+Optional module (`modules.newsletter`, default off); all logic in `includes/newsletter.php`.
+
+| File | Content |
+|---|---|
+| `settings.json` | Sender, delivery (`site`, `gmail`, `smtp`), batch size, limit per 24 hours, double opt-in, tracking switches, design, own fields, cron token |
+| `subscribers.json` | `{"subscribers": {id: {email, firstName, lastName, status, lists, tags, fields, token, consent, ...}}}`; status `pending`, `subscribed`, `unsubscribed` or `bounced` |
+| `lists.json` | `{"lists": [{id, name, description}]}` |
+| `campaigns/{id}.json` | Subject, preheader, lists, `blocks` (heading, text, image, button, divider, spacer, post), status `draft`, `scheduled`, `sending`, `paused` or `sent`, counters in `stats` |
+| `campaigns/{id}.rcpt.json` | `queue` (subscriber ids still to send), `done` (per recipient: sent, opened, clicks, unsubscribed, error), `links` (click counts) |
+| `mail-log.jsonl` | One JSON line per outgoing mail: `at`, `type` (`campaign`, `confirm`, `test`), `to`, `subject`, `error`; trimmed to the newest 2,000 entries of 30 days |
+| `state.json`, `secret.json` | Hourly send counters for the limit; HMAC key for tracking and browser links |
+
+Public links all go through `api/newsletter.php?a=…` (`subscribe`, `confirm`, `unsubscribe`, `view`,
+`open`, `click`, `cron`). The queue (`nibblyNewsletterRunQueue()`) runs under a non-blocking lock from
+the dashboard (`newsletter-run`), `cli/newsletter.php` or the web cron; each mail is recorded before
+the next one is sent, so an interrupted run never sends twice.
+
 ### Form JSON (`content/forms/{id}.json`)
 
 Public forms can be stored as JSON definitions. This keeps the no-database
