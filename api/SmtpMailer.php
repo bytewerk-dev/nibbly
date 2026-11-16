@@ -47,7 +47,7 @@ class SmtpMailer {
     /**
      * Sends an email via SMTP
      */
-    public function send($to, $subject, $body, $fromEmail, $fromName = '', $replyTo = '', $bcc = [], $htmlBody = '') {
+    public function send($to, $subject, $body, $fromEmail, $fromName = '', $replyTo = '', $bcc = [], $htmlBody = '', array $extraHeaders = []) {
         try {
             // Connect to the server
             if (!$this->connect()) {
@@ -80,7 +80,7 @@ class SmtpMailer {
             }
 
             // Send email
-            if (!$this->sendMail($to, $subject, $body, $fromEmail, $fromName, $replyTo, $bcc, $htmlBody)) {
+            if (!$this->sendMail($to, $subject, $body, $fromEmail, $fromName, $replyTo, $bcc, $htmlBody, $extraHeaders)) {
                 $this->disconnect();
                 return false;
             }
@@ -208,7 +208,7 @@ class SmtpMailer {
         }, $recipients));
     }
 
-    private function sendMail($to, $subject, $body, $fromEmail, $fromName, $replyTo, $bcc = [], $htmlBody = '') {
+    private function sendMail($to, $subject, $body, $fromEmail, $fromName, $replyTo, $bcc = [], $htmlBody = '', array $extraHeaders = []) {
         $toRecipients = $this->normalizeRecipients($to);
         $bccRecipients = $this->normalizeRecipients($bcc);
 
@@ -254,6 +254,7 @@ class SmtpMailer {
         [$mimeHeaders, $body] = self::mimeParts($body, $htmlBody);
         $headers = array_merge($headers, $mimeHeaders);
         $headers[] = "X-Mailer: SmtpMailer/1.0";
+        foreach (self::cleanHeaders($extraHeaders) as $line) $headers[] = $line;
 
         $message = implode("\r\n", $headers) . "\r\n\r\n" . $body;
 
@@ -270,6 +271,17 @@ class SmtpMailer {
         }
 
         return true;
+    }
+
+    /** Extra header lines ("Name" => "value"), stripped of anything that could inject further headers. */
+    public static function cleanHeaders(array $headers): array {
+        $lines = [];
+        foreach ($headers as $name => $value) {
+            $name = preg_replace('/[^A-Za-z0-9-]/', '', (string)$name);
+            $value = trim(preg_replace('/[\r\n]+/', ' ', (string)$value));
+            if ($name !== '' && $value !== '') $lines[] = $name . ': ' . $value;
+        }
+        return $lines;
     }
 
     /** MIME headers and wire body shared by SMTP and PHP mail(). */

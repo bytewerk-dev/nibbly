@@ -122,3 +122,4 @@ not-for-git/
 content/search-index.json
 # Comments module: secret for the arithmetic challenge
 content/comments-secret.json
+content/newsletter/

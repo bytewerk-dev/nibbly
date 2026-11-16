@@ -273,6 +273,10 @@
             history.replaceState({view:'dashboard',tab:'people',subtab:''}, '', DASHBOARD_PATH + '#people');
             return;
         }
+        if (tab !== 'newsletter' && window.NbNewsletter && !window.NbNewsletter.canLeave()) {
+            history.replaceState({view:'dashboard',tab:'newsletter',subtab:''}, '', DASHBOARD_PATH + '#newsletter');
+            return;
+        }
         if (tab !== 'menus' && window.NbMenusEditor && !window.NbMenusEditor.canLeave()) {
             if (window.location.hash.replace(/^#/, '').split('/')[0] !== 'menus') {
                 history.replaceState({ view: 'dashboard', tab: 'menus', subtab: '' }, '', DASHBOARD_PATH + '#menus');
@@ -294,6 +298,8 @@
         const commentsTab = document.getElementById('commentsTab');
         if (commentsTab) commentsTab.style.display = tab === 'comments' ? 'block' : 'none';
         if (tab === 'comments' && typeof loadComments === 'function') loadComments();
+        const newsletterTab = document.getElementById('newsletterTab');
+        if (newsletterTab) newsletterTab.style.display = tab === 'newsletter' ? 'block' : 'none';
         const mediaTab = document.getElementById('mediaTab');
         if (mediaTab) mediaTab.style.display = tab === 'media' ? 'block' : 'none';
         const menusTab = document.getElementById('menusTab');
@@ -315,7 +321,7 @@
         if (activeNavItem) activeNavItem.classList.add('active');
 
         // Update topbar title
-        const titles = { system: t('system.title'), home: t('dashboard_home.title'), content: currentPage ? t('editor.title') : t('pages.title'), news: t('news.title'), mails: t('mails.title'), comments: t('comments.title'), events: t('events.title'), people: t('people.title'), media: t('nav.media_library'), menus: t('menus.title'), icons: t('icons.title'), settings: t('settings.title'), backup: t('settings.backup') };
+        const titles = { system: t('system.title'), home: t('dashboard_home.title'), content: currentPage ? t('editor.title') : t('pages.title'), news: t('news.title'), mails: t('mails.title'), comments: t('comments.title'), events: t('events.title'), people: t('people.title'), newsletter: t('newsletter.title'), media: t('nav.media_library'), menus: t('menus.title'), icons: t('icons.title'), settings: t('settings.title'), backup: t('settings.backup') };
         nbSetTopbarTitle([titles[tab] || 'Dashboard']);
 
         // Close sidebar on mobile after tab switch
@@ -361,6 +367,7 @@
             }
         }
         if (tab === 'people' && window.NbPeople) window.NbPeople.open();
+        if (tab === 'newsletter' && window.NbNewsletter) window.NbNewsletter.open();
         if (tab === 'menus' && window.NbMenusEditor) {
             window.NbMenusEditor.open();
         }

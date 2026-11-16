@@ -51,7 +51,7 @@ foreach (array_keys($tabs) as $tab) {
 preg_match("/'news' => true, 'events' => true, 'people' => true, 'messages' => true, 'comments' => true, 'menus' => true, 'iconManager' => true, 'ai' => true/", $dashboard) or mapAssert(false, 'the dashboard module list changed; update nibblyMapSections()');
 foreach ($sections as $area => [$label, $role, $module]) {
     mapAssert(in_array($role, ['admin', 'editor'], true), "area '{$area}' has an unknown role");
-    mapAssert($module === '' || in_array($module, ['news', 'events', 'people', 'messages', 'comments', 'menus', 'iconManager'], true), "area '{$area}' has an unknown module");
+    mapAssert($module === '' || in_array($module, ['news', 'events', 'people', 'messages', 'comments', 'menus', 'iconManager', 'newsletter'], true), "area '{$area}' has an unknown module");
 }
 
 // ---- Every name exists in every admin language -----------------------------------------------------------------
