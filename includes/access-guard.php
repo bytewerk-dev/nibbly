@@ -257,6 +257,11 @@ function nibblyAccessRenderStandalonePage(array $options): void {
             .nb-lock-page--split main { width: min(680px, calc(100vw - 40px)); }
         }
     </style>
+    <?php // Site-owned styles for the lock pages (fonts, colours), so they match the site's design.
+    $lockCss = nibblyAccessSiteRoot() . '/css/lock.css';
+    if (is_file($lockCss)): ?>
+    <link rel="stylesheet" href="/css/lock.css?v=<?php echo (int)filemtime($lockCss); ?>">
+    <?php endif; ?>
 </head>
 <body class="<?php echo htmlspecialchars($bodyClass, ENT_QUOTES, 'UTF-8'); ?>" data-nibbly-lock="<?php echo $mode; ?>"<?php echo $imageLayout !== 'none' ? ' style="--nb-lock-image: url(&quot;' . htmlspecialchars($cssImage, ENT_QUOTES, 'UTF-8') . '&quot;)' . $overlayStyle . '"' : ''; ?>>
     <div class="nb-lock-shell">
