@@ -840,6 +840,15 @@ sticks to the session. Deleting a row revokes that link. `bypassKeyHash` is
 the older single hashed key; it keeps working until the access form is
 saved once, which replaces it with the visible links.
 
+The lock pages (maintenance and password pages) are standalone documents with
+their own small stylesheet. A site can restyle them with an optional
+`css/lock.css`, which is linked after the built-in styles when the file exists:
+set fonts and colours there (`body`, `h1`, `p`, `.nb-lock-label`, `input`,
+`button`, `.nb-lock-media`, `.nb-countdown`; colours also through `--nb-bg`,
+`--nb-fg`, `--nb-muted`, `--nb-border`). `body` carries `data-nibbly-lock` with
+the mode (`maintenance`, `offline`, `launch`, `private`). Do not edit
+`includes/access-guard.php` for this.
+
 Valid `mode` values are `maintenance`, `offline`, and `launch`. The guard blocks
 public frontend pages with a standalone `503` response and sets `noindex` for the
 lock page. Static assets, admin routes, API routes, `robots.txt`, and
