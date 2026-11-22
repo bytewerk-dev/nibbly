@@ -1493,6 +1493,24 @@ function nibblyCopilotDraftSecret(): string {
     return (string)$_SESSION['copilot_draft_secret'];
 }
 
+/**
+ * Sign the image proposal of a finished job for the session that receives it.
+ *
+ * The job runs after the session is closed or in the CLI worker, which has no session at all, so the
+ * signature it stored was made with a secret this session never had and "Apply" was refused. The job
+ * file is written by the server and access to it is checked before it is handed out, so signing its
+ * proposal again here is safe.
+ */
+function nibblyCopilotSignJobProposal(array $publicJob): array {
+    $proposal = $publicJob['result']['proposal'] ?? null;
+    $contentPage = (string)($publicJob['result']['context']['page']['contentPage'] ?? '');
+    if (($publicJob['kind'] ?? '') !== 'copilot' || !is_array($proposal) || $contentPage === '') {
+        return $publicJob;
+    }
+    $publicJob['result']['proposal']['proposalSignature'] = nibblyCopilotProposalSignature($contentPage, $proposal);
+    return $publicJob;
+}
+
 function nibblyCopilotDraftSignature(string $contentType, string $draftHash): string {
     return hash_hmac('sha256', $contentType . ':' . $draftHash, nibblyCopilotDraftSecret());
 }

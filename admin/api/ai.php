@@ -42,7 +42,7 @@ switch ($action) {
         }
         $openOnly = !empty($_GET['open_only']) || !empty($_POST['open_only']);
         $userFilter = isAdmin() ? null : nibblyApiCurrentAiUser();
-        jsonResponse(true, ['jobs' => nibblyAiListImageJobs($openOnly, (int)($_GET['limit'] ?? $_POST['limit'] ?? 20), $userFilter)]);
+        jsonResponse(true, ['jobs' => array_map('nibblyCopilotSignJobProposal', nibblyAiListImageJobs($openOnly, (int)($_GET['limit'] ?? $_POST['limit'] ?? 20), $userFilter))]);
         break;
 
     case 'ai-image-job-run':
@@ -59,6 +59,7 @@ switch ($action) {
         try {
             $pendingJob = nibblyAiRefreshImageJobState(nibblyAiLoadImageJob($jobId));
             nibblyApiAssertImageJobAccess($pendingJob);
+            nibblyCopilotDraftSecret(); // must exist before the session closes, or the result cannot be signed for it
             if (session_status() === PHP_SESSION_ACTIVE) {
                 session_write_close();
             }
@@ -79,7 +80,7 @@ switch ($action) {
             if ($detached) {
                 exit;
             }
-            jsonResponse(true, ['job' => $job]);
+            jsonResponse(true, ['job' => nibblyCopilotSignJobProposal($job)]);
         } catch (Throwable $e) {
             jsonResponse(false, null, $e->getMessage());
         }
