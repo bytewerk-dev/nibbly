@@ -9,6 +9,12 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+### Fixed
+
+- Maintenance and password pages are shown in the language of the page (English, German, Spanish; English otherwise) instead of always in German: label, default title and text, password field, button, error message and countdown units.
+- The SEO hint in the page list is no longer covered by the badge of the next row.
+- Setup wizard: more space and a compact button on the "Setup complete" view.
+
 ## [2.9.0] — 2026-11-16
 
 ### Added

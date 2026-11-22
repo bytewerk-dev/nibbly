@@ -5,6 +5,8 @@
 
 require_once __DIR__ . '/session-helper.php';
 
+require_once __DIR__ . '/public-strings.php';
+
 function nibblyAccessStartSession(): void {
     if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
         nibblySessionStart();
@@ -172,6 +174,31 @@ function nibblyAccessRgbaFromHex(string $hex, int $opacity): string {
     return "rgba($red, $green, $blue, $alpha)";
 }
 
+/**
+ * Language of a lock page: the page's own language (JSON "lang"), else $currentLang of the
+ * request, else the language prefix of the URL, else the primary language.
+ */
+function nibblyAccessLang(array $pageData = []): string {
+    $lang = strtolower(trim((string)($pageData['lang'] ?? ($GLOBALS['currentLang'] ?? ''))));
+    if ($lang === '') {
+        // The guard also runs from the router, before a page has set $currentLang or the language list.
+        $languages = is_array($GLOBALS['SITE_LANGUAGES'] ?? null) ? $GLOBALS['SITE_LANGUAGES'] : [];
+        if (!$languages) {
+            require_once __DIR__ . '/site-languages.php';
+            $languages = nibblyCurrentSiteLanguages(nibblyAccessSiteRoot());
+        }
+        $languages = array_keys($languages);
+        $first = strtolower(explode('/', trim(nibblyAccessCurrentPath(), '/'))[0] ?? '');
+        if ($first !== '' && in_array($first, array_map('strtolower', $languages), true)) {
+            $lang = $first;
+        }
+    }
+    if ($lang === '' || !preg_match('/^[a-z]{2,3}(-[a-z0-9]{2,8})?$/', $lang)) {
+        $lang = nibblyPublicLang();
+    }
+    return $lang;
+}
+
 function nibblyAccessRenderStandalonePage(array $options): void {
     $status = (int)($options['status'] ?? 503);
     http_response_code($status);
@@ -186,6 +213,8 @@ function nibblyAccessRenderStandalonePage(array $options): void {
     $mode = htmlspecialchars((string)($options['mode'] ?? 'maintenance'), ENT_QUOTES, 'UTF-8');
     $until = htmlspecialchars((string)($options['until'] ?? ''), ENT_QUOTES, 'UTF-8');
     $showCountdown = !empty($options['showCountdown']) && $until !== '';
+    $lockLang = preg_match('/^[a-z]{2,3}(-[a-z0-9]{2,8})?$/i', (string)($options['lang'] ?? '')) ? strtolower((string)$options['lang']) : nibblyAccessLang();
+    $lockT = static fn(string $key): string => htmlspecialchars(nibblyPublicString($key, $lockLang), ENT_QUOTES, 'UTF-8');
     $brandAsset = nibblyAccessAssetPath((string)($options['brandAssetPath'] ?? ''));
     $image = nibblyAccessAssetPath((string)($options['image'] ?? ''));
     $imageLayout = $image !== '' ? nibblyAccessImageLayout((string)($options['imageLayout'] ?? 'none')) : 'none';
@@ -206,7 +235,7 @@ function nibblyAccessRenderStandalonePage(array $options): void {
         : '';
     ?>
 <!doctype html>
-<html lang="de">
+<html lang="<?php echo htmlspecialchars($lockLang, ENT_QUOTES, 'UTF-8'); ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -263,20 +292,20 @@ function nibblyAccessRenderStandalonePage(array $options): void {
         <?php if (in_array($imageLayout, ['left', 'right'], true)): ?><div class="nb-lock-media" aria-hidden="true"></div><?php endif; ?>
     <main>
         <?php if ($brandAsset !== ''): ?><img class="nb-lock-brand" src="<?php echo htmlspecialchars($brandAsset, ENT_QUOTES, 'UTF-8'); ?>" alt=""><?php endif; ?>
-        <div class="nb-lock-label"><?php echo $mode === 'launch' ? 'Launch' : ($mode === 'private' ? 'Privat' : 'Wartung'); ?></div>
+        <div class="nb-lock-label"><?php echo $lockT($mode === 'launch' ? 'lock_label_launch' : ($mode === 'private' ? 'lock_label_private' : 'lock_label_maintenance')); ?></div>
         <h1><?php echo $title; ?></h1>
         <?php if ($text): ?><p><?php echo $text; ?></p><?php endif; ?>
         <?php if (!empty($options['form'])): ?>
         <form method="post">
-            <input type="password" name="nibbly_page_password" placeholder="Passwort" autocomplete="current-password" required>
-            <button type="submit">Freischalten</button>
+            <input type="password" name="nibbly_page_password" placeholder="<?php echo $lockT('lock_password'); ?>" aria-label="<?php echo $lockT('lock_password'); ?>" autocomplete="current-password" required>
+            <button type="submit"><?php echo $lockT('lock_unlock'); ?></button>
         </form>
         <?php if (!empty($options['error'])): ?><div class="nb-error"><?php echo htmlspecialchars((string)$options['error'], ENT_QUOTES, 'UTF-8'); ?></div><?php endif; ?>
         <?php endif; ?>
         <?php if ($showCountdown): ?>
         <div class="nb-countdown" data-countdown-until="<?php echo $until; ?>" aria-live="polite"></div>
         <script>
-        (function(){var el=document.querySelector('[data-countdown-until]');if(!el)return;var target=new Date(el.dataset.countdownUntil).getTime();function tick(){var d=Math.max(0,target-Date.now());var s=Math.floor(d/1000),days=Math.floor(s/86400);s-=days*86400;var h=Math.floor(s/3600);s-=h*3600;var m=Math.floor(s/60);s-=m*60;el.innerHTML='<span>'+days+'<small>Tage</small></span><span>'+h+'<small>Std</small></span><span>'+m+'<small>Min</small></span><span>'+s+'<small>Sek</small></span>';if(d>0)setTimeout(tick,1000);}tick();})();
+        (function(){var el=document.querySelector('[data-countdown-until]');if(!el)return;var target=new Date(el.dataset.countdownUntil).getTime();function tick(){var d=Math.max(0,target-Date.now());var s=Math.floor(d/1000),days=Math.floor(s/86400);s-=days*86400;var h=Math.floor(s/3600);s-=h*3600;var m=Math.floor(s/60);s-=m*60;el.innerHTML='<span>'+days+'<small><?php echo $lockT('lock_days'); ?></small></span><span>'+h+'<small><?php echo $lockT('lock_hours'); ?></small></span><span>'+m+'<small><?php echo $lockT('lock_minutes'); ?></small></span><span>'+s+'<small><?php echo $lockT('lock_seconds'); ?></small></span>';if(d>0)setTimeout(tick,1000);}tick();})();
         </script>
         <?php endif; ?>
     </main>
@@ -318,8 +347,8 @@ function nibblyAccessEnforceMaintenance(): void {
     nibblyAccessRenderStandalonePage([
         'status' => 503,
         'mode' => $maintenance['mode'] ?? 'maintenance',
-        'title' => $maintenance['title'] ?? 'Wartungsarbeiten',
-        'text' => $maintenance['text'] ?? 'Wir sind in Kürze wieder online.',
+        'title' => $maintenance['title'] ?? nibblyPublicString('lock_maintenance_title', nibblyAccessLang()),
+        'text' => $maintenance['text'] ?? nibblyPublicString('lock_maintenance_text', nibblyAccessLang()),
         'until' => $until,
         'showCountdown' => !empty($maintenance['showCountdown']),
         'brandAssetPath' => nibblyAccessResolveBrandAsset($settings, (string)($maintenance['brandAsset'] ?? 'none')),
@@ -358,15 +387,16 @@ function nibblyAccessEnforcePage(string $contentPage, array $pageData): void {
             header('Location: ' . ($_SERVER['REQUEST_URI'] ?? '/'));
             exit;
         }
-        $error = 'Das Passwort ist nicht korrekt.';
+        $error = nibblyPublicString('lock_wrong_password', nibblyAccessLang($pageData));
     }
 
     nibblyAccessRenderStandalonePage([
         'status' => 403,
         'mode' => 'private',
-        'title' => $visibility['title'] ?? 'Geschützte Seite',
-        'text' => $visibility['text'] ?? 'Bitte gib das Passwort ein, um diese Seite zu öffnen.',
+        'title' => $visibility['title'] ?? nibblyPublicString('lock_private_title', nibblyAccessLang($pageData)),
+        'text' => $visibility['text'] ?? nibblyPublicString('lock_private_text', nibblyAccessLang($pageData)),
         'form' => true,
+        'lang' => nibblyAccessLang($pageData),
         'error' => $error,
     ]);
 }
