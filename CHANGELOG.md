@@ -18,6 +18,7 @@ Git milestones and the gaps in publication records.
 - Maintenance and password pages are shown in the language of the page (English, German, Spanish; English otherwise) instead of always in German: label, default title and text, password field, button, error message and countdown units.
 - The SEO hint in the page list is no longer covered by the badge of the next row.
 - Setup wizard: more space and a compact button on the "Setup complete" view.
+- Forms: select fields draw their own caret with a fixed distance from the edge. The browser's arrow sat flush with the border, and site styles that set `padding` or `background` on the fields removed the reserved space.
 - AI assistant: applying a generated image no longer fails with "AI proposal signature is missing or invalid". The image job runs without the browser session; its result is now signed for the session that receives it.
 
 ## [2.9.0] — 2026-11-16

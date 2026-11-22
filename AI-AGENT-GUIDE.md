@@ -176,6 +176,18 @@ A site can override the HTML layout in `templates/contact-email.php` by defining
 escape submitted values before inserting them, and keep line breaks when displaying text areas.
 The core supplies MIME encoding, the plain-text version, recipients and Reply-To.
 
+### Styling Form Fields
+
+Select fields inside `.form-group` draw their own caret (`css/style.css`), a
+fixed distance from the edge of the field, in the colour of the field's text.
+When a site restyles form fields, style `input`, `textarea` and `select`
+freely (colours, borders, radius, font, padding), but do not set `appearance`
+on selects and do not try to remove their `background-image`: the caret and
+its reserved space are protected against `padding` and `background`
+shorthands on purpose. Move or resize the caret with
+`--nb-field-caret-inset` (default `0.95em`) and `--nb-field-caret-size`
+(default `0.36em`) on the select.
+
 ### Placing a Form and Custom PHP Forms
 
 A JSON-only page shows a form below its sections when its JSON names it:

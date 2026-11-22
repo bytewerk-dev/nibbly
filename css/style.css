@@ -1096,6 +1096,35 @@ body.edit-mode-active .event-add-wrapper {
     padding-right: 2.625rem;
 }
 
+/* Select fields of public forms draw their own caret, at a fixed distance from the edge.
+   The browser's arrow ignores padding and sits flush with the border, and site styles that set
+   `padding` or `background` as shorthands would otherwise remove the reserved space. These
+   declarations therefore win over ordinary site rules; change the look through the two custom
+   properties instead. The caret takes the colour of the field's text. */
+.form-group select:not([multiple]):not([size]) {
+    --nb-field-caret-inset: 0.95em;
+    --nb-field-caret-size: 0.36em;
+    -webkit-appearance: none;
+    appearance: none;
+    padding-inline-end: calc(var(--nb-field-caret-inset) + var(--nb-field-caret-size) * 2 + 0.75em) !important;
+    background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%) !important;
+    background-position: right calc(var(--nb-field-caret-inset) + var(--nb-field-caret-size)) top 54%, right var(--nb-field-caret-inset) top 54% !important;
+    background-size: var(--nb-field-caret-size) var(--nb-field-caret-size) !important;
+    background-repeat: no-repeat !important;
+}
+
+[dir="rtl"] .form-group select:not([multiple]):not([size]) {
+    background-position: left var(--nb-field-caret-inset) top 54%, left calc(var(--nb-field-caret-inset) + var(--nb-field-caret-size)) top 54% !important;
+}
+
+@media (forced-colors: active) {
+    .form-group select:not([multiple]):not([size]) {
+        -webkit-appearance: auto;
+        appearance: auto;
+        background-image: none !important;
+    }
+}
+
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group select:focus {
