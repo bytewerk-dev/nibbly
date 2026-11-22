@@ -319,6 +319,21 @@ function nibblyPublicString(string $key, ?string $lang = null): string {
             'de' => 'Beiträge (RSS)',
             'es' => 'Publicaciones (RSS)',
         ],
+        // Lock pages (includes/access-guard.php): maintenance mode and password-protected pages
+        'lock_label_maintenance' => ['en' => 'Maintenance', 'de' => 'Wartung', 'es' => 'Mantenimiento'],
+        'lock_label_private' => ['en' => 'Private', 'de' => 'Privat', 'es' => 'Privado'],
+        'lock_label_launch' => ['en' => 'Launch', 'de' => 'Launch', 'es' => 'Lanzamiento'],
+        'lock_maintenance_title' => ['en' => 'Maintenance', 'de' => 'Wartungsarbeiten', 'es' => 'Mantenimiento'],
+        'lock_maintenance_text' => ['en' => 'We will be back online shortly.', 'de' => 'Wir sind in Kürze wieder online.', 'es' => 'Volveremos a estar en línea en breve.'],
+        'lock_private_title' => ['en' => 'Protected page', 'de' => 'Geschützte Seite', 'es' => 'Página protegida'],
+        'lock_private_text' => ['en' => 'Enter the password to open this page.', 'de' => 'Bitte gib das Passwort ein, um diese Seite zu öffnen.', 'es' => 'Introduce la contraseña para abrir esta página.'],
+        'lock_password' => ['en' => 'Password', 'de' => 'Passwort', 'es' => 'Contraseña'],
+        'lock_unlock' => ['en' => 'Unlock', 'de' => 'Freischalten', 'es' => 'Desbloquear'],
+        'lock_wrong_password' => ['en' => 'The password is not correct.', 'de' => 'Das Passwort ist nicht korrekt.', 'es' => 'La contraseña no es correcta.'],
+        'lock_days' => ['en' => 'days', 'de' => 'Tage', 'es' => 'días'],
+        'lock_hours' => ['en' => 'hrs', 'de' => 'Std', 'es' => 'h'],
+        'lock_minutes' => ['en' => 'min', 'de' => 'Min', 'es' => 'min'],
+        'lock_seconds' => ['en' => 'sec', 'de' => 'Sek', 'es' => 's'],
     ];
     $lang = nibblyPublicLang($lang);
     return $strings[$key][$lang] ?? $strings[$key]['en'] ?? $key;

@@ -6525,6 +6525,31 @@ input.color-hex-input,
     max-width: 520px;
 }
 
+/* Setup complete: room after the heading, a compact call to action */
+.setup-complete h1 {
+    margin-bottom: var(--nb-space-6);
+}
+
+.setup-complete .success-message {
+    margin-bottom: var(--nb-space-6);
+    text-align: center;
+}
+
+.setup-complete .site-name {
+    margin-bottom: var(--nb-space-8);
+}
+
+.setup-complete__actions {
+    display: flex;
+    justify-content: center;
+}
+
+.setup-complete__actions .btn {
+    min-width: 12rem;
+    justify-content: center;
+    text-align: center;
+}
+
 /* Setup: site languages as a list (switcher order, one primary) */
 .setup-lang-list {
     display: grid;
@@ -10219,6 +10244,12 @@ input.color-hex-input,
 
 .page-list-row:focus-within .page-list-row-actions {
     opacity: 1;
+}
+
+/* The title cell is its own stacking context; lift the active row so the SEO popover is not covered by the next row's badge. */
+.page-list-row:hover .page-list-cell-title,
+.page-list-row:focus-within .page-list-cell-title {
+    z-index: 2;
 }
 
 .page-list-empty {

@@ -435,7 +435,7 @@ CONFIGTPL;
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="login-page">
-    <div class="login-container setup-container">
+    <div class="login-container setup-container<?php echo $success ? ' setup-complete' : ''; ?>">
         <?php if ($success): ?>
             <div class="login-logo">
                 <svg viewBox="0 0 512 512" aria-hidden="true" focusable="false">
@@ -449,7 +449,9 @@ CONFIGTPL;
             <p class="site-name">
                 <?php echo t('setup.complete_login_hint'); ?>
             </p>
-            <a href="index.php" class="btn btn-primary btn-block"><?php echo t('setup.go_to_login'); ?></a>
+            <div class="setup-complete__actions">
+                <a href="index.php" class="btn btn-primary"><?php echo t('setup.go_to_login'); ?></a>
+            </div>
         <?php else: ?>
             <div class="login-logo">
                 <svg viewBox="0 0 512 512" aria-hidden="true" focusable="false">
