@@ -533,6 +533,7 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     color: var(--nb-text, #172033);
     font: inherit;
     font-size: 12px;
+    font-weight: 400; /* the label around it is bold; typed text is not */
     line-height: 1.35;
 }
 
