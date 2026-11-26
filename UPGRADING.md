@@ -3,6 +3,28 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.9.0 to 2.10.0
+
+Version 2.10.0 adds batch actions and ZIP archives to the media library and contains the fixes
+listed in the changelog. All API changes are additions; no data migration is needed.
+
+1. Deploy the complete core. New: `admin/api/media-operations.php`,
+   `tests/media-bulk-zip-smoke.py` and `tests/media-bulk-check.js` (CI / local only). Changed:
+   `admin/api/media.php`, `admin/api/routes.php`, `admin/lang/*.json`, `js/image-manager.js`,
+   `css/image-manager.css`, `includes/handbook/chapters/images.*.php`, the handbook images
+   `includes/handbook/img/{de,en}/media.webp`, and from the fixes `admin/api/ai.php`,
+   `admin/setup.php`, `admin/style.css`, `css/ai-copilot.css`, `css/style.css`,
+   `includes/access-guard.php`, `includes/ai/copilot-context.php`, `includes/public-strings.php`.
+2. New API actions `bulk-media`, `zip-media` and `unzip-media` (POST with CSRF token, same rights
+   as the single-file media actions). The single-file actions `move-media`, `delete-media`,
+   `restore-media`, `delete-media-trash` and `upload-media` keep their requests and responses;
+   they now refuse symbolic links and directories as source files.
+3. ZIP download and import need the PHP extension `zip` (also used by backups). Without it the
+   media library hides both ZIP actions; check with `php -m | grep zip`.
+4. ZIP import writes into a private temporary folder (`sys_get_temp_dir()`, else `backups/`) and
+   removes it after the request. Large archives need `upload_max_filesize` / `post_max_size` to
+   match (Nibbly accepts archives up to 512 MB).
+
 ## Upgrading from 2.8.5 to 2.9.0
 
 Version 2.9.0 adds the optional newsletter module. It is switched off by default; existing sites
