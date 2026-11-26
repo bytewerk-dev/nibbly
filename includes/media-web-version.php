@@ -248,8 +248,11 @@ function nibblyMediaOriginalForget(string $webRelative, bool $trash): void {
 
 /**
  * Store an uploaded image: as a web version with the original kept, or as
- * it is. $moveFile moves the upload into place (move_uploaded_file in the
- * API, rename in tests). Returns the final relative name and what happened.
+ * it is. $directory is the media root and $relativeStem the name without
+ * extension relative to it, folder included ("2026/live/photo"): the original
+ * goes to the same relative place below images-originals/. $moveFile moves
+ * the upload into place (move_uploaded_file in the API, rename in tests).
+ * Returns the final relative name (folder included) and what happened.
  *
  * @return array{name:string,webVersion:?array,reason:?string}|null null when nothing could be stored
  */

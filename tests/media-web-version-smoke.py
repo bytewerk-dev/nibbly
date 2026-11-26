@@ -96,6 +96,28 @@ with tempfile.TemporaryDirectory(prefix="nibbly-web-version-") as folder:
         assert post(admin, "delete-media-trash", type="image", filename="evening.webp")["success"]
         assert not (site.root / "assets/images-originals-trash/evening.png").exists(), "original must go with the file"
 
+        # 4b. In a folder the original goes into the same folder below images-originals/, the library
+        #     finds it, and move, trash and restore carry it along.
+        result = upload(admin, "Stage Night.png", big, {"folder": "2026/live"})
+        assert result["success"] and result["data"]["name"] == "2026/live/Stage-Night.webp", result
+        assert result["data"]["path"] == "../assets/images/2026/live/Stage-Night.webp", result
+        assert result["data"]["original"]["name"] == "2026/live/Stage-Night.png", result["data"]
+        assert (site.root / "assets/images-originals/2026/live/Stage-Night.png").is_file()
+        assert not (site.root / "assets/images-originals/Stage-Night.png").exists(), "original landed outside its folder"
+        _, _, raw = admin.request("/admin/api.php?action=list-media&type=image")
+        item = next(i for i in json.loads(raw)["data"]["items"] if i["name"] == "2026/live/Stage-Night.webp")
+        assert item["original"]["path"] == "../assets/images-originals/2026/live/Stage-Night.png", item
+        # the same name in another folder keeps its own original
+        result = upload(admin, "Stage Night.png", big, {"folder": "2025"})
+        assert result["data"]["name"] == "2025/Stage-Night.webp", result
+        assert (site.root / "assets/images-originals/2025/Stage-Night.png").is_file()
+        assert post(admin, "move-media", type="image", filename="2026/live/Stage-Night.webp", folder="archiv")["success"]
+        assert (site.root / "assets/images-originals/archiv/Stage-Night.png").is_file()
+        assert post(admin, "delete-media", type="image", filename="archiv/Stage-Night.webp")["success"]
+        assert (site.root / "assets/images-originals-trash/archiv/Stage-Night.png").is_file()
+        assert post(admin, "restore-media", type="image", filename="archiv/Stage-Night.webp")["success"]
+        assert (site.root / "assets/images-originals/archiv/Stage-Night.png").is_file()
+
         # 5. Above the PHP limit: the message names the server limit.
         huge = make_png(1400, 1400, noise=True)
         assert len(huge) > 3 * 1024 * 1024, len(huge)
@@ -109,4 +131,4 @@ with tempfile.TemporaryDirectory(prefix="nibbly-web-version-") as folder:
     finally:
         site.close()
 
-print("PASS media web version: limits reported, big upload -> WebP + original, small kept, original follows rename/trash/restore, server limit named, switch off respected")
+print("PASS media web version: limits reported, big upload -> WebP + original, small kept, original follows rename/trash/restore, originals in folders, server limit named, switch off respected")

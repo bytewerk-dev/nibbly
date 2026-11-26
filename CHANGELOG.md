@@ -9,6 +9,13 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+## [2.11.1] — 2026-11-26
+
+### Fixed
+
+- Media library: a large image uploaded into a folder (for example `2026/live`) kept its original in the root of `assets/images-originals/` instead of `assets/images-originals/2026/live/`. The library showed no "Original" badge for it, rename, move, trash and delete left the original behind, and images with the same name in different folders shared one original path. Originals now go to the folder of their web version (upload and ZIP import).
+- New `cli/media-originals.php` finds originals that older versions misplaced and moves them to the folder of their web version (`--action=status`, `--action=repair [--dry-run]`); unclear cases are only reported.
+
 ## [2.11.0] — 2026-11-26
 
 ### Added

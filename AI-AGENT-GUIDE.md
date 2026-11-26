@@ -1327,7 +1327,10 @@ its own extension>`. `listMediaFiles()` attaches it as `original` (name, public 
 dimensions) and flags files above 2 MB as `large`; the library shows badges, and the download
 action hands out the original. `nibblyMediaOriginalRelocate()` / `nibblyMediaOriginalForget()`
 keep originals in step with rename, move, trash, restore and permanent deletion
-(`assets/images-originals-trash/`). GIF and SVG are never converted; `media.webVersion: false`
+(`assets/images-originals-trash/`). `nibblyMediaStoreImage()` takes the media root and the stem
+with its folder, so an upload into `2026/live/` keeps its original in
+`assets/images-originals/2026/live/`; `cli/media-originals.php` repairs originals that versions
+before 2.11.1 left in the root. GIF and SVG are never converted; `media.webVersion: false`
 stores every upload as it is. The system status lists the PHP limits, `memory_limit` and the
 web-version state; re-encoding raises `memory_limit` for the request when the server allows it.
 

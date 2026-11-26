@@ -209,11 +209,13 @@ function nibblyMediaStoreIncoming(string $type, string $tmpFile, string $mimeTyp
         while (file_exists($targetBase . $stem . '.webp') || nibblyMediaOriginalFor($prefix . $stem . '.webp') !== null) {
             $stem = pathinfo(uniqueMediaFilename($targetBase, $stem . '-1.' . $extension), PATHINFO_FILENAME);
         }
-        $stored = nibblyMediaStoreImage($tmpFile, $targetBase, $stem, $extension, $mimeType, $moveFile);
+        // The stem is passed relative to the media root, with its folder: the original's place
+        // below images-originals/ is derived from it (without the folder it landed in the root)
+        $stored = nibblyMediaStoreImage($tmpFile, $config['path'], $prefix . $stem, $extension, $mimeType, $moveFile);
         if ($stored === null) {
             return nibblyMediaOpResult(false, null, 'Error saving');
         }
-        $relativeName = $prefix . $stored['name'];
+        $relativeName = $stored['name'];
         if ($aiLabel !== '') {
             nibblySetMediaAiLabel($type, $relativeName, $aiLabel);
         }
@@ -223,7 +225,7 @@ function nibblyMediaStoreIncoming(string $type, string $tmpFile, string $mimeTyp
         return nibblyMediaOpResult(true, [
             'type' => $type,
             'name' => $relativeName,
-            'path' => $targetPublicBase . $stored['name'],
+            'path' => $config['publicPath'] . $relativeName,
             'aiLabel' => $aiLabel,
             'webVersion' => $stored['webVersion'],
             'original' => nibblyMediaOriginalFor($relativeName),
