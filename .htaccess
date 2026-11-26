@@ -8,6 +8,14 @@
 RewriteEngine On
 Options -MultiViews
 
+# Compress text responses where the server has mod_deflate (many hosts send them plain).
+# Responses PHP compressed itself (large admin JSON) carry Content-Encoding and are skipped.
+<IfModule mod_deflate.c>
+    <IfModule mod_filter.c>
+        AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml text/javascript application/javascript application/json application/xml application/rss+xml image/svg+xml
+    </IfModule>
+</IfModule>
+
 # ============================================
 # Security - Protect sensitive files
 # ============================================

@@ -351,6 +351,13 @@
         return path + (path.indexOf('?') === -1 ? '?' : '&') + 'v=' + encodeURIComponent(String(item.modified));
     }
 
+    // Grid and list show the smallest responsive size (item.thumb, 640 px WebP) when it exists:
+    // a full-size photo per tile made big libraries slow. Preview, download and paths keep the file.
+    function thumbSrc(item) {
+        if (!item || !item.thumb || state.mode === 'trash') return previewSrc(item);
+        return previewSrc(Object.assign({}, item, { path: item.thumb }));
+    }
+
     // ============================================================
     // MEDIA STATES (includes/media-states.php): flags and properties per file, several at
     // once. The core registers the AI disclosure label (EU AI Act, Art. 50); a site adds
@@ -470,7 +477,7 @@
         var cls = className + ' nb-imgmgr-thumb-btn' + (selectOnClick ? ' nb-imgmgr-thumb-btn--select' : '');
         if (isImage(item)) {
             return '<button type="button" class="' + cls + ' nb-imgmgr-thumb-btn--image"' + actionAttr + previewAttr + ' aria-label="' + escapeHtml(label) + '">' +
-                '<span class="nb-imgmgr-thumb-surface"><img src="' + escapeHtml(previewSrc(item)) + '" alt="" loading="lazy" onload="window.NbImageManager && NbImageManager.detectTransparency(this)"></span>' +
+                '<span class="nb-imgmgr-thumb-surface"><img src="' + escapeHtml(thumbSrc(item)) + '" alt="" loading="lazy" decoding="async" onload="window.NbImageManager && NbImageManager.detectTransparency(this)"></span>' +
                 stateBadgesHtml(item) +
             '</button>';
         }
@@ -1144,6 +1151,7 @@
                             type: img.type || 'image',
                             folder: img.folder || '',
                             basename: img.basename || img.name || '',
+                            thumb: img.thumb ? String(img.thumb).replace(/^\.\.\//, '/') : '',
                             path: img.path.indexOf('api.php?') === 0 ? img.path : img.path.replace(/^\.\.\//, '/')
                         });
                     });
