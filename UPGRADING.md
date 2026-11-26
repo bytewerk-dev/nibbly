@@ -3,6 +3,20 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.11.0 to 2.11.1
+
+Patch release, no API or data format changes.
+
+1. Deploy the complete core. Changed: `admin/api/media-operations.php`,
+   `includes/media-web-version.php`. New: `cli/media-originals.php`,
+   `tests/media-originals-smoke.py` (CI only).
+2. Images uploaded into library folders with a web version before this release may have their
+   original in the root of `assets/images-originals/`. Check and repair from the project root:
+   `php cli/media-originals.php --action=status`, then
+   `php cli/media-originals.php --action=repair`. Originals whose name exists in several
+   folders are listed as "ambiguous" and stay where they are; move those by hand. On hosts
+   without a shell, run the tool on a local copy and upload `assets/images-originals/`.
+
 ## Upgrading from 2.10.0 to 2.11.0
 
 Install the complete updated core and merge the access rule for `local-only/` from
