@@ -36,7 +36,7 @@ switch ($action) {
             'created' => time()
         ];
 
-        jsonResponse(true, ['token' => $token, 'filename' => $created['file']], 'Backup created');
+        jsonResponse(true, ['token' => $token, 'filename' => $created['file'], 'warnings' => $created['warnings']], 'Backup created');
         break;
 
     case 'download-site-backup':
@@ -173,7 +173,7 @@ switch ($action) {
             $name = $zip->getNameIndex($i);
 
             // Path traversal check
-            if (str_contains($name, '..') || str_starts_with($name, '/')) {
+            if (!NibblyProjectFiles::validPath(rtrim($name, '/'))) {
                 $zip->close();
                 jsonResponse(false, null, 'ZIP contains unsafe paths (path traversal detected).');
             }
@@ -203,58 +203,64 @@ switch ($action) {
             jsonResponse(false, null, 'Not a valid nibbly backup. No content pages found.');
         }
 
-        // File extension whitelist
-        $allowedExtensions = backupRestoreAllowedExtensions();
-
-        $rejectedPhpFiles = [];
-        foreach ($entries as $entry) {
-            // Skip directories
-            if (str_ends_with($entry, '/')) continue;
-
-            // Older full-site backups may contain development tests. Accept
-            // the archive, but do not treat or restore these as site PHP.
-            if (backupRestoreEntryIgnored($entry)) continue;
-
-            $ext = strtolower(pathinfo($entry, PATHINFO_EXTENSION));
-
-            // Check PHP files are in allowed locations
-            if ($ext === 'php' && !backupRestorePhpEntryAllowed($entry)) {
-                $rejectedPhpFiles[] = $entry;
-            }
-
-            // Check file extension whitelist (skip dirs)
-            if ($ext !== '' && !in_array($ext, $allowedExtensions) && basename($entry) !== '.htaccess') {
-                // Silently skip — will not extract these files
-            }
-        }
-
-        if (!empty($rejectedPhpFiles)) {
-            $zip->close();
-            jsonResponse(false, null, 'ZIP contains PHP files in unexpected locations: ' . implode(', ', array_slice($rejectedPhpFiles, 0, 5)));
-        }
-
         $siteRoot = realpath(NIBBLY_ADMIN_DIR . '/..');
         require_once NIBBLY_ADMIN_DIR . '/../includes/restore-helper.php';
         $selected = [];
+        $directories = [];
         $skipped = 0;
-        foreach ($entries as $entry) {
-            if (str_ends_with($entry, '/')) continue;
-            $ext = strtolower(pathinfo($entry, PATHINFO_EXTENSION));
-            if (backupRestoreEntryIgnored($entry)
-                || ($ext !== '' && !in_array($ext, $allowedExtensions, true) && basename($entry) !== '.htaccess')
-                || ($mode === 'content' && !backupRestoreContentEntryAllowed($entry))) {
-                $skipped++;
-                continue;
+        $warnings = [];
+        try {
+            $policy = new NibblyProjectFiles($siteRoot);
+            $privateFiles = $policy->privateFiles;
+            $report = $zip->getFromName(NibblyProjectFiles::REPORT, 1024 * 1024);
+            if ($report !== false) {
+                $notes = json_decode($report, true);
+                if (!is_array($notes) || !is_array($notes['privateFiles'] ?? null)) {
+                    $warnings[] = 'Inspect the recovery notes in ' . NibblyProjectFiles::REPORT;
+                } else {
+                    foreach ($notes['privateFiles'] as $name) {
+                        if (is_string($name) && NibblyProjectFiles::validPath($name)) $privateFiles[] = $name;
+                    }
+                }
             }
-            $selected[] = $entry;
+            foreach (array_unique($privateFiles) as $name) $warnings[] = t('backup.recovery_private', ['path' => $name]);
+            foreach ($entries as $entry) {
+                $path = rtrim($entry, '/');
+                $directory = $path !== $entry;
+                $role = $policy->role($path);
+                if ($role === 'private') $warnings[] = t('backup.recovery_private', ['path' => $path]);
+                if ($role === 'local' || $role === 'private') {
+                    $skipped++;
+                    continue;
+                }
+                $disposition = $directory ? 'restore' : backupRestoreDisposition($path, $policy);
+                if ($disposition === 'reject-php') throw new RuntimeException('ZIP contains PHP in an unapproved location: ' . $path);
+                if ($disposition === 'reject-path') throw new RuntimeException('Unsafe restore path.');
+                if ($disposition === 'skip-type') $warnings[] = t('backup.recovery_type', ['path' => $path]);
+                if (strcasecmp($path, NibblyProjectFiles::RULES) === 0) {
+                    if (!is_file($siteRoot . '/' . NibblyProjectFiles::RULES)) $warnings[] = t('backup.recovery_rules', ['path' => $path]);
+                    $skipped++;
+                    continue;
+                }
+                if ($disposition !== 'restore' || ($mode === 'content' && !$policy->isProjectPath($path)
+                    && !backupRestoreContentEntryAllowed($entry))) {
+                    $skipped++;
+                    continue;
+                }
+                if ($directory) $directories[] = $path;
+                else $selected[] = $path;
+            }
+        } catch (Throwable $error) {
+            $zip->close();
+            jsonResponse(false, null, $error->getMessage());
         }
         try {
-            $extracted = backupWithLock(function () use ($zip, $selected, $siteRoot, $mode): int {
+            $extracted = backupWithLock(function () use ($zip, $selected, $siteRoot, $mode, $directories, $policy): int {
                 if ($mode === 'full') {
                     $safetyBackup = backupCreate('manual');
                     if (empty($safetyBackup['ok'])) throw new RuntimeException('Pre-restore backup failed: ' . ($safetyBackup['message'] ?? 'unknown error'));
                 }
-                return nibblyRestoreFiles($zip, $selected, $siteRoot, $mode === 'content');
+                return nibblyRestoreFiles($zip, $selected, $siteRoot, $mode === 'content', $directories, $policy);
             });
         } catch (Throwable $error) {
             $zip->close();
@@ -265,6 +271,7 @@ switch ($action) {
         jsonResponse(true, [
             'extracted' => $extracted,
             'skipped' => $skipped,
+            'warnings' => array_values(array_unique($warnings)),
             'mode' => $mode,
         ], $mode === 'full' ? 'Full site restored' : 'Content restored');
         break;

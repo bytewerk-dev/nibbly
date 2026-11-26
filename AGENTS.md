@@ -34,6 +34,19 @@ When adapting a customer/site project that runs on Nibbly:
   pages locally and compare screenshots section by section, including mobile
   breakpoints and scroll/animation states. Treat visual drift as a bug.
 
+## Publication and recovery
+
+- Keep drafts, model files, temporary exports and other working material under
+  `local-only/` at the project root. Existing `not-for-git/` folders have the same role.
+- Classify additional root paths in the site-owned `content/project-files.json`.
+  Record customer modules, downloads and runtime data when you add them.
+- Run `php cli/package.php preview` before deployment. Publish the generated package.
+  Use the separate seed tree only to add missing initial content and media.
+- Keep host credentials in private storage outside the webroot. Record required
+  private filenames in the project rules and preserve their separate backup.
+- Follow [Publication and recovery](AI-AGENT-GUIDE.md#publication-and-recovery) for
+  the schema, FTPS preview, switching an existing site, and trusted restore.
+
 ## Core Development Rules
 
 When the user explicitly asks for Nibbly core behavior, admin UI, API, CLI, backup, routing, setup, editor, or shared helper changes:

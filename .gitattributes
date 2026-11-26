@@ -8,3 +8,5 @@ package.json            export-ignore
 package-lock.json       export-ignore
 screenshot.mjs          export-ignore
 screenshot-section.mjs  export-ignore
+local-only              export-ignore
+not-for-git             export-ignore

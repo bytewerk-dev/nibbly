@@ -13,12 +13,18 @@
  */
 
 require_once dirname(__DIR__) . '/json-store.php';
+require_once dirname(__DIR__) . '/private-files.php';
 
 if (!defined('NIBBLY_AI_SETTINGS_PATH')) {
     define('NIBBLY_AI_SETTINGS_PATH', dirname(__DIR__, 2) . '/content/ai-settings.json');
 }
 if (!defined('NIBBLY_AI_SECRETS_PATH')) {
-    define('NIBBLY_AI_SECRETS_PATH', dirname(NIBBLY_AI_SETTINGS_PATH) . '/ai-secrets.json');
+    $privateDir = nibblyPrivateDirectory();
+    $secretsDir = $privateDir ?? dirname(NIBBLY_AI_SETTINGS_PATH);
+    if (is_link($secretsDir . '/ai-secrets.json') && $privateDir !== null) {
+        throw new RuntimeException('The private AI secrets file must be a regular file.');
+    }
+    define('NIBBLY_AI_SECRETS_PATH', $secretsDir . '/ai-secrets.json');
 }
 
 function nibblyAiReadJsonObject(string $path): array {
@@ -87,6 +93,8 @@ function nibblyAiStripSecrets(array $settings): array {
 /** Write the secrets file: owner-only where the system allows it, replaced atomically. */
 function nibblyAiWriteSecrets(array $secrets): bool {
     if (!$secrets && !is_file(NIBBLY_AI_SECRETS_PATH)) return true;
+    // Host-owned private storage is provisioned separately on a recovery server.
+    if (!is_dir(dirname(NIBBLY_AI_SECRETS_PATH)) && dirname(NIBBLY_AI_SECRETS_PATH) === nibblyPrivateDirectory()) return false;
     if (!nibblyJsonAtomicWrite(NIBBLY_AI_SECRETS_PATH, $secrets)) return false;
     @chmod(NIBBLY_AI_SECRETS_PATH, 0600);
     return true;

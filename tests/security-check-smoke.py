@@ -111,7 +111,9 @@ def free_port():
 
 def test_probe_through_proxy(site):
     root = site.root
-    folders = ["content/", "backups/", "assets/images-trash/", "assets/audio-trash/", "assets/videos-trash/", "assets/documents-trash/"]
+    for folder in ("local-only", "not-for-git"):
+        (root / folder).mkdir(exist_ok=True)
+    folders = ["content/", "backups/", "local-only/", "not-for-git/", "assets/images-trash/", "assets/audio-trash/", "assets/videos-trash/", "assets/documents-trash/"]
     exposed_proxy = front_proxy(root, site.port)
     try:
         result = probe(root, f"http://127.0.0.1:{exposed_proxy.server_port}")
@@ -126,7 +128,7 @@ def test_probe_through_proxy(site):
     # The generated nginx rules must cover every probed folder.
     rules = php(root, "echo json_encode(nibblySecurityNginxRules(''));")
     prefixes = re.findall(r"^location \^~ (\S+) \{ deny all; \}$", rules, re.M)
-    assert len(prefixes) == 8 and all(("/" + folder) in prefixes for folder in folders), rules
+    assert set(prefixes) == {"/" + folder for folder in folders + ["cli/", "tests/"]}, rules
     assert "location ^~ /sub/content/ { deny all; }" in php(root, "echo json_encode(nibblySecurityNginxRules('/sub'));")
     fixed_proxy = front_proxy(root, site.port, deny=prefixes)
     try:
@@ -135,12 +137,12 @@ def test_probe_through_proxy(site):
         fixed_proxy.shutdown()
     assert result["state"] == "protected" and all(p["status"] == 403 for p in result["probes"]), result
     # A proxy that still serves media itself (e.g. a Hestia template limited to assets) exposes only the trash folders.
-    media_proxy = front_proxy(root, site.port, deny=["/content/", "/backups/"])
+    media_proxy = front_proxy(root, site.port, deny=["/" + folder for folder in folders[:4]])
     try:
         result = probe(root, f"http://127.0.0.1:{media_proxy.server_port}")
     finally:
         media_proxy.shutdown()
-    assert [p["path"] for p in result["probes"] if p["state"] == "exposed"] == folders[2:], result
+    assert [p["path"] for p in result["probes"] if p["state"] == "exposed"] == folders[4:], result
     # Without a proxy, .htaccess (Apache) or router.php (development server) blocks the folders.
     result = probe(root, f"http://127.0.0.1:{site.port}")
     assert result["state"] == "protected", result

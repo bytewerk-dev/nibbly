@@ -1,22 +1,29 @@
 <?php
 /** Stage a restore before touching live files; roll back ordinary I/O failures. */
 
-function nibblyRestoreFiles(ZipArchive $zip, array $entries, string $root, bool $clearContent): int {
+require_once __DIR__ . '/project-files.php';
+
+function nibblyRestoreTarget(string $root, string $entry): string {
+    if (!NibblyProjectFiles::validPath($entry)) throw new RuntimeException('Unsafe restore path.');
+    $target = $root;
+    foreach (explode('/', $entry) as $segment) {
+        $target .= '/' . $segment;
+        if (is_link($target)) throw new RuntimeException('Restore path contains a symbolic link: ' . $entry);
+    }
+    return $target;
+}
+
+function nibblyRestoreFiles(ZipArchive $zip, array $entries, string $root, bool $clearContent, array $directories = [], ?NibblyProjectFiles $policy = null): int {
     $stage = $root . '/backups/.restore-' . bin2hex(random_bytes(8));
     if (!mkdir($stage, 0700, true)) throw new RuntimeException('Could not stage restore.');
     $operations = [];
     $applied = [];
     $keepRecovery = false;
+    $createdDirs = [];
     try {
         $totalSize = 0;
         foreach ($entries as $entry) {
-            if ($entry === '' || str_starts_with($entry, '/') || str_contains($entry, '..')
-                || preg_match('/[\x00-\x1f\x7f\\\\:]/', $entry)) throw new RuntimeException('Unsafe restore path.');
-            $target = $root;
-            foreach (explode('/', $entry) as $segment) {
-                $target .= '/' . $segment;
-                if (is_link($target)) throw new RuntimeException('Restore path contains a symbolic link: ' . $entry);
-            }
+            $target = nibblyRestoreTarget($root, $entry);
             if (is_dir($target)) throw new RuntimeException('Restore target is a directory: ' . $entry);
             if (isset($operations[$target])) throw new RuntimeException('Duplicate restore entry: ' . $entry);
             $stat = $zip->statName($entry);
@@ -47,7 +54,8 @@ function nibblyRestoreFiles(ZipArchive $zip, array $entries, string $root, bool 
         }
         if ($clearContent) {
             foreach (['content/pages', 'content/news'] as $directory) {
-                foreach (glob($root . '/' . $directory . '/*') ?: [] as $target) {
+                foreach (glob(nibblyRestoreTarget($root, $directory) . '/*') ?: [] as $target) {
+                    if ($policy && in_array($policy->role($directory . '/' . basename($target)), ['local', 'private'], true)) continue;
                     if (is_link($target)) throw new RuntimeException('Content directory contains symbolic links.');
                     if (is_file($target) && !isset($operations[$target]) && !str_ends_with($target, '.lock')) {
                         $operations[$target] = ['new' => null];
@@ -55,11 +63,26 @@ function nibblyRestoreFiles(ZipArchive $zip, array $entries, string $root, bool 
                 }
             }
         }
+        foreach (array_keys($operations) as $target) {
+            $parent = dirname(substr($target, strlen($root) + 1));
+            if ($parent !== '.') $directories[] = $parent;
+        }
+        foreach (array_unique($directories) as $directory) {
+            $target = nibblyRestoreTarget($root, $directory);
+            $missing = [];
+            while (!is_dir($target) && $target !== $root) {
+                $missing[] = $target;
+                $target = dirname($target);
+            }
+            foreach (array_reverse($missing) as $dir) {
+                if (!mkdir($dir, 0755)) throw new RuntimeException('Could not create restore directory: ' . $dir);
+                $createdDirs[] = $dir;
+            }
+        }
         // Preserve every old file before applying the first replacement.
         $oldIndex = 0;
         foreach ($operations as $target => &$operation) {
             $parent = dirname($target);
-            if (!is_dir($parent) && !mkdir($parent, 0755, true)) throw new RuntimeException('Could not create restore directory.');
             if (!is_writable($parent)) throw new RuntimeException('Restore directory is not writable: ' . $parent);
             $operation['old'] = null;
             if (is_file($target)) {
@@ -67,7 +90,11 @@ function nibblyRestoreFiles(ZipArchive $zip, array $entries, string $root, bool 
                 if (!copy($target, $operation['old'])) throw new RuntimeException('Could not preserve file before restore.');
                 chmod($operation['old'], fileperms($target) & 0777);
             }
-            if ($operation['new'] !== null) chmod($operation['new'], is_file($target) ? (fileperms($target) & 0777) : (0666 & ~umask()));
+            if ($operation['new'] !== null) {
+                $mode = is_file($target) ? (fileperms($target) & 0777) : (0666 & ~umask());
+                if ($target === $root . '/content/ai-secrets.json') $mode = 0600;
+                if (!chmod($operation['new'], $mode)) throw new RuntimeException('Could not set restore file permissions.');
+            }
         }
         unset($operation);
         foreach ($operations as $target => $operation) {
@@ -82,6 +109,7 @@ function nibblyRestoreFiles(ZipArchive $zip, array $entries, string $root, bool 
             $ok = $old !== null ? @rename($old, $target) : (!file_exists($target) || @unlink($target));
             if (!$ok) $keepRecovery = true;
         }
+        foreach (array_reverse($createdDirs) as $dir) @rmdir($dir);
         if ($keepRecovery) throw new RuntimeException('Restore failed; some files need manual recovery from ' . $stage, 0, $error);
         throw $error;
     } finally {

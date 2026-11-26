@@ -2188,6 +2188,93 @@ When converting an HTML page to Nibbly or setting up a fresh installation, the s
 
 Never use weak or predictable passwords. The setup wizard enforces: 8+ characters, uppercase, lowercase, digit, and special character.
 
+## Publication and recovery
+
+Keep working material in `local-only/` or the existing `not-for-git/`. The repository and
+release source ZIP include development tools and examples. Build a site package from the
+working copy that contains the site's own templates, merged routing rules and assets.
+
+```sh
+php cli/package.php preview
+mkdir -p local-only
+php cli/package.php build local-only/release-01
+```
+
+Preview shows the deployment role, backup inclusion and restore decision per path. An
+unclassified root entry stops the build. The output must be a new directory under
+`local-only/` or outside the installation. Existing installations keep their webroot.
+
+| Package role | Transfer and ownership |
+| --- | --- |
+| `publish` → `webroot/` | Upload the contents into the existing webroot. Includes runtime code, licenses, site templates, project rules and assets. Merge host-specific `.htaccess` rules in the working copy before uploading. |
+| `seed` → `seed/` | On an initial transfer copy only missing files into the same webroot. Includes pages, posts, forms, navigation and the media libraries. Subsequent transfers are explicit so deleted live files stay deleted. |
+| `server` | Managed on the host and included in full backups. Includes accounts, settings, the installed admin configuration and server-owned project data. A fresh CMS can run setup. For an existing configured site, migrate using its verified full backup and private recovery files. |
+| `local` | Omitted from publication, site backups and restore. Includes agent instructions, development examples, deploy scripts and temporary files. |
+| `private` | Environment files such as `.env` require separate protected recovery. The ZIP records their names. |
+| `unknown` | Review before publishing. A running site still archives additional directories, including custom dependencies under `vendor/`. |
+
+A project can commit its own `content/project-files.json`. Keys in `paths` are literal,
+additional top-level file or directory names. A directory's role covers its descendants.
+Within a declared project directory, `assets/` or `templates/`, use a nested `local`
+or `server` rule for exceptions such as editable design sources alongside the web images.
+The bundled `README.md` and `llms.txt` describe the CMS and stay out of the upload.
+A site that maintains its own public version can declare either filename as `publish`.
+Reserved Nibbly root entries follow the built-in rules. The properties are optional.
+
+```json
+{
+    "paths": {
+        "output": "local",
+        "models": "local",
+        "assets/design-source": "local",
+        "downloads": "publish",
+        "customer-module": "publish",
+        "orders": "server"
+    },
+    "restorePhp": ["customer-module/start.php"],
+    "privateFiles": ["billing-api.json"]
+}
+```
+
+Use `restorePhp` for each executable file in a published or server-owned project extension that requires
+restore approval. For example, a PHP dependency tree under `vendor/` needs its production
+files declared or separately provisioned. `privateFiles` lists relative names for separate
+recovery. Put only filenames in this list. Full backups retain the project rules as a
+reference. Before recovery, provision the trusted rules from the project on the target.
+Restore uses the target's rules and preserves them, including for uploaded and older ZIPs.
+CSV and ZIP downloads and empty directories round-trip. Unsupported file types stay in
+the ZIP for manual recovery. Backup creation reports affected paths. The ZIP also carries
+`.nibbly-backup.json` with recovery notes. Symlinks are skipped and reported.
+
+**FTPS deployment.** Copy the current `deploy.example.sh` to a local `deploy.sh`, or run
+the example with `NIBBLY_FTP_SERVER`, `NIBBLY_FTP_USER`, `NIBBLY_FTP_PASSWORD` and
+`NIBBLY_FTP_DIR` set in the environment. The target directory must exist.
+
+```sh
+bash deploy.sh --preview
+bash deploy.sh --apply
+# First transfer of missing site content and media
+bash deploy.sh --preview --seed
+bash deploy.sh --apply --seed
+```
+
+The preview lists local-only and unclassified files already on the host and prints
+planned transfers. Review obsolete files separately. Publication leaves remote-only files
+in place. Take live backups for server data. For a deliberate update to existing editorial
+content, use the editor or a reviewed content restore. Verify access restrictions on the
+host, including static-file proxy rules in [ROUTING.md](ROUTING.md#hosting-proxies-and-internal-folders).
+
+**Private AI keys.** Existing sites use `content/ai-secrets.json` and retain it in their
+full backups. To opt in, create an owner-only directory outside the site and webroot,
+readable and writable by the site's PHP user. Copy the existing key file into it with
+mode 0600. Set `NIBBLY_PRIVATE_DIR` to its absolute path in the host environment (web PHP
+and cron) or in the site's `admin/config.php`. Verify a configured provider using the
+private file, then remove the old key file. The existing `NIBBLY_AI_SECRETS_PATH`
+override takes precedence. Keep a separate protected backup of the private directory.
+During disaster recovery, provision the files and host-specific configuration first.
+Recovery notes identify the required files by name. Existing site ZIPs can contain
+credentials, including older copies made before this change.
+
 ## Site Backups
 
 Nibbly has three layers of backup, each addressing a different recovery scenario:

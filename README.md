@@ -240,6 +240,12 @@ Dark theme variables are included and toggled via `data-theme="dark"` on the `<h
 
 To use custom fonts, place font files in `assets/fonts/` and define `@font-face` rules in `css/fonts.css`. `includes/header.php` loads `css/fonts.css` automatically when both the file and the `assets/fonts/` directory exist.
 
+## Publishing a site
+
+Keep working material under `local-only/`. Run `php cli/package.php preview` to check
+the site's files before transfer. Build the webroot package and use the deployment
+preview described in [Publication and recovery](AI-AGENT-GUIDE.md#publication-and-recovery).
+
 ## License
 
 Nibbly is licensed under the Mozilla Public License 2.0 starting with version

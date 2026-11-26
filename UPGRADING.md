@@ -3,6 +3,17 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.10.0 to 2.11.0
+
+Install the complete updated core and merge the access rule for `local-only/` from
+`.htaccess`. Existing installations keep their paths. Preserve any site-owned
+`content/project-files.json` when updating Nibbly. Replace the logic of local copies of
+`deploy.sh` with the new example and transfer their site-specific connection settings.
+An old script continues to mirror the working copy. Start with the local and FTPS previews.
+Use the host inventory to review files from older deployments before any manual removal.
+Keep prior backups until a restore has been verified with the site's additional folders
+and private files. See [Publication and recovery](AI-AGENT-GUIDE.md#publication-and-recovery).
+
 ## Upgrading from 2.9.0 to 2.10.0
 
 Version 2.10.0 adds batch actions and ZIP archives to the media library and contains the fixes

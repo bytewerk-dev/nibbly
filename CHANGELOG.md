@@ -9,6 +9,15 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+## [2.11.0] — 2026-11-26
+
+### Added
+
+- Shared project file rules, a publication preview and a webroot package with separate
+  initial content. FTPS previews existing remote files and preserves server-owned data.
+- Full-site backups support customer paths, CSV and ZIP downloads, empty directories
+  and recovery notes. Sites can keep AI credentials in an external private directory.
+
 ## [2.10.0] — 2026-11-26
 
 ### Added

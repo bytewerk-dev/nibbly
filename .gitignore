@@ -117,6 +117,8 @@ content/ai-secrets.json
 content/ai-settings.json.lock
 # Local working files (plans, drafts, notes) that never go into Git, are never deployed and are never served
 not-for-git/
+/local-only/*
+!/local-only/.gitkeep
 
 # Generated search index (rebuilt on save and on demand)
 content/search-index.json

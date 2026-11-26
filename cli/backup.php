@@ -145,6 +145,7 @@ switch ($action) {
         $created = $result['created'];
         if ($created['ok']) {
             echo "Created: {$created['file']} (" . fmtSize($created['size']) . ", tier={$created['tier']})\n";
+            foreach ($created['warnings'] as $warning) fwrite(STDERR, "$warning\n");
             if (!empty($result['deleted'])) {
                 echo "Pruned: " . count($result['deleted']) . " older backup(s)\n";
                 if (!$quiet) {

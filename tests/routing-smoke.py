@@ -93,7 +93,9 @@ def check(site):
     # The local working folder is never served, even when a file lies there (an existing file would be a 200 otherwise).
     (site.root / 'not-for-git').mkdir()
     (site.root / 'not-for-git/plan.md').write_text('private working note')
-    for path in ['/not-for-git/plan.md', '/not-for-git/', '/Not-For-Git/plan.md']:
+    (site.root / 'local-only').mkdir()
+    (site.root / 'local-only/plan.md').write_text('private working note')
+    for path in ['/local-only/plan.md', '/local-only/', '/Local-Only/plan.md', '/not-for-git/plan.md', '/not-for-git/', '/Not-For-Git/plan.md']:
         assert guest.request(path)[0] == 403, path
     assert guest.request('/admin/dashboard.php')[0] == 302
     print('PASS routing: login/slash aliases, preserved query/POST, future directory collisions, relative CSS, both login modes, pages/API/404/security')

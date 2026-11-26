@@ -88,6 +88,8 @@ location ^~ /content/ { deny all; }
 location ^~ /backups/ { deny all; }
 location ^~ /cli/ { deny all; }
 location ^~ /tests/ { deny all; }
+location ^~ /local-only/ { deny all; }
+location ^~ /not-for-git/ { deny all; }
 location ^~ /assets/images-trash/ { deny all; }
 location ^~ /assets/audio-trash/ { deny all; }
 location ^~ /assets/videos-trash/ { deny all; }
