@@ -9,6 +9,8 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+## [2.12.0] — 2026-11-26
+
 ### Changed
 
 - Media library opens faster with large libraries. Measured on a site with 6,500 images over a 20 Mbit connection: list ready after 0.33 s instead of 1.3 s, visible thumbnails after 0.43 s instead of 1.9 s.
