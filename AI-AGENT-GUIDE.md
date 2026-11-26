@@ -1297,6 +1297,22 @@ path of segments, `listMediaFolders()` returns paths with parents before childre
 actions `create-media-folder`, `delete-media-folder` (empty folders only) and `move-media` take folder
 paths. The media library shows the tree collapsible and creates a new folder inside the selected one.
 
+### Media Batch Actions and ZIP Archives
+
+`admin/api/media-operations.php` holds the file operations of the library (`nibblyMediaOpMove`,
+`nibblyMediaOpTrash`, `nibblyMediaOpRestore`, `nibblyMediaOpPurge`, `nibblyMediaStoreIncoming`);
+the single-file actions and the batch actions share them, so originals, responsive sizes and
+metadata follow in both. `bulk-media` takes `op` (`trash`, `move`, `restore`, `purge`), `items`
+(JSON list of `{type, name}`, at most `NIBBLY_MEDIA_BATCH_MAX` = 500) and `folder` for `move`
+(created when missing). It handles every file on its own and answers with `done` and `failed`.
+`zip-media` streams the selected library files as one archive. `unzip-media` imports an uploaded
+archive: entries with unsafe paths, links, encryption, foreign extensions, content that finfo does
+not confirm, or too deep nesting are skipped with a reason code; too many entries, too much expanded
+data or an expansion ratio above `NIBBLY_MEDIA_ZIP_MAX_RATIO` reject the whole archive. Entries are
+extracted into a private temporary folder with a byte cap and CRC check, then stored through the
+normal upload path. Nothing is overwritten. In the library (`js/image-manager.js`) the batch
+selection exists only without a picker callback; in a picker the existing selection stays.
+
 ### Image Uploads and Web Versions
 
 The media library accepts images up to `media.maxUploadMb` (20 MB by default; Settings →

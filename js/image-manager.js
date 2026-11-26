@@ -48,7 +48,14 @@
         expandedFolders: {},
         lightboxItem: null,
         page: 1,
+        bulk: {},          // library selection for batch actions: "type:name" => item
+        bulkAnchor: null,  // index in state.filtered of the last toggled item (shift range)
     };
+
+    // Files one batch request may carry (NIBBLY_MEDIA_BATCH_MAX in admin/api/media-operations.php)
+    var BULK_CHUNK = 200;
+    var BULK_MAX_ZIP = 500;
+    var ZIP_UPLOAD_MAX = 512 * 1024 * 1024;
 
     var replaceTarget = null;
     var moveTarget = null;
@@ -56,7 +63,8 @@
     var pendingRename = null;
     var statesTarget = null;   // media item whose properties panel is open
     var mediaStates = [];      // registered media states from list-media (includes/media-states.php)
-    var localTools = null;     // {platform, commands} when Nibbly runs on this machine (includes/media-local-tools.php)
+    var localTools = null;
+    var zipAvailable = true;   // the server has the PHP zip extension (list-media reports zip)     // {platform, commands} when Nibbly runs on this machine (includes/media-local-tools.php)
     var previousFocus = null;
     // Upload limits from the server (list-media): what PHP lets through and what Nibbly allows
     var uploadLimits = null;
@@ -120,6 +128,8 @@
         move: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h5l2 2h11v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M13 12h5M16 9l3 3-3 3"/></svg>',
         rename: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
         chevronRight: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>',
+        archive: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8"/><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M10 12h4"/></svg>',
+        unzip: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8"/><rect x="2" y="3" width="20" height="5" rx="1"/><path d="M12 11v7M9 15l3 3 3-3"/></svg>',
         chevronLeft: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>',
     };
 
@@ -512,6 +522,14 @@
                         '<div class="nb-imgmgr-folder-list" role="listbox" aria-label="' + escapeHtml(t('media.folders')) + '"></div>' +
                     '</aside>' +
                     '<div class="nb-imgmgr-content">' +
+                        '<div class="nb-imgmgr-bulkbar" hidden>' +
+                            '<label class="nb-imgmgr-bulkbar-page"><input type="checkbox" class="nb-imgmgr-bulk-page"><span>' + escapeHtml(t('media.bulk_select_page')) + '</span></label>' +
+                            '<span class="nb-imgmgr-bulkbar-count" aria-live="polite"></span>' +
+                            '<button type="button" class="nb-imgmgr-bulkbar-link" data-bulk="all" hidden></button>' +
+                            '<button type="button" class="nb-imgmgr-bulkbar-link" data-bulk="none" hidden>' + escapeHtml(t('media.bulk_clear')) + '</button>' +
+                            '<span class="nb-imgmgr-spacer"></span>' +
+                            '<div class="nb-imgmgr-bulkbar-actions"></div>' +
+                        '</div>' +
                         '<div class="nb-imgmgr-pagination nb-imgmgr-pagination--top"></div>' +
                         '<div class="nb-imgmgr-grid" role="list"></div>' +
                         '<div class="nb-imgmgr-list">' +
@@ -540,6 +558,10 @@
                             Icons.upload + ' <span>' + escapeHtml(t('image.upload')) + '</span>' +
                             '<input type="file" class="nb-imgmgr-upload-input" accept=".jpg,.jpeg,.png,.webp" multiple>' +
                         '</label>' +
+                        '<label class="nb-imgmgr-upload-btn nb-imgmgr-unzip-btn" title="' + escapeHtml(t('media.unzip_title')) + '">' +
+                            Icons.unzip + ' <span>' + escapeHtml(t('media.unzip')) + '</span>' +
+                            '<input type="file" class="nb-imgmgr-upload-input nb-imgmgr-unzip-input" accept=".zip,application/zip">' +
+                        '</label>' +
                     '</div>' +
                 '</div>' +
                 '<div class="nb-imgmgr-footer">' +
@@ -560,7 +582,24 @@
         modal.querySelector('[data-action="confirm"]').addEventListener('click', confirmSelection);
         modal.querySelector('[data-action="empty-trash"]').addEventListener('click', emptyImageTrash);
 
-        modal.querySelector('.nb-imgmgr-upload-input').addEventListener('change', handleUpload);
+        modal.querySelector('.nb-imgmgr-upload-input:not(.nb-imgmgr-unzip-input)').addEventListener('change', handleUpload);
+        modal.querySelector('.nb-imgmgr-unzip-input').addEventListener('change', function (e) {
+            var file = e.target.files && e.target.files[0];
+            e.target.value = '';
+            if (file) openUnzipDialog(file);
+        });
+        var bulkbar = modal.querySelector('.nb-imgmgr-bulkbar');
+        bulkbar.querySelector('.nb-imgmgr-bulk-page').addEventListener('change', function (e) {
+            setBulkItems(currentPageItems(), e.target.checked);
+        });
+        bulkbar.addEventListener('click', function (e) {
+            var btn = e.target.closest('button[data-bulk]');
+            if (!btn || btn.disabled) return;
+            var what = btn.dataset.bulk;
+            if (what === 'all') setBulkItems(state.filtered, true);
+            else if (what === 'none') clearBulk();
+            else runBulkAction(what);
+        });
         modal.querySelector('.nb-imgmgr-ai-generator-btn').addEventListener('click', function () {
             if (!canOpenImageGenerator()) return;
             config.openImageGenerator('', 'auto');
@@ -580,8 +619,10 @@
             if (!image) return;
             e.preventDefault();
             e.stopPropagation();
-            // picker: the thumbnail toggles the selection, the zoom button opens the lightbox
+            // picker: the thumbnail toggles the selection, the zoom button opens the lightbox;
+            // in the library the same holds while files are selected for a batch action
             if (thumbSelectsOnClick()) toggleSelection(image.path);
+            else if (bulkSelecting()) toggleBulk(image, e.shiftKey);
             else openLightbox(image);
         }, true);
         modal.querySelector('.nb-imgmgr-folder-create').addEventListener('click', createMediaFolder);
@@ -609,6 +650,7 @@
             state.folderFilter = entry.getAttribute('data-folder') || '';
             if (state.folderFilter && state.folderFilter !== 'all') state.expandedFolders[state.folderFilter] = true;
             state.page = 1;
+            resetBulk();
             filterAndRender();
             updateFolderUI();
         });
@@ -620,6 +662,7 @@
             state.folderFilter = entry.getAttribute('data-folder') || '';
             if (state.folderFilter && state.folderFilter !== 'all') state.expandedFolders[state.folderFilter] = true;
             state.page = 1;
+            resetBulk();
             filterAndRender();
             updateFolderUI();
         });
@@ -647,6 +690,7 @@
         modal.querySelector('.nb-imgmgr-search').addEventListener('input', function (e) {
             state.search = e.target.value.toLowerCase().trim();
             state.page = 1;
+            resetBulk();
             filterAndRender();
         });
 
@@ -665,6 +709,7 @@
         modal.querySelector('.nb-imgmgr-upload-type').addEventListener('change', function (e) {
             state.activeType = e.target.value;
             state.page = 1;
+            resetBulk();
             updateTypeUI();
             loadImages();
         });
@@ -684,7 +729,17 @@
             var renameDialog = document.getElementById('nb-imgmgr-rename');
             var statesPanel = document.getElementById('nb-imgmgr-states');
             var lightbox = document.getElementById('nb-imgmgr-lightbox');
-            if (replaceDialog && replaceDialog.classList.contains('active')) {
+            var bulkMoveDialog = document.getElementById('nb-imgmgr-bulk-move');
+            var unzipDialog = document.getElementById('nb-imgmgr-unzip');
+            if (unzipDialog && unzipDialog.classList.contains('active')) {
+                e.stopPropagation();
+                e.preventDefault();
+                closeUnzipDialog();
+            } else if (bulkMoveDialog && bulkMoveDialog.classList.contains('active')) {
+                e.stopPropagation();
+                e.preventDefault();
+                closeBulkMoveDialog();
+            } else if (replaceDialog && replaceDialog.classList.contains('active')) {
                 e.stopPropagation();
                 e.preventDefault();
                 closeReplaceDialog();
@@ -704,6 +759,11 @@
                 e.stopPropagation();
                 e.preventDefault();
                 closeLightbox();
+            } else if (modal.classList.contains('active') && bulkSelecting()) {
+                // The first Escape clears the batch selection, the next one closes
+                e.stopPropagation();
+                e.preventDefault();
+                clearBulk();
             } else if (modal.classList.contains('active')) {
                 e.stopPropagation();
                 e.preventDefault();
@@ -740,6 +800,8 @@
             : [];
         state.selectedPath = state.multiplePicker ? null : normalizeImagePath(currentPath);
         state.revealSelection = !!(state.selectedPath || state.selectedPaths.length);
+        state.bulk = {};
+        state.bulkAnchor = null;
         state.search = '';
         state.mode = 'library';
         state.folderFilter = 'all';
@@ -780,6 +842,8 @@
             ? options.type
             : (state.allowedTypes.length > 1 ? 'all' : state.allowedTypes[0]);
         state.selectedPath = null;
+        state.bulk = {};
+        state.bulkAnchor = null;
         state.search = '';
         state.mode = 'library';
         state.folderFilter = 'all';
@@ -858,6 +922,7 @@
             btn.addEventListener('click', function () {
                 state.activeType = btn.dataset.type;
                 state.page = 1;
+                resetBulk();
                 updateTypeUI();
                 loadImages();
             });
@@ -1069,6 +1134,8 @@
                     });
                 }
                 if (result.success && result.data && Array.isArray(result.data.states)) mediaStates = result.data.states;
+                if (result.success && result.data && typeof result.data.zip === 'boolean') zipAvailable = result.data.zip;
+                updateZipUI();
                 localTools = result.success && result.data && result.data.localTools && typeof result.data.localTools === 'object' ? result.data.localTools : null;
                 updateLimitHint();
                 if (items.length > 0) {
@@ -1080,6 +1147,7 @@
                             path: img.path.indexOf('api.php?') === 0 ? img.path : img.path.replace(/^\.\.\//, '/')
                         });
                     });
+                    remapBulk();
                     updateFolderUI();
                     updateSortHeaderClasses();
                     applySortOrder();
@@ -1089,6 +1157,8 @@
                     state.data = [];
                     state.filtered = [];
                     state.page = 1;
+                    remapBulk();
+                    updateBulkUI();
                     updateFolderUI();
                     renderPagination();
                     var emptyKey = state.mode === 'trash' ? (isImageOnlyPicker() ? 'image.trash_empty' : 'media.trash_empty') : 'media.no_files';
@@ -1162,6 +1232,7 @@
         renderPagination();
         if (state.view === 'grid') renderGrid();
         else renderList();
+        updateBulkUI();
     }
 
     function currentPageItems() {
@@ -1262,6 +1333,9 @@
                 '</div>';
             if (state.mode !== 'trash' && state.isPicker) {
                 item.insertAdjacentHTML('afterbegin', '<div class="nb-imgmgr-check' + (isSelected ? ' checked' : '') + '"></div>');
+            } else if (bulkEnabled()) {
+                item.insertAdjacentHTML('afterbegin', bulkCheckHtml(image, ''));
+                if (isBulkSelected(image)) item.classList.add('selected');
             }
             gridEl.appendChild(item);
             attachItemEvents(item, image);
@@ -1321,6 +1395,9 @@
                 '</div>';
             if (state.mode !== 'trash' && state.isPicker) {
                 row.querySelector('div:first-child').outerHTML = '<div class="nb-imgmgr-check nb-imgmgr-check--list' + (isSelected ? ' checked' : '') + '"></div>';
+            } else if (bulkEnabled()) {
+                row.querySelector('div:first-child').outerHTML = bulkCheckHtml(image, ' nb-imgmgr-check--list');
+                if (isBulkSelected(image)) row.classList.add('selected');
             }
             listBody.appendChild(row);
             attachItemEvents(row, image);
@@ -1331,7 +1408,8 @@
         if (check) {
             check.addEventListener('click', function (e) {
                 e.stopPropagation();
-                toggleSelection(image.path);
+                if (bulkEnabled()) toggleBulk(image, e.shiftKey);
+                else toggleSelection(image.path);
             });
         }
 
@@ -1367,6 +1445,7 @@
             }
             // Click elsewhere on item = toggle selection
             if (state.mode !== 'trash' && state.isPicker) toggleSelection(image.path);
+            else if (bulkSelecting()) toggleBulk(image, e.shiftKey);
         });
     }
 
@@ -1394,7 +1473,7 @@
         var modal = document.getElementById('nb-imgmgr-modal');
         if (!modal) return;
 
-        modal.querySelectorAll('.nb-imgmgr-item, .nb-imgmgr-row').forEach(function (item) {
+        if (state.isPicker) modal.querySelectorAll('.nb-imgmgr-item, .nb-imgmgr-row').forEach(function (item) {
             var path = item.dataset.path;
             var isSelected = isSelectedPath(path);
             item.classList.toggle('selected', isSelected);
@@ -1410,6 +1489,7 @@
             info.classList.remove('has-selection');
             confirmBtn.hidden = true;
             confirmBtn.disabled = true;
+            updateBulkUI();
             return;
         }
 
@@ -1470,6 +1550,8 @@
         state.mode = mode;
         state.search = '';
         state.page = 1;
+        state.bulk = {};
+        state.bulkAnchor = null;
         var modal = document.getElementById('nb-imgmgr-modal');
         modal.querySelector('.nb-imgmgr-search').value = '';
         updateModeUI();
@@ -1791,6 +1873,13 @@
 
     function uploadFiles(files) {
         var queue = Array.prototype.slice.call(files || []).filter(Boolean);
+        // ZIP archives are not uploaded as files: they open the unpack dialog
+        var archives = queue.filter(isZipFile);
+        queue = queue.filter(function (file) { return !isZipFile(file); });
+        if (archives.length) {
+            if (archives.length > 1) config.showToast(t('media.unzip_one_at_a_time'), 'info');
+            openUnzipDialog(archives[0]);
+        }
         if (queue.length === 0) return;
 
         if (queue.length === 1) {
@@ -1901,6 +1990,537 @@
             .catch(function (err) {
                 config.showToast(err.message || t('toast.error'), 'error');
                 return false;
+            });
+    }
+
+    // ============================================================
+    // BATCH ACTIONS (library without a picker callback): a selection circle on every tile and
+    // row, a bar above the files with the actions. Library: move (existing or new folder),
+    // download as ZIP, move to trash. Trash: restore, delete for good. Shift-click selects a
+    // range; while files are selected, a click on a tile toggles it instead of previewing.
+    // ============================================================
+    function bulkEnabled() { return !state.isPicker; }
+    function bulkKey(item) { return (item.type || 'image') + ':' + item.name; }
+    function bulkCount() { return Object.keys(state.bulk).length; }
+    function bulkItems() { return Object.keys(state.bulk).map(function (key) { return state.bulk[key]; }); }
+    function isBulkSelected(item) { return !!(item && state.bulk[bulkKey(item)]); }
+    function bulkSelecting() { return bulkEnabled() && bulkCount() > 0; }
+
+    // "1 Datei" / "3 Dateien": keys with an _one variant for a single file
+    function countText(key, count, params) {
+        var p = Object.assign({ count: count }, params || {});
+        if (count === 1) {
+            var one = t(key + '_one', p);
+            if (one && one !== key + '_one') return one;
+        }
+        return t(key, p);
+    }
+
+    function bulkCheckHtml(item, extraClass) {
+        var on = isBulkSelected(item);
+        return '<button type="button" class="nb-imgmgr-check nb-imgmgr-check--bulk' + extraClass + (on ? ' checked' : '') + '" role="checkbox" aria-checked="' + (on ? 'true' : 'false') + '"' +
+            ' title="' + escapeHtml(t('media.bulk_select_item')) + '" aria-label="' + escapeHtml(t('media.bulk_select_item') + ': ' + mediaDisplayName(item)) + '"></button>';
+    }
+
+    function resetBulk() {
+        state.bulk = {};
+        state.bulkAnchor = null;
+    }
+
+    function clearBulk() {
+        resetBulk();
+        updateBulkUI();
+    }
+
+    // After a reload the items are new objects: keep the selection for files that still exist
+    function remapBulk() {
+        var next = {};
+        state.data.forEach(function (item) {
+            var key = bulkKey(item);
+            if (state.bulk[key]) next[key] = item;
+        });
+        state.bulk = next;
+        state.bulkAnchor = null;
+    }
+
+    function setBulkItems(items, on) {
+        items.forEach(function (item) {
+            if (on) state.bulk[bulkKey(item)] = item;
+            else delete state.bulk[bulkKey(item)];
+        });
+        updateBulkUI();
+    }
+
+    function toggleBulk(item, range) {
+        if (!bulkEnabled() || !item) return;
+        var index = state.filtered.indexOf(item);
+        if (range && state.bulkAnchor !== null && index !== -1 && state.filtered[state.bulkAnchor]) {
+            var from = Math.min(state.bulkAnchor, index), to = Math.max(state.bulkAnchor, index);
+            setBulkItems(state.filtered.slice(from, to + 1), true);
+        } else {
+            setBulkItems([item], !isBulkSelected(item));
+        }
+        if (index !== -1) state.bulkAnchor = index;
+    }
+
+    function bulkActionButton(action, icon, label, danger, disabled) {
+        return '<button type="button" class="nb-imgmgr-btn ' + (danger ? 'nb-imgmgr-btn--danger' : 'nb-imgmgr-btn--secondary') + ' nb-imgmgr-bulkbar-btn" data-bulk="' + action + '"' + (disabled ? ' disabled' : '') + '>' +
+            icon + '<span>' + escapeHtml(label) + '</span></button>';
+    }
+
+    function updateBulkUI() {
+        var modal = document.getElementById('nb-imgmgr-modal');
+        if (!modal) return;
+        var bar = modal.querySelector('.nb-imgmgr-bulkbar');
+        if (!bar) return;
+        var enabled = bulkEnabled() && state.filtered.length > 0;
+        bar.hidden = !enabled;
+        modal.classList.toggle('nb-imgmgr-modal--bulk', bulkSelecting());
+
+        var byPath = {};
+        currentPageItems().forEach(function (entry) { byPath[entry.path] = entry; });
+        modal.querySelectorAll('.nb-imgmgr-item, .nb-imgmgr-row').forEach(function (el) {
+            var check = el.querySelector('.nb-imgmgr-check--bulk');
+            if (!check) return;
+            var item = byPath[el.dataset.path];
+            var on = isBulkSelected(item);
+            el.classList.toggle('selected', on);
+            check.classList.toggle('checked', on);
+            check.setAttribute('aria-checked', on ? 'true' : 'false');
+        });
+        if (!enabled) return;
+
+        var count = bulkCount();
+        var pageItems = currentPageItems();
+        var pageSelected = pageItems.filter(isBulkSelected).length;
+        var pageBox = bar.querySelector('.nb-imgmgr-bulk-page');
+        pageBox.checked = pageItems.length > 0 && pageSelected === pageItems.length;
+        pageBox.indeterminate = pageSelected > 0 && pageSelected < pageItems.length;
+
+        bar.querySelector('.nb-imgmgr-bulkbar-count').textContent = count ? countText('media.bulk_count', count) : '';
+        var allBtn = bar.querySelector('[data-bulk="all"]');
+        var unselected = state.filtered.filter(function (item) { return !isBulkSelected(item); }).length;
+        allBtn.hidden = !(count > 0 && unselected > 0 && state.filtered.length > pageItems.length);
+        allBtn.textContent = t('media.bulk_select_all', { count: state.filtered.length });
+        bar.querySelector('[data-bulk="none"]').hidden = count === 0;
+
+        var none = count === 0;
+        var actions = state.mode === 'trash'
+            ? bulkActionButton('restore', Icons.restore, t('media.bulk_restore'), false, none) +
+              bulkActionButton('purge', Icons.delete, t('media.bulk_purge'), true, none)
+            : bulkActionButton('move', Icons.move, t('media.bulk_move'), false, none) +
+              (zipAvailable ? bulkActionButton('zip', Icons.archive, t('media.bulk_zip'), false, none) : '') +
+              bulkActionButton('trash', Icons.delete, t('media.bulk_delete'), true, none);
+        var box = bar.querySelector('.nb-imgmgr-bulkbar-actions');
+        if (box.dataset.html !== actions) {
+            box.innerHTML = actions;
+            box.dataset.html = actions;
+        }
+    }
+
+    function runBulkAction(action) {
+        var items = bulkItems();
+        if (!items.length) return;
+        if (action === 'move') openBulkMoveDialog(items);
+        else if (action === 'zip') downloadZip(items);
+        else if (action === 'trash') {
+            confirmAction(t('media.bulk_delete_title'), countText('media.bulk_trash_confirm', items.length), function () {
+                submitBulk('trash', items, {});
+            });
+        } else if (action === 'restore') submitBulk('restore', items, {});
+        else if (action === 'purge') {
+            confirmAction(t('image.delete_permanently'), countText('media.bulk_purge_confirm', items.length), function () {
+                submitBulk('purge', items, {});
+            });
+        }
+    }
+
+    function setBulkBusy(busy) {
+        var modal = document.getElementById('nb-imgmgr-modal');
+        if (!modal) return;
+        modal.classList.toggle('nb-imgmgr-modal--busy', busy);
+        modal.querySelectorAll('.nb-imgmgr-bulkbar button').forEach(function (btn) {
+            btn.disabled = busy;
+        });
+        if (!busy) {
+            // Rebuild the action buttons, so they take their enabled state from the selection again
+            var box = modal.querySelector('.nb-imgmgr-bulkbar-actions');
+            if (box) box.dataset.html = '';
+            updateBulkUI();
+        }
+    }
+
+    // Sends the selection in chunks (the server takes NIBBLY_MEDIA_BATCH_MAX per request) and reports once
+    function submitBulk(op, items, extra) {
+        var chunks = [];
+        for (var i = 0; i < items.length; i += BULK_CHUNK) chunks.push(items.slice(i, i + BULK_CHUNK));
+        var done = 0;
+        var failed = [];
+        setBulkBusy(true);
+        if (items.length > 20) config.showToast(t('media.bulk_working'), 'info');
+
+        return chunks.reduce(function (chain, chunk) {
+            return chain.then(function () {
+                var formData = new FormData();
+                formData.append('action', 'bulk-media');
+                formData.append('op', op);
+                formData.append('items', JSON.stringify(chunk.map(function (item) { return { type: item.type || 'image', name: item.name }; })));
+                if (extra.folder !== undefined) formData.append('folder', extra.folder);
+                formData.append('csrf_token', config.csrfToken);
+                return fetch(config.apiUrl, { method: 'POST', body: formData })
+                    .then(function (r) { return r.json(); })
+                    .then(function (result) {
+                        var data = result && result.data ? result.data : null;
+                        if (data && Array.isArray(data.done)) done += data.done.length;
+                        if (data && Array.isArray(data.failed)) failed = failed.concat(data.failed);
+                        else if (!result.success) failed = failed.concat(chunk.map(function (item) { return { name: item.name, message: result.message || t('toast.error') }; }));
+                    })
+                    .catch(function (err) {
+                        failed = failed.concat(chunk.map(function (item) { return { name: item.name, message: err.message || t('toast.error') }; }));
+                    });
+            });
+        }, Promise.resolve()).then(function () {
+            var key = { trash: 'media.bulk_trashed', move: 'media.bulk_moved', restore: 'media.bulk_restored', purge: 'media.bulk_purged' }[op];
+            if (done) config.showToast(countText(key, done), failed.length ? 'info' : 'success');
+            if (failed.length) {
+                var first = failed[0];
+                config.showToast(countText('media.bulk_failed', failed.length, { message: (first.name ? first.name + ': ' : '') + (first.message || '') }), 'error');
+            }
+            if (op === 'move' && extra.folder) {
+                state.expandedFolders[extra.folder] = true;
+                expandFolderAncestors(extra.folder);
+            }
+            // Files that failed stay selected, so the action can be repeated for them
+            var keep = {};
+            failed.forEach(function (entry) {
+                items.forEach(function (item) { if (item.name === entry.name && (!entry.type || entry.type === item.type)) keep[bulkKey(item)] = item; });
+            });
+            state.bulk = keep;
+            state.bulkAnchor = null;
+            setBulkBusy(false);
+            if (done && state.selectedPath) state.selectedPath = null;
+            loadImages();
+            return { done: done, failed: failed };
+        });
+    }
+
+    // ============================================================
+    // BULK MOVE DIALOG: into an existing folder, or into a new one created on the way
+    // ============================================================
+    var bulkMoveItems = null;
+
+    function folderOptionsHtml(includeRoot) {
+        return (includeRoot ? '<option value="">' + escapeHtml(t('media.folder_root')) + '</option>' : '') +
+            state.folders.map(function (folder) {
+                var depth = folder.split('/').length - 1;
+                var label = new Array(depth + 1).join(' ') + (depth ? folder.slice(folder.lastIndexOf('/') + 1) : folder);
+                return '<option value="' + escapeHtml(folder) + '">' + escapeHtml(label) + '</option>';
+            }).join('');
+    }
+
+    function createBulkMoveDialog() {
+        if (document.getElementById('nb-imgmgr-bulk-move')) return;
+        var dialog = document.createElement('div');
+        dialog.id = 'nb-imgmgr-bulk-move';
+        dialog.className = 'nb-imgmgr-move';
+        dialog.innerHTML =
+            '<div class="nb-imgmgr-move-backdrop"></div>' +
+            '<div class="nb-imgmgr-move-dialog" role="dialog" aria-modal="true" aria-labelledby="nb-imgmgr-bulk-move-title">' +
+                '<div class="nb-imgmgr-move-header">' +
+                    '<h3 id="nb-imgmgr-bulk-move-title">' + escapeHtml(t('media.bulk_move_title')) + '</h3>' +
+                    '<button type="button" class="nb-imgmgr-close" aria-label="' + escapeHtml(t('close')) + '">&times;</button>' +
+                '</div>' +
+                '<div class="nb-imgmgr-move-body">' +
+                    '<p class="nb-imgmgr-move-filename"></p>' +
+                    '<label for="nb-imgmgr-bulk-move-target">' + escapeHtml(t('media.bulk_target')) + '</label>' +
+                    '<select id="nb-imgmgr-bulk-move-target" class="nb-imgmgr-move-select" data-role="target"></select>' +
+                    '<div class="nb-imgmgr-bulk-newfolder" hidden>' +
+                        '<label for="nb-imgmgr-bulk-move-parent">' + escapeHtml(t('media.bulk_new_folder_parent')) + '</label>' +
+                        '<select id="nb-imgmgr-bulk-move-parent" class="nb-imgmgr-move-select" data-role="parent"></select>' +
+                        '<label for="nb-imgmgr-bulk-move-name">' + escapeHtml(t('media.bulk_new_folder_name')) + '</label>' +
+                        '<input type="text" id="nb-imgmgr-bulk-move-name" class="nb-imgmgr-folder-name-input" maxlength="60" spellcheck="false">' +
+                        '<p class="nb-imgmgr-rename-hint">' + escapeHtml(t('media.bulk_new_folder_hint')) + '</p>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="nb-imgmgr-move-footer">' +
+                    '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--secondary" data-action="cancel">' + escapeHtml(t('cancel')) + '</button>' +
+                    '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--primary" data-action="submit">' + escapeHtml(t('media.bulk_move')) + '</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(dialog);
+        var target = dialog.querySelector('[data-role="target"]');
+        var newBox = dialog.querySelector('.nb-imgmgr-bulk-newfolder');
+        var nameInput = dialog.querySelector('#nb-imgmgr-bulk-move-name');
+        dialog.querySelector('.nb-imgmgr-move-backdrop').addEventListener('click', closeBulkMoveDialog);
+        dialog.querySelector('.nb-imgmgr-close').addEventListener('click', closeBulkMoveDialog);
+        dialog.querySelector('[data-action="cancel"]').addEventListener('click', closeBulkMoveDialog);
+        target.addEventListener('change', function () {
+            newBox.hidden = target.value !== '__new__';
+            if (!newBox.hidden) nameInput.focus();
+        });
+        nameInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); submitBulkMove(); }
+        });
+        dialog.querySelector('[data-action="submit"]').addEventListener('click', submitBulkMove);
+    }
+
+    function openBulkMoveDialog(items) {
+        createBulkMoveDialog();
+        bulkMoveItems = items.slice();
+        var dialog = document.getElementById('nb-imgmgr-bulk-move');
+        dialog.querySelector('.nb-imgmgr-move-filename').textContent = countText('media.bulk_files', items.length);
+        var target = dialog.querySelector('[data-role="target"]');
+        target.innerHTML = folderOptionsHtml(true) + '<option value="__new__">' + escapeHtml(t('media.bulk_new_folder_option')) + '</option>';
+        var current = state.folderFilter && state.folderFilter !== 'all' ? state.folderFilter : '';
+        target.value = current;
+        var parent = dialog.querySelector('[data-role="parent"]');
+        parent.innerHTML = folderOptionsHtml(true);
+        parent.value = current;
+        dialog.querySelector('#nb-imgmgr-bulk-move-name').value = '';
+        dialog.querySelector('.nb-imgmgr-bulk-newfolder').hidden = true;
+        dialog.querySelector('[data-action="submit"]').disabled = false;
+        dialog.classList.add('active');
+        target.focus();
+    }
+
+    function closeBulkMoveDialog() {
+        var dialog = document.getElementById('nb-imgmgr-bulk-move');
+        if (dialog) dialog.classList.remove('active');
+        bulkMoveItems = null;
+    }
+
+    function submitBulkMove() {
+        var dialog = document.getElementById('nb-imgmgr-bulk-move');
+        if (!dialog || !bulkMoveItems) return;
+        var target = dialog.querySelector('[data-role="target"]').value;
+        var folder = target;
+        if (target === '__new__') {
+            var input = dialog.querySelector('#nb-imgmgr-bulk-move-name');
+            var name = (input.value || '').trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+            if (!name || !/^[a-zA-Z0-9][a-zA-Z0-9._-]*(\/[a-zA-Z0-9][a-zA-Z0-9._-]*)*$/.test(name) || name.indexOf('..') !== -1) {
+                config.showToast(t('media.bulk_new_folder_invalid'), 'error');
+                input.focus();
+                return;
+            }
+            var parent = dialog.querySelector('[data-role="parent"]').value;
+            folder = parent ? parent + '/' + name : name;
+        }
+        var items = bulkMoveItems;
+        dialog.querySelector('[data-action="submit"]').disabled = true;
+        closeBulkMoveDialog();
+        submitBulk('move', items, { folder: folder });
+    }
+
+    // ============================================================
+    // ZIP DOWNLOAD: the server packs the selected library files (zip-media)
+    // ============================================================
+    function downloadZip(items) {
+        if (items.length > BULK_MAX_ZIP) {
+            config.showToast(t('media.zip_too_many', { max: BULK_MAX_ZIP }), 'error');
+            return;
+        }
+        var formData = new FormData();
+        formData.append('action', 'zip-media');
+        formData.append('items', JSON.stringify(items.map(function (item) { return { type: item.type || 'image', name: item.name }; })));
+        formData.append('csrf_token', config.csrfToken);
+        config.showToast(t('media.zip_creating'), 'info');
+        setBulkBusy(true);
+        fetch(config.apiUrl, { method: 'POST', body: formData })
+            .then(function (response) {
+                var type = response.headers.get('Content-Type') || '';
+                if (!response.ok || type.indexOf('application/zip') === -1) {
+                    return response.json().then(function (result) {
+                        throw new Error(result && result.message ? result.message : t('toast.error'));
+                    }, function () { throw new Error(t('toast.error')); });
+                }
+                var disposition = response.headers.get('Content-Disposition') || '';
+                var match = /filename="?([^";]+)"?/i.exec(disposition);
+                return response.blob().then(function (blob) {
+                    var url = URL.createObjectURL(blob);
+                    var link = document.createElement('a');
+                    link.href = url;
+                    link.download = match ? match[1] : 'media.zip';
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+                    config.showToast(countText('media.zip_ready', items.length), 'success');
+                });
+            })
+            .catch(function (err) {
+                config.showToast(err.message || t('toast.error'), 'error');
+            })
+            .finally(function () {
+                setBulkBusy(false);
+            });
+    }
+
+    // ============================================================
+    // UNZIP DIALOG: import the files of an archive (unzip-media). The server checks every
+    // entry (path, links, encryption, type, real content, size, ZIP bomb); the dialog shows
+    // what was imported and what was skipped, with the reason.
+    // ============================================================
+    var unzipFile = null;
+
+    // Without the PHP zip extension on the server both ZIP actions are hidden
+    function updateZipUI() {
+        var modal = document.getElementById('nb-imgmgr-modal');
+        var button = modal && modal.querySelector('.nb-imgmgr-unzip-btn');
+        if (button) button.hidden = !zipAvailable;
+    }
+
+    function isZipFile(file) {
+        return !!file && /\.zip$/i.test(file.name || '');
+    }
+
+    function zipFolderName(filename) {
+        var stem = String(filename || '').replace(/\.zip$/i, '');
+        var safe = stem.replace(/[^a-zA-Z0-9._-]/g, '-').replace(/-+/g, '-').replace(/^[.\-_]+/, '').slice(0, 64).replace(/[.-]+$/, '');
+        return safe || 'zip';
+    }
+
+    function createUnzipDialog() {
+        if (document.getElementById('nb-imgmgr-unzip')) return;
+        var dialog = document.createElement('div');
+        dialog.id = 'nb-imgmgr-unzip';
+        dialog.className = 'nb-imgmgr-move';
+        dialog.innerHTML =
+            '<div class="nb-imgmgr-move-backdrop"></div>' +
+            '<div class="nb-imgmgr-move-dialog nb-imgmgr-unzip-dialog" role="dialog" aria-modal="true" aria-labelledby="nb-imgmgr-unzip-title">' +
+                '<div class="nb-imgmgr-move-header">' +
+                    '<h3 id="nb-imgmgr-unzip-title">' + escapeHtml(t('media.unzip_title')) + '</h3>' +
+                    '<button type="button" class="nb-imgmgr-close" aria-label="' + escapeHtml(t('close')) + '">&times;</button>' +
+                '</div>' +
+                '<div class="nb-imgmgr-move-body">' +
+                    '<div class="nb-imgmgr-unzip-form">' +
+                        '<p class="nb-imgmgr-move-filename"></p>' +
+                        '<label for="nb-imgmgr-unzip-target">' + escapeHtml(t('media.unzip_target')) + '</label>' +
+                        '<select id="nb-imgmgr-unzip-target" class="nb-imgmgr-move-select"></select>' +
+                        '<label class="nb-imgmgr-rename-check"><input type="checkbox" class="nb-imgmgr-unzip-structure" checked> <span>' + escapeHtml(t('media.unzip_structure')) + '</span></label>' +
+                        '<label class="nb-imgmgr-rename-check"><input type="checkbox" class="nb-imgmgr-unzip-subfolder"> <span class="nb-imgmgr-unzip-subfolder-label"></span></label>' +
+                        '<p class="nb-imgmgr-rename-hint">' + escapeHtml(t('media.unzip_hint')) + '</p>' +
+                    '</div>' +
+                    '<div class="nb-imgmgr-unzip-report" hidden></div>' +
+                '</div>' +
+                '<div class="nb-imgmgr-move-footer">' +
+                    '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--secondary" data-action="cancel">' + escapeHtml(t('cancel')) + '</button>' +
+                    '<button type="button" class="nb-imgmgr-btn nb-imgmgr-btn--primary" data-action="submit">' + escapeHtml(t('media.unzip_submit')) + '</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(dialog);
+        dialog.querySelector('.nb-imgmgr-move-backdrop').addEventListener('click', closeUnzipDialog);
+        dialog.querySelector('.nb-imgmgr-close').addEventListener('click', closeUnzipDialog);
+        dialog.querySelector('[data-action="cancel"]').addEventListener('click', closeUnzipDialog);
+        dialog.querySelector('[data-action="submit"]').addEventListener('click', submitUnzip);
+    }
+
+    function openUnzipDialog(file) {
+        if (!file || state.mode === 'trash') return;
+        if (!zipAvailable) {
+            config.showToast(t('media.zip_unavailable'), 'error');
+            return;
+        }
+        var serverMax = uploadLimits && uploadLimits.serverMaxBytes ? uploadLimits.serverMaxBytes : null;
+        var max = serverMax !== null ? Math.min(serverMax, ZIP_UPLOAD_MAX) : ZIP_UPLOAD_MAX;
+        if (file.size > max) {
+            config.showToast(t(serverMax !== null && serverMax < ZIP_UPLOAD_MAX ? 'media.server_limit_error' : 'media.size_limit_error', { name: file.name, max: megabytes(max) }), 'error');
+            return;
+        }
+        createUnzipDialog();
+        unzipFile = file;
+        var dialog = document.getElementById('nb-imgmgr-unzip');
+        dialog.querySelector('.nb-imgmgr-unzip-form').hidden = false;
+        var report = dialog.querySelector('.nb-imgmgr-unzip-report');
+        report.hidden = true;
+        report.innerHTML = '';
+        dialog.querySelector('.nb-imgmgr-move-filename').textContent = file.name + ' · ' + fileSize(file.size);
+        var select = dialog.querySelector('#nb-imgmgr-unzip-target');
+        select.innerHTML = folderOptionsHtml(true);
+        select.value = state.mode === 'library' && state.folderFilter && state.folderFilter !== 'all' ? state.folderFilter : '';
+        dialog.querySelector('.nb-imgmgr-unzip-structure').checked = true;
+        dialog.querySelector('.nb-imgmgr-unzip-subfolder').checked = false;
+        dialog.querySelector('.nb-imgmgr-unzip-subfolder-label').textContent = t('media.unzip_subfolder', { name: zipFolderName(file.name) });
+        var submit = dialog.querySelector('[data-action="submit"]');
+        submit.hidden = false;
+        submit.disabled = false;
+        dialog.querySelector('[data-action="cancel"]').textContent = t('cancel');
+        dialog.classList.add('active');
+        select.focus();
+    }
+
+    function closeUnzipDialog() {
+        var dialog = document.getElementById('nb-imgmgr-unzip');
+        if (dialog) dialog.classList.remove('active');
+        unzipFile = null;
+    }
+
+    function unzipReasonText(entry) {
+        var key = 'media.unzip_reason_' + (entry.reason || 'error');
+        var text = t(key);
+        if (entry.reason === 'error' || text === key) return entry.message || entry.reason || t('toast.error');
+        return text;
+    }
+
+    function submitUnzip() {
+        var dialog = document.getElementById('nb-imgmgr-unzip');
+        if (!dialog || !unzipFile) return;
+        var file = unzipFile;
+        var submit = dialog.querySelector('[data-action="submit"]');
+        var formData = new FormData();
+        formData.append('action', 'unzip-media');
+        formData.append('file', file);
+        formData.append('folder', dialog.querySelector('#nb-imgmgr-unzip-target').value);
+        formData.append('structure', dialog.querySelector('.nb-imgmgr-unzip-structure').checked ? '1' : '0');
+        formData.append('subfolder', dialog.querySelector('.nb-imgmgr-unzip-subfolder').checked ? '1' : '0');
+        formData.append('csrf_token', config.csrfToken);
+        submit.disabled = true;
+        config.showToast(t('media.unzip_working'), 'info');
+
+        fetch(config.apiUrl, { method: 'POST', body: formData })
+            .then(function (r) { return r.json(); })
+            .then(function (result) {
+                var data = result && result.data ? result.data : {};
+                var imported = Array.isArray(data.imported) ? data.imported : [];
+                var skipped = Array.isArray(data.skipped) ? data.skipped : [];
+                var skippedCount = data.skippedCount || skipped.length;
+                if (!result.success && !skippedCount) {
+                    submit.disabled = false;
+                    config.showToast(result.message || t('toast.error'), 'error');
+                    return;
+                }
+                if (imported.length) {
+                    config.showToast(countText('media.unzip_done', imported.length), skippedCount ? 'info' : 'success');
+                    if (typeof data.folder === 'string') {
+                        state.folderFilter = data.folder;
+                        if (data.folder) { state.expandedFolders[data.folder] = true; expandFolderAncestors(data.folder); }
+                    }
+                    state.sort = { field: 'date', dir: 'desc' };
+                    state.page = 1;
+                    resetBulk();
+                    loadImages();
+                }
+                if (!skippedCount) {
+                    closeUnzipDialog();
+                    return;
+                }
+                // Show what was left out, and why
+                dialog.querySelector('.nb-imgmgr-unzip-form').hidden = true;
+                var report = dialog.querySelector('.nb-imgmgr-unzip-report');
+                report.hidden = false;
+                report.innerHTML =
+                    '<p class="nb-imgmgr-unzip-summary">' + escapeHtml(imported.length ? countText('media.unzip_done', imported.length) : (result.message || t('toast.error'))) + '</p>' +
+                    '<strong>' + escapeHtml(countText('media.unzip_skipped', skippedCount)) + '</strong>' +
+                    '<ul>' + skipped.slice(0, 50).map(function (entry) {
+                        return '<li><span>' + escapeHtml(entry.entry || '') + '</span><small>' + escapeHtml(unzipReasonText(entry)) + '</small></li>';
+                    }).join('') + '</ul>' +
+                    (skippedCount > 50 ? '<p class="nb-imgmgr-rename-hint">' + escapeHtml(t('media.unzip_more', { count: skippedCount - 50 })) + '</p>' : '');
+                submit.hidden = true;
+                dialog.querySelector('[data-action="cancel"]').textContent = t('close');
+                unzipFile = null;
+            })
+            .catch(function (err) {
+                submit.disabled = false;
+                config.showToast(err.message || t('toast.error'), 'error');
             });
     }
 

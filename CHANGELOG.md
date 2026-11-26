@@ -9,8 +9,13 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+## [2.10.0] — 2026-11-26
+
 ### Added
 
+- **Media library: batch actions.** Files can be selected several at a time (circle on each tile or row, Shift for a range, "All on this page" / "Select all", Esc clears). A bar above the files moves the selection into an existing or a new folder, downloads it as one ZIP archive, or moves it to the trash; in the trash it restores or deletes for good. Each file is handled on its own: the response names files that failed, and they stay selected. New API actions `bulk-media` (`op` = `trash` | `move` | `restore` | `purge`, `items` = JSON list of `{type, name}`, at most 500 per request) and `zip-media`.
+- **Media library: unpack ZIP archives** (`unzip-media`): button next to Upload, or drop a `.zip` onto the upload area. Target folder, keep the archive's folders or not, optional new folder named after the archive. Every entry is checked before anything is written: no absolute or `..` paths, no links or devices, no encrypted entries, only extensions of the media types, real content checked with finfo, per-type size limits, at most 2000 entries / 500 files / 1 GB expanded, and an expansion-ratio check against ZIP bombs (rejects the whole archive). `__MACOSX`, hidden and system files are ignored. Imported files take the normal upload path (safe names, SVG sanitizing, web version, AI label, responsive sizes) and never overwrite existing files. The dialog lists skipped entries with the reason.
+- Media library: `list-media` reports `zip` (PHP zip extension present). Without it the library hides "Download as ZIP" and "Unpack ZIP"; the other batch actions stay.
 - Lock pages: an optional `css/lock.css` restyles the maintenance and password pages (fonts, colours), so they can match the design of the site. Without the file nothing changes.
 
 ### Fixed

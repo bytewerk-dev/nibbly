@@ -2165,3 +2165,227 @@ button.nb-imgmgr-folder-item-toggle:hover {
 .nb-imgmgr-zoom:hover {
     background: var(--nb-imgmgr-accent);
 }
+
+/* ============================================================
+   BATCH ACTIONS: selection circles in the library, the bar above the files,
+   and the dialogs for moving several files and unpacking ZIP archives
+   ============================================================ */
+
+.nb-imgmgr-bulkbar {
+    position: sticky;
+    top: calc(-1 * var(--nb-space-4, 16px));
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--nb-space-2, 8px) var(--nb-space-3, 12px);
+    margin: 0 0 var(--nb-space-3, 12px);
+    padding: var(--nb-space-2, 8px) var(--nb-space-3, 12px);
+    background: var(--nb-bg-elevated, #fff);
+    border: 1px solid var(--nb-border, #d2d2d2);
+    border-radius: var(--nb-radius-md, 8px);
+    font-size: 13px;
+}
+
+.nb-imgmgr-bulkbar[hidden] {
+    display: none;
+}
+
+.nb-imgmgr-modal--bulk .nb-imgmgr-bulkbar {
+    border-color: var(--nb-imgmgr-accent);
+    box-shadow: 0 0 0 3px var(--nb-imgmgr-accent-subtle);
+}
+
+.nb-imgmgr-bulkbar-page {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--nb-space-2, 8px);
+    margin: 0;
+    color: var(--nb-text, #1a1a1a);
+    cursor: pointer;
+    user-select: none;
+}
+
+.nb-imgmgr-bulkbar-page input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: var(--nb-imgmgr-accent);
+}
+
+.nb-imgmgr-bulkbar-count {
+    font-weight: 600;
+    color: var(--nb-text, #1a1a1a);
+}
+
+.nb-imgmgr-bulkbar-count:empty {
+    display: none;
+}
+
+.nb-imgmgr-bulkbar-link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--nb-imgmgr-accent);
+    font: inherit;
+    font-size: 13px;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+.nb-imgmgr-bulkbar-link[hidden] {
+    display: none;
+}
+
+.nb-imgmgr-bulkbar .nb-imgmgr-spacer {
+    flex: 1 1 auto;
+}
+
+.nb-imgmgr-bulkbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--nb-space-1-5, 6px);
+}
+
+.nb-imgmgr-bulkbar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--nb-space-1-5, 6px);
+    padding: var(--nb-space-1-5, 6px) var(--nb-space-3, 12px);
+}
+
+.nb-imgmgr-bulkbar-btn svg {
+    width: 15px;
+    height: 15px;
+    flex: 0 0 auto;
+}
+
+.nb-imgmgr-bulkbar-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.nb-imgmgr-btn--danger {
+    background: var(--nb-bg-elevated, #fff);
+    color: var(--nb-danger-text, #b91c1c);
+    border-color: var(--nb-danger-border, rgba(220, 38, 38, 0.3));
+}
+
+.nb-imgmgr-btn--danger:hover:not(:disabled) {
+    background: var(--nb-danger-subtle, rgba(220, 38, 38, 0.08));
+}
+
+.nb-imgmgr-modal--busy .nb-imgmgr-content {
+    cursor: progress;
+}
+
+/* Selection circle in the library: a real button; it appears on hover and stays
+   while anything is selected, so the next files can be picked without hovering */
+.nb-imgmgr-check--bulk {
+    padding: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    font: inherit;
+}
+
+.nb-imgmgr-item .nb-imgmgr-check--bulk {
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.nb-imgmgr-item:hover .nb-imgmgr-check--bulk,
+.nb-imgmgr-item:focus-within .nb-imgmgr-check--bulk,
+.nb-imgmgr-modal--bulk .nb-imgmgr-item .nb-imgmgr-check--bulk,
+.nb-imgmgr-item .nb-imgmgr-check--bulk.checked {
+    opacity: 1;
+}
+
+.nb-imgmgr-check--bulk:focus-visible {
+    outline: 2px solid var(--nb-imgmgr-accent);
+    outline-offset: 2px;
+}
+
+.nb-imgmgr-modal--bulk .nb-imgmgr-thumb-btn {
+    cursor: pointer;
+}
+
+@media (hover: none) {
+    .nb-imgmgr-item .nb-imgmgr-check--bulk {
+        opacity: 1;
+    }
+}
+
+/* Unpack button next to the upload button: outlined, so the upload stays the main action */
+.nb-imgmgr-upload-btn.nb-imgmgr-unzip-btn {
+    background: var(--nb-bg-elevated, #fff);
+    background-image: none;
+    color: var(--nb-imgmgr-accent);
+    border: 1px solid var(--nb-imgmgr-accent);
+}
+
+.nb-imgmgr-upload-btn.nb-imgmgr-unzip-btn:hover {
+    background: var(--nb-imgmgr-accent-subtle);
+}
+
+.nb-imgmgr-bulk-newfolder,
+.nb-imgmgr-unzip-form > label[for] {
+    margin-top: var(--nb-space-3, 12px);
+}
+
+.nb-imgmgr-unzip-form > label[for] {
+    margin-top: 0;
+}
+
+.nb-imgmgr-bulk-newfolder[hidden],
+.nb-imgmgr-unzip-form[hidden],
+.nb-imgmgr-unzip-report[hidden] {
+    display: none;
+}
+
+.nb-imgmgr-move-body .nb-imgmgr-bulk-newfolder label {
+    margin-top: var(--nb-space-3, 12px);
+}
+
+.nb-imgmgr-unzip-report {
+    font-size: 13px;
+}
+
+.nb-imgmgr-unzip-summary {
+    margin: 0 0 var(--nb-space-3, 12px);
+    font-weight: 600;
+}
+
+.nb-imgmgr-unzip-report ul {
+    margin: var(--nb-space-2, 8px) 0 0;
+    padding: 0;
+    list-style: none;
+    max-height: 40vh;
+    overflow-y: auto;
+    border: 1px solid var(--nb-border, #d2d2d2);
+    border-radius: var(--nb-radius-md, 6px);
+}
+
+.nb-imgmgr-unzip-report li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--nb-space-1-5, 6px) var(--nb-space-2-5, 10px);
+    border-bottom: 1px solid var(--nb-border, #d2d2d2);
+}
+
+.nb-imgmgr-unzip-report li:last-child {
+    border-bottom: 0;
+}
+
+.nb-imgmgr-unzip-report li span {
+    overflow-wrap: anywhere;
+}
+
+.nb-imgmgr-unzip-report li small {
+    color: var(--nb-text-muted, #6e6e6e);
+}
+
+.nb-imgmgr-upload-btn.nb-imgmgr-unzip-btn[hidden] {
+    display: none;
+}

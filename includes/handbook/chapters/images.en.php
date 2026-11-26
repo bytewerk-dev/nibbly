@@ -33,6 +33,10 @@
 <div class="hb-prose">
   <p>In the dashboard, <?php echo $hb->nav('Media library', 'image'); ?> manages all files of the website in one place: images, audio, video and documents such as PDFs. At the top you filter by file type; otherwise everything works as in the image manager.</p>
 </div>
+<dl class="hb-fields">
+  <div><dt>Several files at once</dt><dd>When you move the mouse over a file, a circle for selecting it appears at the top right. Holding Shift selects everything up to the file clicked last, <?php echo $hb->ui('All on this page'); ?> takes the whole page. While something is selected, a click on a file selects it too; the Esc key clears the selection. Above the files you then find <?php echo $hb->ui('Move'); ?> (into an existing or a new folder), <?php echo $hb->ui('Download as ZIP'); ?> and <?php echo $hb->ui('Delete'); ?>; in the trash <?php echo $hb->ui('Restore'); ?> and <?php echo $hb->ui('Delete permanently'); ?>.</dd></div>
+  <div><dt>Unpack ZIP</dt><dd>Next to <?php echo $hb->ui('Upload'); ?>, <?php echo $hb->ui('Unpack ZIP'); ?> brings a whole archive into the media library; a ZIP dragged onto the upload area opens the same dialog. You choose the target folder, whether the archive's folders are kept and whether everything goes into a new folder named after the archive. Only images, audio, video and documents whose content really matches the file extension are imported. Program files, links, encrypted and hidden entries are skipped, and nibbly tells you afterwards what was left out and why. Existing files are never overwritten.</dd></div>
+</dl>
 <?php echo $hb->note('On your own computer', 'When nibbly runs locally on your computer, the Media Library shows three more symbols after the properties: <b>Show in Finder</b> (on Windows “Show in Explorer”), <b>Open with default application</b>, for example to open a photo in your image editor, and <b>Copy local path</b>. They never appear on the website on the internet.'); ?>
 <?php echo $hb->shot('media.webp', 'The Media Library in the dashboard with file type filter, folders and files', '<b>Media Library.</b> All files of the website, filtered by type.'); ?>
 <?php endif; ?>
