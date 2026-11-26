@@ -21,6 +21,9 @@
  * none of that exists.
  */
 
+require_once __DIR__ . '/project-files.php';
+require_once dirname(__DIR__) . '/admin/lang/i18n.php';
+
 if (!defined('BACKUP_PATH')) {
     // Allow standalone include from CLI before config.php has run.
     $configPath = __DIR__ . '/../admin/config.php';
@@ -379,72 +382,10 @@ function backupWithLock(callable $fn) {
     }
 }
 
-/** Directories that should never be included in full-site ZIP backups. */
-function backupExcludeDirs() {
-    return [
-        'node_modules',
-        '.git',
-        'screenshots',
-        'reference',
-        '.codex-qa',
-        '.vscode',
-        '.idea',
-        '.claude',
-        'tests',
-        'examples',
-        'vendor',
-        'website',
-        'nibbly-alt',
-        'nibbly-backup',
-    ];
-}
-
-/** File basenames that should never be included in full-site ZIP backups. */
-function backupExcludeFiles() {
-    return ['.DS_Store', 'Thumbs.db'];
-}
-
-/** Development and agent documentation at the project root. */
-function backupExcludeRootFiles() {
-    return [
-        'AGENTS.md',
-        'AI-AGENT-GUIDE.md',
-        'CLAUDE.md',
-        'CONTRIBUTING.md',
-        'SKILLS.md',
-        'architecture.md',
-        'design-qa.md',
-    ];
-}
-
-/** Return whether a relative path should be skipped in a full-site ZIP. */
+/** Kept for callers inspecting one path. Bulk operations share a single policy instance. */
 function backupShouldSkipPath($relativePath) {
-    $relativePath = str_replace('\\', '/', $relativePath);
-    foreach (backupExcludeDirs() as $dir) {
-        if ($relativePath === $dir || str_starts_with($relativePath, $dir . '/')) {
-            return true;
-        }
-    }
-
-    if (!str_contains($relativePath, '/') && in_array($relativePath, backupExcludeRootFiles(), true)) {
-        return true;
-    }
-
-    $base = basename($relativePath);
-    if (in_array($base, backupExcludeFiles(), true)) return true;
-    if (str_ends_with($base, '.tmp') || str_ends_with($base, '.swp') || str_ends_with($base, '.lock') || str_starts_with($base, '.nibbly-json-')) return true;
-    // Short-lived probe files of the security check (includes/security-check.php).
-    if (str_starts_with($base, 'nibbly-access-check-')) return true;
-    if (preg_match('#(^|/)\.restore-[^/]+(/|$)#', $relativePath)) return true;
-
-    // Keep old JSON page backups, but never include generated backup ZIPs/logs.
-    if (str_starts_with($relativePath, 'backups/')) {
-        if (str_ends_with($base, '.zip') || $base === '.backup.lock' || $base === 'backup.log') {
-            return true;
-        }
-    }
-
-    return false;
+    $role = (new NibblyProjectFiles(dirname(__DIR__)))->role(str_replace('\\', '/', $relativePath));
+    return in_array($role, ['local', 'private'], true);
 }
 
 /** Persist the backup config back to settings.json (merging with existing keys). */
@@ -1622,14 +1563,14 @@ function backupRestoreAllowedExtensions(): array {
         'php', 'json', 'css', 'js', 'html', 'htm', 'htaccess',
         'jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'ico', 'avif',
         'mp3', 'ogg', 'wav', 'm4a', 'aac', 'flac', 'mp4', 'webm', 'mov', 'm4v',
-        'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'rtf',
-        'woff', 'woff2', 'ttf', 'otf', 'eot', 'txt', 'xml', 'md',
+        'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'rtf', 'zip',
+        'woff', 'woff2', 'ttf', 'otf', 'eot', 'txt', 'xml', 'md', 'csv',
     ];
 }
 
 function backupRestoreIsLanguageEntry(string $entry): bool {
-    return !str_starts_with($entry, 'js/')
-        && (bool)preg_match('#^[a-z]{2}/#', $entry);
+    $parts = explode('/', $entry, 2);
+    return count($parts) === 2 && (isset(nibblySiteLanguageCatalog()[$parts[0]]) || isset($GLOBALS['SITE_LANGUAGES'][$parts[0]]));
 }
 
 /**
@@ -1659,15 +1600,21 @@ function backupRestorePhpEntryAllowed(string $entry): bool {
     return backupRestoreIsLanguageEntry($entry);
 }
 
-/**
- * Development-only archive entries may occur in backups created by older
- * versions. They are accepted for backwards compatibility, but are never
- * restored into the public site tree.
- */
+/** Decide against the target's own rules before reading any archive-supplied configuration. */
+function backupRestoreDisposition(string $entry, NibblyProjectFiles $policy): string {
+    if (!NibblyProjectFiles::validPath($entry)) return 'reject-path';
+    if (in_array($policy->role($entry), ['local', 'private'], true) || strcasecmp($entry, NibblyProjectFiles::RULES) === 0) return 'ignore';
+    $ext = strtolower(pathinfo($entry, PATHINFO_EXTENSION));
+    if ($ext === 'php') {
+        $allowed = $policy->isProjectPath($entry) ? $policy->allowsPhp($entry) : backupRestorePhpEntryAllowed($entry);
+        if (!$allowed) return 'reject-php';
+    }
+    if ($ext !== '' && !in_array($ext, backupRestoreAllowedExtensions(), true)) return 'skip-type';
+    return 'restore';
+}
+
 function backupRestoreEntryIgnored(string $entry): bool {
-    $entry = str_replace('\\', '/', ltrim($entry, '/'));
-    return $entry === 'tests' || str_starts_with($entry, 'tests/')
-        || str_ends_with($entry, '.lock') || preg_match('#(^|/)\.(restore-|nibbly-json-)#', $entry);
+    return backupRestoreDisposition($entry, new NibblyProjectFiles(dirname(__DIR__))) === 'ignore';
 }
 
 /**
@@ -1750,27 +1697,46 @@ function backupCreate($tier = null, $now = null) {
         return ['ok' => false, 'message' => "Could not create ZIP archive (code $opened)."];
     }
 
-    $iterator = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator($siteRoot, RecursiveDirectoryIterator::SKIP_DOTS),
-        RecursiveIteratorIterator::SELF_FIRST
-    );
-
-    foreach ($iterator as $file) {
-        $filePath = $file->getRealPath();
-        if ($filePath === false) continue;
-        $rel = str_replace(DIRECTORY_SEPARATOR, '/', substr($filePath, strlen($siteRoot) + 1));
-        if (backupShouldSkipPath($rel)) continue;
-
-        if ($file->isDir()) {
-            $zip->addEmptyDir($rel);
-        } elseif ($rel === 'content/settings.json') {
-            $zip->addFromString($rel, backupScrubSettingsForArchive($filePath));
-        } else {
-            $zip->addFile($filePath, $rel);
+    try {
+        $policy = new NibblyProjectFiles($siteRoot);
+        $warnings = [];
+        $privateFiles = $policy->privateFiles;
+        foreach ($privateFiles as $name) $warnings[] = t('backup.recovery_private', ['path' => $name]);
+        foreach ($policy->walk($siteRoot) as $rel => [$role, $directory]) {
+            if ($role === 'local') continue;
+            if ($role === 'private') {
+                $privateFiles[] = $rel;
+                $warnings[] = t('backup.recovery_private', ['path' => $rel]);
+                continue;
+            }
+            if ($role === 'unsupported') {
+                $warnings[] = t('backup.recovery_omitted', ['path' => $rel]);
+                continue;
+            }
+            $filePath = $siteRoot . '/' . $rel;
+            if ($directory) {
+                $added = $zip->addEmptyDir($rel);
+            } else {
+                $disposition = backupRestoreDisposition($rel, $policy);
+                if ($disposition === 'reject-php') $warnings[] = t('backup.recovery_php', ['path' => $rel]);
+                if ($disposition === 'skip-type') $warnings[] = t('backup.recovery_type', ['path' => $rel]);
+                if ($rel === NibblyProjectFiles::RULES) $warnings[] = t('backup.recovery_rules', ['path' => $rel]);
+                $added = $rel === 'content/settings.json'
+                    ? $zip->addFromString($rel, backupScrubSettingsForArchive($filePath))
+                    : $zip->addFile($filePath, $rel);
+            }
+            if (!$added) throw new RuntimeException('Could not archive ' . $rel);
         }
+        if (!$zip->addFromString(NibblyProjectFiles::REPORT, json_encode([
+            'privateFiles' => array_values(array_unique($privateFiles)), 'warnings' => $warnings,
+        ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_INVALID_UTF8_SUBSTITUTE))) throw new RuntimeException('Could not write recovery notes.');
+        $closed = $zip->close();
+    } catch (Throwable $error) {
+        $zip->unchangeAll();
+        $zip->close();
+        if (is_file($zipPath)) unlink($zipPath);
+        return ['ok' => false, 'message' => $error->getMessage()];
     }
-
-    $closed = $zip->close();
 
     if (!$closed || !is_file($zipPath)) {
         if (is_file($zipPath)) @unlink($zipPath);
@@ -1782,6 +1748,7 @@ function backupCreate($tier = null, $now = null) {
         'file' => $filename,
         'size' => filesize($zipPath) ?: 0,
         'tier' => $tier,
+        'warnings' => $warnings,
     ];
 }
 
@@ -1851,9 +1818,9 @@ function backupRun($now = null, $tier = null, $uploadRemote = true) {
 
     backupSaveConfig([
         'last_run'     => date('c', $now),
-        'last_status'  => ($created['ok'] && empty($remoteErrors)) ? 'success' : 'error',
+        'last_status'  => ($created['ok'] && empty($remoteErrors)) ? ($created['warnings'] ? 'warning' : 'success') : 'error',
         'last_message' => $created['ok']
-            ? "Created {$created['file']} (" . number_format($created['size'] / 1024 / 1024, 1) . " MB), pruned " . count($deleted) . ", uploaded " . (count($remoteResults) - count($remoteErrors)) . "/" . count($remoteResults) . " remote target(s)."
+            ? "Created {$created['file']} (" . number_format($created['size'] / 1024 / 1024, 1) . " MB), pruned " . count($deleted) . ", uploaded " . (count($remoteResults) - count($remoteErrors)) . "/" . count($remoteResults) . " remote target(s)." . ($created['warnings'] ? "\n" . implode("\n", $created['warnings']) : '')
             : ($created['message'] ?? 'Unknown error'),
     ]);
 

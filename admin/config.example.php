@@ -18,6 +18,11 @@ define('SITE_NAME', 'My Website');
 // If omitted, Nibbly derives it from the request host or hosting path.
 // define('NIBBLY_SITE_DOMAIN', 'example.com');
 
+// Optional existing, owner-only directory outside the document root for AI keys.
+// Set this on the host after copying and verifying any existing ai-secrets.json.
+// The NIBBLY_PRIVATE_DIR environment variable also works for PHP and cron.
+// define('NIBBLY_PRIVATE_DIR', dirname(__DIR__, 2) . '/private');
+
 // Canonical public address of the site (scheme and host, optional port). Password reset mails
 // use only this address (or the site address in Settings → Search engines), never the Host
 // header of the request, so a forged header can not redirect reset links to another domain.

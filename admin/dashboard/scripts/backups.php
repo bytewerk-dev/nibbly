@@ -3,6 +3,18 @@
     // SITE BACKUP
     // ============================================================
 
+    function backupFeedback(message, warnings, reload) {
+        if (warnings && warnings.length) {
+            showModal(message, warnings.join(' • '), function() {
+                closeModal();
+                if (reload) location.reload();
+            }, { confirmText: t('btn.close'), confirmClass: 'btn btn-primary' });
+        } else {
+            showToast(message, 'success');
+            if (reload) setTimeout(function() { location.reload(); }, 2000);
+        }
+    }
+
     (function() {
         var btn = document.getElementById('createSiteBackupBtn');
         var progress = document.getElementById('backupProgress');
@@ -36,7 +48,7 @@
                     a.click();
                     document.body.removeChild(a);
 
-                    showToast(t('toast.backup_site_created'), 'success');
+                    backupFeedback(t('toast.backup_site_created'), result.data.warnings, false);
                 } else {
                     showToast(t('toast.backup_site_failed', {message: result.message}), 'error');
                 }
@@ -112,8 +124,7 @@
 
                     if (result.success) {
                         var toastKey = mode === 'full' ? 'toast.restore_success_full' : 'toast.restore_success_content';
-                        showToast(t(toastKey, {extracted: result.data.extracted}), 'success');
-                        setTimeout(function() { location.reload(); }, 2000);
+                        backupFeedback(t(toastKey, {extracted: result.data.extracted}), result.data.warnings, true);
                     } else {
                         showToast(t('toast.restore_failed', {message: result.message}), 'error');
                         restoreBtn.disabled = false;
@@ -265,6 +276,9 @@
                     if (s.last_status === 'error') {
                         statusEl.dataset.state = 'error';
                         statusMsgEl.textContent = t('settings.last_run_error', { message: s.last_message || '' });
+                    } else if (s.last_status === 'warning') {
+                        statusEl.dataset.state = 'warning';
+                        statusMsgEl.textContent = s.last_message;
                     } else if (s.enabled && ageDays >= 2) {
                         statusEl.dataset.state = 'warning';
                         statusMsgEl.textContent = t('settings.last_run_warning', { days: ageDays });
@@ -796,8 +810,7 @@
                             var json = await res.json();
                             if (json.success) {
                                 var toastKey = mode === 'full' ? 'toast.restore_success_full' : 'toast.restore_success_content';
-                                showToast(t(toastKey, { extracted: json.data.extracted }), 'success');
-                                setTimeout(function() { location.reload(); }, 2000);
+                                backupFeedback(t(toastKey, { extracted: json.data.extracted }), json.data.warnings, true);
                             } else {
                                 showToast(t('toast.restore_failed', { message: json.message }), 'error');
                             }

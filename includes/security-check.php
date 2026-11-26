@@ -58,7 +58,7 @@ function nibblySecurityBaseUrl(string $scheme): string {
 /** nginx rules for every folder that .htaccess protects. */
 function nibblySecurityNginxRules(string $basePath = ''): string {
     $rules = [];
-    foreach (['content', 'backups', 'cli', 'tests', 'assets/images-trash', 'assets/audio-trash',
+    foreach (['content', 'backups', 'cli', 'tests', 'local-only', 'not-for-git', 'assets/images-trash', 'assets/audio-trash',
         'assets/videos-trash', 'assets/documents-trash'] as $folder) {
         $rules[] = 'location ^~ ' . $basePath . '/' . $folder . '/ { deny all; }';
     }
@@ -68,6 +68,9 @@ function nibblySecurityNginxRules(string $basePath = ''): string {
 /** Folders to probe, with extensions that proxies commonly serve as static files. */
 function nibblySecurityProbeTargets(string $root): array {
     $targets = [['content', 'json'], ['backups', 'zip']];
+    foreach (['local-only', 'not-for-git'] as $folder) {
+        if (is_dir($root . '/' . $folder) && !is_link($root . '/' . $folder)) $targets[] = [$folder, 'txt'];
+    }
     foreach (['images' => 'jpg', 'audio' => 'mp3', 'videos' => 'mp4', 'documents' => 'pdf'] as $type => $extension) {
         if (is_dir($root . '/assets/' . $type . '-trash')) $targets[] = ['assets/' . $type . '-trash', $extension];
     }
@@ -298,7 +301,7 @@ function nibblySecurityProbeItems(string $baseUrl, bool $local, bool $devServer,
         } else {
             $exposed = array_values(array_column(array_filter($result['probes'], fn($probe) => $probe['state'] === 'exposed'), 'path'));
             // Accounts, credentials, submissions and backups are critical; deleted media alone is a warning.
-            $critical = array_intersect($exposed, ['content/', 'backups/']) !== [];
+            $critical = array_intersect($exposed, ['content/', 'backups/', 'local-only/', 'not-for-git/']) !== [];
             $folders += [
                 'state' => ['exposed' => $critical ? 'critical' : 'warning', 'protected' => 'ok'][$result['state']] ?? 'unknown',
                 'reason' => $result['reason'], 'detail' => $result['detail'], 'checkedAt' => $result['checkedAt'],
