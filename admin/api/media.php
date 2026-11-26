@@ -4,6 +4,7 @@ if (!defined('NIBBLY_ADMIN_DIR')) { http_response_code(404); exit; }
 require_once NIBBLY_ADMIN_DIR . '/../includes/svg-sanitizer.php';
 require_once NIBBLY_ADMIN_DIR . '/../includes/media-states.php';
 require_once NIBBLY_ADMIN_DIR . '/../includes/media-local-tools.php';
+require_once __DIR__ . '/media-operations.php';
 
 // Authenticated dispatcher supplies shared helpers and request context.
 switch ($action) {
@@ -42,6 +43,8 @@ switch ($action) {
             'states' => nibblyMediaStatesPublic(),
             // Reveal/open/path on the editor's own machine, null on a web host (includes/media-local-tools.php)
             'localTools' => nibblyLocalToolsInfo(),
+            // ZIP download and import need the PHP zip extension; without it the library hides both
+            'zip' => class_exists('ZipArchive'),
             'types' => array_values(array_map(function($config) {
                 return [
                     'type' => $config['type'],
@@ -98,77 +101,293 @@ switch ($action) {
             jsonResponse(false, null, sprintf('File too large: the limit for %s is %s MB', $config['type'], nibblyMegabytes((int)$config['maxSize'])));
         }
 
-        $originalName = pathinfo($file['name'], PATHINFO_FILENAME);
-        $safeName = preg_replace('/[^a-z0-9\-_]/i', '-', $originalName);
-        $safeName = preg_replace('/-+/', '-', $safeName);
-        $safeName = trim($safeName, '-');
-        if ($safeName === '') {
-            $safeName = $config['fallbackName'] . '-' . time();
+        $safeName = nibblyMediaSafeStem(pathinfo($file['name'], PATHINFO_FILENAME), $config['fallbackName']);
+        $folder = trim((string)($_POST['folder'] ?? ''));
+        if ($folder !== '' && !validateMediaFolderName($folder)) {
+            jsonResponse(false, null, 'Invalid folder name');
+        }
+
+        $stored = nibblyMediaStoreIncoming($type, $file['tmp_name'], $mimeType, $safeName, $extension, $folder, 'move_uploaded_file');
+        jsonResponse($stored['ok'], $stored['ok'] ? $stored['data'] : null, $stored['message']);
+        break;
+
+    case 'bulk-media':
+        // Several files at once: op = trash | move | restore | purge, items = JSON [{type, name}],
+        // folder = target folder for move ('' = main folder; a new folder is created).
+        // Each file is handled on its own; the response lists what worked and what did not.
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        $op = (string)($_POST['op'] ?? '');
+        if (!in_array($op, ['trash', 'move', 'restore', 'purge'], true)) {
+            jsonResponse(false, null, 'Invalid bulk action');
+        }
+        [$items, $problem] = nibblyMediaBatchItems($_POST['items'] ?? '');
+        if ($items === null) {
+            jsonResponse(false, null, $problem);
+        }
+        $targetFolder = trim((string)($_POST['folder'] ?? ''));
+        if ($op === 'move' && $targetFolder !== '' && !validateMediaFolderName($targetFolder)) {
+            jsonResponse(false, null, 'Invalid folder name');
+        }
+        @set_time_limit(300);
+
+        $done = [];
+        $failed = [];
+        foreach ($items as $item) {
+            $result = match ($op) {
+                'trash' => nibblyMediaOpTrash($item['type'], $item['name']),
+                'move' => nibblyMediaOpMove($item['type'], $item['name'], $targetFolder),
+                'restore' => nibblyMediaOpRestore($item['type'], $item['name']),
+                'purge' => nibblyMediaOpPurge($item['type'], $item['name']),
+            };
+            if ($result['ok']) {
+                $done[] = ['type' => $item['type'], 'name' => $item['name'], 'newName' => $result['data']['name'] ?? $item['name']];
+            } else {
+                $failed[] = ['type' => $item['type'], 'name' => $item['name'], 'message' => $result['message']];
+            }
+        }
+        jsonResponse($done !== [], [
+            'op' => $op,
+            'folder' => $op === 'move' ? $targetFolder : null,
+            'done' => $done,
+            'failed' => $failed,
+        ], $done === [] ? ($failed[0]['message'] ?? 'Error') : ($failed ? 'Some files could not be processed' : 'Done'));
+        break;
+
+    case 'zip-media':
+        // Download selected library files as one ZIP archive (items = JSON [{type, name}])
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        if (!class_exists('ZipArchive')) {
+            jsonResponse(false, null, 'ZIP archives are not supported on this server (PHP zip extension missing)');
+        }
+        [$items, $problem] = nibblyMediaBatchItems($_POST['items'] ?? '');
+        if ($items === null) {
+            jsonResponse(false, null, $problem);
+        }
+        $files = [];
+        $total = 0;
+        foreach ($items as $item) {
+            $path = getMediaConfig($item['type'])['path'] . $item['name'];
+            if (!is_file($path) || is_link($path)) {
+                jsonResponse(false, ['name' => $item['name']], 'File not found: ' . $item['name']);
+            }
+            $total += (int)filesize($path);
+            if ($total > NIBBLY_MEDIA_ZIP_DOWNLOAD_MAX_BYTES) {
+                jsonResponse(false, null, sprintf('The selection is too large for one archive (at most %s MB)', nibblyMegabytes(NIBBLY_MEDIA_ZIP_DOWNLOAD_MAX_BYTES)));
+            }
+            $files[] = $path;
+        }
+        @set_time_limit(300);
+        $workDir = nibblyMediaWorkDir();
+        if ($workDir === null) {
+            jsonResponse(false, null, 'No writable temporary folder for the archive');
+        }
+        register_shutdown_function('nibblyMediaRemoveWorkDir', $workDir);
+        $zipPath = $workDir . '/media.zip';
+        $zip = new ZipArchive();
+        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            jsonResponse(false, null, 'Could not create the archive');
+        }
+        foreach (nibblyMediaZipEntryNames($items) as $index => $entryName) {
+            if (!$zip->addFile($files[$index], $entryName)) {
+                $zip->close();
+                jsonResponse(false, null, 'Could not create the archive');
+            }
+            if (nibblyMediaZipStoredExtension(strtolower(pathinfo($entryName, PATHINFO_EXTENSION)))) {
+                $zip->setCompressionName($entryName, ZipArchive::CM_STORE);
+            }
+        }
+        if (!$zip->close() || !is_file($zipPath)) {
+            jsonResponse(false, null, 'Could not create the archive');
+        }
+        $downloadName = 'media-' . date('Y-m-d-His') . '.zip';
+        header_remove('Content-Type');
+        header('Content-Type: application/zip');
+        header('Content-Disposition: attachment; filename="' . $downloadName . '"');
+        header('Content-Length: ' . filesize($zipPath));
+        header('Cache-Control: private, no-store');
+        header('X-Content-Type-Options: nosniff');
+        readfile($zipPath);
+        exit;
+
+    case 'unzip-media':
+        // Import the files of an uploaded ZIP archive into the library. Each entry is checked on its own:
+        // safe path, no link, not encrypted, allowed extension, real file type (finfo) matching it, size
+        // limits and expansion ratio; SVG is sanitized and images take the normal upload path (web version,
+        // AI label, responsive sizes). Nothing is overwritten. folder = target folder, structure = 1 keeps
+        // the archive's folders, subfolder = 1 puts everything into a new folder named after the archive.
+        if (!validateCsrfToken()) {
+            jsonResponse(false, null, 'Invalid CSRF token');
+        }
+        if (!class_exists('ZipArchive')) {
+            jsonResponse(false, null, 'ZIP archives are not supported on this server (PHP zip extension missing)');
+        }
+        $upload = $_FILES['file'] ?? null;
+        if (!is_array($upload) || ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file($upload['tmp_name'])) {
+            $code = is_array($upload) ? ($upload['error'] ?? null) : null;
+            if ($code === UPLOAD_ERR_INI_SIZE || $code === UPLOAD_ERR_FORM_SIZE) {
+                jsonResponse(false, ['serverLimitBytes' => nibblyUploadServerLimit()], sprintf('File too large: the server accepts uploads up to %s MB (upload_max_filesize / post_max_size)', nibblyMegabytes(nibblyUploadServerLimit())));
+            }
+            jsonResponse(false, null, $code === UPLOAD_ERR_PARTIAL ? 'Upload error: the file arrived only partially' : 'Upload error');
+        }
+        if (strtolower(pathinfo((string)$upload['name'], PATHINFO_EXTENSION)) !== 'zip') {
+            jsonResponse(false, null, 'Invalid file extension');
+        }
+        if ((int)$upload['size'] > NIBBLY_MEDIA_ZIP_UPLOAD_MAX_BYTES) {
+            jsonResponse(false, null, sprintf('File too large: archives may have up to %s MB', nibblyMegabytes(NIBBLY_MEDIA_ZIP_UPLOAD_MAX_BYTES)));
+        }
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $archiveMime = (string)finfo_file($finfo, $upload['tmp_name']);
+        $head = (string)@file_get_contents($upload['tmp_name'], false, null, 0, 4);
+        if (!in_array($archiveMime, ['application/zip', 'application/x-zip-compressed', 'application/x-zip'], true) || $head !== "PK\x03\x04") {
+            jsonResponse(false, null, 'Invalid file type');
         }
 
         $folder = trim((string)($_POST['folder'] ?? ''));
         if ($folder !== '' && !validateMediaFolderName($folder)) {
             jsonResponse(false, null, 'Invalid folder name');
         }
-        $targetBase = $config['path'] . ($folder !== '' ? $folder . '/' : '');
-        $targetPublicBase = $config['publicPath'] . ($folder !== '' ? $folder . '/' : '');
+        if (($_POST['subfolder'] ?? '0') === '1') {
+            $archiveFolder = nibblyMediaSafeFolderSegment(pathinfo((string)$upload['name'], PATHINFO_FILENAME));
+            if ($archiveFolder === '') $archiveFolder = 'zip-' . date('Y-m-d');
+            $folder = $folder !== '' ? $folder . '/' . $archiveFolder : $archiveFolder;
+            if (!validateMediaFolderName($folder)) {
+                jsonResponse(false, null, 'Invalid folder name');
+            }
+        }
+        $keepStructure = ($_POST['structure'] ?? '1') === '1';
 
-        if (!is_dir($targetBase)) {
-            mkdir($targetBase, 0755, true);
+        $zip = new ZipArchive();
+        if ($zip->open($upload['tmp_name'], ZipArchive::RDONLY) !== true) {
+            jsonResponse(false, null, 'The archive could not be read');
+        }
+        if ($zip->numFiles > NIBBLY_MEDIA_ZIP_MAX_ENTRIES) {
+            $zip->close();
+            jsonResponse(false, null, sprintf('The archive has too many entries (at most %d)', NIBBLY_MEDIA_ZIP_MAX_ENTRIES));
         }
 
-        if ($type === 'image' && in_array($mimeType, ['image/jpeg', 'image/png', 'image/webp'], true)) {
-            // Provenance sits in metadata that re-encoding drops: read it from the upload
-            $aiLabel = nibblyDetectAiLabel($file['tmp_name']);
-            // The web version and the original share a stem; it must be free in both places
-            $stem = pathinfo(uniqueMediaFilename($targetBase, $safeName . '.' . $extension), PATHINFO_FILENAME);
-            while (file_exists($targetBase . $stem . '.webp') || nibblyMediaOriginalFor(($folder !== '' ? $folder . '/' : '') . $stem . '.webp') !== null) {
-                $stem = pathinfo(uniqueMediaFilename($targetBase, $stem . '-1.' . $extension), PATHINFO_FILENAME);
+        // First pass: decide per entry from the central directory, before anything is written
+        $plan = [];
+        $skipped = [];
+        $ignored = 0;
+        $expanded = 0;
+        $folderDepth = $folder === '' ? 0 : count(explode('/', $folder));
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $stat = $zip->statIndex($i, ZipArchive::FL_UNCHANGED);
+            if (!is_array($stat)) {
+                $zip->close();
+                jsonResponse(false, null, 'The archive could not be read');
             }
-            $stored = nibblyMediaStoreImage($file['tmp_name'], $targetBase, $stem, $extension, $mimeType, 'move_uploaded_file');
-            if ($stored === null) {
-                jsonResponse(false, null, 'Error saving');
+            $entryName = (string)$stat['name'];
+            if (str_ends_with(str_replace('\\', '/', $entryName), '/')) continue; // folder entry
+            $parsed = nibblyMediaZipParseEntryName($entryName);
+            if (!empty($parsed['ignore'])) { $ignored++; continue; }
+            $label = mb_substr(preg_replace('/[\x00-\x1f\x7f]/', '?', $entryName), 0, 200);
+            if (isset($parsed['skip'])) { $skipped[] = ['entry' => $label, 'reason' => $parsed['skip']]; continue; }
+            $mode = nibblyMediaZipEntryMode($zip, $i);
+            if ($mode !== null && ($mode & 0xF000) !== 0 && ($mode & 0xF000) !== 0x8000) {
+                $skipped[] = ['entry' => $label, 'reason' => 'not_regular']; // symbolic link, device
+                continue;
             }
-            $relativeName = ($folder !== '' ? $folder . '/' : '') . $stored['name'];
-            if ($aiLabel !== '') {
-                nibblySetMediaAiLabel($type, $relativeName, $aiLabel);
+            if ((int)($stat['encryption_method'] ?? 0) !== 0) {
+                $skipped[] = ['entry' => $label, 'reason' => 'encrypted'];
+                continue;
             }
-            // Responsive sizes next to the library, see includes/media-sizes.php
-            $sizes = nibblyMediaSizesGenerate($relativeName);
-            nibblyMediaEvent('uploaded', $type, $relativeName);
-            jsonResponse(true, [
+            $extension = strtolower(pathinfo($parsed['file'], PATHINFO_EXTENSION));
+            $type = nibblyMediaTypeForExtension($extension);
+            if ($type === '') {
+                $skipped[] = ['entry' => $label, 'reason' => 'type_not_allowed'];
+                continue;
+            }
+            $config = getMediaConfig($type);
+            $size = (int)$stat['size'];
+            $compressed = (int)$stat['comp_size'];
+            if ($size > $config['maxSize']) {
+                $skipped[] = ['entry' => $label, 'reason' => 'too_large'];
+                continue;
+            }
+            if ($size > 1048576 && ($compressed <= 0 || $size / $compressed > NIBBLY_MEDIA_ZIP_MAX_RATIO)) {
+                $zip->close();
+                jsonResponse(false, null, 'The archive was rejected: an entry expands suspiciously far (ZIP bomb protection)');
+            }
+            $segments = [];
+            if ($keepStructure) {
+                foreach ($parsed['folders'] as $segment) {
+                    $safe = nibblyMediaSafeFolderSegment($segment);
+                    if ($safe !== '') $segments[] = $safe;
+                }
+            }
+            if ($folderDepth + count($segments) > NIBBLY_MEDIA_MAX_DEPTH) {
+                $skipped[] = ['entry' => $label, 'reason' => 'too_deep'];
+                continue;
+            }
+            if (count($plan) >= NIBBLY_MEDIA_ZIP_MAX_FILES) {
+                $zip->close();
+                jsonResponse(false, null, sprintf('The archive has too many files (at most %d)', NIBBLY_MEDIA_ZIP_MAX_FILES));
+            }
+            $expanded += $size;
+            if ($expanded > NIBBLY_MEDIA_ZIP_MAX_EXPANDED_BYTES) {
+                $zip->close();
+                jsonResponse(false, null, sprintf('The archive expands to more than %s MB', nibblyMegabytes(NIBBLY_MEDIA_ZIP_MAX_EXPANDED_BYTES)));
+            }
+            $plan[] = [
+                'stat' => $stat,
+                'label' => $label,
                 'type' => $type,
-                'name' => $relativeName,
-                'path' => $targetPublicBase . $stored['name'],
-                'aiLabel' => $aiLabel,
-                'webVersion' => $stored['webVersion'],
-                'original' => nibblyMediaOriginalFor($relativeName),
-                'sizes' => $sizes,
-            ], 'Media uploaded');
+                'extension' => $extension,
+                'stem' => nibblyMediaSafeStem(pathinfo($parsed['file'], PATHINFO_FILENAME), $config['fallbackName']),
+                'folder' => implode('/', array_filter([$folder, implode('/', $segments)], 'strlen')),
+            ];
         }
 
-        $filename = uniqueMediaFilename($targetBase, $safeName . '.' . $extension);
-        if (move_uploaded_file($file['tmp_name'], $targetBase . $filename)) {
-            if (strtolower($extension) === 'svg' && !nibblySanitizeSvgFile($targetBase . $filename)) {
-                @unlink($targetBase . $filename);
-                jsonResponse(false, null, 'SVG could not be processed safely');
-            }
-            $relativeName = ($folder !== '' ? $folder . '/' : '') . $filename;
-            $aiLabel = in_array($type, ['image', 'video'], true) ? nibblyDetectAiLabel($targetBase . $filename) : '';
-            if ($aiLabel !== '') {
-                nibblySetMediaAiLabel($type, $relativeName, $aiLabel);
-            }
-            nibblyMediaEvent('uploaded', $type, $relativeName);
-            jsonResponse(true, [
-                'type' => $type,
-                'name' => $relativeName,
-                'path' => $targetPublicBase . $filename,
-                'aiLabel' => $aiLabel,
-                'webVersion' => null,
-            ], 'Media uploaded');
+        // Second pass: extract each planned entry into a private folder, check the content, store it
+        @set_time_limit(600);
+        $workDir = nibblyMediaWorkDir();
+        if ($workDir === null) {
+            $zip->close();
+            jsonResponse(false, null, 'No writable temporary folder for the archive');
         }
+        register_shutdown_function('nibblyMediaRemoveWorkDir', $workDir);
+        $imported = [];
+        foreach ($plan as $index => $entry) {
+            $tmp = $workDir . '/entry-' . $index;
+            if (!nibblyMediaZipExtractEntry($zip, $entry['stat'], $tmp)) {
+                $skipped[] = ['entry' => $entry['label'], 'reason' => 'damaged'];
+                continue;
+            }
+            $config = getMediaConfig($entry['type']);
+            $mimeType = (string)finfo_file($finfo, $tmp);
+            if (!in_array($mimeType, $config['mimeTypes'], true)) {
+                @unlink($tmp);
+                $skipped[] = ['entry' => $entry['label'], 'reason' => 'mime_mismatch'];
+                continue;
+            }
+            $stored = nibblyMediaStoreIncoming($entry['type'], $tmp, $mimeType, $entry['stem'], $entry['extension'], $entry['folder'], 'rename');
+            @unlink($tmp);
+            if (!$stored['ok']) {
+                $skipped[] = ['entry' => $entry['label'], 'reason' => 'error', 'message' => $stored['message']];
+                continue;
+            }
+            $imported[] = [
+                'type' => $stored['data']['type'],
+                'name' => $stored['data']['name'],
+                'path' => $stored['data']['path'],
+                'webVersion' => $stored['data']['webVersion'] !== null,
+            ];
+        }
+        $zip->close();
+        unset($finfo);
 
-        jsonResponse(false, null, 'Error saving');
+        jsonResponse($imported !== [], [
+            'folder' => $folder,
+            'imported' => $imported,
+            'skipped' => array_slice($skipped, 0, 200),
+            'skippedCount' => count($skipped),
+            'ignored' => $ignored,
+        ], $imported === [] ? 'The archive contains no files the media library accepts' : 'Archive imported');
         break;
 
     case 'create-media-folder':
@@ -234,50 +453,8 @@ switch ($action) {
         if (!validateCsrfToken()) {
             jsonResponse(false, null, 'Invalid CSRF token');
         }
-
-        $type = normalizeMediaType($_POST['type'] ?? 'image');
-        $filename = $_POST['filename'] ?? '';
-        $targetFolder = trim((string)($_POST['folder'] ?? ''));
-        $config = getMediaConfig($type);
-        if (!$config || !validateMediaFilename($filename, $type)) {
-            jsonResponse(false, null, 'Invalid media file');
-        }
-        if ($targetFolder !== '' && !validateMediaFolderName($targetFolder)) {
-            jsonResponse(false, null, 'Invalid folder name');
-        }
-
-        $sourcePath = $config['path'] . $filename;
-        if (!is_file($sourcePath)) {
-            jsonResponse(false, null, 'File not found');
-        }
-
-        $basename = basename($filename);
-        $targetRelative = ($targetFolder !== '' ? $targetFolder . '/' : '') . $basename;
-        if ($targetRelative === $filename) {
-            jsonResponse(true, [
-                'type' => $type,
-                'name' => $filename,
-                'path' => $config['publicPath'] . $filename,
-            ], 'Media already in folder');
-        }
-
-        $targetDirectory = $config['path'] . ($targetFolder !== '' ? $targetFolder : '');
-        if (!is_dir($targetDirectory) && !mkdir($targetDirectory, 0755, true)) {
-            jsonResponse(false, null, 'Error creating target folder');
-        }
-
-        $targetRelative = uniqueMediaRelativePath($config['path'], $targetRelative);
-        if (rename($sourcePath, $config['path'] . $targetRelative)) {
-            nibblyMoveMediaMeta($type, $filename, $type, $targetRelative);
-            if ($type === 'image') { nibblyMediaOriginalRelocate($filename, false, $targetRelative, false); nibblyMediaSizesRelocate($filename, false, $targetRelative, false); }
-            jsonResponse(true, [
-                'type' => $type,
-                'name' => $targetRelative,
-                'path' => $config['publicPath'] . $targetRelative,
-            ], 'Media moved');
-        }
-
-        jsonResponse(false, null, 'Error moving media');
+        $moved = nibblyMediaOpMove(normalizeMediaType($_POST['type'] ?? 'image'), (string)($_POST['filename'] ?? ''), (string)($_POST['folder'] ?? ''));
+        jsonResponse($moved['ok'], $moved['ok'] ? $moved['data'] : null, $moved['message']);
         break;
 
     case 'rename-media':
@@ -460,96 +637,24 @@ switch ($action) {
         if (!validateCsrfToken()) {
             jsonResponse(false, null, 'Invalid CSRF token');
         }
-
-        $type = normalizeMediaType($_POST['type'] ?? '');
-        $filename = $_POST['filename'] ?? '';
-        $config = getMediaConfig($type);
-        if (!$config || !validateMediaFilename($filename, $type)) {
-            jsonResponse(false, null, 'Invalid media file');
-        }
-
-        $sourcePath = $config['path'] . $filename;
-        if (!file_exists($sourcePath)) {
-            jsonResponse(false, null, 'File not found');
-        }
-
-        if (!is_dir($config['trashPath'])) {
-            mkdir($config['trashPath'], 0755, true);
-        }
-
-        $targetFilename = uniqueMediaRelativePath($config['trashPath'], $filename);
-        $targetDirectory = dirname($config['trashPath'] . $targetFilename);
-        if (!is_dir($targetDirectory)) {
-            mkdir($targetDirectory, 0755, true);
-        }
-        if (rename($sourcePath, $config['trashPath'] . $targetFilename)) {
-            nibblyMoveMediaMeta($type, $filename, $type . '-trash', $targetFilename);
-            if ($type === 'image') { nibblyMediaOriginalRelocate($filename, false, $targetFilename, true); nibblyMediaSizesRelocate($filename, false, $targetFilename, true); }
-            jsonResponse(true, null, 'Media moved to trash');
-        }
-
-        jsonResponse(false, null, 'Error moving');
+        $trashed = nibblyMediaOpTrash(normalizeMediaType($_POST['type'] ?? ''), (string)($_POST['filename'] ?? ''));
+        jsonResponse($trashed['ok'], null, $trashed['message']);
         break;
 
     case 'restore-media':
         if (!validateCsrfToken()) {
             jsonResponse(false, null, 'Invalid CSRF token');
         }
-
-        $type = normalizeMediaType($_POST['type'] ?? '');
-        $filename = $_POST['filename'] ?? '';
-        $config = getMediaConfig($type);
-        if (!$config || !validateMediaFilename($filename, $type)) {
-            jsonResponse(false, null, 'Invalid media file');
-        }
-
-        $sourcePath = $config['trashPath'] . $filename;
-        if (!file_exists($sourcePath)) {
-            jsonResponse(false, null, 'File not found');
-        }
-
-        $targetFilename = uniqueMediaRelativePath($config['path'], $filename);
-        $targetDirectory = dirname($config['path'] . $targetFilename);
-        if (!is_dir($targetDirectory)) {
-            mkdir($targetDirectory, 0755, true);
-        }
-        if (rename($sourcePath, $config['path'] . $targetFilename)) {
-            nibblyMoveMediaMeta($type . '-trash', $filename, $type, $targetFilename);
-            if ($type === 'image') { nibblyMediaOriginalRelocate($filename, true, $targetFilename, false); nibblyMediaSizesRelocate($filename, true, $targetFilename, false); }
-            jsonResponse(true, [
-                'type' => $type,
-                'name' => $targetFilename,
-                'path' => $config['publicPath'] . $targetFilename,
-            ], 'Media restored');
-        }
-
-        jsonResponse(false, null, 'Error restoring');
+        $restored = nibblyMediaOpRestore(normalizeMediaType($_POST['type'] ?? ''), (string)($_POST['filename'] ?? ''));
+        jsonResponse($restored['ok'], $restored['ok'] ? $restored['data'] : null, $restored['message']);
         break;
 
     case 'delete-media-trash':
         if (!validateCsrfToken()) {
             jsonResponse(false, null, 'Invalid CSRF token');
         }
-
-        $type = normalizeMediaType($_POST['type'] ?? '');
-        $filename = $_POST['filename'] ?? '';
-        $config = getMediaConfig($type);
-        if (!$config || !validateMediaFilename($filename, $type)) {
-            jsonResponse(false, null, 'Invalid media file');
-        }
-
-        $path = $config['trashPath'] . $filename;
-        if (!file_exists($path)) {
-            jsonResponse(false, null, 'File not found');
-        }
-
-        if (unlink($path)) {
-            nibblyForgetMediaMeta($type . '-trash', $filename);
-            if ($type === 'image') { nibblyMediaOriginalForget($filename, true); nibblyMediaSizesForget($filename, true); }
-            jsonResponse(true, null, 'Media permanently deleted');
-        }
-
-        jsonResponse(false, null, 'Error deleting');
+        $purged = nibblyMediaOpPurge(normalizeMediaType($_POST['type'] ?? ''), (string)($_POST['filename'] ?? ''));
+        jsonResponse($purged['ok'], null, $purged['message']);
         break;
 
     case 'empty-media-trash':

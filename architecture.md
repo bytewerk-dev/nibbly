@@ -928,6 +928,9 @@ Full-site backups are created by `includes/backup-helper.php` and can be run fro
 | `upload-media` | POST | Upload a file into a folder path |
 | `create-media-folder` / `delete-media-folder` | POST | Create a folder (inside a parent path) / delete an empty folder |
 | `move-media` / `rename-media` | POST | Move a file to another folder path / rename a file in place |
+| `bulk-media` | POST | Batch action on up to 500 files (`op` = trash / move / restore / purge, `items` JSON, `folder` for move); per-file `done` / `failed` |
+| `zip-media` | POST | Download selected library files as one ZIP archive (shared folder left out, one top folder per media type) |
+| `unzip-media` | POST | Import the media files of an uploaded ZIP archive after per-entry checks (see AI-AGENT-GUIDE, Media batch actions) |
 | `upload-image` | POST | Upload image file |
 | `delete-image` | POST | Delete image file |
 | `list-audio` | GET | List uploaded audio files |
