@@ -168,6 +168,22 @@ php cli/media-sizes.php --action=prune [--dry-run]       # sizes whose image is 
 `--images=PATH` works on another images folder (tests, a copy); its sizes folder sits next to it.
 Exit codes: 0 success, 1 failure (or at least one image that could not be encoded), 2 invalid arguments.
 
+## media-originals.php — Misplaced Originals
+
+Before 2.11.1 an image uploaded into a library folder kept its original in the root of
+`assets/images-originals/`. This tool moves such originals to the folder of their web version.
+
+```bash
+php cli/media-originals.php --action=status              # list what is misplaced
+php cli/media-originals.php --action=repair --dry-run    # show the moves
+php cli/media-originals.php --action=repair              # move them
+```
+
+Originals with no web version (orphaned), with web versions of the same name in several folders
+(ambiguous) or whose target exists already (conflict) are only reported; nothing is overwritten.
+The trash (`images-originals-trash/`) is handled the same way. `--images=PATH` works on another
+images folder. Exit codes: 0 success, 1 a move failed, 2 invalid arguments.
+
 ## backup.php — Site Backup Runner
 
 Creates full-site ZIP backups for cron jobs and ad-hoc maintenance. The dashboard writes backup policy to `content/settings.json`; the CLI reads the same settings. If a hosting plan does not allow server cron jobs, the dashboard can also generate a secret web-cron URL for external schedulers.
