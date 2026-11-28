@@ -20,6 +20,7 @@ Feature release. Existing content and backups keep working without changes.
 4. Page history keeps the configured `MAX_BACKUPS` count until an admin selects calendar tiers
    under **Backup**. Protected versions are recorded in `backups/page-history/`; include that
    folder wherever `backups/` is copied or restored. Each page is cleaned up on its next save.
+
 ## Upgrading from 2.11.1 to 2.12.0
 
 Version 2.12.0 makes the media library faster with large libraries. No data migration.
