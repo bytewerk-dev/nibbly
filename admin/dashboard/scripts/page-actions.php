@@ -47,15 +47,15 @@
 
     // Load backups
     async function loadBackups() {
+        const page = currentPage;
         try {
-            const response = await fetch(`api.php?action=backups&page=${currentPage}`);
+            const response = await fetch(`api.php?action=backups&page=${encodeURIComponent(page)}`);
             const result = await response.json();
 
-            if (result.success) {
-                renderBackups(result.data);
-            }
+            if (!result.success) throw new Error(result.message);
+            if (page === currentPage) renderBackups(result.data);
         } catch (error) {
-            console.error('Error loading backups:', error);
+            if (page === currentPage) document.getElementById('backupList').textContent = error.message;
         }
     }
 
@@ -72,21 +72,51 @@
                 <div class="backup-info">
                     <span class="backup-date">${backup.date}</span>
                     <span class="backup-time">${backup.time}</span>
+                    ${backup.pinned ? '<strong class="backup-pin-label">' + escapeHtml(backup.label || t('history.protected')) + '</strong>' : ''}
                 </div>
-                ${renderBackupActions(backup.filename, 'previewBackup', 'restoreBackup', 'deleteBackup')}
+                ${renderBackupActions(backup.filename, 'previewBackup', 'restoreBackup', 'deleteBackup', backup)}
             </div>
         `).join('');
+        container.querySelectorAll('[data-backup-protection]').forEach((button, i) => {
+            button.onclick = () => editBackupProtection(currentPage, backups[i]);
+        });
+    }
+
+    function editBackupProtection(page, backup) {
+        const title = t(backup.pinned ? 'history.edit' : 'history.pin');
+        const update = async pin => {
+            const label = document.getElementById('backupPinLabel').value;
+            const body = new URLSearchParams({action: 'protect-page-backup', csrf_token: CSRF_TOKEN,
+                page, backup: backup.filename, pin: pin ? '1' : '0', label});
+            try {
+                const result = await (await fetch('api.php', {method: 'POST', body})).json();
+                if (!result.success) throw new Error(result.message);
+                closeModal();
+                showToast(t('toast.saved'), 'success');
+                await loadBackups();
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        };
+        showModal(title, '<label for="backupPinLabel">' + escapeHtml(t('history.label')) + '</label>' +
+            '<input type="text" id="backupPinLabel" maxlength="120">', () => update(true), {
+                html: true, confirmClass: 'btn btn-primary', confirmText: t('btn.save'), focusSelector: '#backupPinLabel',
+                altText: backup.pinned ? t('history.unpin') : '', onAlt: () => update(false)
+            });
+        document.getElementById('backupPinLabel').value = backup.label || '';
     }
 
     // Icon buttons of a backup entry (pages and posts alike): view, restore and, set apart, delete
     // in the quiet red style of the section delete button. The handlers get the backup's filename.
-    function renderBackupActions(filename, viewFn, restoreFn, deleteFn) {
+    function renderBackupActions(filename, viewFn, restoreFn, deleteFn, pageBackup = null) {
         const file = escapeHtml(filename);
         const button = (fn, cls, iconName, label) => `<button type="button" class="btn btn-sm btn-secondary ${cls}" onclick="${fn}('${file}')" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}">${icon(iconName, 14)}</button>`;
+        const protectionLabel = pageBackup ? t(pageBackup.pinned ? 'history.edit' : 'history.pin') : '';
         return `<div class="backup-actions">
             ${button(viewFn, 'backup-view-btn', 'eye', t('backups.view'))}
             ${button(restoreFn, 'backup-restore-btn', 'restore', t('backups.restore'))}
-            ${button(deleteFn, 'section-delete-btn', 'trash', t('backups.delete'))}
+            ${pageBackup ? `<button type="button" class="btn btn-sm btn-secondary" data-backup-protection aria-pressed="${pageBackup.pinned}" aria-label="${protectionLabel}" title="${protectionLabel}">${icon('bookmark', 14)}</button>` : ''}
+            ${pageBackup?.pinned ? '' : button(deleteFn, 'section-delete-btn', 'trash', t('backups.delete'))}
         </div>`;
     }
 

@@ -915,7 +915,8 @@
                     const occurrence = (seen.get(label) || 0) + 1;
                     seen.set(label, occurrence);
                     option.value = item.filename;
-                    option.textContent = label + (occurrence > 1 ? ` (${occurrence})` : '');
+                    option.textContent = label + (occurrence > 1 ? ` (${occurrence})` : '')
+                        + (item.pinned ? ' · ' + (item.label || t('page_backups.protected')) : '');
                     select.appendChild(option);
                 });
                 if (this.items.some(item => item.filename === selected)) select.value = selected;

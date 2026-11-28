@@ -14,6 +14,7 @@
     "undo": "Cofnij",
     "redo": "Ponów",
     "edit_mode_hint": "Kliknij tekst, aby edytować",
+    "page_backups.protected": "Chroniona",
     "page_backups.label": "Kopie zapasowe tej strony",
     "page_backups.apply": "Zastosuj",
     "page_backups.retry": "Wczytaj ponownie",

@@ -236,12 +236,8 @@ switch ($action) {
 
         require_once NIBBLY_ADMIN_DIR . '/../includes/json-store.php';
         // Backups of every file that moves, then rename and update page/path inside
-        $stamp = date('Y-m-d_His') . '_' . bin2hex(random_bytes(3));
-        foreach ($moves as $fromKey => $toKey) {
-            if (!copy(CONTENT_PATH . $fromKey . '.json', BACKUP_PATH . $fromKey . '_' . $stamp . '.json')) {
-                jsonResponse(false, null, 'Could not create a backup before moving');
-            }
-            cleanupOldBackups($fromKey);
+        foreach (array_keys($moves) as $fromKey) {
+            dashboardPageHistory()->snapshot(CONTENT_PATH . $fromKey . '.json');
         }
         $renamed = [];
         foreach ($moves as $fromKey => $toKey) {
@@ -541,10 +537,7 @@ switch ($action) {
 
         // Create backup if file exists
         if (file_exists($filepath)) {
-            $timestamp = date('Y-m-d_His') . '_' . bin2hex(random_bytes(3));
-            $backupPath = BACKUP_PATH . $page . '_' . $timestamp . '.json';
-            if (!copy($filepath, $backupPath)) jsonResponse(false, null, 'Could not create a backup before saving');
-            cleanupOldBackups($page);
+            dashboardPageHistory()->snapshot($filepath);
         }
 
         $contentData['lastModified'] = date('c');
@@ -596,28 +589,20 @@ switch ($action) {
             jsonResponse(false, null, 'Invalid page name');
         }
 
-        $backups = glob(BACKUP_PATH . $page . '_*.json');
-        $backupList = [];
+        $history = dashboardPageHistory();
+        jsonResponse(true, $history->plan($page, $history->mode()));
+        break;
 
-        foreach ($backups as $backup) {
-            $filename = basename($backup);
-            if (preg_match('/^' . preg_quote($page, '/') . '_(\d{4}-\d{2}-\d{2})_(\d{6})(?:_[a-f0-9]{6})?\.json$/', $filename, $matches)) {
-                $date = $matches[1];
-                $time = substr($matches[2], 0, 2) . ':' . substr($matches[2], 2, 2) . ':' . substr($matches[2], 4, 2);
-                $backupList[] = [
-                    'filename' => $filename,
-                    'date' => $date,
-                    'time' => $time,
-                    'timestamp' => filemtime($backup)
-                ];
-            }
+    case 'protect-page-backup':
+        $page = $_POST['page'] ?? '';
+        $backup = $_POST['backup'] ?? '';
+        $pin = $_POST['pin'] ?? '';
+        $label = $_POST['label'] ?? '';
+        if (!validatePageName($page) || !validateBackupName($backup) || !is_string($label) || !in_array($pin, ['0', '1'], true)) {
+            jsonResponse(false, null, 'Invalid backup protection request');
         }
-
-        usort($backupList, function($a, $b) {
-            return $b['timestamp'] - $a['timestamp'];
-        });
-
-        jsonResponse(true, $backupList);
+        dashboardPageHistory()->changeProtection($page, $backup, $pin === '1', trim($label));
+        jsonResponse(true);
         break;
 
     case 'restore':
@@ -635,7 +620,7 @@ switch ($action) {
             jsonResponse(false, null, 'Backup not found');
         }
 
-        $page = preg_replace('/_\d{4}-\d{2}-\d{2}_\d{6}(?:_[a-f0-9]{6})?\.json$/', '', $backup);
+        $page = NibblyPageHistory::owner($backup);
         $filepath = CONTENT_PATH . $page . '.json';
 
         if (isset($_POST['page']) && $_POST['page'] !== $page) {
@@ -645,11 +630,7 @@ switch ($action) {
 
         // Save current state before restoring
         if (file_exists($filepath)) {
-            $timestamp = date('Y-m-d_His') . '_' . bin2hex(random_bytes(3));
-            $newBackupPath = BACKUP_PATH . $page . '_' . $timestamp . '.json';
-            if (!copy($filepath, $newBackupPath)) {
-                jsonResponse(false, null, 'Could not create a backup before restoring');
-            }
+            dashboardPageHistory()->snapshot($filepath, false);
         }
 
         $restoredData = json_decode((string)file_get_contents($backupPath), true);
@@ -659,7 +640,7 @@ switch ($action) {
             jsonResponse(false, null, 'Error restoring');
         }
 
-        cleanupOldBackups($page);
+        dashboardPageHistory()->prune($page);
         jsonResponse(true, null, 'Backup restored successfully');
         break;
 
@@ -673,17 +654,7 @@ switch ($action) {
             jsonResponse(false, null, 'Invalid backup name');
         }
 
-        $backupPath = BACKUP_PATH . $backup;
-        if (!file_exists($backupPath)) {
-            jsonResponse(false, null, 'Backup not found');
-        }
-
-        $result = unlink($backupPath);
-
-        if (!$result) {
-            jsonResponse(false, null, 'Error deleting');
-        }
-
+        dashboardPageHistory()->delete(NibblyPageHistory::owner($backup), $backup);
         jsonResponse(true, null, 'Backup deleted');
         break;
 

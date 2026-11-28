@@ -14,6 +14,7 @@
     "undo": "Annulla",
     "redo": "Ripristina",
     "edit_mode_hint": "Clicca su un testo per modificare",
+    "page_backups.protected": "Protetta",
     "page_backups.label": "Backup di questa pagina",
     "page_backups.apply": "Applica",
     "page_backups.retry": "Riprova",

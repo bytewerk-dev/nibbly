@@ -952,8 +952,7 @@ switch ($action) {
         if ($undoPath === '' || $undoSignature === '' || !hash_equals(dashboardCopilotUndoSignature($contentPage, $backup, $undoPath), $undoSignature)) {
             jsonResponse(false, null, 'Undo signature is missing or invalid');
         }
-        $expectedPrefix = $contentPage . '_';
-        if (!str_starts_with($backup, $expectedPrefix)) {
+        if (NibblyPageHistory::owner($backup) !== $contentPage) {
             jsonResponse(false, null, 'Backup does not belong to this page');
         }
         $backupPath = BACKUP_PATH . $backup;
@@ -974,7 +973,7 @@ switch ($action) {
             if (file_put_contents($filepath, json_encode($restored, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX) === false) {
                 throw new RuntimeException('Could not update restored page metadata.');
             }
-            cleanupOldBackups($contentPage);
+            dashboardPageHistory()->prune($contentPage);
             nibblyAiAudit('copilot-undo', true, [
                 'contentPage' => $contentPage,
                 'backup' => $backup,

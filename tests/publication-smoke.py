@@ -114,7 +114,12 @@ with tempfile.TemporaryDirectory(prefix="nibbly-publication-") as tmp:
     try:
         live.start()
         recovery.start()
-        result = Client(live).login().api("create-site-backup")[1]
+        live_admin = Client(live).login()
+        old_version = "en_home_2020-02-20_120000.json"
+        write_json(live.root / "backups" / old_version, {"title": "Before the relaunch"})
+        assert live_admin.api("protect-page-backup", page="en_home", backup=old_version, pin=1, label="Relaunch")[1]["success"]
+        assert live_admin.api("set-page-history-policy", mode="tiered")[1]["success"]
+        result = live_admin.api("create-site-backup")[1]
         assert result["success"], result
         response = result["data"]
         assert any("misc/extra.dat" in w for w in response["warnings"])
@@ -144,6 +149,10 @@ with tempfile.TemporaryDirectory(prefix="nibbly-publication-") as tmp:
         for path in ["downloads/prices.csv", "assets/documents/live-only.pdf", "customer-data/order.csv", "misc/readme.txt"]:
             assert (recovery.root / path).read_bytes() == (live.root / path).read_bytes()
         assert Client(recovery).request("/customer/start.php")[2] == b"Customer module"
+        recovered = Client(recovery).login(password=live.password)
+        history = json.loads(recovered.request("/admin/api.php?action=backups&page=en_home")[2])["data"]
+        assert [(v["filename"], v["label"]) for v in history if v["pinned"]] == [(old_version, "Relaunch")]
+        assert json.loads(recovered.request("/admin/api.php?action=get-page-history-policy")[2])["data"]["mode"] == "tiered"
 
         # Older ZIPs lack recovery metadata and may carry once-excluded work files.
         legacy_name = name.replace("-manual.zip", "-daily.zip")

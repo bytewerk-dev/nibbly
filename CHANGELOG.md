@@ -11,6 +11,8 @@ Git milestones and the gaps in publication records.
 
 - The Icon Manager supports categories and library names, with count links for category, library and animation that combine with search.
 - 29 useAnimations icons render their original local Lottie timelines and stroke widths in the dashboard and on the website. The Icon Manager previews the original interaction and lets editors choose playback, direction and single-play or loop behaviour. Toggle icons follow their control’s state and respect reduced motion. The player loads when an icon first has to move, and animated icons outside a control stay decorative for keyboard and screen reader users.
+- Page history can keep calendar milestones and individually protected versions with optional labels. The Backup tab previews both retention modes. Existing sites keep their configured count by default.
+- Page edits, including AI edits, now prune only backups with the exact page and language key. Saving a parent page preserves its subpages’ history.
 
 ## [2.11.1] — 2026-11-26
 

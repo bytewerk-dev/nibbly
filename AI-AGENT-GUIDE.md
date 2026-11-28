@@ -2328,7 +2328,11 @@ Nibbly has three layers of backup, each addressing a different recovery scenario
 
 ### 1. Per-page JSON history (automatic, always on)
 
-Every save in the inline editor or admin dashboard writes the previous JSON to `backups/{lang}_{slug}_YYYY-MM-DD_HHMMSS.json` and keeps the last `MAX_BACKUPS` (default 30) versions per page. Used to roll back a single page edit without affecting the rest of the site. Visible in the dashboard's per-page history view.
+The inline editor, dashboard and AI writers save the previous page JSON under `backups/`. Each history belongs to the full content key, including its language and nested path. Existing filenames with or without a six-digit hexadecimal suffix remain readable.
+
+The default count policy keeps the newest `MAX_BACKUPS` unprotected versions per page (default 30). Admins can select calendar tiers under **Backup → Page history retention**. This keeps the latest five unprotected versions plus the newest from each of the last seven active days, four active ISO weeks, twelve active months and two active years. A version can fill several slots. Periods without changes consume no slots.
+
+**Keep this version** in the page editor protects a snapshot until explicitly released and accepts an optional label. Store and restore the protection records in `backups/page-history/` alongside the original JSON snapshots. The policy is stored in `content/settings.json` as `pageHistoryMode` (`count` or `tiered`). The preview evaluates the current files. Saving a policy leaves the files in place. A subsequent page backup adds the previous state and applies the policy to that page. No cron job is needed.
 
 ### 2. Manual full-site backup (on-demand)
 

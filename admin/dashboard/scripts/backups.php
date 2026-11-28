@@ -141,6 +141,92 @@
         });
     })();
 
+    (function () {
+        const panel = document.getElementById('pageHistoryPolicy');
+        if (!panel) return;
+        const form = document.getElementById('pageHistoryForm');
+        const mode = document.getElementById('historyMode');
+        const page = document.getElementById('historyPage');
+        const status = document.getElementById('historyStatus');
+        const list = document.getElementById('historyPreview');
+        const save = form.querySelector('button[type="submit"]');
+        let savedMode = '';
+        let request = 0;
+
+        async function api(url, options) {
+            const result = await (await fetch(url, options)).json();
+            if (!result.success) throw new Error(result.message);
+            return result.data;
+        }
+
+        async function preview() {
+            const id = ++request;
+            list.replaceChildren();
+            save.disabled = true;
+            status.textContent = t('menus.loading');
+            try {
+                const query = new URLSearchParams({action: 'get-page-history-preview', page: page.value, mode: mode.value});
+                const items = page.value ? await api('api.php?' + query) : [];
+                if (id !== request) return;
+                const kept = items.filter(item => item.keep).length;
+                status.textContent = items.length ? t('history.summary', {keep: kept, remove: items.length - kept}) : t('backups.no_backups');
+                const rows = document.createDocumentFragment();
+                for (const item of items) {
+                    const row = document.createElement('li');
+                    const decision = item.pinned ? 'history.protected' : item.keep ? 'history.keep' : 'history.remove';
+                    row.textContent = [item.filename, t(decision), item.label].filter(Boolean).join(' · ');
+                    rows.appendChild(row);
+                }
+                list.replaceChildren(rows);
+                save.disabled = mode.value === savedMode;
+            } catch (error) {
+                if (id === request) status.textContent = error.message;
+            }
+        }
+
+        panel.addEventListener('toggle', async () => {
+            const id = ++request;
+            if (!panel.open) return;
+            mode.disabled = page.disabled = save.disabled = true;
+            status.textContent = t('menus.loading');
+            list.replaceChildren();
+            try {
+                const data = await api('api.php?action=get-page-history-policy');
+                if (id !== request) return;
+                savedMode = data.mode;
+                mode.options[0].textContent = t('history.count', {count: data.limit});
+                mode.value = savedMode;
+                page.replaceChildren(...data.pages.map(key => new Option(key.replace(/^([a-z]{2})_/, '$1 / ').replaceAll('__', '/'), key)));
+                mode.disabled = false;
+                page.disabled = !data.pages.length;
+                await preview();
+            } catch (error) {
+                if (id === request) status.textContent = error.message;
+            }
+        });
+        mode.addEventListener('change', preview);
+        page.addEventListener('change', preview);
+        form.addEventListener('submit', async event => {
+            event.preventDefault();
+            if (save.disabled) return;
+            save.disabled = page.disabled = mode.disabled = true;
+            const selected = mode.value;
+            try {
+                await api('api.php', {method: 'POST', body: new URLSearchParams({
+                    action: 'set-page-history-policy', csrf_token: CSRF_TOKEN, mode: selected
+                })});
+                savedMode = selected;
+                showToast(t('toast.saved'), 'success');
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                mode.disabled = false;
+                page.disabled = !page.options.length;
+                save.disabled = mode.value === savedMode;
+            }
+        });
+    })();
+
     // ============================================================
     // SCHEDULED / AUTOMATED BACKUPS
     // ============================================================

@@ -56,7 +56,7 @@ if (in_array($action, ['ai-copilot-apply', 'ai-copilot-apply-visibility', 'ai-co
     if ($path === '') jsonResponse(false, null, 'Invalid page name');
 }
 if ($action === 'restore' && validateBackupName($_POST['backup'] ?? '')) {
-    $page = preg_replace('/_\d{4}-\d{2}-\d{2}_\d{6}(?:_[a-f0-9]{6})?\.json$/', '', $_POST['backup']);
+    $page = NibblyPageHistory::owner($_POST['backup']);
     $path = CONTENT_PATH . $page . '.json';
 }
 if ($path !== null) {

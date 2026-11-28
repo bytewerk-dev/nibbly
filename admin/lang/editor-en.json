@@ -14,6 +14,7 @@
     "undo": "Undo",
     "redo": "Redo",
     "edit_mode_hint": "Click any text to edit",
+    "page_backups.protected": "Protected",
     "page_backups.label": "Backups of this page",
     "page_backups.apply": "Apply",
     "page_backups.retry": "Retry",

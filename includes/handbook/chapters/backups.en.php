@@ -3,7 +3,7 @@
   <p>You can hardly break anything. nibbly keeps backups on two levels:</p>
 </div>
 <div class="hb-cards">
-  <div class="hb-card"><h4>Backups of a page or post</h4><p>Every time you save, nibbly keeps the previous version. The last 30 versions of each page and each post are kept.</p></div>
+  <div class="hb-card"><h4>Backups of a page or post</h4><p>Every time you save, nibbly keeps the previous version. By default, the last 30 versions are kept for each page and language, or for each post.</p></div>
   <?php if ($hb->isAdmin): ?><div class="hb-card"><h4>Website backup</h4><p>A ZIP file of the whole website: content, images and program files. Manually or automatically on a schedule.</p></div><?php endif; ?>
 </div>
 
@@ -17,7 +17,22 @@
   <p>In the dashboard you find the same backups in a page's Content Editor, with <?php echo $hb->ui('View'); ?> to compare first.<?php if ($hb->module('menus') && $hb->isAdmin): ?> Menus and footer have their own backups, see <?php echo $hb->ref('menus'); ?>.<?php endif; ?></p>
 </div>
 
+<h3>Keep a page version</h3>
+<ol class="hb-steps">
+  <li><span>Open the page in the Content Editor and select its language. Under <?php echo $hb->ui('Backups'); ?>, find the version by date and time. Use <?php echo $hb->ui('View'); ?> to check its contents.</span></li>
+  <li><span>Click the <?php echo $hb->ui('Keep this version'); ?> bookmark beside the version. Give it a label such as “Before the relaunch” if you wish, then click <?php echo $hb->ui('Save'); ?>. Protected versions are kept in addition to those retained automatically.</span></li>
+  <li><span>To change the label, open <?php echo $hb->ui('Edit protection'); ?> beside the same version. If you choose <?php echo $hb->ui('Remove protection'); ?>, the usual retention rule applies to that version at the next cleanup.</span></li>
+</ol>
+
 <?php if ($hb->isAdmin): ?>
+<h3>Page history retention</h3>
+<p>In the dashboard, open <?php echo $hb->ui('Backup'); ?> and expand <?php echo $hb->ui('Page history retention'); ?>. The policy applies across the site. Each page, subpage and language version has its own history.</p>
+<dl class="hb-fields">
+  <div><dt>Latest versions</dt><dd>Keep the most recent unprotected versions. The default is 30. The dropdown shows the number configured for your site.</dd></div>
+  <div><dt>Calendar tiers</dt><dd>Keep the five most recent unprotected versions. Also keep the newest unprotected version from each of the last seven days, four calendar weeks, twelve months and two years with edits. One version can cover a day, a week and a month. Periods without edits use no slots.</dd></div>
+</dl>
+<p>Choose a policy, then pick a page that has backups under <?php echo $hb->ui('Preview for a page'); ?>. The list shows which existing versions would be kept or removed. Click <?php echo $hb->ui('Save'); ?> to apply the policy. Cleanup takes place the next time someone saves that page, after nibbly has backed up its previous version.</p>
+
 <h3>Website backup</h3>
 <?php echo $hb->shot('backups.webp', 'Backup area with Create Backup, restore and stored backups', '<b>Backup.</b> Create and restore at the top, below the stored backups and the schedule.'); ?>
 <dl class="hb-fields">

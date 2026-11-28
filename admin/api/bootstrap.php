@@ -10,7 +10,7 @@ require_once NIBBLY_ADMIN_DIR . '/config.php';
 require_once NIBBLY_ADMIN_DIR . '/users.php';
 require_once NIBBLY_ADMIN_DIR . '/lang/i18n.php';
 require_once NIBBLY_ADMIN_DIR . '/../includes/content-loader.php';
-require_once NIBBLY_ADMIN_DIR . '/../includes/page-path.php';
+require_once NIBBLY_ADMIN_DIR . '/../includes/page-history.php';
 require_once NIBBLY_ADMIN_DIR . '/../includes/seo-helper.php';
 require_once NIBBLY_ADMIN_DIR . '/../includes/ai/ai-helper.php';
 require_once NIBBLY_ADMIN_DIR . '/../includes/ai/copilot-context.php';
@@ -285,7 +285,7 @@ function redirectHtml($title, $message, $url = 'dashboard') {
 
 // Validate page name (lang_slug format, e.g. de_home, en_example)
 function validatePageName($page) {
-    return nibblyPageIsValidContentKey((string)$page) || in_array($page, ['sidebar', 'footer']);
+    return is_string($page) && NibblyPageHistory::validPage($page);
 }
 
 function dashboardCopilotAdminUrl(string $hash = ''): string {
@@ -321,22 +321,7 @@ function dashboardCopilotCreatePageBackup(string $contentPage, bool $cleanup = t
     if (!is_file($filepath)) {
         return '';
     }
-    for ($offset = 0; $offset < 5; $offset++) {
-        $timestamp = date('Y-m-d_His', time() + $offset);
-        $backupName = $contentPage . '_' . $timestamp . '.json';
-        $backupPath = BACKUP_PATH . $backupName;
-        if (is_file($backupPath)) {
-            continue;
-        }
-        if (!copy($filepath, $backupPath)) {
-            throw new RuntimeException('Could not create backup before AI change.');
-        }
-        if ($cleanup) {
-            cleanupOldBackups($contentPage);
-        }
-        return $backupName;
-    }
-    throw new RuntimeException('Could not allocate a backup filename before AI change.');
+    return dashboardPageHistory()->snapshot($filepath, $cleanup);
 }
 
 function dashboardCopilotConfirmed(): bool {
@@ -652,8 +637,7 @@ function dashboardCopilotLoadOwnedHistory(string $id): array {
 
 // Validate backup filename
 function validateBackupName($backup) {
-    if (!preg_match('/^(.+)_\d{4}-\d{2}-\d{2}_\d{6}(?:_[a-f0-9]{6})?\.json$/', (string)$backup, $matches)) return false;
-    return validatePageName($matches[1]);
+    return is_string($backup) && NibblyPageHistory::owner($backup) !== null;
 }
 
 function dashboardReadJsonFile(string $path): array {
@@ -756,17 +740,8 @@ function dashboardStatusOverview(string $pagesPath, string $newsPath): array {
     ];
 }
 
-// Cleanup old backups (keep max MAX_BACKUPS)
-function cleanupOldBackups($pagePrefix) {
-    $backups = glob(BACKUP_PATH . $pagePrefix . '_*.json');
-    usort($backups, function($a, $b) {
-        return filemtime($b) - filemtime($a);
-    });
-
-    while (count($backups) > MAX_BACKUPS) {
-        $oldBackup = array_pop($backups);
-        unlink($oldBackup);
-    }
+function dashboardPageHistory(): NibblyPageHistory {
+    return new NibblyPageHistory(BACKUP_PATH, defined('SETTINGS_PATH') ? SETTINGS_PATH : null);
 }
 
 function validateImageFilename(string $filename): bool {

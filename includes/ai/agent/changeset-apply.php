@@ -11,6 +11,7 @@
  */
 
 require_once __DIR__ . '/changeset.php';
+require_once dirname(__DIR__, 2) . '/page-history.php';
 
 const NIBBLY_AGENT_SNAPSHOT_DAYS = 30;
 const NIBBLY_AGENT_STAGING_HOURS = 24;
@@ -109,10 +110,15 @@ function nibblyAgentBackupDir(): string {
 function nibblyAgentBackupFile(string $file): void {
     if (!is_file($file)) return;
     $dir = nibblyAgentBackupDir();
-    if (!is_dir($dir) && !@mkdir($dir, 0755, true)) return;
     $base = basename($file, '.json');
     $kind = nibblyAgentTargetKindOfFile($file);
-    $prefix = $kind === 'news' ? 'news_' . $base : ($kind === 'events' ? 'events' : $base);
+    if ($kind === 'page') {
+        $history = new NibblyPageHistory($dir, defined('SETTINGS_PATH') ? SETTINGS_PATH : null);
+        $history->snapshot($file);
+        return;
+    }
+    if (!is_dir($dir) && !@mkdir($dir, 0755, true)) return;
+    $prefix = $kind === 'news' ? 'news_' . $base : 'events';
     $stamp = date('Y-m-d_His') . '_' . bin2hex(random_bytes(3));
     @copy($file, $dir . '/' . $prefix . '_' . $stamp . '.json');
     $limit = defined('MAX_BACKUPS') ? (int)MAX_BACKUPS : 30;
@@ -370,11 +376,12 @@ function nibblyAgentChangesetApply(string $csId, string $previewHash, array $act
         nibblyAgentChangesetMutate($csId, static function (array &$cs) { $cs['status'] = 'applying'; return true; });
         $changed = nibblyAgentChangedFiles($replay['state']);
         $changes = nibblyAgentFileChanges($changed);
-        foreach ($changed as $file => $change) {
-            if ($change['exists']) nibblyAgentBackupFile($file);
-        }
         $movedMedia = [];
         try {
+            // A backup that cannot be written stops the package before anything changes.
+            foreach ($changed as $file => $change) {
+                if ($change['exists']) nibblyAgentBackupFile($file);
+            }
             // Images the package uses move into the library first; if the files cannot be written they move back.
             if ($cs['media']) $movedMedia = nibblyAgentApplyMedia($cs, $changed);
             nibblyAgentWriteTransaction($csId, 'apply', $changes, $options);
@@ -471,10 +478,10 @@ function nibblyAgentChangesetUndo(string $csId, string $token, array $actor, arr
                 $changes[] = ['file' => $file, 'remove' => true];
             }
         }
-        foreach ($changes as $change) {
-            if (is_file($change['file'])) nibblyAgentBackupFile($change['file']);
-        }
         try {
+            foreach ($changes as $change) {
+                if (is_file($change['file'])) nibblyAgentBackupFile($change['file']);
+            }
             nibblyAgentWriteTransaction($csId, 'undo', $changes, $options);
         } catch (Throwable $error) {
             nibblyAgentAudit('agent-undo', false, ['cs' => $csId, 'reason' => 'write-failed']);
@@ -578,9 +585,9 @@ function nibblyAgentChangesetPublish(string $csId, array $item, array $actor, ar
                 return ['ok' => false, 'error' => 'Unknown item.'];
         }
         $data['lastModified'] = date('c');
-        nibblyAgentBackupFile($storage['file']);
         $phase = 'publish-' . ($found + 1);
         try {
+            nibblyAgentBackupFile($storage['file']);
             nibblyAgentWriteTransaction($csId, $phase, [['file' => $storage['file'], 'data' => $data]], $options);
         } catch (Throwable $error) {
             nibblyAgentAudit('agent-publish', false, ['cs' => $csId, 'item' => $entry['kind'], 'reason' => 'write-failed']);
