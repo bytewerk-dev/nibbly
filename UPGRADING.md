@@ -3,7 +3,7 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
-## Upgrading from 2.11.1 to 2.12.0
+## Upgrading from 2.12.0 to 2.13.0
 
 Feature release. Existing content and backups keep working without changes.
 
@@ -20,6 +20,21 @@ Feature release. Existing content and backups keep working without changes.
 4. Page history keeps the configured `MAX_BACKUPS` count until an admin selects calendar tiers
    under **Backup**. Protected versions are recorded in `backups/page-history/`; include that
    folder wherever `backups/` is copied or restored. Each page is cleaned up on its next save.
+## Upgrading from 2.11.1 to 2.12.0
+
+Version 2.12.0 makes the media library faster with large libraries. No data migration.
+
+1. Deploy the complete core. Changed: `.htaccess`, `admin/api/bootstrap.php`,
+   `includes/media-sizes.php`, `js/image-manager.js`; new `tests/media-listing-smoke.py` (CI only).
+2. Sites with their own `.htaccess`: merge the new `mod_deflate` block near the top. It is wrapped
+   in `IfModule` and does nothing where the module is missing.
+3. `list-media` items gain `thumb` (public path of the smallest responsive size); `sizes` keeps its
+   meaning. Admin API answers of 32 KB and more may now arrive gzip-compressed
+   (`Content-Encoding: gzip`), which browsers and HTTP clients that send `Accept-Encoding: gzip`
+   handle themselves.
+4. Libraries that were imported or filled before responsive sizes existed: run
+   `php cli/media-sizes.php --action=status`, then `--action=generate`, and upload
+   `assets/images-sizes/`. Without them the library shows the full files as before.
 
 ## Upgrading from 2.11.0 to 2.11.1
 

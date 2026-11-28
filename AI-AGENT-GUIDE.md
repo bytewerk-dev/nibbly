@@ -1340,13 +1340,19 @@ web-version state; re-encoding raises `memory_limit` for the request when the se
 640 and 1280 px wide (`NIBBLY_MEDIA_SIZE_WIDTHS`), WebP with `media.webQuality`, only for widths
 the image exceeds. They live in `assets/images-sizes/` next to the library under the image's
 relative name plus the width (`team/portrait.webp` → `images-sizes/team/portrait-640.webp`), so the
-library never lists them; `listMediaFiles()` reports the widths that exist as `sizes`.
+library never lists them; `listMediaFiles()` reports the widths that exist as `sizes` (a plain
+existence check, `nibblyMediaSizeWidthsOnDisk()`, so big libraries list quickly) and the smallest as
+`thumb`, which the library grid and list show instead of the full file.
 `upload-media` makes them right after `nibblyMediaStoreImage()`, and
 `nibblyMediaSizesRelocate()` / `nibblyMediaSizesForget()` keep them in step with rename, move,
 trash, restore and permanent deletion (`assets/images-sizes-trash/`), the same pattern as the
 originals. Images that were in the library before get theirs from
 `php cli/media-sizes.php --action=generate` (`--dry-run`, `--folder=`, `--limit=`, `--force`);
 `--action=status` counts what is missing and `--action=prune` deletes sizes whose image is gone.
+After importing a large library, run `generate` once: the library then loads thumbnails instead
+of full images. Admin API answers of 32 KB and more (`nibblyEmitJson()`) are sent gzip-compressed
+when the browser accepts it and PHP does not compress already; the core `.htaccess` enables
+`mod_deflate` for text responses where the module exists.
 
 Rendering never writes files. `nibblyImageTag($src, $alt, $options)` is the one place that
 builds a public `<img>`: `width`/`height` from the file, `loading="lazy" decoding="async"` (or

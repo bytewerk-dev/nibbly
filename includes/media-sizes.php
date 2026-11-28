@@ -49,6 +49,19 @@ function nibblyMediaSizeName(string $relative, int $width): string {
     return ($folder !== '' ? $folder . '/' : '') . pathinfo($relative, PATHINFO_FILENAME) . '-' . $width . '.webp';
 }
 
+/** Widths whose size file exists for a library image, smallest first (no image is read; for listings). */
+function nibblyMediaSizeWidthsOnDisk(string $relative): array {
+    if (!nibblyMediaSizesEligible($relative)) return [];
+    $dir = nibblyMediaSizesPath();
+    $widths = [];
+    foreach (nibblyMediaSizeWidths() as $width) {
+        $file = $dir . nibblyMediaSizeName($relative, $width);
+        if (is_file($file) && !is_link($file)) $widths[] = $width;
+    }
+    sort($widths);
+    return $widths;
+}
+
 /** Whether a library file can have sizes at all (by extension). */
 function nibblyMediaSizesEligible(string $relative): bool {
     return in_array(strtolower(pathinfo($relative, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp'], true);
