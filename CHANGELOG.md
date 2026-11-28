@@ -9,10 +9,40 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
-- The Icon Manager supports categories and library names, with count links for category, library and animation that combine with search.
-- 29 useAnimations icons render their original local Lottie timelines and stroke widths in the dashboard and on the website. The Icon Manager previews the original interaction and lets editors choose playback, direction and single-play or loop behaviour. Toggle icons follow their control’s state and respect reduced motion. The player loads when an icon first has to move, and animated icons outside a control stay decorative for keyboard and screen reader users.
-- Page history can keep calendar milestones and individually protected versions with optional labels. The Backup tab previews both retention modes. Existing sites keep their configured count by default.
-- Page edits, including AI edits, now prune only backups with the exact page and language key. Saving a parent page preserves its subpages’ history.
+## [2.12.0] — 2026-11-28
+
+### Added
+
+- 29 useAnimations icons render their original local Lottie timelines and stroke widths in the
+  dashboard and on the website. The Icon Manager previews the original interaction and lets
+  editors choose playback, direction and single-play or loop behaviour, or combine an entrance,
+  hover, exit and click clip with their own sections of the timeline.
+- Editors can override playback per placement in the inline editor and the page editor. The
+  icon key in the content stays a string; the override is a sibling `iconPlayback` object.
+- The Icon Manager supports categories and library names, with count links for category,
+  library and animation that combine with search.
+- Page history can keep calendar milestones and individually protected versions with optional
+  labels. The Backup tab previews both retention modes. Existing sites keep their configured
+  count by default.
+- Small motion in the dashboard and the editor: icon nudges on hover and focus, a drawn check
+  mark in success messages, rotating carets and add buttons. All of it respects reduced motion.
+
+### Changed
+
+- The Lottie player (49 KB compressed) and an icon's animation data load when the icon first
+  has to move, not with the page.
+- Animated icons outside a button or link stay decorative for keyboard and screen reader users.
+  Toggle icons follow their control's `aria-pressed`, `aria-checked` or `aria-expanded` state.
+- `css/icon-motion.css` is a separate stylesheet, linked by the shared footer and the dashboard.
+- `data-nb-icon-host` lets a surrounding element trigger an icon's hover. `renderFeatureGrid()`
+  sets it on each card.
+
+### Fixed
+
+- Page edits, including AI edits, now prune only backups with the exact page and language key.
+  Saving a parent page preserves its subpages' history.
+- An AI change set stops cleanly, with nothing changed, when a page backup cannot be written.
+- The mobile sidebar button reports its open state to assistive technology.
 
 ## [2.11.1] — 2026-11-26
 
