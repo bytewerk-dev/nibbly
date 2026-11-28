@@ -50,13 +50,65 @@ function jsonResponse($success, $data = null, $message = '') {
     }
     $messageKeys = ['Forbidden' => 'api.forbidden', 'Invalid CSRF token' => 'api.csrf', 'Invalid JSON format' => 'api.invalid_json', 'Error saving' => 'api.storage', 'Error saving settings' => 'api.storage'];
     $message = isset($messageKeys[$message]) ? t($messageKeys[$message]) : $message;
-    echo json_encode([
+    nibblyEmitJson((string)json_encode([
         'revision' => isset($GLOBALS['nibblyRevisionPath']) ? nibblyJsonRevision($GLOBALS['nibblyRevisionPath']) : null,
         'success' => $success,
         'data' => $data,
         'message' => $message
-    ], JSON_UNESCAPED_UNICODE);
+    ], JSON_UNESCAPED_UNICODE));
     exit;
+}
+
+/** Whether an Accept-Encoding header allows gzip: named with q > 0, or "*" with q > 0 when gzip is not named. */
+function nibblyAcceptsGzip(string $header): bool {
+    $gzip = null;
+    $any = null;
+    foreach (explode(',', strtolower($header)) as $part) {
+        $pieces = array_map('trim', explode(';', $part));
+        $q = 1.0;
+        foreach (array_slice($pieces, 1) as $param) {
+            if (preg_match('/^q\s*=\s*([0-9.]+)$/', $param, $m)) $q = (float)$m[1];
+        }
+        if ($pieces[0] === 'gzip') $gzip = $q;
+        elseif ($pieces[0] === '*') $any = $q;
+    }
+    return $gzip !== null ? $gzip > 0 : ($any !== null && $any > 0);
+}
+
+/** Whether PHP compresses output itself already (zlib.output_compression or an output handler). */
+function nibblyPhpCompressesOutput(): bool {
+    $zlib = strtolower(trim((string)ini_get('zlib.output_compression')));
+    if ($zlib !== '' && $zlib !== '0' && $zlib !== 'off' && $zlib !== 'false') return true;
+    if (trim((string)ini_get('output_handler')) !== '') return true;
+    foreach (ob_list_handlers() as $handler) {
+        if (stripos($handler, 'gzhandler') !== false || stripos($handler, 'zlib') !== false) return true;
+    }
+    return false;
+}
+
+/**
+ * Send a JSON body. Large ones (the media list of a big library runs to megabytes) go out
+ * gzip-compressed when the browser accepts it and nothing else compresses: many hosts send
+ * PHP output uncompressed. A server compressor (mod_deflate) skips an encoded response.
+ */
+function nibblyEmitJson(string $json): void {
+    $compress = strlen($json) >= 32768
+        && function_exists('gzencode')
+        && !headers_sent()
+        && !nibblyPhpCompressesOutput()
+        && (ob_get_level() === 0 || ob_get_length() === 0)
+        && nibblyAcceptsGzip((string)($_SERVER['HTTP_ACCEPT_ENCODING'] ?? ''));
+    if ($compress) {
+        $encoded = gzencode($json, 5);
+        if ($encoded !== false) {
+            header('Content-Encoding: gzip');
+            header('Vary: Accept-Encoding');
+            header('Content-Length: ' . strlen($encoded));
+            echo $encoded;
+            return;
+        }
+    }
+    echo $json;
 }
 
 function nibblyParseEmailList($value): array {
@@ -1527,7 +1579,10 @@ function listMediaFiles(string $type, bool $trash = false): array {
             if ($original !== null) $entry['original'] = $original;
             $entry['large'] = $sizeBytes > NIBBLY_MEDIA_LARGE_BYTES && in_array($entry['extension'], ['jpg', 'jpeg', 'png', 'webp'], true);
             // Widths of the responsive sizes that exist (includes/media-sizes.php)
-            $entry['sizes'] = $trash ? [] : array_keys(nibblyMediaSizesFor($relativePath));
+            // Only whether the files exist: reading their pixel sizes for every image made big
+            // libraries slow to open. The smallest one is the thumbnail of the library grid.
+            $entry['sizes'] = $trash ? [] : nibblyMediaSizeWidthsOnDisk($relativePath);
+            if ($entry['sizes']) $entry['thumb'] = '../assets/images-sizes/' . nibblyMediaSizeName($relativePath, min($entry['sizes']));
             // Pixel size for the listing (cached, includes/media-sizes.php); SVG has none
             $dimensions = $entry['extension'] === 'svg' ? null : nibblyMediaDimensions($path);
             if ($dimensions !== null) { $entry['width'] = $dimensions['width']; $entry['height'] = $dimensions['height']; }

@@ -12,6 +12,16 @@ Git milestones and the gaps in publication records.
 - The Icon Manager supports categories and library names, with count links for category, library and animation that combine with search.
 - 29 useAnimations icons render their original local Lottie timelines and stroke widths in the dashboard and on the website. The Icon Manager previews the original interaction and lets editors choose playback, direction and single-play or loop behaviour. Toggle icons follow their control’s state and respect reduced motion. The player loads when an icon first has to move, and animated icons outside a control stay decorative for keyboard and screen reader users.
 
+## [2.12.0] — 2026-11-26
+
+### Changed
+
+- Media library opens faster with large libraries. Measured on a site with 6,500 images over a 20 Mbit connection: list ready after 0.33 s instead of 1.3 s, visible thumbnails after 0.43 s instead of 1.9 s.
+  - Admin API answers of 32 KB and more go out gzip-compressed when the browser accepts it and PHP does not compress already (the media list of 6,500 files: 2.4 MB → 250 KB). Many hosts send PHP output uncompressed.
+  - Grid and list show the smallest responsive size (640 px WebP, new `thumb` in `list-media`) instead of the full file; preview, download and copied paths keep the file. Libraries imported before responsive sizes existed get them with `php cli/media-sizes.php --action=generate`.
+  - `list-media` only checks whether size files exist instead of reading each one's pixel size (`nibblyMediaSizeWidthsOnDisk()`).
+  - The core `.htaccess` enables `mod_deflate` for HTML, CSS, JavaScript, JSON, XML and SVG where the module exists.
+
 ## [2.11.1] — 2026-11-26
 
 ### Fixed
