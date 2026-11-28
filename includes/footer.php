@@ -657,6 +657,13 @@ if (trim($_footerSummaryHtml) === '') {
     <script src="<?php echo $basePath; ?>js/landing-effects.js"></script>
     <?php endif; ?>
 
+    <?php // Icon motion: a small stylesheet and module. The Lottie player itself loads when an icon first moves. ?>
+    <?php if (is_file(__DIR__ . '/../css/icon-motion.css')): ?>
+    <link rel="stylesheet" href="<?php echo $basePath; ?>css/icon-motion.css?v=<?php echo filemtime(__DIR__ . '/../css/icon-motion.css'); ?>">
+    <?php endif; ?>
+    <?php if (is_file(__DIR__ . '/../js/useanimations.js')): ?>
+    <script type="module" src="<?php echo $basePath; ?>js/useanimations.js?v=<?php echo filemtime(__DIR__ . '/../js/useanimations.js'); ?>"></script>
+    <?php endif; ?>
     <?php if (file_exists(__DIR__ . '/../js/faq-accordion.js')): ?>
     <script src="<?php echo $basePath; ?>js/faq-accordion.js"></script>
     <?php endif; ?>
@@ -721,7 +728,7 @@ if (trim($_footerSummaryHtml) === '') {
         }
     }
     ?>
-    <link rel="stylesheet" href="<?php echo $basePath; ?>css/nibbly-admin-tokens.css">
+    <link rel="stylesheet" href="<?php echo $_v('css/nibbly-admin-tokens.css'); ?>">
     <link rel="stylesheet" href="<?php echo $_v('css/image-manager.css'); ?>">
     <link rel="stylesheet" href="<?php echo $_v('css/inline-editor.css'); ?>">
     <link rel="stylesheet" href="<?php echo $_v('css/rich-editor.css'); ?>">
@@ -793,6 +800,8 @@ if (trim($_footerSummaryHtml) === '') {
     window.NB_LANG = <?php echo json_encode(array_merge(tAll(), tEditorAll()), JSON_UNESCAPED_UNICODE); ?>;
     window.NB_MENUS = <?php echo json_encode(getMenuRegistry()['menus'] ?? [], JSON_UNESCAPED_UNICODE); ?>;
     window.NB_AVAILABLE_ICONS = <?php echo json_encode(function_exists('getAvailableIconsRendered') ? getAvailableIconsRendered() : [], JSON_UNESCAPED_UNICODE); ?>;
+    window.NB_ICON_PLAYBACK_MODES = <?php echo json_encode(function_exists('nibblyIconPlaybackModes') ? nibblyIconPlaybackModes() : []); ?>;
+    window.NB_ICON_EVENT_ACTIONS = <?php echo json_encode(function_exists('nibblyIconEventActions') ? nibblyIconEventActions() : []); ?>;
     window.NB_ADMIN_BAR_THEME = <?php echo json_encode($_abConfig); ?>;
     window.NB_SEO_HEALTH = <?php echo json_encode($_seoHealth ?? ['status' => 'yellow', 'score' => 0, 'label' => 'SEO prüfen', 'issues' => ['SEO-Daten konnten nicht berechnet werden.']], JSON_UNESCAPED_UNICODE); ?>;
     window.NB_AI_FEATURES_ENABLED = <?php echo json_encode($_aiModuleEnabled); ?>;
@@ -840,6 +849,7 @@ if (trim($_footerSummaryHtml) === '') {
     <link rel="stylesheet" href="<?php echo $_v('css/revision-client.css'); ?>">
     <script src="<?php echo $_v('js/revision-client.js'); ?>"></script>
     <script src="<?php echo $_v('js/rich-editor.js'); ?>"></script>
+    <script src="<?php echo $_v('js/icon-placement.js'); ?>"></script>
     <script src="<?php echo $_v('js/inline-editor.js'); ?>"></script>
     <?php if ($_aiCopilotAvailable && file_exists(__DIR__ . '/../js/ai-copilot.js')): ?>
     <script src="<?php echo $_v('js/ai-copilot.js'); ?>"></script>

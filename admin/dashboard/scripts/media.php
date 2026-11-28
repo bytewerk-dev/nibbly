@@ -357,7 +357,7 @@
         collectPageSettings();
 
         // Collect generic fields
-        document.querySelectorAll('[data-path]').forEach(el => {
+        document.querySelectorAll('input[data-path], select[data-path], textarea[data-path]').forEach(el => {
             const path = el.dataset.path;
             let value;
             if (el.dataset.type === 'boolean') {
@@ -368,6 +368,14 @@
                 value = el.value;
             }
             setNestedValue(currentContent, path, value);
+        });
+        document.querySelectorAll('[data-icon-playback-path]').forEach(el => {
+            const path = el.dataset.iconPlaybackPath.split('.');
+            const key = path.pop();
+            const owner = path.length ? getNestedValue(currentContent, path.join('.')) : currentContent;
+            const playback = el.placement.value;
+            if (Object.keys(playback).length) owner[key] = playback;
+            else delete owner[key];
         });
 
         // Collect sections (legacy)

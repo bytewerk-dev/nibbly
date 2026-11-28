@@ -12,6 +12,7 @@ require_once __DIR__ . '/../includes/version.php';
 require_once __DIR__ . '/lang/i18n.php';
 require_once __DIR__ . '/users.php';
 require_once __DIR__ . '/../includes/asset-helpers.php';
+require_once __DIR__ . '/../includes/content-loader.php';
 require_once __DIR__ . '/../includes/theme-defaults.php';
 require_once __DIR__ . '/../includes/ai/ai-helper.php';
 ensureUsersFile();
@@ -74,51 +75,60 @@ if ($isAdminUser && !empty($dashboardModules['iconManager'])) $validDashboardTab
 if ($isAdminUser) $validDashboardTabs[] = 'backup';
 if ($isAdminUser) $validDashboardTabs[] = 'system';
 
-// SVG icon helper — keeps inline SVG paths in one place
-function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5'): string {
-    static $paths = [
-        'hamburger' => '<path d="M3 12h18M3 6h18M3 18h18"/>',
-        'comment' => '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
-        'newsletter' => '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>',
-        'chevron-up'   => '<path d="M18 15l-6-6-6 6"/>',
+// Dashboard controls always use core artwork, including when a site customizes its icon set.
+function nbDashboardIconPaths(): array {
+    static $paths = null;
+    if ($paths !== null) return $paths;
+
+    $paths = [
+        'hamburger' => '<path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/>',
+        'chevron-up' => '<path d="M18 15l-6-6-6 6"/>',
         'chevron-down' => '<path d="M6 9l6 6 6-6"/>',
         'search' => '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
-        'collapse'  => '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/>',
-        'home'      => '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/>',
-        'edit'      => '<path d="M12 20h9M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4L16.5 3.5z"/>',
-        'eye'       => '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
-        'mail'      => '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="M22 6l-10 7L2 6"/>',
-        'calendar'  => '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
-        'image'     => '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>',
-        'icons'     => '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
-        'settings'  => '<path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="3"/>',
-        'logout'    => '<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>',
-        'trash'     => '<g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M8.451,5.968V3.484 c0-1.371,1.113-2.484,2.484-2.484h2.129c1.371,0,2.484,1.113,2.484,2.484v2.484 M2.065,5.968h19.871 M4.194,5.968l1.732,14.733 c0.156,1.334,1.277,2.299,2.626,2.299h6.898c1.348,0,2.47-0.965,2.626-2.299l1.732-14.733 M8.341,9.804l0.753,9.616 M12,9.804 v9.616 M15.66,9.804l-0.753,9.616"/></g>',
-        'back'      => '<path d="M19 12H5M12 19l-7-7 7-7"/>',
-        'undo'      => '<path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6.69 3L3 13"/>',
-        'redo'      => '<path d="M21 7v6h-6"/><path d="M3 17a9 9 0 019-9 9 9 0 016.69 3L21 13"/>',
-        'news'      => '<path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><line x1="10" y1="6" x2="18" y2="6"/><line x1="10" y1="10" x2="18" y2="10"/><line x1="10" y1="14" x2="14" y2="14"/>',
-        'download'  => '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
-        'backup'    => '<ellipse cx="9.08" cy="4.67" rx="6.78" ry="2.67"/><path d="M2.3 4.67v10.46c0 1.48 3.03 2.67 6.78 2.67c.37 0 .73-.01 1.09-.03M11.89 12.14c-.85.15-1.8.24-2.81.24C5.34 12.38 2.3 11.18 2.3 9.71M15.86 10.14V4.67M21.21 18.6c.31-.71.49-1.48.49-2.3c0-3.15-2.56-5.7-5.71-5.7s-5.71 2.55-5.71 5.7s2.56 5.7 5.71 5.7c.78 0 1.52-.16 2.19-.44M15.99 14.78v3.45M14.22 16.14l1.77-1.77 1.77 1.77"/>',
-        'upload'    => '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
-        'alert'     => '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
-        'refresh'   => '<path d="M21 12a9 9 0 11-2.64-6.36"/><path d="M21 3v6h-6"/>',
-        'users' => '<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a7 7 0 0 1 14 0v2M17 4a4 4 0 0 1 0 8M22 21v-2a7 7 0 0 0-4-6"/>',
+        'trash' => '<g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M8.451,5.968V3.484 c0-1.371,1.113-2.484,2.484-2.484h2.129c1.371,0,2.484,1.113,2.484,2.484v2.484 M2.065,5.968h19.871 M4.194,5.968l1.732,14.733 c0.156,1.334,1.277,2.299,2.626,2.299h6.898c1.348,0,2.47-0.965,2.626-2.299l1.732-14.733 M8.341,9.804l0.753,9.616 M12,9.804 v9.616 M15.66,9.804l-0.753,9.616"/></g>',
+        'undo' => '<g data-nb-motion="left"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6.69 3L3 13"/></g>',
+        'redo' => '<g data-nb-motion="right"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 019-9 9 9 0 016.69 3L21 13"/></g>',
+        'backup' => '<ellipse cx="9.08" cy="4.67" rx="6.78" ry="2.67"/><path d="M2.3 4.67v10.46c0 1.48 3.03 2.67 6.78 2.67c.37 0 .73-.01 1.09-.03M11.89 12.14c-.85.15-1.8.24-2.81.24C5.34 12.38 2.3 11.18 2.3 9.71M15.86 10.14V4.67M21.21 18.6c.31-.71.49-1.48.49-2.3c0-3.15-2.56-5.7-5.71-5.7s-5.71 2.55-5.71 5.7s2.56 5.7 5.71 5.7c.78 0 1.52-.16 2.19-.44M15.99 14.78v3.45M14.22 16.14l1.77-1.77 1.77 1.77"/>',
+        'alert' => '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
         'menu-dropdown' => '<rect x="3" y="3" width="18" height="7" rx="2"/><path d="M15 6l2 2 2-2M6 14h12M6 19h8"/>',
-        // Settings sub-navigation (one icon per section, for the slim bar)
-        'brand'     => '<path d="M12 21a9 9 0 1 1 9-9c0 1.66-1.34 2.5-3 2.5h-1.8a2 2 0 0 0-1.4 3.4A1.8 1.8 0 0 1 12 21z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="16.5" cy="10.5" r="1"/>',
-        'sliders'   => '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',
-        'modules'   => '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
-        'language'  => '<circle cx="13" cy="10" r="6"/><path d="M6.64 3.64a9 9 0 0 0 12.72 12.72"/><path d="M13 19v2M9.5 21h7"/>',
-        'lock'      => '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
-        'shield'    => '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
-        'form'      => '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>',
-        'user'      => '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/>',
-        'login'     => '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>',
-        'ai'        => '<path d="M12 2l1.6 5.2L19 9l-5.4 1.8L12 16l-1.6-5.2L5 9l5.4-1.8L12 2z"/><path d="M19 14l.8 2.7L22 17.5l-2.2.8L19 21l-.8-2.7-2.2-.8 2.2-.8L19 14z"/><path d="M5 13l.7 2.1L8 16l-2.3.9L5 19l-.7-2.1L2 16l2.3-.9L5 13z"/>',
+        'brand' => '<path d="M12 21a9 9 0 1 1 9-9c0 1.66-1.34 2.5-3 2.5h-1.8a2 2 0 0 0-1.4 3.4A1.8 1.8 0 0 1 12 21z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="16.5" cy="10.5" r="1"/>',
+        'sliders' => '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',
+        'modules' => '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+        'language' => '<circle cx="13" cy="10" r="6"/><path d="M6.64 3.64a9 9 0 0 0 12.72 12.72"/><path d="M13 19v2M9.5 21h7"/>',
+        'lock' => '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+        'shield' => '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+        'form' => '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>',
+        'login' => '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>',
+        'ai' => '<path d="M12 2l1.6 5.2L19 9l-5.4 1.8L12 16l-1.6-5.2L5 9l5.4-1.8L12 2z"/><path d="M19 14l.8 2.7L22 17.5l-2.2.8L19 21l-.8-2.7-2.2-.8 2.2-.8L19 14z"/><path d="M5 13l.7 2.1L8 16l-2.3.9L5 19l-.7-2.1L2 16l2.3-.9L5 13z"/>',
+        'check' => '<path data-nb-motion="check" d="m4 12 5 5L20 6"/>',
+        'folder' => '<path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>',
+        'eye-off' => '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>',
+        'restore' => '<path d="M3 12a9 9 0 1 0 2.64-6.36"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/>',
     ];
-    $p = $paths[$name] ?? '';
-    return "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"{$strokeWidth}\" stroke-linecap=\"round\" stroke-linejoin=\"round\" width=\"{$size}\" height=\"{$size}\">{$p}</svg>";
+    $core = getDefaultIconSet();
+    $bundled = [
+        'home' => 'home', 'edit' => 'edit-3', 'eye' => 'external-link',
+        'settings' => 'settings', 'calendar' => 'calendar', 'mail' => 'mail',
+        'handbook' => 'book-open', 'image' => 'image', 'comment' => 'message-square',
+        'bookmark' => 'bookmark', 'logout' => 'log-out', 'user' => 'user',
+        'users' => 'users', 'clock' => 'clock', 'archive' => 'archive',
+        'news' => 'file-text', 'newsletter' => 'send', 'collapse' => 'sidebar',
+        'icons' => 'grid', 'back' => 'arrow-left', 'duplicate' => 'copy',
+        'download' => 'download', 'upload' => 'upload', 'refresh' => 'refresh',
+    ];
+    foreach ($bundled as $name => $slug) {
+        $definition = $core['useanimations-' . $slug] ?? null;
+        $paths[$name] = $definition
+            ? '<g transform="scale(.75)" stroke-width="2">' . $definition['svg'] . '</g>'
+            : getEmergencyDefaultIconSet()['default']['svg'];
+    }
+    return $paths;
+}
+
+function nbIcon(string $name, int $size = 16, string $strokeWidth = '1.5', array $playback = []): string {
+    $p = nbDashboardIconPaths()[$name] ?? '';
+    $playbackAttrs = nibblyIconPlaybackAttrs($playback);
+    return "<svg aria-hidden=\"true\" focusable=\"false\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"{$strokeWidth}\" stroke-linecap=\"round\" stroke-linejoin=\"round\" width=\"{$size}\" height=\"{$size}\"{$playbackAttrs}>{$p}</svg>";
 }
 ?>
 <!DOCTYPE html>
@@ -180,7 +190,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
 <body>
     <a class="skip-link" href="#adminMain"><?php echo t('nav.skip_content'); ?></a>
     <header class="admin-topbar">
-        <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+        <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-controls="adminSidebar" aria-expanded="false" aria-label="Toggle sidebar">
             <?php echo nbIcon('hamburger', 24, '2'); ?>
         </button>
         <div class="topbar-brand">
@@ -195,7 +205,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
         </div>
         <?php if (!empty($dashboardModules['handbook'])): ?>
         <a href="handbook" class="topbar-handbook" target="_blank" rel="noopener" title="<?php echo htmlspecialchars(t('handbook.link_title')); ?>">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2zM22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg>
+            <?php echo nbIcon('handbook', 14, '1.75'); ?>
             <span><?php echo htmlspecialchars(t('handbook.link')); ?></span>
         </a>
         <?php endif; ?>
@@ -1324,7 +1334,7 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                     <h2><?php echo t('icons.title'); ?></h2>
                 </div>
                 <div class="page-list-header-actions">
-                    <button class="btn btn-secondary btn-sm" id="iconManagerRefreshBtn" onclick="loadIconManager()"><?php echo t('btn.refresh'); ?></button>
+                    <button class="btn btn-secondary btn-sm" id="iconManagerRefreshBtn" onclick="loadIconManager()"><?php echo nbIcon('refresh'); ?> <?php echo t('btn.refresh'); ?></button>
                     <button class="btn btn-secondary btn-sm" onclick="openIconifyImportModal()"><?php echo t('icons.import_icon'); ?></button>
                     <button class="btn btn-primary btn-sm" onclick="openIconManagerModal()"><?php echo t('icons.add_icon'); ?></button>
                 </div>
@@ -1344,7 +1354,13 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
                     <input type="number" id="iconManagerGlobalStrokeWidth" class="modal-input" min="0.25" max="6" step="0.25" placeholder="2" inputmode="decimal">
                 </label>
             </div>
-            <p class="icon-manager-path" id="iconManagerPath"></p>
+            <div class="nb-filter-bar" id="iconManagerFilterLinks">
+                <ul class="nb-filter-links" data-icon-filter="category" aria-label="<?php echo htmlspecialchars(t('icons.category'), ENT_QUOTES, 'UTF-8'); ?>"></ul>
+                <div class="nb-filter-bar__links">
+                    <ul class="nb-filter-links" data-icon-filter="library" aria-label="<?php echo htmlspecialchars(t('icons.library'), ENT_QUOTES, 'UTF-8'); ?>"></ul>
+                    <ul class="nb-filter-links" data-icon-filter="motion" aria-label="<?php echo htmlspecialchars(t('icons.motion'), ENT_QUOTES, 'UTF-8'); ?>"></ul>
+                </div>
+            </div>
             <div class="admin-list-footer admin-list-footer--top admin-list-footer--grid" id="iconManagerFooterTop"></div>
             <div class="icon-manager-grid" id="iconManagerGrid">
                 <!-- Icons inserted via JS -->
@@ -3223,45 +3239,84 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
             <form id="iconManagerForm">
                 <input type="hidden" id="iconManagerOldKey" value="">
                 <div class="modal-form">
-                    <label class="modal-label"><?php echo t('icons.key'); ?>
-                        <input type="text" id="iconManagerKey" class="modal-input" required>
-                    </label>
-                    <p class="form-hint"><?php echo t('icons.key_hint'); ?></p>
-                    <label class="modal-label"><?php echo t('icons.label'); ?>
-                        <input type="text" id="iconManagerLabel" class="modal-input">
-                    </label>
-                    <label class="modal-label"><?php echo t('icons.tags'); ?>
-                        <input type="text" id="iconManagerTags" class="modal-input" placeholder="media, file, feature">
-                    </label>
-                    <p class="form-hint"><?php echo t('icons.tags_hint'); ?></p>
-                    <label class="modal-label"><?php echo t('icons.viewbox'); ?>
-                        <input type="text" id="iconManagerViewBox" class="modal-input" placeholder="0 0 24 24">
-                    </label>
+                    <div class="icon-manager-field-row icon-manager-field-row--identity">
+                        <label class="modal-label"><?php echo t('icons.key'); ?>
+                            <input type="text" id="iconManagerKey" class="modal-input" aria-describedby="iconManagerKeyHint" required>
+                        </label>
+                        <p class="form-hint" id="iconManagerKeyHint"><?php echo t('icons.key_hint'); ?></p>
+                        <label class="modal-label"><?php echo t('icons.label'); ?>
+                            <input type="text" id="iconManagerLabel" class="modal-input">
+                        </label>
+                    </div>
                     <div class="icon-manager-field-row">
+                        <label class="modal-label"><?php echo t('icons.tags'); ?>
+                            <input type="text" id="iconManagerTags" class="modal-input" placeholder="media, file, feature" aria-describedby="iconManagerTagsHint">
+                        </label>
+                        <p class="form-hint" id="iconManagerTagsHint"><?php echo t('icons.tags_hint'); ?></p>
+                    </div>
+                    <div class="icon-manager-field-row icon-manager-field-row--catalog">
+                        <label class="modal-label"><?php echo t('icons.category'); ?>
+                            <input type="text" class="modal-input" id="iconManagerCategory" list="iconManagerCategories" placeholder="<?php echo t('icons.no_category'); ?>">
+                        </label>
+                        <datalist id="iconManagerCategories"></datalist>
+                        <label class="modal-label"><?php echo t('icons.library'); ?>
+                            <input type="text" class="modal-input" id="iconManagerLibrary" list="iconManagerLibraries" placeholder="<?php echo t('icons.no_library'); ?>">
+                        </label>
+                        <datalist id="iconManagerLibraries"></datalist>
+                    </div>
+                    <div class="icon-manager-field-row icon-manager-field-row--appearance">
+                        <label class="modal-label"><?php echo t('icons.viewbox'); ?>
+                            <input type="text" id="iconManagerViewBox" class="modal-input" placeholder="0 0 24 24">
+                        </label>
                         <label class="modal-label"><?php echo t('icons.style'); ?>
                             <select id="iconManagerStyle" class="modal-input">
                                 <option value="stroke"><?php echo t('icons.style_stroke'); ?></option>
                                 <option value="fill"><?php echo t('icons.style_fill'); ?></option>
                             </select>
                         </label>
+                        <label class="modal-label icon-manager-stroke-toggle">
+                            <?php echo t('icons.stroke_global_label'); ?>
+                            <span class="icon-manager-switch-control">
+                                <span class="toggle-switch">
+                                    <input type="checkbox" role="switch" id="iconManagerInheritStroke" aria-label="<?php echo htmlspecialchars(t('icons.stroke_inherit'), ENT_QUOTES, 'UTF-8'); ?>" aria-controls="iconManagerStrokeWidth" checked>
+                                    <span class="toggle-slider" aria-hidden="true"></span>
+                                </span>
+                            </span>
+                        </label>
                         <label class="modal-label"><?php echo t('icons.stroke_width'); ?>
-                            <input type="number" id="iconManagerStrokeWidth" class="modal-input" min="0.25" max="6" step="0.25" placeholder="2" inputmode="decimal">
+                            <input type="number" id="iconManagerStrokeWidth" class="modal-input" min="0.25" max="6" step="0.01" inputmode="decimal" aria-describedby="iconManagerStrokeHint" disabled>
                         </label>
+                        <p class="form-hint" id="iconManagerStrokeHint"><?php echo t('icons.stroke_width_hint'); ?></p>
                     </div>
-                    <p class="form-hint"><?php echo t('icons.stroke_width_hint'); ?></p>
-                    <div class="icon-manager-svg-field">
-                        <label class="modal-label"><?php echo t('icons.svg'); ?>
-                            <textarea id="iconManagerSvg" class="modal-input icon-manager-svg-input" required rows="8"></textarea>
+                    <div id="iconManagerPlayback" hidden>
+                        <label class="modal-label"><?php echo t('icons.playback'); ?>
+                            <select id="iconManagerTrigger" class="modal-input">
+                                <option value=""></option>
+                                <?php foreach (nibblyIconPlaybackModes() as $mode): ?>
+                                    <option value="<?php echo $mode; ?>"><?php echo t('icons.motion_' . $mode); ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </label>
-                        <div class="icon-manager-svg-tools">
-                            <button type="button" class="btn btn-secondary btn-sm" id="iconManagerCleanupBtn"><?php echo t('icons.cleanup'); ?></button>
-                            <button type="button" class="btn btn-secondary btn-sm" id="iconManagerCurrentColorBtn"><?php echo t('icons.current_color'); ?></button>
+                        <label><input type="checkbox" id="iconManagerReverse"> <?php echo t('icons.motion_reverse'); ?></label>
+                        <div class="nb-icon-events" id="iconManagerEvents" hidden></div>
+                        <a id="iconManagerSource" target="_blank" rel="noopener"><?php echo t('icons.motion_source'); ?></a>
+                    </div>
+                    <details id="iconManagerSvgDetails" open>
+                        <summary hidden><?php echo t('icons.static_svg'); ?></summary>
+                        <div class="icon-manager-svg-field">
+                            <label class="modal-label"><?php echo t('icons.svg'); ?>
+                                <textarea id="iconManagerSvg" class="modal-input icon-manager-svg-input" aria-describedby="iconManagerSvgHint" required rows="8"></textarea>
+                            </label>
+                            <div class="icon-manager-svg-tools">
+                                <button type="button" class="btn btn-secondary btn-sm" id="iconManagerCleanupBtn"><?php echo t('icons.cleanup'); ?></button>
+                                <button type="button" class="btn btn-secondary btn-sm" id="iconManagerCurrentColorBtn"><?php echo t('icons.current_color'); ?></button>
+                            </div>
+                            <small class="form-hint" id="iconManagerSvgHint"></small>
                         </div>
-                        <small class="form-hint"><?php echo htmlspecialchars(t('icons.svg_hint'), ENT_QUOTES, 'UTF-8'); ?></small>
-                    </div>
+                    </details>
                     <div class="icon-manager-preview-box">
                         <span><?php echo t('icons.preview'); ?></span>
-                        <svg id="iconManagerPreview" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+                        <button type="button" id="iconManagerPlayPreview" data-nb-preview disabled aria-label="<?php echo t('icons.preview'); ?>"><svg id="iconManagerPreview" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg></button>
                     </div>
                     <div class="info-banner info-banner--warning icon-manager-rename-warning" id="iconRenameWarning" hidden>
                         <div class="info-banner__inner">
@@ -3397,6 +3452,9 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
 
     <link rel="stylesheet" href="../css/revision-client.css?v=<?php echo filemtime(__DIR__ . '/../css/revision-client.css'); ?>">
     <script src="../js/revision-client.js?v=<?php echo filemtime(__DIR__ . '/../js/revision-client.js'); ?>"></script>
+    <link rel="stylesheet" href="../css/icon-motion.css?v=<?php echo filemtime(__DIR__ . '/../css/icon-motion.css'); ?>">
+    <script type="module" src="../js/useanimations.js?v=<?php echo filemtime(__DIR__ . '/../js/useanimations.js'); ?>"></script>
+    <script src="../js/icon-placement.js?v=<?php echo filemtime(__DIR__ . '/../js/icon-placement.js'); ?>"></script>
     <script src="../js/nb-select.js?v=<?php echo @filemtime(__DIR__ . '/../js/nb-select.js') ?: time(); ?>"></script>
     <script src="../js/image-manager.js?v=<?php echo @filemtime(__DIR__ . '/../js/image-manager.js') ?: time(); ?>"></script>
     <script src="../js/rich-editor.js?v=<?php echo @filemtime(__DIR__ . '/../js/rich-editor.js') ?: time(); ?>"></script>

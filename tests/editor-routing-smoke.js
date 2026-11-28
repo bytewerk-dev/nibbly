@@ -20,7 +20,8 @@ class Element {
         this.tag = tag;
         this.children = [];
         this.style = {};
-        this.classList = {add() {}, remove() {}};
+        this.classList = {add() {}, remove() {}, toggle() {}};
+        this.attributes = new Map();
         this.textContent = '';
         this._value = '';
     }
@@ -36,6 +37,7 @@ class Element {
     }
     cloneNode() { const copy = new Element(this.tag); copy.value = this.value; copy.textContent = this.textContent; return copy; }
     querySelectorAll() { return []; }
+    setAttribute(name, value) { this.attributes.set(name, String(value)); }
     remove() {}
 }
 
@@ -130,6 +132,7 @@ async function checkRoute(lang, slug, hashRoute, listFirst) {
     assert.equal(vm.runInContext('currentPage', context), pageKey);
     assert.equal(vm.runInContext('currentContent.page', context), pageKey);
     assert.equal(location.hash, `#page/${pageKey}`);
+    assert.equal(get('sidebarToggle').attributes.get('aria-expanded'), 'false');
 }
 
 (async () => {

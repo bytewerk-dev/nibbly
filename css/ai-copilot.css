@@ -289,6 +289,10 @@ body:not(.visual-editing) .nb-copilot-selected-field {
     }
 }
 
+@media (prefers-reduced-motion: reduce) {
+    .nb-copilot-toggle:hover, .nb-copilot-spinner { animation: none; }
+}
+
 .nb-copilot-proposals {
     display: grid;
     gap: var(--nb-space-2-5, 10px);

@@ -1275,7 +1275,7 @@ editableLink($page, $fieldKey, $defaultText = '', $defaultHref = '#', $class = '
 // Visitor: plain <a>. JSON stores {text, href}.
 
 editableIcon($page, $fieldKey, $default = '', $class = '')
-// Icon token. Stores a plain text icon key and renders SVG from the icon set.
+// Stores a plain text key. Lottie icons render their SVG here. Other tokens remain available to site-specific icon systems.
 
 contentBindAttrs($page, $fieldKey, $type = 'text')
 // Not editable itself: binds an element that repeats a field shown elsewhere
@@ -1407,6 +1407,50 @@ custom viewBox values are preserved. `getIconSvg($iconKey)` remains available
 for legacy code that needs only inner SVG markup. The dashboard Icon Manager can
 import selected icons from a whitelisted Iconify set; imports are copied into the
 site-owned iconset JSON, so visitor pages do not depend on Iconify at runtime.
+
+Icon definitions can include a single `category` and a `library` name. Bundled
+categories use stable keys with translated dashboard labels. Editors can also
+enter their own category names. Keep Iconify attribution in the original
+`source` object. The manager uses it to identify the library even after a
+rename. Animation filters follow the effective playback setting.
+
+Bundled `useanimations-*` icons use their original local Lottie JSON, artboard
+and interaction. Render them with `renderIconSvg()`. The shared footer loads
+`js/useanimations.js` as a module. A standalone template with its own footer
+can include the same module via its `$basePath`. The Icon Manager shows the
+trigger and can save a playback or direction override with the site's icon.
+The page editor and inline icon picker can override either setting per placement.
+The stored key stays a string. For a field named `icon`, a sibling `iconPlayback`
+can contain `{"mode":"once","direction":"forward"}`. Omit either property to
+inherit it and omit the object to inherit both. In custom templates pass the
+placement settings through, for example
+`renderIconSvg($item['icon'], '', $item['iconPlayback'] ?? [])`.
+`renderFeatureGrid()` and `editableIcon()` handle them automatically. For fixed
+dashboard controls, `nbIcon()` and its JavaScript counterpart `icon()` take the
+same playback options as a fourth argument.
+Use `mode: "events"` to combine an entrance, pointer entry/exit and click.
+The fixed modes are presets of those four event clips. `js/useanimations.js`
+owns both lists (`PRESETS`, `EVENT_ACTIONS`, one line of JSON each) and PHP reads
+them from there, so add or change a mode in that file only.
+The Lottie player and an icon's JSON load when the icon first has to move: on
+the first hover, focus or click, or at once for a loop, an entrance or a rest
+pose that differs from the bundled artwork. `css/icon-motion.css` and the module
+are linked by the shared footer and the dashboard.
+Animated icons outside a button or link stay decorative: render them with
+`aria-hidden="true"` and put any real action on a surrounding control. Add
+`data-nb-icon-host` to a surrounding element, as `renderFeatureGrid()` does on
+each card, to let its whole area trigger the hover. In a toggle icon's markup,
+`data-nb-start="on"` marks artwork whose opening frame is the active state.
+The initial combination plays the entrance once, loops on hover and toggles on click.
+Set defaults in the Icon Manager and override individual event rows in a placement.
+For example, `{"mode":"events","events":{"hover":{"action":"loop","from":20,"to":60},"leave":{"action":"off"}}}`
+loops over 20–60% of the original Lottie timeline. Bounds are whole percentages,
+default to 0 and 100, and can descend. A click toggle uses the two ends of its
+clip as inactive and active poses. Leaving hover restores the current state.
+For two-state controls, put `aria-pressed`, `aria-checked` or `aria-expanded`
+on the owning button and update it when the underlying state changes. The
+player picks the matching frame on initial render and subsequent updates,
+including when the user prefers reduced motion.
 
 ### Media States
 

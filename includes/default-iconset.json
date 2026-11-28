@@ -1,5 +1,7 @@
 {
     "database": {
+        "category": "system",
+        "library": "nibbly",
         "label": "Database",
         "tags": [
             "data",
@@ -8,6 +10,8 @@
         "svg": "<ellipse cx=\"12\" cy=\"5\" rx=\"9\" ry=\"3\"\/><path d=\"M21 12c0 1.66-4 3-9 3s-9-1.34-9-3\"\/><path d=\"M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5\"\/><line x1=\"4\" y1=\"4\" x2=\"20\" y2=\"20\" stroke=\"currentColor\" stroke-width=\"2.5\"\/>"
     },
     "edit": {
+        "category": "actions",
+        "library": "nibbly",
         "label": "Edit",
         "tags": [
             "write",
@@ -16,6 +20,8 @@
         "svg": "<path d=\"M12 20h9\"\/><path d=\"M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z\"\/>"
     },
     "backup": {
+        "category": "system",
+        "library": "nibbly",
         "label": "Backup",
         "tags": [
             "history",
@@ -24,6 +30,8 @@
         "svg": "<polyline points=\"1 4 1 10 7 10\"\/><path d=\"M3.51 15a9 9 0 105.64-11.36L1 10\"\/><circle cx=\"12\" cy=\"12\" r=\"1\" fill=\"currentColor\"\/><polyline points=\"12 7 12 12 15 14\"\/>"
     },
     "image": {
+        "category": "content",
+        "library": "nibbly",
         "label": "Image",
         "tags": [
             "media",
@@ -32,6 +40,8 @@
         "svg": "<rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\" ry=\"2\"\/><circle cx=\"8.5\" cy=\"8.5\" r=\"1.5\" fill=\"currentColor\"\/><polyline points=\"21 15 16 10 5 21\"\/>"
     },
     "globe": {
+        "category": "navigation",
+        "library": "nibbly",
         "label": "Globe",
         "tags": [
             "world",
@@ -40,6 +50,8 @@
         "svg": "<circle cx=\"12\" cy=\"12\" r=\"10\"\/><line x1=\"2\" y1=\"12\" x2=\"22\" y2=\"12\"\/><path d=\"M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z\"\/>"
     },
     "language": {
+        "category": "navigation",
+        "library": "nibbly",
         "label": "Language",
         "tags": [
             "language",
@@ -51,6 +63,8 @@
         "svg": "<circle cx=\"13\" cy=\"10\" r=\"6\"\/><path d=\"M6.64 3.64a9 9 0 0 0 12.72 12.72\"\/><path d=\"M13 19v2M9.5 21h7\"\/>"
     },
     "link": {
+        "category": "navigation",
+        "library": "nibbly",
         "label": "Link",
         "tags": [
             "url",
@@ -59,6 +73,8 @@
         "svg": "<path d=\"M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71\"\/><path d=\"M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71\"\/>"
     },
     "shield": {
+        "category": "system",
+        "library": "nibbly",
         "label": "Shield",
         "tags": [
             "security",
@@ -67,6 +83,8 @@
         "svg": "<path d=\"M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z\"\/><polyline points=\"9 12 11 14 15 10\"\/>"
     },
     "feather": {
+        "category": "content",
+        "library": "nibbly",
         "label": "Feather",
         "tags": [
             "lightweight",
@@ -75,6 +93,8 @@
         "svg": "<path d=\"M20.24 12.24a6 6 0 00-8.49-8.49L5 10.5V19h8.5z\"\/><line x1=\"16\" y1=\"8\" x2=\"2\" y2=\"22\"\/><line x1=\"17.5\" y1=\"15\" x2=\"9\" y2=\"15\"\/>"
     },
     "star": {
+        "category": "status",
+        "library": "nibbly",
         "label": "Star",
         "tags": [
             "favorite",
@@ -83,6 +103,8 @@
         "svg": "<polygon points=\"12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2\"\/>"
     },
     "sparkles": {
+        "category": "status",
+        "library": "nibbly",
         "label": "Sparkles",
         "tags": [
             "ai",
@@ -91,6 +113,8 @@
         "svg": "<path d=\"M12 3l1.45 4.35L18 9l-4.55 1.65L12 15l-1.45-4.35L6 9l4.55-1.65L12 3z\"\/><path d=\"M19 13l.75 2.25L22 16l-2.25.75L19 19l-.75-2.25L16 16l2.25-.75L19 13z\"\/><path d=\"M5 17l.5 1.5L7 19l-1.5.5L5 21l-.5-1.5L3 19l1.5-.5L5 17z\"\/>"
     },
     "zap": {
+        "category": "status",
+        "library": "nibbly",
         "label": "Zap",
         "tags": [
             "fast",
@@ -99,6 +123,8 @@
         "svg": "<polygon points=\"13 2 3 14 12 14 11 22 21 10 12 10 13 2\"\/>"
     },
     "terminal": {
+        "category": "system",
+        "library": "nibbly",
         "label": "Terminal",
         "tags": [
             "code",
@@ -107,6 +133,8 @@
         "svg": "<polyline points=\"4 17 10 11 4 5\"\/><line x1=\"12\" y1=\"19\" x2=\"20\" y2=\"19\"\/>"
     },
     "upload": {
+        "category": "actions",
+        "library": "nibbly",
         "label": "Upload",
         "tags": [
             "deploy",
@@ -115,6 +143,8 @@
         "svg": "<path d=\"M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4\"\/><polyline points=\"17 8 12 3 7 8\"\/><line x1=\"12\" y1=\"3\" x2=\"12\" y2=\"15\"\/>"
     },
     "server": {
+        "category": "system",
+        "library": "nibbly",
         "label": "Server",
         "tags": [
             "hosting",
@@ -123,6 +153,8 @@
         "svg": "<rect x=\"2\" y=\"2\" width=\"20\" height=\"8\" rx=\"2\" ry=\"2\"\/><rect x=\"2\" y=\"14\" width=\"20\" height=\"8\" rx=\"2\" ry=\"2\"\/><line x1=\"6\" y1=\"6\" x2=\"6.01\" y2=\"6\"\/><line x1=\"6\" y1=\"18\" x2=\"6.01\" y2=\"18\"\/>"
     },
     "folder": {
+        "category": "content",
+        "library": "nibbly",
         "label": "Folder",
         "tags": [
             "files",
@@ -131,6 +163,8 @@
         "svg": "<path d=\"M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z\"\/>"
     },
     "wand": {
+        "category": "actions",
+        "library": "nibbly",
         "label": "Wand",
         "tags": [
             "magic",
@@ -138,7 +172,478 @@
         ],
         "svg": "<path d=\"M15 4V2\"\/><path d=\"M15 16v-2\"\/><path d=\"M8 9h2\"\/><path d=\"M20 9h2\"\/><path d=\"M17.8 11.8L19 13\"\/><path d=\"M15 9h.01\"\/><path d=\"M17.8 6.2L19 5\"\/><path d=\"M11 6.2L9.7 5\"\/><path d=\"M11 11.8L9.7 13\"\/><path d=\"M2 21l9-9\"\/>"
     },
+    "useanimations-arrow-left": {
+        "category": "navigation",
+        "library": "useAnimations",
+        "label": "Arrow left",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "back",
+            "zurück",
+            "links"
+        ],
+        "svg": "<g data-nb-ua=\"arrow-left\" data-nb-trigger=\"hover-replay\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M12,19 C12,19 5,12 5,12 C5,12 12,5 12,5 M19,12 C19,12 5,12 5,12\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-arrow-right": {
+        "category": "navigation",
+        "library": "useAnimations",
+        "label": "Arrow right",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "next",
+            "weiter",
+            "rechts"
+        ],
+        "svg": "<g data-nb-ua=\"arrow-right\" data-nb-trigger=\"hover-replay\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M12,5 C12,5 19,12 19,12 C19,12 12,19 12,19 M5,12 C5,12 19,12 19,12\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-external-link": {
+        "category": "navigation",
+        "library": "useAnimations",
+        "label": "External link",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "open",
+            "link",
+            "extern"
+        ],
+        "svg": "<g data-nb-ua=\"external-link\" data-nb-trigger=\"hover-replay\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M18,13 C18,13 18,19 18,19 C18,20.105 17.105,21 16,21 C16,21 5,21 5,21 C3.895,21 3,20.105 3,19 C3,19 3,8 3,8 C3,6.895 3.895,6 5,6 C5,6 11,6 11,6\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M10,14 C10,14 21,3 21,3 M15,3 C15,3 21,3 21,3 C21,3 21,9 21,9\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-upload": {
+        "category": "actions",
+        "library": "useAnimations",
+        "label": "Upload",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "file",
+            "hochladen"
+        ],
+        "svg": "<g data-nb-ua=\"upload\" data-nb-trigger=\"click-replay\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M21,15 C21,15 21,19 21,19 C21,20.105 20.105,21 19,21 C19,21 5,21 5,21 C3.895,21 3,20.105 3,19 C3,19 3,15 3,15\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M12,3 C12,3 12,15 12,15 M17,8 C17,8 12,3 12,3 C12,3 7,8 7,8\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-download": {
+        "category": "actions",
+        "library": "useAnimations",
+        "label": "Download",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "file",
+            "herunterladen"
+        ],
+        "svg": "<g data-nb-ua=\"download\" data-nb-trigger=\"click-replay\" stroke=\"none\" fill=\"none\"><g transform=\"translate(4 4)\" stroke=\"currentColor\" stroke-linejoin=\"round\" stroke-linecap=\"round\"><path d=\"M3 17v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3\"/><polyline points=\"8 12 12 16 16 12\"/><line x1=\"12\" y1=\"2\" x2=\"12\" y2=\"16\"/></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-copy": {
+        "category": "actions",
+        "library": "useAnimations",
+        "label": "Copy",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "duplicate",
+            "kopieren"
+        ],
+        "svg": "<g data-nb-ua=\"copy\" data-nb-trigger=\"hover\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g transform=\"matrix(1,0,0,1,8.5,8.5)\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M-3.5,6.5 C-3.5,6.5 -4.5,6.5 -4.5,6.5 C-5.604,6.5 -6.5,5.604 -6.5,4.5 C-6.5,4.5 -6.5,-4.5 -6.5,-4.5 C-6.5,-5.604 -5.604,-6.5 -4.5,-6.5 C-4.5,-6.5 4.5,-6.5 4.5,-6.5 C5.604,-6.5 6.5,-5.604 6.5,-4.5 C6.5,-4.5 6.5,-3.5 6.5,-3.5\"/></g><g transform=\"matrix(1,0,0,1,15.5,15.5)\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M-4.5,-6.5 C-4.5,-6.5 4.5,-6.5 4.5,-6.5 C5.604,-6.5 6.5,-5.604 6.5,-4.5 C6.5,-4.5 6.5,4.5 6.5,4.5 C6.5,5.604 5.604,6.5 4.5,6.5 C4.5,6.5 -4.5,6.5 -4.5,6.5 C-5.604,6.5 -6.5,5.604 -6.5,4.5 C-6.5,4.5 -6.5,-4.5 -6.5,-4.5 C-6.5,-5.604 -5.604,-6.5 -4.5,-6.5z\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-refresh": {
+        "category": "actions",
+        "library": "useAnimations",
+        "label": "Refresh",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "reload",
+            "aktualisieren"
+        ],
+        "svg": "<g data-nb-ua=\"refresh\" data-nb-trigger=\"click-replay\" stroke=\"none\" fill=\"none\"><g><g transform=\"matrix(1,0,0,1,16,15.9)\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M11,-7.9 C11,-7.9 11,-1.9 11,-1.9 C11,-1.9 5,-1.9 5,-1.9 M-11,8.1 C-11,8.1 -11,2.1 -11,2.1 C-11,2.1 -5,2.1 -5,2.1 M-8.5,-2.9 C-6.8,-7.6 -1.7,-10 3,-8.4 C4.3,-8 5.4,-7.2 6.4,-6.3 C6.4,-6.3 11,-1.9 11,-1.9 M-11,2.1 C-11,2.1 -6.4,6.5 -6.4,6.5 C-2.9,10 2.8,10 6.3,6.5 C7.2,5.6 8,4.4 8.4,3.1\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-check": {
+        "category": "status",
+        "library": "useAnimations",
+        "label": "Check",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "done",
+            "success",
+            "bestätigen"
+        ],
+        "svg": "<g data-nb-ua=\"check\" data-nb-trigger=\"click-replay\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M12,2 C17.523,2 22,6.477 22,12 C22,17.523 17.523,22 12,22 C6.477,22 2,17.523 2,12 C2,6.477 6.477,2 12,2z\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M8,12.5 C8,12.5 11,15.5 11,15.5 C11,15.5 16,9.5 16,9.5\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-home": {
+        "category": "navigation",
+        "library": "useAnimations",
+        "label": "Home",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "dashboard",
+            "start",
+            "startseite"
+        ],
+        "svg": "<g data-nb-ua=\"home\" data-nb-trigger=\"hover\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g transform=\"matrix(1,0,0,1,12,12)\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M-9,-3 C-9,-3 0,-10 0,-10 C0,-10 9,-3 9,-3 C9,-3 9,8 9,8 C9,9.104 8.104,10 7,10 C7,10 -7,10 -7,10 C-8.104,10 -9,9.104 -9,8 C-9,8 -9,-3 -9,-3z\"/></g><g transform=\"matrix(1,0,0,1,12,17)\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M-3,5 C-3,5 -3,-5 -3,-5 C-3,-5 3,-5 3,-5 C3,-5 3,5 3,5\"/></g><g transform=\"matrix(1,0,0,1,12,17)\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M-3,5 C-3,5 -3,-5 -3,-5 C-3,-5 3,-5 3,-5 C3,-5 3,5 3,5\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-edit-3": {
+        "category": "actions",
+        "library": "useAnimations",
+        "label": "Edit",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "write",
+            "edit",
+            "bearbeiten",
+            "stift"
+        ],
+        "svg": "<g data-nb-ua=\"edit-3\" data-nb-trigger=\"click-replay\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M16.5,3.5 C17.328,2.672 18.672,2.672 19.5,3.5 C20.328,4.328 20.328,5.672 19.5,6.5 C19.5,6.5 7,19 7,19 C7,19 3,20 3,20 C3,20 4,16 4,16 C4,16 16.5,3.5 16.5,3.5z\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M12,20 C12,20 21,20 21,20\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-visibility": {
+        "category": "actions",
+        "library": "useAnimations",
+        "label": "Preview",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "eye",
+            "view",
+            "vorschau",
+            "auge"
+        ],
+        "svg": "<g data-nb-ua=\"visibility\" data-nb-trigger=\"click-toggle\" data-nb-start=\"on\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g transform=\"matrix(1,0,0,1,12,12)\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M-11,0 C-11,0 -7,-8 0,-8 C7,-8 11,0 11,0 C11,0 7,8 0,8 C-7,8 -11,0 -11,0z\"/></g><g transform=\"matrix(1,0,0,1,12,12)\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M0,-3 C1.657,-3 3,-1.657 3,0 C3,1.657 1.657,3 0,3 C-1.657,3 -3,1.657 -3,0 C-3,-1.657 -1.657,-3 0,-3z\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><g transform=\"matrix(1,0,0,1,13,10.75)\"><path stroke-linecap=\"butt\" stroke-linejoin=\"miter\" fill-opacity=\"0\" stroke-miterlimit=\"10\" stroke=\"rgb(255,255,255)\" d=\"M0 0\"/></g><g transform=\"matrix(1,0,0,1,12,11.75)\"><path stroke-linecap=\"round\" stroke-linejoin=\"miter\" fill-opacity=\"0\" stroke-miterlimit=\"10\" stroke=\"currentColor\" d=\"M0 0\"/></g></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-settings": {
+        "category": "system",
+        "library": "useAnimations",
+        "label": "Settings",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "gear",
+            "settings",
+            "einstellungen",
+            "zahnrad"
+        ],
+        "svg": "<g data-nb-ua=\"settings\" data-nb-trigger=\"hover\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g transform=\"matrix(1,0,0,1,12,12)\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M0,-3 C1.657,-3 3,-1.657 3,0 C3,1.657 1.657,3 0,3 C-1.657,3 -3,1.657 -3,0 C-3,-1.657 -1.657,-3 0,-3z\"/></g><g transform=\"matrix(1,0,0,1,12,12)\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M7.4,3 C7.128,3.617 7.258,4.338 7.73,4.82 C7.73,4.82 7.79,4.88 7.79,4.88 C8.571,5.66 8.572,6.927 7.792,7.708 C7.792,7.708 7.79,7.71 7.79,7.71 C7.009,8.491 5.743,8.492 4.962,7.712 C4.962,7.712 4.96,7.71 4.96,7.71 C4.96,7.71 4.9,7.65 4.9,7.65 C4.418,7.179 3.697,7.048 3.08,7.32 C2.475,7.579 2.083,8.172 2.08,8.83 C2.08,8.83 2.08,9 2.08,9 C2.08,10.104 1.184,11 0.08,11 C-1.025,11 -1.92,10.104 -1.92,9 C-1.92,9 -1.92,8.91 -1.92,8.91 C-1.936,8.232 -2.365,7.634 -3,7.4 C-3.618,7.128 -4.338,7.259 -4.82,7.73 C-4.82,7.73 -4.88,7.79 -4.88,7.79 C-5.661,8.571 -6.927,8.572 -7.709,7.792 C-7.709,7.791 -7.71,7.79 -7.71,7.79 C-8.492,7.01 -8.493,5.743 -7.712,4.962 C-7.711,4.961 -7.711,4.961 -7.71,4.96 C-7.71,4.96 -7.65,4.9 -7.65,4.9 C-7.179,4.418 -7.048,3.697 -7.32,3.08 C-7.579,2.476 -8.173,2.083 -8.83,2.08 C-8.83,2.08 -9,2.08 -9,2.08 C-10.105,2.08 -11,1.185 -11,0.08 C-11,-1.024 -10.105,-1.92 -9,-1.92 C-9,-1.92 -8.911,-1.92 -8.911,-1.92 C-8.233,-1.936 -7.634,-2.364 -7.4,-3 C-7.128,-3.617 -7.259,-4.338 -7.73,-4.82 C-7.73,-4.82 -7.79,-4.88 -7.79,-4.88 C-8.572,-5.661 -8.573,-6.927 -7.792,-7.708 C-7.792,-7.708 -7.79,-7.71 -7.79,-7.71 C-7.01,-8.492 -5.744,-8.492 -4.962,-7.711 C-4.962,-7.711 -4.96,-7.71 -4.96,-7.71 C-4.96,-7.71 -4.9,-7.65 -4.9,-7.65 C-4.418,-7.178 -3.698,-7.048 -3.08,-7.32 C-3.08,-7.32 -3,-7.32 -3,-7.32 C-2.396,-7.579 -2.003,-8.172 -2,-8.83 C-2,-8.83 -2,-9 -2,-9 C-2,-10.104 -1.105,-11 0,-11 C1.104,-11 2,-10.104 2,-9 C2,-9 2,-8.91 2,-8.91 C2.003,-8.252 2.395,-7.659 3,-7.4 C3.617,-7.127 4.337,-7.258 4.82,-7.73 C4.82,-7.73 4.879,-7.79 4.879,-7.79 C5.66,-8.571 6.926,-8.572 7.708,-7.792 C7.709,-7.791 7.71,-7.791 7.71,-7.79 C8.491,-7.009 8.492,-5.743 7.712,-4.961 C7.711,-4.961 7.711,-4.96 7.71,-4.96 C7.71,-4.96 7.65,-4.9 7.65,-4.9 C7.178,-4.418 7.047,-3.697 7.32,-3.08 C7.32,-3.08 7.32,-3 7.32,-3 C7.579,-2.396 8.171,-2.002 8.83,-2 C8.83,-2 9,-2 9,-2 C10.104,-2 11,-1.104 11,0 C11,1.104 10.104,2 9,2 C9,2 8.91,2 8.91,2 C8.252,2.003 7.659,2.396 7.4,3z\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-calendar": {
+        "category": "content",
+        "library": "useAnimations",
+        "label": "Calendar",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "event",
+            "date",
+            "kalender",
+            "termine"
+        ],
+        "svg": "<g data-nb-ua=\"calendar\" data-nb-trigger=\"hover\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g transform=\"matrix(1,0,0,1,12,13)\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M-7,-9 C-7,-9 7,-9 7,-9 C8.104,-9 9,-8.104 9,-7 C9,-7 9,7 9,7 C9,8.104 8.104,9 7,9 C7,9 -7,9 -7,9 C-8.104,9 -9,8.104 -9,7 C-9,7 -9,-7 -9,-7 C-9,-8.104 -8.104,-9 -7,-9z\"/></g><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M16,2 C16,2 16,6 16,6\"/></g><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M8,2 C8,2 8,6 8,6\"/></g><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M3,10 C3,10 21,10 21,10\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-mail": {
+        "category": "communication",
+        "library": "useAnimations",
+        "label": "Mail",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "inbox",
+            "nachrichten",
+            "posteingang"
+        ],
+        "svg": "<g data-nb-ua=\"mail\" data-nb-trigger=\"hover\" stroke=\"none\" fill=\"none\"><g><g transform=\"matrix(1,0,0,1,16,16)\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M0,-8 C0,-8 8,-8 8,-8 C9.1,-8 10,-7.1 10,-6 C10,-6 10,6 10,6 C10,7.1 9.1,8 8,8 C8,8 -8,8 -8,8 C-9.1,8 -10,7.1 -10,6 C-10,6 -10,-6 -10,-6 C-10,-7.1 -9.1,-8 -8,-8 C-8,-8 0,-8 0,-8z\"/></g><g transform=\"matrix(1,0,0,1,16,13.5)\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M10,-3.5 C10,-3.5 0,3.5 0,3.5 C0,3.5 -10,-3.5 -10,-3.5\"/></g><g transform=\"matrix(1,0,0,1,16,20.826)\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M0 0\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-book-open": {
+        "category": "content",
+        "library": "useAnimations",
+        "label": "Open book",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "guide",
+            "handbuch",
+            "buch"
+        ],
+        "svg": "<g data-nb-ua=\"book-open\" data-nb-trigger=\"hover-replay\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M22,3 C22,3 16,3 16,3 C13.791,3 12,4.791 12,7 C12,7 12,21 12,21 C12,19.343 13.343,18 15,18 C15,18 22,18 22,18 C22,18 22,3 22,3z\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M2,3 C2,3 8,3 8,3 C10.209,3 12,4.791 12,7 C12,7 12,21 12,21 C12,19.343 10.657,18 9,18 C9,18 2,18 2,18 C2,18 2,3 2,3z\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M22,3 C22,3 16,3 16,3 C13.791,3 12,4.791 12,7 C12,7 12,21 12,21 C12,19.343 13.343,18 15,18 C15,18 22,18 22,18 C22,18 22,3 22,3z\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M22,3 C22,3 16,3 16,3 C13.791,3 12,4.791 12,7 C12,7 12,21 12,21 C12,19.343 13.343,18 15,18 C15,18 22,18 22,18 C22,18 22,3 22,3z\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-image": {
+        "category": "content",
+        "library": "useAnimations",
+        "label": "Image",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "media",
+            "photo",
+            "bild",
+            "mediathek"
+        ],
+        "svg": "<g data-nb-ua=\"image\" data-nb-trigger=\"hover-replay\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M5,3 C5,3 19,3 19,3 C20.105,3 21,3.895 21,5 C21,5 21,19 21,19 C21,20.105 20.105,21 19,21 C19,21 5,21 5,21 C3.895,21 3,20.105 3,19 C3,19 3,5 3,5 C3,3.895 3.895,3 5,3z\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M21,15 C21,15 16,10 16,10 C16,10 5,21 5,21\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M8.5,7 C9.328,7 10,7.672 10,8.5 C10,9.328 9.328,10 8.5,10 C7.672,10 7,9.328 7,8.5 C7,7.672 7.672,7 8.5,7z\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-message-square": {
+        "category": "communication",
+        "library": "useAnimations",
+        "label": "Comment",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "chat",
+            "comment",
+            "kommentar"
+        ],
+        "svg": "<g data-nb-ua=\"message-square\" data-nb-trigger=\"hover-replay\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M21,15 C21,16.105 20.105,17 19,17 C19,17 7,17 7,17 C7,17 3,21 3,21 C3,21 3,5 3,5 C3,3.895 3.895,3 5,3 C5,3 19,3 19,3 C20.105,3 21,3.895 21,5 C21,5 21,15 21,15z\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-bookmark": {
+        "category": "content",
+        "library": "useAnimations",
+        "label": "Bookmark",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "pin",
+            "history",
+            "lesezeichen",
+            "markieren"
+        ],
+        "svg": "<g data-nb-ua=\"bookmark\" data-nb-trigger=\"click-toggle\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g transform=\"matrix(1,0,0,1,12,12)\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M7,9 C7,9 0,4 0,4 C0,4 -7,9 -7,9 C-7,9 -7,-7 -7,-7 C-7,-8.104 -6.104,-9 -5,-9 C-5,-9 5,-9 5,-9 C6.104,-9 7,-8.104 7,-7 C7,-7 7,9 7,9z\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-log-out": {
+        "category": "navigation",
+        "library": "useAnimations",
+        "label": "Log out",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "exit",
+            "logout",
+            "abmelden"
+        ],
+        "svg": "<g data-nb-ua=\"log-out\" data-nb-trigger=\"click-replay\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M9,21 C9,21 5,21 5,21 C3.895,21 3,20.105 3,19 C3,19 3,5 3,5 C3,3.895 3.895,3 5,3 C5,3 9,3 9,3\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M21,12 C21,12 9,12 9,12 M16,17 C16,17 21,12 21,12 C21,12 16,7 16,7\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-user": {
+        "category": "communication",
+        "library": "useAnimations",
+        "label": "User",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "account",
+            "profile",
+            "konto",
+            "benutzer"
+        ],
+        "svg": "<g data-nb-ua=\"user\" data-nb-trigger=\"hover-replay\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M20,21 C20,21 20,19 20,19 C20,16.791 18.209,15 16,15 C16,15 8,15 8,15 C5.791,15 4,16.791 4,19 C4,19 4,21 4,21\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M12,3 C14.209,3 16,4.791 16,7 C16,9.209 14.209,11 12,11 C9.791,11 8,9.209 8,7 C8,4.791 9.791,3 12,3z\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-users": {
+        "category": "communication",
+        "library": "useAnimations",
+        "label": "Users",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "people",
+            "team",
+            "personen"
+        ],
+        "svg": "<g data-nb-ua=\"users\" data-nb-trigger=\"hover-replay\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M23,21 C23,21 23,19 23,19 C22.999,17.177 21.765,15.586 20,15.13\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M16,3.13 C17.77,3.583 19.008,5.178 19.008,7.005 C19.008,8.832 17.77,10.427 16,10.88\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M17,21 C17,21 17,19 17,19 C17,16.791 15.209,15 13,15 C13,15 5,15 5,15 C2.791,15 1,16.791 1,19 C1,19 1,21 1,21\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M9,3 C11.209,3 13,4.791 13,7 C13,9.209 11.209,11 9,11 C6.791,11 5,9.209 5,7 C5,4.791 6.791,3 9,3z\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-clock": {
+        "category": "status",
+        "library": "useAnimations",
+        "label": "Clock",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "schedule",
+            "time",
+            "zeit",
+            "uhr"
+        ],
+        "svg": "<g data-nb-ua=\"clock\" data-nb-trigger=\"hover-replay\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M12,2 C17.523,2 22,6.477 22,12 C22,17.523 17.523,22 12,22 C6.477,22 2,17.523 2,12 C2,6.477 6.477,2 12,2z\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M12,12 C12,12 16,14 16,14\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M12,6 C12,6 12,12 12,12\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-archive": {
+        "category": "content",
+        "library": "useAnimations",
+        "label": "Archive",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "backup",
+            "archiv",
+            "sicherung"
+        ],
+        "svg": "<g data-nb-ua=\"archive\" data-nb-trigger=\"hover\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,9)\"><g><g transform=\"matrix(1,0,0,1,12,14.5)\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M9,-6.5 C9,-6.5 9,6.5 9,6.5 C9,6.5 -9,6.5 -9,6.5 C-9,6.5 -9,-6.5 -9,-6.5\"/></g><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M10,12 C10,12 14,12 14,12\"/></g></g><g><g transform=\"matrix(1,0,0,1,12,6.75)\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M11,-1.25 C11,-1.25 11,1.25 11,1.25 C11,1.25 -11,1.25 -11,1.25 C-11,1.25 -11,-1.25 -11,-1.25\"/></g><g transform=\"matrix(1,0,0,1,12,4.25)\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M-11,1.25 C-11,1.25 -11,-1.25 -11,-1.25 C-11,-1.25 11,-1.25 11,-1.25 C11,-1.25 11,1.25 11,1.25\"/></g></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-file-text": {
+        "category": "content",
+        "library": "useAnimations",
+        "label": "Text file",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "document",
+            "news",
+            "dokument",
+            "beitrag"
+        ],
+        "svg": "<g data-nb-ua=\"file-text\" data-nb-trigger=\"hover-replay\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M14,2 C14,2 14,8 14,8 C14,8 20,8 20,8 M14,2 C14,2 6,2 6,2 C4.895,2 4,2.895 4,4 C4,4 4,20 4,20 C4,21.105 4.895,22 6,22 C6,22 18,22 18,22 C19.105,22 20,21.105 20,20 C20,20 20,8 20,8 C20,8 14,2 14,2z\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M8,17 C8,17 16,17 16,17\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M8,13 C8,13 16,13 16,13\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M8,9 C8,9 10,9 10,9\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-send": {
+        "category": "communication",
+        "library": "useAnimations",
+        "label": "Send",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "newsletter",
+            "send",
+            "senden",
+            "versand"
+        ],
+        "svg": "<g data-nb-ua=\"send\" data-nb-trigger=\"click-replay\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M22,2 C22,2 15,22 15,22 C15,22 11,13 11,13 C11,13 2,9 2,9 C2,9 22,2 22,2z M22,2 C22,2 11,13 11,13\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-sidebar": {
+        "category": "navigation",
+        "library": "useAnimations",
+        "label": "Sidebar",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "panel",
+            "navigation",
+            "seitenleiste"
+        ],
+        "svg": "<g data-nb-ua=\"sidebar\" data-nb-trigger=\"hover-replay\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M5,3 C5,3 19,3 19,3 C20.105,3 21,3.895 21,5 C21,5 21,19 21,19 C21,20.105 20.105,21 19,21 C19,21 5,21 5,21 C3.895,21 3,20.105 3,19 C3,19 3,5 3,5 C3,3.895 3.895,3 5,3z\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M9,3 C9,3 9,21 9,21\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-grid": {
+        "category": "navigation",
+        "library": "useAnimations",
+        "label": "Grid",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "tiles",
+            "icons",
+            "raster",
+            "symbole"
+        ],
+        "svg": "<g data-nb-ua=\"grid\" data-nb-trigger=\"hover-replay\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M3,14 C3,14 10,14 10,14 C10,14 10,21 10,21 C10,21 3,21 3,21 C3,21 3,14 3,14z\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M14,14 C14,14 21,14 21,14 C21,14 21,21 21,21 C21,21 14,21 14,21 C14,21 14,14 14,14z\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M14,3 C14,3 21,3 21,3 C21,3 21,10 21,10 C21,10 14,10 14,10 C14,10 14,3 14,3z\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M3,3 C3,3 10,3 10,3 C10,3 10,10 10,10 C10,10 3,10 3,10 C3,10 3,3 3,3z\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-activity": {
+        "category": "status",
+        "library": "useAnimations",
+        "label": "Activity",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "activity",
+            "aktivität"
+        ],
+        "svg": "<g data-nb-ua=\"activity\" data-nb-trigger=\"loop\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g transform=\"matrix(1,0,0,1,12,12)\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M10.002,0 C8.257,0 6,0 6,0 C6,0 3,9 3,9 C3,9 -3,-9 -3,-9 C-3,-9 -6,0 -6,0 C-6,0 -8.257,0 -10.002,0\"/></g><g transform=\"matrix(1,0,0,1,12,12)\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M0 0\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
+    "useanimations-globe": {
+        "category": "navigation",
+        "library": "useAnimations",
+        "label": "Globe",
+        "tags": [
+            "useAnimations",
+            "animated",
+            "animiert",
+            "globe",
+            "weltkugel"
+        ],
+        "svg": "<g data-nb-ua=\"globe\" data-nb-trigger=\"hover-loop\" stroke=\"none\" fill=\"none\"><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M2,12 C2,12 22,12 22,12 M12,2 C17.523,2 22,6.477 22,12 C22,17.523 17.523,22 12,22 C6.477,22 2,17.523 2,12 C2,6.477 6.477,2 12,2z\"/></g></g><g transform=\"matrix(1,0,0,1,4,4)\"><g><path stroke-linecap=\"round\" stroke-linejoin=\"round\" fill-opacity=\"0\" stroke=\"currentColor\" d=\"M12,2 C14.501,4.738 15.923,8.292 16,12 C15.923,15.708 14.501,19.262 12,22 C9.499,19.262 8.077,15.708 8,12 C8.077,8.292 9.499,4.738 12,2z\"/></g></g></g>",
+        "viewBox": "0 0 32 32",
+        "strokeWidth": "2"
+    },
     "default": {
+        "category": "status",
+        "library": "nibbly",
         "label": "Default",
         "tags": [
             "fallback",

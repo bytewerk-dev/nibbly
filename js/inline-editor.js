@@ -270,8 +270,8 @@
         arrowDown: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></g></svg>',
         warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></g></svg>',
         eraser: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21M22 21H7M5 11l9 9"/></g></svg>',
-        undo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6.69 3L3 13"/></g></svg>',
-        redo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6.69 3L21 13"/></g></svg>',
+        undo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g data-nb-motion="left" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6.69 3L3 13"/></g></svg>',
+        redo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g data-nb-motion="right" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6.69 3L21 13"/></g></svg>',
         save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></g></svg>',
         history: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></g></svg>',
         eyeOpen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></g></svg>',
@@ -287,7 +287,7 @@
         list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></g></svg>',
         eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></g></svg>',
         replace: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></g></svg>',
-        check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></g></svg>',
+        check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path data-nb-motion="check" d="m4 12 5 5L20 6"/></svg>',
         heading: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16M18 4v16M6 12h12"/></g></svg>',
         quote: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6a4 4 0 0 1-4 4"/><path d="M20 11h-4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6a4 4 0 0 1-4 4"/></g></svg>',
         spacer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18M3 20h18"/><path d="m8 10 4-3 4 3M8 14l4 3 4-3"/></g></svg>',
@@ -1470,6 +1470,7 @@
     }
 
     function cleanupActiveEditorState() {
+        activeSectionPicker?.close();
         if (activeHtmlField && activeHtmlField.isContentEditable && !activeHtmlField.classList.contains('news-editable')) {
             finishInlineHtmlEdit(activeHtmlField, activeHtmlField._originalHtml || '', false);
         }
@@ -1618,7 +1619,18 @@
             const value = getNestedValue(pageData, fieldKey);
             if (value === null || value === undefined) return;
 
-            if (field.classList.contains('editable-field-html')) {
+            if (field.hasAttribute('data-editable-icon')) {
+                const svg = placementIconSvg(value, getNestedValue(pageData, fieldKey + 'Playback'));
+                field.dataset.icon = value;
+                if (Object.hasOwn(window.NB_AVAILABLE_ICONS || {}, value) && svg.querySelector('g[data-nb-ua][data-nb-trigger]')) {
+                    svg.setAttribute('width', '1em');
+                    svg.setAttribute('height', '1em');
+                    svg.setAttribute('aria-hidden', 'true');
+                    field.replaceChildren(svg);
+                } else {
+                    field.textContent = value;
+                }
+            } else if (field.classList.contains('editable-field-html')) {
                 field.innerHTML = value;
             } else {
                 field.textContent = value;
@@ -1683,22 +1695,6 @@
             }
         });
 
-        // Update custom editable icon values
-        document.querySelectorAll('[data-editable-icon]').forEach(iconEl => {
-            const page = iconEl.dataset.page;
-            const fieldKey = iconEl.dataset.field;
-            if (!page || !fieldKey) return;
-
-            const pageData = EditorConfig.contentData[page];
-            if (!pageData) return;
-
-            const value = getNestedValue(pageData, fieldKey);
-            if (value === null || value === undefined) return;
-
-            iconEl.textContent = value;
-            iconEl.dataset.icon = value;
-        });
-
         // Update visible SVGs for grouped custom components that use icon fields.
         document.querySelectorAll('[data-editable-group]').forEach(group => {
             const page = group.dataset.page;
@@ -1714,10 +1710,17 @@
             const pageData = EditorConfig.contentData[page];
             if (!pageData) return;
 
-            const iconId = getNestedValue(pageData, groupFieldPath(groupKey, iconField));
-            const svg = group.querySelector('.feature-icon svg, .vibecoding-icon svg, svg');
+            const path = groupFieldPath(groupKey, iconField);
+            const iconId = getNestedValue(pageData, path);
+            const artwork = Array.from(group.querySelectorAll('svg')).filter(el =>
+                el.closest('[data-editable-group]') === group && !el.closest('.editable-group-overlay, .editable-list-overlay, [data-editable-icon], .field-hide-btn'));
+            const svg = artwork.find(el => el.closest('.feature-card__icon, .feature-icon, .vibecoding-icon')) || artwork[0];
             if (svg && iconId !== null && iconId !== undefined) {
-                svg.innerHTML = getIconMarkup(iconId);
+                const next = placementIconSvg(iconId, getNestedValue(pageData, path + 'Playback'));
+                for (const name of ['class', 'id', 'style', 'width', 'height', 'aria-hidden', 'aria-label', 'aria-labelledby', 'focusable']) {
+                    if (svg.hasAttribute(name)) next.setAttribute(name, svg.getAttribute(name));
+                }
+                svg.replaceWith(next);
             }
         });
 
@@ -2205,7 +2208,11 @@
         const icons = window.NB_AVAILABLE_ICONS && typeof window.NB_AVAILABLE_ICONS === 'object'
             ? window.NB_AVAILABLE_ICONS
             : {};
-        return icons[iconId] || icons.default || '';
+        return Object.hasOwn(icons, iconId) ? icons[iconId] : (icons.default || '');
+    }
+
+    function placementIconSvg(iconId, playback) {
+        return NibblyIconPlacement.svg(iconSvgHtml(getIconMarkup(iconId)), playback, window.NB_ICON_PLAYBACK_MODES);
     }
 
     function groupFieldPath(groupKey, field) {
@@ -2239,14 +2246,15 @@
                 `).join('');
 
                 return `<div class="editor-field group-editor-field" id="${fieldId}" data-group-field-index="${index}">
-                    <label>${label}</label>
-                    <input type="hidden" id="${id}">
+                    <label for="${normalized.allowCustomKey ? id : id + '-search'}">${label}</label>
+                    <input type="${normalized.allowCustomKey ? 'text' : 'hidden'}" id="${id}">
                     <div class="group-icon-picker" data-group-icon-picker="${index}">
                         <div class="group-icon-selected">
-                            <span class="group-icon-selected-preview" id="group-editor-icon-preview-${index}"></span>
+                            <button type="button" class="group-icon-selected-preview" id="group-editor-icon-preview-${index}" data-nb-preview aria-label="${escHtml(t('icons.preview'))}" disabled></button>
                             <span class="group-icon-selected-label" id="group-editor-icon-label-${index}"></span>
                         </div>
-                        <input type="search" class="group-icon-search" data-group-icon-search="${index}" placeholder="${escHtml(t('icons.search_placeholder'))}">
+                        <div class="nb-icon-placement" hidden></div>
+                        <input type="search" id="${id}-search" class="group-icon-search" data-group-icon-search="${index}" placeholder="${escHtml(t('icons.search_placeholder'))}">
                         <div class="group-icon-grid">${iconButtons}</div>
                     </div>
                     ${hint}
@@ -2500,10 +2508,13 @@
 
     function openGroupEditor(groupEl) {
         const page = groupEl.dataset.page;
-        const groupKey = groupEl.dataset.group || '';
+        const singleIcon = groupEl.hasAttribute('data-editable-icon');
+        const groupKey = singleIcon ? groupEl.dataset.field : groupEl.dataset.group;
         if (!page || !groupKey) return;
 
-        const schema = parseGroupSchema(groupEl);
+        const schema = singleIcon
+            ? { label: t('icons.edit_icon'), fields: [{ path: groupKey, type: 'icon', label: t('icons.key'), allowCustomKey: true }] }
+            : parseGroupSchema(groupEl);
         const fields = Array.isArray(schema.fields) ? schema.fields : [];
         if (fields.length === 0) {
             showToast(t('toast.error_generic', { message: 'Editable group has no fields.' }), 'error');
@@ -2524,14 +2535,18 @@
         renderedFields.forEach((field, index) => populateGroupEditorField(field, index, page, groupKey));
         setupEditorLanguageTabs(body);
         body.querySelectorAll('[data-group-icon-picker]').forEach(picker => {
+            const index = Number(picker.dataset.groupIconPicker);
+            const input = document.getElementById(groupFieldIds(index).id);
+            input.addEventListener('input', () => updateGroupIconPicker(index, input.value));
+            picker.addEventListener('change', event => {
+                if (event.target.matches('[data-playback-field]')) updateGroupIconPicker(index, input.value);
+            });
             picker.addEventListener('click', (e) => {
                 const btn = e.target.closest('[data-group-icon-value]');
                 if (!btn) return;
                 e.preventDefault();
-                const index = parseInt(picker.dataset.groupIconPicker, 10);
-                const input = document.getElementById(groupFieldIds(index).id);
-                if (input) input.value = btn.dataset.groupIconValue || '';
-                updateGroupIconPicker(index, btn.dataset.groupIconValue || '');
+                input.value = btn.dataset.groupIconValue || '';
+                updateGroupIconPicker(index, input.value);
             });
         });
         body.querySelectorAll('[data-group-icon-search]').forEach(search => {
@@ -2609,7 +2624,10 @@
         if (normalized.type === 'checkbox') {
             input.checked = value === true;
         } else if (normalized.type === 'icon') {
-            input.value = value || 'default';
+            input.value = value ?? (normalized.allowCustomKey ? '' : 'default');
+            const playback = getNestedValue(pageData, path + 'Playback');
+            const picker = document.querySelector(`[data-group-icon-picker="${index}"]`);
+            picker.placement = new NibblyIconPlacement(picker.querySelector('.nb-icon-placement'), window.NB_ICON_PLAYBACK_MODES, t, playback);
             updateGroupIconPicker(index, input.value);
         } else {
             input.value = value ?? '';
@@ -2650,9 +2668,7 @@
 
         const preview = document.getElementById(`group-editor-icon-preview-${index}`);
         const label = document.getElementById(`group-editor-icon-label-${index}`);
-        if (preview) {
-            preview.innerHTML = iconSvgHtml(getIconMarkup(iconId));
-        }
+        picker.placement.updatePreview(preview, iconSvgHtml(getIconMarkup(iconId)));
         if (label) label.textContent = iconId || '';
     }
 
@@ -2699,6 +2715,12 @@
             const { path, value } = readGroupEditorField(field, index, groupKey);
             if (!path) return;
             setNestedValue(EditorConfig.contentData[page], path, value);
+            if (normalizeGroupField(field).type === 'icon') {
+                const playback = document.querySelector(`[data-group-icon-picker="${index}"]`).placement.value;
+                const playbackPath = path + 'Playback';
+                if (Object.keys(playback).length) setNestedValue(EditorConfig.contentData[page], playbackPath, playback);
+                else deleteNestedValue(EditorConfig.contentData[page], playbackPath);
+            }
         });
 
         EditorConfig.dirtyPages.add(page);
@@ -3040,20 +3062,16 @@
     // SECTION TYPE PICKER POPOVER
     // ============================================================
 
+    let activeSectionPicker = null;
+
     function openSectionTypePicker(anchorBtn, afterIndex, contentPage, options) {
         options = options || {};
-        // Toggle: close if already open for this anchor
-        const existing = document.querySelector('.section-type-picker');
-        if (existing) {
-            existing.remove();
-            if (existing.dataset.anchorId === anchorBtn.dataset.pickerId) {
-                anchorBtn.setAttribute('aria-expanded', 'false');
-                return;
-            }
+        if (activeSectionPicker) {
+            const sameAnchor = activeSectionPicker.anchor === anchorBtn;
+            activeSectionPicker.close();
+            if (sameAnchor) return;
         }
 
-        const pickerId = 'picker-' + Date.now();
-        anchorBtn.dataset.pickerId = pickerId;
         anchorBtn.setAttribute('aria-expanded', 'true');
 
         // Group types by category, using the BlockTypeRegistry definition order
@@ -3070,7 +3088,6 @@
         // Few types (news blocks): one flat row without category headings
         const compact = !!options.types && options.types.length <= 4;
         picker.className = 'section-type-picker' + (compact ? ' section-type-picker--compact' : '');
-        picker.dataset.anchorId = pickerId;
 
         const orderedCategories = [
             ...categoryOrder.filter(c => grouped[c]),
@@ -3114,6 +3131,7 @@
 
         // Close on outside click / Escape
         const closePicker = () => {
+            activeSectionPicker = null;
             picker.remove();
             anchorBtn.setAttribute('aria-expanded', 'false');
             document.removeEventListener('click', outsideClick, true);
@@ -3129,13 +3147,11 @@
             if (e.key === 'Escape') closePicker();
         };
         const reposition = () => positionPicker(picker, anchorBtn);
-        // Defer to avoid catching the click that opened it
-        setTimeout(() => {
-            document.addEventListener('click', outsideClick, true);
-            document.addEventListener('keydown', escHandler, true);
-            window.addEventListener('resize', reposition);
-            window.addEventListener('scroll', reposition, true);
-        }, 0);
+        activeSectionPicker = { anchor: anchorBtn, close: closePicker };
+        document.addEventListener('click', outsideClick, true);
+        document.addEventListener('keydown', escHandler, true);
+        window.addEventListener('resize', reposition);
+        window.addEventListener('scroll', reposition, true);
     }
 
     function positionPicker(picker, anchor) {
@@ -4399,7 +4415,7 @@
             formData.append('audio', file);
             formData.append('csrf_token', EditorConfig.csrfToken);
 
-            showToast(t('image.uploading'), 'success');
+            showToast(t('image.uploading'), 'info');
 
             const response = await fetch(EditorConfig.apiUrl, {
                 method: 'POST',
@@ -4618,7 +4634,11 @@
         toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
         toast.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
         toast.setAttribute('aria-atomic', 'true');
-        toast.innerHTML = `<span class="toast-message">${message}</span>`;
+        const label = document.createElement('span');
+        label.className = 'toast-message';
+        label.textContent = message;
+        toast.appendChild(label);
+        if (type === 'success') toast.insertAdjacentHTML('afterbegin', Icons.check);
         toastTimeout = setTimeout(() => toast.remove(), 3000);
 
         document.body.appendChild(toast);
@@ -4987,6 +5007,19 @@
 
             // Add hide toggle button
             addFieldHideButton(field);
+
+            if (field.hasAttribute('data-editable-icon')) {
+                field.addEventListener('click', e => {
+                    if (!EditorConfig.editMode) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const group = field.closest('[data-editable-group]');
+                    const inSchema = group && parseGroupSchema(group).fields?.some(f =>
+                        normalizeGroupField(f).type === 'icon' && groupFieldPath(group.dataset.group, f) === field.dataset.field);
+                    openGroupEditor(inSchema ? group : field);
+                });
+                return;
+            }
 
             if (field.classList.contains('editable-field-html')) {
                 field.addEventListener('click', (e) => {
@@ -6263,8 +6296,30 @@
                     const refEl = domItems[toIndex];
                     refEl.parentNode.insertBefore(movedEl, refEl);
                 }
-                // Update indices
+                // Fields, including playback overrides, must still address their own card after a move.
                 listContainer.querySelectorAll(':scope > [data-list-index]').forEach((el, i) => {
+                    const before = listKey + '.' + el.dataset.listIndex;
+                    const after = listKey + '.' + i;
+                    if (before === after) return;
+                    const rebase = path => path === before || path?.startsWith(before + '.') ? after + path.slice(before.length) : path;
+                    const nodes = [el, ...el.querySelectorAll('[data-page], [data-list-page], [data-nb-bind-page]')];
+                    for (const node of nodes) {
+                        if (node.dataset.page === page) {
+                            for (const attr of ['field', 'altField', 'group']) {
+                                if (node.dataset[attr]) node.dataset[attr] = rebase(node.dataset[attr]);
+                            }
+                            if (node.dataset.groupSchema) {
+                                const schema = parseGroupSchema(node);
+                                for (const field of schema.fields || []) {
+                                    if (field.path) field.path = rebase(field.path);
+                                    if (field.key) field.key = rebase(field.key);
+                                }
+                                node.dataset.groupSchema = JSON.stringify(schema);
+                            }
+                        }
+                        if (node.dataset.nbBindPage === page) node.dataset.nbBindField = rebase(node.dataset.nbBindField);
+                        if (node.dataset.listPage === page) node.dataset.listKey = rebase(node.dataset.listKey);
+                    }
                     el.dataset.listIndex = i;
                 });
             }
@@ -7157,7 +7212,7 @@
             formData.append('audio', file);
             formData.append('csrf_token', EditorConfig.csrfToken);
 
-            showToast(t('image.uploading'), 'success');
+            showToast(t('image.uploading'), 'info');
 
             const response = await fetch(EditorConfig.apiUrl, {
                 method: 'POST',

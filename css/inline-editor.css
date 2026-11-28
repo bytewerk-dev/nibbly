@@ -1232,6 +1232,7 @@ dialog.editor-mode-hint .editor-btn:focus-visible { outline: 2px solid var(--edi
 }
 
 .editor-field input[type="text"],
+.editor-field input[type="search"],
 .editor-field input[type="url"],
 .editor-field input[type="date"],
 .editor-field input[type="time"],
@@ -1249,6 +1250,16 @@ dialog.editor-mode-hint .editor-btn:focus-visible { outline: 2px solid var(--edi
     transition: border-color 0.15s, box-shadow 0.15s;
 }
 
+.editor-field input[type="search"] {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* Keep Safari's clear button within the text line. */
+.editor-field input[type="search"]::-webkit-search-cancel-button {
+    max-block-size: 1lh;
+}
+
 .editor-field select {
     width: auto;
     min-width: 180px;
@@ -1263,12 +1274,14 @@ dialog.editor-mode-hint .editor-btn:focus-visible { outline: 2px solid var(--edi
 }
 
 .editor-field input[type="text"]::placeholder,
+.editor-field input[type="search"]::placeholder,
 .editor-field input[type="url"]::placeholder,
 .editor-field textarea::placeholder {
     color: #8a8a8a;
 }
 
 .editor-field input[type="text"]:focus,
+.editor-field input[type="search"]:focus,
 .editor-field input[type="url"]:focus,
 .editor-field input[type="date"]:focus,
 .editor-field input[type="time"]:focus,
@@ -1780,7 +1793,6 @@ textarea.editor-html {
     font-size: 14px;
     line-height: 1.45;
     z-index: 30000;
-    animation: slideInToast 0.3s ease;
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
@@ -1803,11 +1815,20 @@ textarea.editor-html {
     }
 }
 
-/* Toast mit Undo-Button */
+@media (prefers-reduced-motion: no-preference) {
+    .editor-toast { animation: slideInToast 180ms ease-out; }
+}
+
 .editor-toast-success {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 10px;
+}
+
+.editor-toast-success > svg {
+    flex: none;
+    width: 18px;
+    height: 18px;
 }
 
 .toast-message {
@@ -1958,6 +1979,10 @@ textarea.editor-html {
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .section-type-picker,
+    .editor-modal-backdrop,
+    .editor-modal-content,
+    .floating-toolbar,
     #admin-bar .admin-bar-btn:hover,
     #admin-bar .admin-bar-btn.is-hover {
         animation: none;
@@ -2433,6 +2458,9 @@ body.edit-mode-active .editable-group-overlay:focus {
     justify-content: center;
     width: 28px;
     height: 28px;
+    padding: 0;
+    border: 0;
+    background: transparent;
     color: var(--editor-primary, #2563eb);
 }
 
@@ -2445,10 +2473,6 @@ body.edit-mode-active .editable-group-overlay:focus {
     font-size: 13px;
     font-weight: 600;
     color: #333;
-}
-
-.group-icon-search {
-    width: 100%;
 }
 
 .group-icon-grid {
@@ -2477,6 +2501,10 @@ body.edit-mode-active .editable-group-overlay:focus {
     transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
 }
 
+.group-icon-option[hidden] {
+    display: none;
+}
+
 .group-icon-option svg {
     width: 24px;
     height: 24px;
@@ -2484,9 +2512,7 @@ body.edit-mode-active .editable-group-overlay:focus {
 
 .group-icon-option span {
     max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
     font-size: 11px;
     line-height: 1.2;
 }

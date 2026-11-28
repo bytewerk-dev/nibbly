@@ -1,0 +1,53 @@
+/* Apply motion to the marked part of an inline SVG. Unmarked paths keep their
+   position, e.g. the tray under an upload arrow or the frame of an external link. */
+:is(.ce-section-insert__trigger, .section-add-btn-toggle)[aria-expanded="true"] > svg {
+    transform: rotate(45deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    :is(.ce-section-insert__trigger, .section-add-btn-toggle) > svg {
+        transition: transform var(--nb-duration-fast, 150ms) ease-out;
+    }
+
+    [data-nb-motion="left"]    { --nb-icon-pose: translateX(-2px); }
+    [data-nb-motion="right"]   { --nb-icon-pose: translateX(2px); }
+    [data-nb-motion="up"]      { --nb-icon-pose: translateY(-2px); }
+    [data-nb-motion="down"]    { --nb-icon-pose: translateY(2px); }
+    [data-nb-motion="out"]     { --nb-icon-pose: translate(1.5px, -1.5px); }
+    [data-nb-motion="copy"]    { --nb-icon-pose: translate(1.5px, 1.5px); }
+    [data-nb-motion="turn"]    { --nb-icon-pose: rotate(22deg); transform-origin: center; }
+    [data-nb-motion="check"], [data-nb-motion="draw"] { --nb-icon-feedback: nb-icon-draw; }
+    [data-nb-motion="write"]   { --nb-icon-pose: translate(1px, -1px) rotate(-8deg); transform-origin: 4px 19px; }
+    [data-nb-motion="flap"]    { --nb-icon-pose: scaleY(.48); transform-origin: 12px 6px; }
+    [data-nb-motion="door"]    { --nb-icon-pose: scaleX(.72); transform-origin: 9px 22px; }
+    [data-nb-motion="page"]    { --nb-icon-pose: scaleX(.64); transform-origin: 12px 12px; }
+    [data-nb-motion="sunrise"] { --nb-icon-pose: translate(1px, -1.3px); }
+    [data-nb-motion="speak"]   { --nb-icon-pose: scale(1.07); transform-origin: 3px 21px; }
+    [data-nb-motion="nod"]     { --nb-icon-pose: translateY(1.5px); }
+    [data-nb-motion="tile"]    { --nb-icon-pose: rotate(13deg); transform-box: fill-box; transform-origin: center; }
+
+    :where(button:enabled, a[href]):not([aria-disabled="true"]):is(:focus-visible, :active) [data-nb-motion],
+    .icon-manager-card:has(:focus-visible) .icon-manager-card__preview [data-nb-motion],
+    .nb-imgmgr-upload-btn:focus-within [data-nb-motion],
+    .nb-imgmgr-dropzone--active .nb-imgmgr-upload-btn [data-nb-motion],
+    :is(.toast.success, .editor-toast-success) [data-nb-motion="check"] {
+        animation: var(--nb-icon-feedback, nb-icon-nudge) 340ms ease-out;
+    }
+
+    @media (hover: hover) {
+        :where(button:enabled, a[href], .nb-imgmgr-upload-btn, [data-nb-icon-host]):not([aria-disabled="true"]):hover [data-nb-motion],
+        .icon-manager-card:hover .icon-manager-card__preview [data-nb-motion],
+        svg:hover:not(:where(button:disabled *, [aria-disabled="true"] *)) [data-nb-motion] {
+            animation: var(--nb-icon-feedback, nb-icon-nudge) 340ms ease-out;
+        }
+    }
+}
+
+@keyframes nb-icon-nudge {
+    45% { transform: var(--nb-icon-pose); }
+}
+
+@keyframes nb-icon-draw {
+    from { stroke-dasharray: 30; stroke-dashoffset: 30; }
+    to   { stroke-dasharray: 30; stroke-dashoffset: 0; }
+}

@@ -1,7 +1,6 @@
 <?php if (!defined('NIBBLY_DASHBOARD')) { http_response_code(404); exit; } ?>
     // Block Type Registry
     window.BlockTypeRegistry = <?php
-        require_once dirname(NIBBLY_DASHBOARD_DIR) . '/includes/content-loader.php';
         require_once dirname(NIBBLY_DASHBOARD_DIR) . '/includes/menu-helpers.php';
         echo json_encode(getBlockTypes(), JSON_UNESCAPED_UNICODE);
     ?>;
@@ -51,24 +50,17 @@
         return DASHBOARD_MODULES[key] !== false;
     }
 
-    // SVG icon paths (viewBox 0 0 24 24)
-    const ICONS = {
-        edit:      '<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>',
-        eye:       '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
-        folder:    '<path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>',
-        duplicate: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>',
-        trash:     '<g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M8.451,5.968V3.484 c0-1.371,1.113-2.484,2.484-2.484h2.129c1.371,0,2.484,1.113,2.484,2.484v2.484 M2.065,5.968h19.871 M4.194,5.968l1.732,14.733 c0.156,1.334,1.277,2.299,2.626,2.299h6.898c1.348,0,2.47-0.965,2.626-2.299l1.732-14.733 M8.341,9.804l0.753,9.616 M12,9.804 v9.616 M15.66,9.804l-0.753,9.616"/></g>',
-        'eye-off': '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>',
-        back:      '<path d="M19 12H5M12 19l-7-7 7-7"/>',
-        restore:   '<path d="M3 12a9 9 0 1 0 2.64-6.36"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/>',
-        ai:        '<path d="M12 2l1.6 5.2L19 9l-5.4 1.8L12 16l-1.6-5.2L5 9l5.4-1.8L12 2z"/><path d="M19 14l.8 2.7 2.2.8-2.2.8L19 21l-.8-2.7-2.2-.8 2.2-.8L19 14z"/>',
-        // Globe on a stand, also in the icon set as "language" (includes/default-iconset.json)
-        language:  '<circle cx="13" cy="10" r="6"/><path d="M6.64 3.64a9 9 0 0 0 12.72 12.72"/><path d="M13 19v2M9.5 21h7"/>',
-        users:     '<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a7 7 0 0 1 14 0v2M17 4a4 4 0 0 1 0 8M22 21v-2a7 7 0 0 0-4-6"/>',
-    };
+    const ICONS = <?php echo json_encode(nbDashboardIconPaths(), JSON_HEX_TAG | JSON_UNESCAPED_SLASHES); ?>;
+    const ICON_PLAYBACK_MODES = <?php echo json_encode(nibblyIconPlaybackModes()); ?>;
+    window.NB_ICON_EVENT_ACTIONS = <?php echo json_encode(nibblyIconEventActions()); ?>;
+    const PAGE_EDITOR_ICONS = <?php echo json_encode(getAvailableIconsRendered(), JSON_HEX_TAG | JSON_UNESCAPED_SLASHES); ?>;
 
-    function icon(name, size = 16, strokeWidth = '1.5') {
-        return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" width="${size}" height="${size}">${ICONS[name]}</svg>`;
+    function icon(name, size = 16, strokeWidth = '1.5', playback = {}) {
+        const mode = ICON_PLAYBACK_MODES.includes(playback.mode) ? ` data-nb-play="${playback.mode}"` : '';
+        const direction = ['forward', 'reverse'].includes(playback.direction) ? ` data-nb-reverse="${playback.direction === 'reverse'}"` : '';
+        const events = Object.entries(NibblyIconPlacement.eventAttributes(playback.events))
+            .map(([key, value]) => ` data-nb-${key}="${value}"`).join('');
+        return `<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" width="${size}" height="${size}"${mode}${direction}${events}>${ICONS[name]}</svg>`;
     }
 
     // Language choice of an editor, the same in every editor: a segmented control under the title.
@@ -158,7 +150,9 @@
         if (typeof value === 'string') {
             if (/\p{L}/u.test(value) && !/^(https?:|\/|#|mailto:|tel:)/i.test(value.trim())) out[path] = value;
         } else if (value && typeof value === 'object') {
-            Object.entries(value).forEach(([key, child]) => { if (!UNTRANSLATED_KEYS.has(key)) translatableStrings(child, path ? path + '.' + key : key, out); });
+            Object.entries(value).forEach(([key, child]) => {
+                if (!UNTRANSLATED_KEYS.has(key) && !isIconPlaybackProperty(value, key)) translatableStrings(child, path ? path + '.' + key : key, out);
+            });
         }
         return out;
     }

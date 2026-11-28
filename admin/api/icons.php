@@ -58,7 +58,7 @@ switch ($action) {
             $_POST['svg'] ?? '',
             $_POST['viewBox'] ?? '',
             $_POST['style'] ?? '',
-            $_POST['strokeWidth'] ?? ''
+            $_POST['strokeWidth'] ?? null
         );
         if (!$validIcon) {
             jsonResponse(false, null, $iconError);
@@ -69,12 +69,22 @@ switch ($action) {
             jsonResponse(false, null, 'The fallback icon key cannot be renamed.');
         }
         $rawIconSet = readSiteIconSetRaw();
-        $customIcons = normalizeIconSet($rawIconSet);
-        $availableIcons = iconManagerListData()['icons'];
-        $availableKeys = array_column($availableIcons, 'key');
+        $availableIcons = array_column(iconManagerListData()['icons'], null, 'key');
 
-        if (($oldKey === '' || $oldKey !== $newKey) && in_array($newKey, $availableKeys, true)) {
+        if (($oldKey === '' || $oldKey !== $newKey) && isset($availableIcons[$newKey])) {
             jsonResponse(false, null, 'An icon with this key already exists.');
+        }
+
+        $previousKey = $oldKey ?: $newKey;
+        $previousDefinition = is_array($rawIconSet[$previousKey] ?? null) ? $rawIconSet[$previousKey] : [];
+        $previousIcon = $availableIcons[$previousKey] ?? [];
+        foreach (['category', 'library'] as $field) {
+            $value = $_POST[$field] ?? $previousIcon[$field] ?? '';
+            if (!is_string($value)) jsonResponse(false, null, t('icons.invalid_metadata'));
+            $definition[$field] = $field === 'library' ? normalizeIconLibraryName($value) : trim($value);
+        }
+        if (!empty($previousIcon['libraryFromSource'])) {
+            $definition['library'] = $previousIcon['library'];
         }
 
         if ($oldKey !== '' && $oldKey !== $newKey) {
@@ -85,8 +95,6 @@ switch ($action) {
             }
         }
 
-        $previousKey = $oldKey ?: $newKey;
-        $previousDefinition = isset($rawIconSet[$previousKey]) && is_array($rawIconSet[$previousKey]) ? $rawIconSet[$previousKey] : [];
         $definition['createdAt'] = isset($previousDefinition['createdAt']) && is_string($previousDefinition['createdAt'])
             ? $previousDefinition['createdAt']
             : date('c');

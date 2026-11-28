@@ -5,14 +5,16 @@
     // ============================================================
 
     let iconManagerData = [];
-    let iconManagerPath = '';
     let iconManagerSortMode = 'alpha';
     let iconManagerSearchTerm = '';
+    const iconManagerFilters = { motion: null, category: null, library: null };
+    const bundledIconCategories = ['navigation', 'actions', 'content', 'communication', 'system', 'status'];
     let iconManagerHighlightedKeys = new Set();
     let iconManagerHighlightTimer = null;
     let iconManagerSettings = { strokeWidth: '', defaultStrokeWidth: '2' };
     // Set once the editor picks a style by hand, so SVG edits stop overriding the choice.
     let iconManagerStyleTouched = false;
+    let iconManagerCustomStrokeWidth = '';
     const ICONIFY_IMPORT_SETS = {
         lucide:   { label: 'Lucide',         license: 'ISC', licenseUrl: 'https://github.com/lucide-icons/lucide/blob/main/LICENSE' },
         tabler:   { label: 'Tabler Icons',   license: 'MIT', licenseUrl: 'https://github.com/tabler/tabler-icons/blob/master/LICENSE' },
@@ -48,7 +50,8 @@
             'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset',
             'fill-rule', 'clip-rule', 'opacity', 'fill-opacity', 'stroke-opacity',
             'transform', 'id', 'clip-path', 'mask', 'offset', 'stop-color', 'stop-opacity',
-            'gradientUnits', 'gradientTransform'
+            'gradientUnits', 'gradientTransform', 'data-nb-motion', 'data-nb-ua', 'data-nb-trigger', 'data-nb-play', 'data-nb-reverse', 'data-nb-start',
+            ...Object.keys(window.NB_ICON_EVENT_ACTIONS).map(event => 'data-nb-' + event)
         ]);
         let cleaned = '';
         attrs.replace(/\s+([a-zA-Z_:][-a-zA-Z0-9_:.]*)(?:\s*=\s*("[^"]*"|'[^']*'|[^\s>\/]+))?/g, function(match, rawName, rawValue) {
@@ -154,8 +157,6 @@
         try {
             const result = await fetchJsonWithTimeout('api.php?action=list-icons&csrf_token=' + encodeURIComponent(CSRF_TOKEN) + '&_=' + Date.now());
             if (result.success) {
-                iconManagerData = result.data.icons || [];
-                iconManagerPath = result.data.path || 'content/settings/iconset.json';
                 renderIconManager(result.data);
             } else {
                 showToast(result.message, 'error');
@@ -164,6 +165,88 @@
             showToast(t('icons.load_error', {message: error.message}), 'error');
         } finally {
             if (button) button.disabled = false;
+        }
+    }
+
+    function iconCategoryLabel(category) {
+        return bundledIconCategories.includes(category) ? t('icons.category_' + category) : category;
+    }
+
+    function iconMotionType(svg) {
+        if (!svg.includes('data-nb-')) return 'static';
+        const doc = new DOMParser().parseFromString('<svg>' + svg + '</svg>', 'image/svg+xml');
+        if (doc.querySelector('[data-nb-motion]')) return 'animated';
+        const animated = Array.from(doc.querySelectorAll('g[data-nb-ua][data-nb-trigger]')).some(group => {
+            const mode = group.getAttribute('data-nb-play') || group.getAttribute('data-nb-trigger');
+            if (mode === 'events') {
+                const clips = IconEventFields.clipsFrom(group);
+                return Object.entries(window.NB_ICON_EVENT_ACTIONS).some(([key, actions]) => (clips[key]?.action || actions[0]) !== 'off');
+            }
+            return mode !== 'static' && ICON_PLAYBACK_MODES.includes(mode);
+        });
+        return animated ? 'animated' : 'static';
+    }
+
+    function matchesIconFilters(item, except) {
+        return Object.entries(iconManagerFilters).every(([field, value]) =>
+            field === except || value === null || item[field] === value);
+    }
+
+    function buildIconManagerFilters() {
+        for (const list of document.querySelectorAll('#iconManagerFilterLinks [data-icon-filter]')) {
+            const field = list.dataset.iconFilter;
+            const values = field === 'motion' ? ['animated', 'static'] : [...new Set(iconManagerData.map(item => item[field]))];
+            const options = values.map(value => {
+                let label = value;
+                if (field === 'motion') label = t('icons.' + value);
+                if (field === 'category') label = value ? iconCategoryLabel(value) : t('icons.no_category');
+                if (field === 'library' && !value) label = t('icons.no_library');
+                return { value, label };
+            });
+            if (field !== 'motion') options.sort((a, b) => a.label.localeCompare(b.label));
+            if (field === 'category') options.unshift({ value: null, label: t('filter.all') });
+
+            list.replaceChildren(...options.map(({ value, label }) => {
+                const entry = document.createElement('li');
+                const button = document.createElement('button');
+                button.type = 'button';
+                if (value !== null) button.dataset.filterValue = value;
+                const count = document.createElement('span');
+                count.className = 'nb-filter-links__count';
+                button.append(label + ' ', count);
+                button.addEventListener('click', () => {
+                    if (value === null) {
+                        for (const key of Object.keys(iconManagerFilters)) iconManagerFilters[key] = null;
+                    } else {
+                        iconManagerFilters[field] = iconManagerFilters[field] === value ? null : value;
+                    }
+                    dashboardListPages.icons = 1;
+                    renderIconManager();
+                });
+                entry.appendChild(button);
+                return entry;
+            }));
+        }
+    }
+
+    function updateIconManagerFilters(searchResults) {
+        const allSelected = Object.values(iconManagerFilters).every(value => value === null);
+        for (const list of document.querySelectorAll('#iconManagerFilterLinks [data-icon-filter]')) {
+            const field = list.dataset.iconFilter;
+            const counts = new Map();
+            for (const item of searchResults) {
+                if (!matchesIconFilters(item, field)) continue;
+                counts.set(item[field], (counts.get(item[field]) || 0) + 1);
+            }
+            for (const button of list.querySelectorAll('button')) {
+                const value = button.dataset.filterValue;
+                const isAll = value === undefined;
+                const active = isAll ? allSelected : iconManagerFilters[field] === value;
+                const count = isAll ? searchResults.length : (counts.get(value) || 0);
+                button.setAttribute('aria-pressed', String(active));
+                button.disabled = !isAll && !active && count === 0;
+                button.lastElementChild.textContent = '(' + count + ')';
+            }
         }
     }
 
@@ -176,12 +259,16 @@
                     iconItem.key || '',
                     iconItem.label || '',
                     (iconItem.tags || []).join(' '),
-                    iconItem.source || ''
+                    iconItem.source || '',
+                    iconCategoryLabel(iconItem.category),
+                    iconItem.library
                 ].join(' ').toLowerCase();
                 return haystack.includes(term);
             });
         }
 
+        updateIconManagerFilters(icons);
+        icons = icons.filter(item => matchesIconFilters(item));
         icons.sort(function(a, b) {
             if (iconManagerSortMode === 'newest' || iconManagerSortMode === 'oldest') {
                 const aTime = Date.parse(a.createdAt || a.updatedAt || '') || 0;
@@ -210,7 +297,20 @@
             input.placeholder = iconManagerSettings.defaultStrokeWidth || '2';
         }
         const perIcon = document.getElementById('iconManagerStrokeWidth');
-        if (perIcon) perIcon.placeholder = iconManagerGlobalStrokeWidth();
+        if (perIcon?.disabled) perIcon.value = iconManagerGlobalStrokeWidth();
+    }
+
+    function syncIconStrokeMode() {
+        const input = document.getElementById('iconManagerStrokeWidth');
+        const inherit = document.getElementById('iconManagerInheritStroke').checked;
+        input.disabled = inherit;
+        input.required = !inherit;
+        if (inherit) {
+            input.value = iconManagerGlobalStrokeWidth();
+        } else {
+            const svg = document.getElementById('iconManagerSvg').value;
+            input.value = iconManagerCustomStrokeWidth || extractUniformStrokeWidthClient(svg).strokeWidth || iconManagerGlobalStrokeWidth();
+        }
     }
 
     function iconSvgAttributes(iconItem, strokeWidth) {
@@ -276,18 +376,18 @@
     function renderIconManager(data = null) {
         const grid = document.getElementById('iconManagerGrid');
         const empty = document.getElementById('iconManagerEmpty');
-        const path = document.getElementById('iconManagerPath');
         if (!grid) return;
 
         if (data) {
-            iconManagerData = data.icons || [];
-            iconManagerPath = data.path || iconManagerPath;
+            iconManagerData = (data.icons || []).map(item => ({ ...item, motion: iconMotionType(item.svg) }));
+            for (const field of Object.keys(iconManagerFilters)) {
+                if (!iconManagerData.some(item => item[field] === iconManagerFilters[field])) iconManagerFilters[field] = null;
+            }
+            buildIconManagerFilters();
             applyIconManagerSettings(data.settings);
         }
 
         grid.innerHTML = '';
-        // The site-relative path only: a server path says nothing an editor needs and reveals the install location
-        if (path) path.textContent = t('icons.path', {path: (iconManagerPath || 'content/settings/iconset.json').replace(/^.*?(?=content\/)/, '')});
 
         const icons = getFilteredIconManagerIcons();
         if (!icons.length) {
@@ -324,6 +424,21 @@
                     <button type="button" class="icon-manager-action-btn icon-manager-action-btn--danger" data-icon-delete="${escapeHtml(iconItem.key)}" title="${t('btn.delete')}" aria-label="${t('btn.delete')}"${iconItem.canDelete ? '' : ' disabled'}>${icon('trash', 14, '2')}</button>
                 </div>
             `;
+            const preview = card.querySelector('.icon-manager-card__preview');
+            const motion = preview.querySelector('g[data-nb-ua][data-nb-trigger]');
+            if (motion) {
+                const mode = t('icons.motion_' + (motion.dataset.nbPlay || motion.dataset.nbTrigger));
+                const label = document.createElement('small');
+                label.textContent = motion.dataset.nbReverse === 'true' ? mode + ' · ' + t('icons.motion_reverse') : mode;
+                card.querySelector('.icon-manager-card__body').append(label);
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = preview.className;
+                button.dataset.nbPreview = '';
+                button.setAttribute('aria-label', (iconItem.label || iconItem.key) + ' · ' + mode);
+                button.append(...preview.childNodes);
+                preview.replaceWith(button);
+            }
             grid.appendChild(card);
         });
 
@@ -348,13 +463,34 @@
         document.getElementById('iconManagerKey').value = isEdit ? iconItem.key : '';
         document.getElementById('iconManagerLabel').value = isEdit ? (iconItem.label || '') : '';
         document.getElementById('iconManagerTags').value = isEdit ? (iconItem.tags || []).join(', ') : '';
+        const categories = new Set([...bundledIconCategories, ...iconManagerData.map(item => item.category).filter(Boolean)]);
+        const libraries = new Set([...Object.values(ICONIFY_IMPORT_SETS).map(set => set.label), ...iconManagerData.map(item => item.library).filter(Boolean)]);
+        function fillSuggestions(id, values, labelFor) {
+            const options = Array.from(values, value => {
+                const option = document.createElement('option');
+                option.value = labelFor(value);
+                option.dataset.key = value;
+                return option;
+            }).sort((a, b) => a.value.localeCompare(b.value));
+            document.getElementById(id).replaceChildren(...options);
+        }
+        fillSuggestions('iconManagerCategories', categories, iconCategoryLabel);
+        fillSuggestions('iconManagerLibraries', libraries, value => value);
+        document.getElementById('iconManagerCategory').value = iconCategoryLabel(iconItem?.category || '');
+        const library = document.getElementById('iconManagerLibrary');
+        library.value = iconItem?.library || '';
+        library.readOnly = !!iconItem?.libraryFromSource;
+        library.title = library.readOnly ? t('icons.library_from_source') : '';
         document.getElementById('iconManagerViewBox').value = isEdit ? (iconItem.viewBox || '0 0 24 24') : '0 0 24 24';
         document.getElementById('iconManagerSvg').value = isEdit ? (iconItem.svg || '') : '';
         document.getElementById('iconManagerStyle').value = isEdit ? (iconItem.style || 'stroke') : 'stroke';
-        document.getElementById('iconManagerStrokeWidth').value = isEdit ? (iconItem.strokeWidth || '') : '';
+        iconManagerCustomStrokeWidth = iconItem?.strokeWidth || '';
+        document.getElementById('iconManagerInheritStroke').checked = !iconManagerCustomStrokeWidth;
+        syncIconStrokeMode();
         iconManagerStyleTouched = isEdit;
         applyIconManagerSettings();
         document.getElementById('iconRenameWarning').hidden = true;
+        document.getElementById('iconManagerSvgDetails').open = false;
         updateIconManagerPreview();
         closeAllComboboxes();
         document.getElementById('iconManagerModalOverlay').style.display = 'flex';
@@ -564,6 +700,27 @@
                 return match;
             });
             preview.innerHTML = iconSvgMarkup(Object.assign({ svg: markup }, previewItem));
+            const motion = preview.querySelector('g[data-nb-ua][data-nb-trigger]');
+            document.getElementById('iconManagerPlayback').hidden = !motion;
+            const svgDetails = document.getElementById('iconManagerSvgDetails');
+            svgDetails.querySelector('summary').hidden = !motion;
+            svgDetails.querySelector('.icon-manager-svg-tools').hidden = !!motion;
+            if (!motion) svgDetails.open = true;
+            document.getElementById('iconManagerSvgHint').textContent = t(motion ? 'icons.static_svg_hint' : 'icons.svg_hint');
+            const button = document.getElementById('iconManagerPlayPreview');
+            button.disabled = !motion;
+            button.removeAttribute('aria-pressed');
+            if (motion) {
+                const trigger = document.getElementById('iconManagerTrigger');
+                trigger.options[0].textContent = t('icons.motion_original', {mode: t('icons.motion_' + motion.dataset.nbTrigger)});
+                trigger.value = motion.dataset.nbPlay || '';
+                const reverse = document.getElementById('iconManagerReverse');
+                reverse.checked = motion.dataset.nbReverse === 'true';
+                reverse.disabled = trigger.value === 'static';
+                iconManagerEvents.load(IconEventFields.clipsFrom(motion));
+                iconManagerEvents.update(trigger.value === 'events');
+                document.getElementById('iconManagerSource').href = 'https://useanimations.com/icons/' + encodeURIComponent(motion.dataset.nbUa);
+            }
         }
         const oldKey = document.getElementById('iconManagerOldKey').value;
         const newKey = document.getElementById('iconManagerKey').value;
@@ -582,15 +739,38 @@
             const detected = detectIconStyleClient(this.value);
             if (detected) styleSelect.value = detected;
         }
-        const strokeWidthInput = document.getElementById('iconManagerStrokeWidth');
-        if (strokeWidthInput && !strokeWidthInput.value.trim() && (styleSelect?.value || 'stroke') === 'stroke') {
-            const extracted = extractUniformStrokeWidthClient(this.value).strokeWidth;
-            if (extracted) strokeWidthInput.value = extracted;
-        }
         updateIconManagerPreview();
     });
+    function changeIconPlayback() {
+        const field = document.getElementById('iconManagerSvg');
+        const doc = new DOMParser().parseFromString('<svg xmlns="http://www.w3.org/2000/svg">' + sanitizeIconSvgClient(field.value) + '</svg>', 'image/svg+xml');
+        const motion = doc.querySelector('g[data-nb-ua][data-nb-trigger]');
+        if (!motion) return;
+        const mode = document.getElementById('iconManagerTrigger').value;
+        if (mode) motion.setAttribute('data-nb-play', mode);
+        else motion.removeAttribute('data-nb-play');
+        const attrs = mode === 'events' ? NibblyIconPlacement.eventAttributes(iconManagerEvents.value) : {};
+        for (const event of Object.keys(window.NB_ICON_EVENT_ACTIONS)) {
+            if (attrs[event]) motion.setAttribute('data-nb-' + event, attrs[event]);
+            else motion.removeAttribute('data-nb-' + event);
+        }
+        if (document.getElementById('iconManagerReverse').checked) motion.setAttribute('data-nb-reverse', 'true');
+        else motion.removeAttribute('data-nb-reverse');
+        // XML serialization repeats the namespace on every top-level element.
+        field.value = doc.documentElement.innerHTML.replaceAll(' xmlns="http://www.w3.org/2000/svg"', '');
+        updateIconManagerPreview();
+    }
+    document.getElementById('iconManagerTrigger')?.addEventListener('change', changeIconPlayback);
+    const iconManagerEvents = new IconEventFields(document.getElementById('iconManagerEvents'), t);
+    iconManagerEvents.container.addEventListener('change', changeIconPlayback);
+    document.getElementById('iconManagerReverse')?.addEventListener('change', changeIconPlayback);
     document.getElementById('iconManagerViewBox')?.addEventListener('input', updateIconManagerPreview);
     document.getElementById('iconManagerStrokeWidth')?.addEventListener('input', updateIconManagerPreview);
+    document.getElementById('iconManagerInheritStroke')?.addEventListener('change', function() {
+        if (this.checked) iconManagerCustomStrokeWidth = normalizeStrokeWidthClient(document.getElementById('iconManagerStrokeWidth').value);
+        syncIconStrokeMode();
+        updateIconManagerPreview();
+    });
     document.getElementById('iconManagerStyle')?.addEventListener('change', function() {
         iconManagerStyleTouched = true;
         updateIconManagerPreview();
@@ -652,10 +832,17 @@
         formData.append('key', newKey);
         formData.append('label', document.getElementById('iconManagerLabel').value);
         formData.append('tags', document.getElementById('iconManagerTags').value);
+        for (const [field, id] of [['category', 'iconManagerCategory'], ['library', 'iconManagerLibrary']]) {
+            const input = document.getElementById(id);
+            const value = input.value.trim();
+            const match = Array.from(input.list.options).find(option => option.value.toLowerCase() === value.toLowerCase());
+            formData.append(field, match ? match.dataset.key : value);
+        }
         formData.append('viewBox', document.getElementById('iconManagerViewBox').value);
         formData.append('svg', document.getElementById('iconManagerSvg').value);
         formData.append('style', document.getElementById('iconManagerStyle').value);
-        formData.append('strokeWidth', document.getElementById('iconManagerStrokeWidth').value);
+        const widthInput = document.getElementById('iconManagerStrokeWidth');
+        formData.append('strokeWidth', widthInput.disabled ? '' : widthInput.value);
 
         try {
             const result = await fetchJsonWithTimeout('api.php', { method: 'POST', body: formData }, 15000);
