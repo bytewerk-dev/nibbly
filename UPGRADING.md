@@ -3,6 +3,15 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.13.0 to 2.13.1
+
+Patch release, no API or data format changes.
+
+1. Deploy the complete core. Changed: `css/components.css`; `tests/browser-check.js` (CI only).
+2. The AI disclosure label now keeps its size when a site stylesheet stretches all images of
+   a container. A site that resized the label with its own `width` or `height` rule sets
+   `--nb-ai-label-height` on the label or one of its ancestors instead.
+
 ## Upgrading from 2.12.0 to 2.13.0
 
 Feature release. Existing content and backups keep working without changes.

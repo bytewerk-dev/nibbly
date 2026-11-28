@@ -2091,11 +2091,17 @@ body.edit-mode-active .news-post-page__photo-credit--empty {
     transition: opacity 0.4s ease;
 }
 
+/* The size is fixed with !important: site rules that stretch every image of a
+   container (e.g. `.hero img { width: 100% }`) must not enlarge the label.
+   Change the size with --nb-ai-label-height. */
 .nb-ai-label > img.nb-ai-label__badge {
     display: block;
-    width: auto;
-    max-width: none;
-    height: var(--nb-ai-label-height, 1.375rem);
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: var(--nb-ai-label-height, 1.375rem) !important;
+    min-height: 0 !important;
+    max-height: none !important;
     margin: 0;
     border: 0;
     border-radius: 0;
