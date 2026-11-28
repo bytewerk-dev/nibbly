@@ -3,6 +3,25 @@ if (!defined('NIBBLY_ADMIN_DIR')) { http_response_code(404); exit; }
 
 // Authenticated dispatcher supplies shared helpers and request context.
 switch ($action) {
+    case 'get-page-history-policy':
+        $history = dashboardPageHistory();
+        jsonResponse(true, ['mode' => $history->mode(), 'limit' => NibblyPageHistory::countLimit(), 'pages' => $history->pages()]);
+        break;
+
+    case 'get-page-history-preview':
+        $page = $_GET['page'] ?? '';
+        $mode = $_GET['mode'] ?? '';
+        if (!validatePageName($page) || !is_string($mode)) jsonResponse(false, null, 'Invalid page history preview');
+        jsonResponse(true, dashboardPageHistory()->plan($page, $mode));
+        break;
+
+    case 'set-page-history-policy':
+        $mode = $_POST['mode'] ?? '';
+        if (!is_string($mode)) jsonResponse(false, null, 'Invalid page history mode');
+        dashboardPageHistory()->setMode($mode);
+        jsonResponse(true);
+        break;
+
     case 'create-site-backup':
         if (!isAdmin()) {
             jsonResponse(false, null, 'Forbidden');

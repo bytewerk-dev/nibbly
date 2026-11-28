@@ -14,6 +14,7 @@
     "undo": "Desfazer",
     "redo": "Refazer",
     "edit_mode_hint": "Clique em qualquer texto para editar",
+    "page_backups.protected": "Protegida",
     "page_backups.label": "Backups desta página",
     "page_backups.apply": "Aplicar",
     "page_backups.retry": "Tentar novamente",

@@ -71,6 +71,9 @@ function harness(replies = []) {
     assert.equal(h.cleanups(), 1);
     assert.equal(h.session.get('site-edit-mode'), 'true');
 
+    const pinned = harness([{data: [{...backup, pinned: true, label: 'Vor dem Relaunch'}]}]);
+    await pinned.controller.load();
+    assert.match(pinned.nodes.get('admin-backup-select').options[0].textContent, /Vor dem Relaunch$/);
     const empty = harness([{data: []}]);
     await empty.controller.load();
     assert.equal(empty.nodes.get('admin-page-backups').hidden, true);

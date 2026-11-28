@@ -14,6 +14,7 @@
     "undo": "Geri al",
     "redo": "Yinele",
     "edit_mode_hint": "Düzenlemek için metne tıklayın",
+    "page_backups.protected": "Korumalı",
     "page_backups.label": "Bu sayfanın yedekleri",
     "page_backups.apply": "Uygula",
     "page_backups.retry": "Yeniden dene",

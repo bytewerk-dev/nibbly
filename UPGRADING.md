@@ -3,6 +3,24 @@
 Read every section between the installed version and the target version, oldest
 first. Installations before 2.0.0 start with [Upgrading to 2.0.0](#upgrading-to-200).
 
+## Upgrading from 2.12.0 to 2.13.0
+
+Feature release. Existing content and backups keep working without changes.
+
+1. Deploy the complete core. New: `css/icon-motion.css`, `js/useanimations.js`,
+   `js/useanimations/`, `js/vendor/lottie-web/`, `js/icon-placement.js`,
+   `includes/page-history.php`. The bundled icon set (`includes/default-iconset.json`) gains
+   29 `useanimations-*` icons; site icon sets in `content/settings/iconset.json` are untouched.
+2. A template with its own footer instead of `includes/footer.php` needs two lines to animate
+   icons: `<link rel="stylesheet" href="<?php echo $basePath; ?>css/icon-motion.css">` and
+   `<script type="module" src="<?php echo $basePath; ?>js/useanimations.js"></script>`.
+3. Custom templates that render icons can pass a placement's playback through:
+   `renderIconSvg($item['icon'], 'aria-hidden="true"', $item['iconPlayback'] ?? [])`. Add
+   `data-nb-icon-host` to a card if its whole area should trigger the icon's hover.
+4. Page history keeps the configured `MAX_BACKUPS` count until an admin selects calendar tiers
+   under **Backup**. Protected versions are recorded in `backups/page-history/`; include that
+   folder wherever `backups/` is copied or restored. Each page is cleaned up on its next save.
+
 ## Upgrading from 2.11.1 to 2.12.0
 
 Version 2.12.0 makes the media library faster with large libraries. No data migration.

@@ -3042,6 +3042,25 @@ $_themeFontSize = in_array($siteSettings['theme']['fontSize'] ?? '', ['small', '
             </table>
         </div>
 
+        <?php if ($isAdminUser): ?>
+        <details class="backup-site-card backup-scheduled" id="pageHistoryPolicy">
+            <summary><strong><?php echo t('history.retention_title'); ?></strong></summary>
+            <form id="pageHistoryForm">
+                <select id="historyMode" aria-label="<?php echo htmlspecialchars(t('history.retention_title')); ?>" disabled>
+                    <option value="count"></option>
+                    <option value="tiered"><?php echo t('history.tiered'); ?></option>
+                </select>
+                <p class="scheduled-form__hint"><?php echo t('history.rules'); ?></p>
+                <label for="historyPage"><?php echo t('history.preview'); ?></label>
+                <select id="historyPage" disabled></select>
+                <p class="scheduled-form__hint"><?php echo t('history.hint'); ?></p>
+                <p id="historyStatus" role="status"></p>
+                <ul id="historyPreview" class="backup-list"></ul>
+                <button type="submit" class="btn btn-primary" disabled><?php echo t('btn.save'); ?></button>
+            </form>
+        </details>
+        <?php endif; ?>
+
         <!-- Automated / scheduled backups -->
         <div class="backup-site-card backup-scheduled">
             <div class="backup-site-card__info">

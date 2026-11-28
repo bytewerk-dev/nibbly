@@ -38,4 +38,8 @@ if (!is_string($action) || !isset($routes[$action])) {
     jsonResponse(false, null, 'Unknown action');
 }
 require __DIR__ . '/api/contracts.php';
-require __DIR__ . '/api/' . $routes[$action] . '.php';
+try {
+    require __DIR__ . '/api/' . $routes[$action] . '.php';
+} catch (NibblyPageHistoryException $e) {
+    jsonResponse(false, null, $e->getMessage());
+}

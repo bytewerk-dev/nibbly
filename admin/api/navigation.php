@@ -232,9 +232,7 @@ switch ($action) {
         if ($writeFooter && $newFooter !== $footerData) {
             $footerPath = nibblyFooterContentPath();
             if (is_file($footerPath)) {
-                $backupPath = BACKUP_PATH . 'footer_' . date('Y-m-d_His') . '_' . bin2hex(random_bytes(3)) . '.json';
-                if (!copy($footerPath, $backupPath)) jsonResponse(false, null, 'Could not create a backup before saving');
-                cleanupOldBackups('footer');
+                dashboardPageHistory()->snapshot($footerPath);
             } else {
                 $newFooter = ['page' => 'footer'] + $newFooter;
             }
