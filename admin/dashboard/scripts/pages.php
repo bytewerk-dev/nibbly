@@ -133,7 +133,7 @@
 
         function paginationIcon(direction) {
             const path = direction === 'prev' ? 'M15 18l-6-6 6-6' : 'M9 18l6-6-6-6';
-            return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="' + path + '"/></svg>';
+            return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path data-nb-motion="' + (direction === 'prev' ? 'left' : 'right') + '" d="' + path + '"/></svg>';
         }
 
         function addButton(nav, label, targetPage, disabled, currentPage, direction = '') {
@@ -2211,7 +2211,8 @@
 
         const panels = createEditorShell(container);
         renderPageSettings(panels);
-        const customContentKeys = Object.keys(currentContent).filter(isEditableTopLevelContentKey);
+        const customContentKeys = Object.keys(currentContent).filter(key =>
+            isEditableTopLevelContentKey(key) && !isIconPlaybackProperty(currentContent, key));
         renderContentPanel(panels.content, customContentKeys);
 
         // Auto-resize all textareas
@@ -2395,6 +2396,7 @@
     // Render object fields (key-value pairs)
     function renderObjectFields(container, obj, basePath) {
         for (const [k, v] of Object.entries(obj)) {
+            if (isIconPlaybackProperty(obj, k)) continue;
             if (v !== null && typeof v === 'object') {
                 // Nested object or array — render as sub-group
                 const subGroup = renderJsonGroup(k, v, basePath + '.' + k);
@@ -2500,6 +2502,56 @@
     }
 
     // Render a primitive field (string, number, boolean)
+    function isContentIconKey(key, value) {
+        return /^(icon|iconid|symbol)$/i.test(key) && typeof value === 'string' && /^[\w-]*$/.test(value);
+    }
+
+    function isIconPlaybackProperty(obj, key) {
+        const owner = key.slice(0, -'Playback'.length);
+        return key.endsWith('Playback') && isContentIconKey(owner, obj[owner]);
+    }
+
+    function renderContentIconField(label, value, path) {
+        let choices = document.getElementById('pageIconChoices');
+        if (!choices) {
+            choices = document.createElement('datalist');
+            choices.id = 'pageIconChoices';
+            for (const key of Object.keys(PAGE_EDITOR_ICONS)) choices.append(new Option(key, key));
+            document.body.append(choices);
+        }
+        const field = document.createElement('div');
+        field.className = 'ce-icon-placement';
+        const keyRow = document.createElement('div');
+        keyRow.className = 'ce-icon-placement__key';
+        const input = document.createElement('input');
+        input.className = 'ce-input';
+        input.id = 'page-icon-' + path;
+        label.htmlFor = input.id;
+        input.dataset.path = path;
+        input.setAttribute('list', choices.id);
+        input.value = value;
+        const preview = document.createElement('button');
+        preview.type = 'button';
+        preview.className = 'icon-manager-action-btn';
+        preview.dataset.nbPreview = '';
+        preview.setAttribute('aria-label', t('icons.preview'));
+        const controls = document.createElement('div');
+        controls.className = 'nb-icon-placement';
+        controls.dataset.iconPlaybackPath = path + 'Playback';
+        controls.placement = new NibblyIconPlacement(controls, ICON_PLAYBACK_MODES, t, getNestedValue(currentContent, path + 'Playback'));
+        const refresh = () => {
+            const markup = Object.hasOwn(PAGE_EDITOR_ICONS, input.value) ? PAGE_EDITOR_ICONS[input.value] : '';
+            preview.hidden = !markup;
+            controls.placement.updatePreview(preview, markup || '<svg></svg>');
+        };
+        input.addEventListener('input', () => { refresh(); markDirty(); });
+        controls.addEventListener('change', () => { refresh(); markDirty(); });
+        keyRow.append(input, preview);
+        field.append(keyRow, controls);
+        refresh();
+        return field;
+    }
+
     function renderPrimitiveField(label, value, path) {
         const row = document.createElement('div');
         row.className = 'ce-field';
@@ -2508,6 +2560,11 @@
         labelEl.className = 'ce-field-label';
         labelEl.textContent = label;
         row.appendChild(labelEl);
+
+        if (isContentIconKey(path.split('.').pop(), value)) {
+            row.appendChild(renderContentIconField(labelEl, value, path));
+            return row;
+        }
 
         if (typeof value === 'boolean') {
             const cb = document.createElement('input');

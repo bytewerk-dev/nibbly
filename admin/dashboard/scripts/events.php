@@ -676,5 +676,5 @@
 
     // Sidebar toggle (mobile)
     document.getElementById('sidebarToggle').addEventListener('click', () => {
-        document.getElementById('adminSidebar').classList.toggle('open');
+        setMobileSidebarOpen(document.getElementById('sidebarToggle').getAttribute('aria-expanded') !== 'true');
     });

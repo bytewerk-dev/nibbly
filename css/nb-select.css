@@ -145,6 +145,16 @@ input.modal-input {
     height: 13px;
 }
 
+.nb-select__button[aria-expanded="true"] .nb-select__caret {
+    transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .nb-select__caret {
+        transition: transform var(--nb-duration-fast, 150ms) ease-out;
+    }
+}
+
 .nb-select__list {
     position: fixed;
     z-index: calc(var(--nb-z-modal, 20000) + 100);

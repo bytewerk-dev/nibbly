@@ -369,25 +369,29 @@
         var currentUser = users.current || {};
         var chips = [];
 
+        function chipLabel(iconName, textKey) {
+            return '<span class="dashboard-status-chip__label">' + icon(iconName, 13, '1.8') + escapeHtml(t(textKey)) + '</span>';
+        }
+
         if (isDashboardModuleEnabled('mails')) {
             var unreadCount = status.messages?.unread || 0;
-            chips.push('<button type="button" class="dashboard-status-chip' + (unreadCount > 0 ? ' dashboard-status-chip--accent' : '') + '" onclick="switchTab(&quot;mails&quot;)"><span class="dashboard-status-chip__label">' + escapeHtml(t('dashboard_home.unread_messages')) + '</span><strong class="dashboard-status-chip__value">' + unreadCount + '</strong></button>');
+            chips.push('<button type="button" class="dashboard-status-chip' + (unreadCount > 0 ? ' dashboard-status-chip--accent' : '') + '" onclick="switchTab(&quot;mails&quot;)">' + chipLabel('mail', 'dashboard_home.unread_messages') + '<strong class="dashboard-status-chip__value">' + unreadCount + '</strong></button>');
         }
 
         var backupText = backup.newest ? formatDashboardDate(backup.newest) : t('dashboard_home.no_backup');
         if (VALID_DASHBOARD_TABS.indexOf('backup') !== -1) {
-            chips.push('<button type="button" class="dashboard-status-chip" onclick="switchTab(&quot;backup&quot;)"><span class="dashboard-status-chip__label">' + escapeHtml(t('dashboard_home.backup_status')) + '</span><strong class="dashboard-status-chip__value">' + escapeHtml(backupText) + '</strong></button>');
+            chips.push('<button type="button" class="dashboard-status-chip" onclick="switchTab(&quot;backup&quot;)">' + chipLabel('archive', 'dashboard_home.backup_status') + '<strong class="dashboard-status-chip__value">' + escapeHtml(backupText) + '</strong></button>');
 
-            chips.push('<button type="button" class="dashboard-status-chip" onclick="switchTab(&quot;backup&quot;)"><span class="dashboard-status-chip__label">' + escapeHtml(t('dashboard_home.auto_backup')) + '</span><strong class="dashboard-status-chip__value">' + escapeHtml(backup.enabled ? t('dashboard_home.active') : t('dashboard_home.inactive')) + '</strong></button>');
+            chips.push('<button type="button" class="dashboard-status-chip" onclick="switchTab(&quot;backup&quot;)">' + chipLabel('clock', 'dashboard_home.auto_backup') + '<strong class="dashboard-status-chip__value">' + escapeHtml(backup.enabled ? t('dashboard_home.active') : t('dashboard_home.inactive')) + '</strong></button>');
         }
 
         if (recent) {
             var recentTitle = recent.title || recent.id || '';
-            chips.push('<button type="button" class="dashboard-status-chip dashboard-status-chip--wide" title="' + escapeHtml(recentTitle) + '" onclick="openDashboardRecentEdit(window.dashboardRecentStatusItems[0])"><span class="dashboard-status-chip__label">' + escapeHtml(t('dashboard_home.recent_edit')) + '</span><strong class="dashboard-status-chip__value">' + escapeHtml(recentTitle) + '</strong></button>');
+            chips.push('<button type="button" class="dashboard-status-chip dashboard-status-chip--wide" title="' + escapeHtml(recentTitle) + '" onclick="openDashboardRecentEdit(window.dashboardRecentStatusItems[0])">' + chipLabel('edit', 'dashboard_home.recent_edit') + '<strong class="dashboard-status-chip__value">' + escapeHtml(recentTitle) + '</strong></button>');
         }
 
         if (currentUser.username) {
-            chips.push('<button type="button" class="dashboard-status-chip" onclick="switchTab(&quot;settings&quot;, {settingsTab: &quot;users&quot;});"><span class="dashboard-status-chip__label">' + escapeHtml(t('dashboard_home.current_user')) + '</span><strong class="dashboard-status-chip__value">' + escapeHtml(currentUser.username) + '</strong></button>');
+            chips.push('<button type="button" class="dashboard-status-chip" onclick="switchTab(&quot;settings&quot;, {settingsTab: &quot;users&quot;});">' + chipLabel('user', 'dashboard_home.current_user') + '<strong class="dashboard-status-chip__value">' + escapeHtml(currentUser.username) + '</strong></button>');
         }
 
         target.innerHTML = chips.join('');

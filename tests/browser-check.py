@@ -11,6 +11,41 @@ from support import ROOT, Site
 with tempfile.TemporaryDirectory(prefix="nibbly-browser-review-") as folder:
     site = Site(folder).start()
     script = sys.argv[1] if len(sys.argv) > 1 else 'browser-check.js'
+    if script == 'icon-placement-check.js':
+        (site.root / 'en').mkdir(exist_ok=True)
+        (site.root / 'en/placements.php').write_text("""<?php
+$contentPage = 'en_placements';
+$currentLang = 'en';
+$currentPage = 'placements';
+$basePath = '../';
+include __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/content-loader.php';
+echo '<main class="main-content"><h1>Icon placements</h1>';
+echo renderFeatureGrid($contentPage);
+echo editableIcon($contentPage, 'standalone.icon', 'useanimations-mail');
+echo '</main>';
+include __DIR__ . '/../includes/footer.php';
+""")
+        (site.root / 'en/lazy.php').write_text("""<?php
+$contentPage = 'en_lazy';
+$currentLang = 'en';
+$currentPage = 'lazy';
+$basePath = '../';
+include __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/content-loader.php';
+echo '<main class="main-content"><h1>Lazy icons</h1><div id="lazy-card" data-nb-icon-host>';
+echo renderIconSvg('useanimations-globe', 'width="48" height="48" aria-hidden="true"') . '</div></main>';
+include __DIR__ . '/../includes/footer.php';
+""")
+        (site.root / 'content/pages/en_lazy.json').write_text(json.dumps({'page': 'en_lazy', 'lang': 'en', 'title': 'Lazy'}))
+        mail = 'useanimations-mail'
+        (site.root / 'content/pages/en_placements.json').write_text(json.dumps({
+            'page': 'en_placements', 'lang': 'en', 'title': 'Placements', 'standalone': {'icon': mail},
+            'features': {'items': [{'icon': mail, 'title': title, 'desc': title} for title in ['One', 'Two']]}}))
+        library = json.loads((site.root / 'includes/default-iconset.json').read_text())[mail]
+        library['svg'] = library['svg'].replace('data-nb-ua=', 'data-nb-play="click-replay" data-nb-reverse="true" data-nb-ua=')
+        (site.root / 'content/settings').mkdir(exist_ok=True)
+        (site.root / 'content/settings/iconset.json').write_text(json.dumps({mail: library}))
     if script == 'responsive-check.js':
         menu_page = site.root / 'content/pages/en_services__test.json'
         menu_content = json.loads(menu_page.read_text())

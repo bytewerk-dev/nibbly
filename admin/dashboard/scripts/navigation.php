@@ -17,6 +17,11 @@
     let currentDashboardAnalyticsRange = { period: 'days', count: 30 };
     let formsAdminLoaded = false;
 
+    function setMobileSidebarOpen(open) {
+        document.getElementById('adminSidebar').classList.toggle('open', open);
+        document.getElementById('sidebarToggle').setAttribute('aria-expanded', String(open));
+    }
+
     function dashboardHashFor(tab, subtab) {
         const publicTab = tab === 'home' ? 'dashboard' : (tab === 'content' ? 'pages' : (tab === 'mails' ? 'messages' : tab));
         return '#' + publicTab + (subtab ? '/' + subtab : '');
@@ -325,7 +330,7 @@
         nbSetTopbarTitle([titles[tab] || 'Dashboard']);
 
         // Close sidebar on mobile after tab switch
-        document.getElementById('adminSidebar').classList.remove('open');
+        setMobileSidebarOpen(false);
 
         if (tab === 'mails') {
             // Always start on the list view when switching into Mails

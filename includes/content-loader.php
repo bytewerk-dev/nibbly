@@ -646,16 +646,23 @@ function editableIcon($page, $fieldKey, $default = '', $class = '') {
     $hidden = isFieldHidden($data, $fieldKey);
     $classAttr = trim('editable-field editable-field-icon ' . $class);
     $safeValue = htmlspecialchars((string)$value);
+    // External icon systems can still use the plain token. A Lottie placement needs its SVG player target.
+    $definition = is_string($value) ? (getAvailableIconDefinitions()[$value] ?? []) : [];
+    $artwork = $safeValue;
+    if (strpos($definition['svg'] ?? '', 'data-nb-ua=') !== false) {
+        $artwork = renderIconSvg($value, '', getNestedValue($data, $fieldKey . 'Playback'));
+        $artwork = str_replace('<svg ', '<svg width="1em" height="1em" aria-hidden="true" ', $artwork);
+    }
 
     if (isAdminLoggedIn()) {
         $hiddenAttr = $hidden ? ' data-hidden="true"' : '';
         return '<span class="' . htmlspecialchars($classAttr) . '" data-editable-icon data-page="' . htmlspecialchars($page) . '" data-field="' . htmlspecialchars($fieldKey) . '" data-icon="' . $safeValue . '"' . $hiddenAttr . '>'
-            . $safeValue
+            . $artwork
             . '</span>';
     }
 
     if ($hidden) return '';
-    return '<span class="' . htmlspecialchars($class) . '" data-icon="' . $safeValue . '">' . $safeValue . '</span>';
+    return '<span class="' . htmlspecialchars($class) . '" data-icon="' . $safeValue . '">' . $artwork . '</span>';
 }
 
 // ============================================================
@@ -1042,6 +1049,8 @@ function sanitizeIconSvgMarkup($svg) {
     $svg = preg_replace('/\s+on[a-z]+\s*=\s*(["\']).*?\1/is', '', $svg);
     $svg = preg_replace('/\s+(href|xlink:href)\s*=\s*(["\'])\s*(?!#)[^"\']*\2/is', '', $svg);
     $svg = preg_replace('/\s+(class|style)\s*=\s*(["\']).*?\2/is', '', $svg);
+    // The markup is inlined into an HTML page, where a namespace declaration on inner elements is noise.
+    $svg = preg_replace('/\s+xmlns\s*=\s*(["\'])http:\/\/www\.w3\.org\/2000\/svg\1/i', '', $svg);
 
     $allowedTags = 'path|circle|ellipse|line|polyline|polygon|rect|g|defs|clipPath|mask|linearGradient|radialGradient|stop|title';
     $svg = preg_replace_callback('#</?([a-zA-Z][a-zA-Z0-9:-]*)(\s[^>]*)?>#', function($m) use ($allowedTags) {
@@ -1226,6 +1235,11 @@ function extractUniformIconStrokeWidth($svg) {
     return [trim($stripped), reset($values)];
 }
 
+function normalizeIconLibraryName(string $name): string {
+    $name = trim($name);
+    return strcasecmp($name, 'nibbly') === 0 ? 'nibbly' : $name;
+}
+
 /**
  * Normalize icon definitions from either the rich format
  * { "key": {"label": "...", "svg": "...", "tags": []} }
@@ -1291,6 +1305,12 @@ function normalizeIconSet($raw) {
             'createdAt' => $createdAt ?? '',
             'updatedAt' => $updatedAt ?? '',
         ];
+        // Missing values on older site overrides can inherit the bundled catalog metadata.
+        foreach (['category', 'library'] as $field) {
+            if (is_array($value) && isset($value[$field]) && is_string($value[$field])) {
+                $icons[$key][$field] = $field === 'library' ? normalizeIconLibraryName($value[$field]) : trim($value[$field]);
+            }
+        }
     }
 
     return $icons;
@@ -1388,7 +1408,7 @@ function getIconDefinition($iconId) {
  * Render a complete SVG for an icon identifier, preserving custom viewBox
  * values while keeping the old getIconSvg() inner-markup helper available.
  */
-function renderIconSvg($iconId, $attributes = '') {
+function renderIconSvg($iconId, $attributes = '', $playback = []) {
     $icon = getIconDefinition($iconId);
     $icon['strokeWidth'] = $icon['strokeWidth'] ?? '';
     $viewBox = htmlspecialchars($icon['viewBox'] ?? '0 0 24 24', ENT_QUOTES, 'UTF-8');
@@ -1404,7 +1424,48 @@ function renderIconSvg($iconId, $attributes = '') {
         }
     }
 
-    return '<svg viewBox="' . $viewBox . '" ' . $attributes . '>' . $svg . '</svg>';
+    return '<svg viewBox="' . $viewBox . '" ' . $attributes . nibblyIconPlaybackAttrs($playback) . '>' . $svg . '</svg>';
+}
+
+// The player owns both lists, so the editors, saved placements and the website cannot drift apart.
+function nibblyIconPlayerList(string $name): array {
+    static $source = null;
+    if ($source === null) $source = (string)@file_get_contents(__DIR__ . '/../js/useanimations.js');
+    $list = preg_match('/^const ' . $name . ' = (\{.*\});$/m', $source, $match) ? json_decode($match[1], true) : null;
+    return is_array($list) ? $list : [];
+}
+
+function nibblyIconPlaybackModes(): array {
+    static $modes = null;
+    return $modes ??= array_merge(['events'], array_map('strval', array_keys(nibblyIconPlayerList('PRESETS'))));
+}
+
+// The first action is the default when choosing combined playback.
+function nibblyIconEventActions(): array {
+    static $actions = null;
+    return $actions ??= nibblyIconPlayerList('EVENT_ACTIONS');
+}
+
+// The outer SVG owns placement overrides. The artwork inside keeps the library defaults.
+function nibblyIconPlaybackAttrs($playback): string {
+    if (!is_array($playback)) return '';
+    $mode = $playback['mode'] ?? '';
+    $attrs = in_array($mode, nibblyIconPlaybackModes(), true) ? ' data-nb-play="' . $mode . '"' : '';
+    $direction = $playback['direction'] ?? '';
+    if (in_array($direction, ['forward', 'reverse'], true)) {
+        $attrs .= ' data-nb-reverse="' . ($direction === 'reverse' ? 'true' : 'false') . '"';
+    }
+    if (empty($playback['events']) || !is_array($playback['events'])) return $attrs;
+    $percent = static function ($value, $fallback) {
+        return is_numeric($value) ? max(0, min(100, (int)$value)) : $fallback;
+    };
+    foreach (nibblyIconEventActions() as $event => $actions) {
+        $clip = $playback['events'][$event] ?? null;
+        if (!is_array($clip) || !in_array($clip['action'] ?? null, $actions, true)) continue;
+        $attrs .= ' data-nb-' . $event . '="' . $clip['action'] . ':' . $percent($clip['from'] ?? null, 0)
+            . ':' . $percent($clip['to'] ?? null, 100) . '"';
+    }
+    return $attrs;
 }
 
 /**
@@ -1717,8 +1778,8 @@ function renderFeatureGrid($page) {
     $html = '<div class="feature-grid stagger-reveal"' . editableListAttrs($page, 'features.items', $defaults) . '>';
     foreach ($items as $i => $item) {
         $iconId = $item['icon'] ?? 'default';
-        $html .= '<div class="feature-card"' . editableListGroupItemAttrs($page, 'features.items', $i, [], $defaults, 'Feature') . '>';
-        $html .= '<div class="feature-card__icon">' . renderIconSvg($iconId) . '</div>';
+        $html .= '<div class="feature-card" data-nb-icon-host' . editableListGroupItemAttrs($page, 'features.items', $i, [], $defaults, 'Feature') . '>';
+        $html .= '<div class="feature-card__icon">' . renderIconSvg($iconId, 'aria-hidden="true"', $item['iconPlayback'] ?? []) . '</div>';
         $html .= '<h3 class="feature-card__title">' . editableText($page, "features.items.$i.title", 'Feature') . '</h3>';
         $html .= '<p class="feature-card__desc">' . editableText($page, "features.items.$i.desc", 'Description') . '</p>';
         $html .= '</div>';

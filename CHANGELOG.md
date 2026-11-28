@@ -9,6 +9,9 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+- The Icon Manager supports categories and library names, with count links for category, library and animation that combine with search.
+- 29 useAnimations icons render their original local Lottie timelines and stroke widths in the dashboard and on the website. The Icon Manager previews the original interaction and lets editors choose playback, direction and single-play or loop behaviour. Toggle icons follow their control’s state and respect reduced motion. The player loads when an icon first has to move, and animated icons outside a control stay decorative for keyboard and screen reader users.
+
 ## [2.12.0] — 2026-11-26
 
 ### Changed

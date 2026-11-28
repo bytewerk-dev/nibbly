@@ -366,6 +366,7 @@
         toast.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
         toast.setAttribute('aria-atomic', 'true');
         toast.textContent = message;
+        if (type === 'success') toast.insertAdjacentHTML('afterbegin', icon('check', 18, '2.5'));
         document.body.appendChild(toast);
 
         const duration = type === 'error' ? 6000 : 4000;

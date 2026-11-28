@@ -1962,7 +1962,7 @@ function importIconifyIcon($fullName) {
     return [true, iconManagerListData(), ''];
 }
 
-function normalizeIconManagerPayload($key, $label, $tags, $svg, $viewBox = '', $style = '', $strokeWidth = '') {
+function normalizeIconManagerPayload($key, $label, $tags, $svg, $viewBox = '', $style = '', $strokeWidth = null) {
     $key = sanitizeIconKeyInput($key);
     if ($key === '') {
         return [false, null, 'Invalid icon key. Use lowercase letters, numbers, hyphens, and underscores.'];
@@ -1979,12 +1979,15 @@ function normalizeIconManagerPayload($key, $label, $tags, $svg, $viewBox = '', $
     $rawViewBox = trim((string)$viewBox);
     $svg = sanitizeIconSvgMarkup((string)$svg);
     $style = in_array($style, ['fill', 'stroke'], true) ? $style : (detectIconStyleFromSvg($svg) ?: 'stroke');
-    $strokeWidth = normalizeIconStrokeWidth($strokeWidth);
+    $inputWidth = is_string($strokeWidth) ? trim($strokeWidth) : $strokeWidth;
+    $strokeWidth = normalizeIconStrokeWidth($inputWidth);
+    if ($inputWidth !== null && $inputWidth !== '' && $strokeWidth === '') {
+        return [false, null, t('icons.stroke_width_invalid')];
+    }
     if ($style === 'stroke') {
-        // A uniform stroke-width inside the markup would override the wrapper, so it moves
-        // into the per-icon field (unless the editor already chose an explicit width).
+        // An explicitly empty field inherits. Older clients that omit the field keep the SVG width.
         [$svg, $uniformWidth] = extractUniformIconStrokeWidth($svg);
-        if ($strokeWidth === '' && $uniformWidth !== '') {
+        if ($inputWidth === null) {
             $strokeWidth = $uniformWidth;
         }
     }
@@ -2024,9 +2027,22 @@ function iconManagerListData() {
     }
 
     $icons = [];
+    $sets = getIconifyAllowedSets();
     foreach ($merged as $key => $definition) {
+        $source = $raw[$key]['source'] ?? null;
+        $knownLibrary = '';
+        if (is_array($source) && ($source['type'] ?? '') === 'iconify' && is_string($source['icon'] ?? null)) {
+            $prefix = explode(':', $source['icon'], 2)[0];
+            $knownLibrary = $sets[$prefix]['label'] ?? $prefix;
+        } elseif (preg_match('/<g\b[^>]*\sdata-nb-ua\s*=/i', $definition['svg'])) {
+            $knownLibrary = 'useAnimations';
+        }
+        $bundledLibrary = $definition['svg'] === ($core[$key]['svg'] ?? null) ? ($core[$key]['library'] ?? '') : '';
         $icons[] = [
             'key' => $key,
+            'category' => $definition['category'] ?? $core[$key]['category'] ?? '',
+            'library' => $knownLibrary !== '' ? $knownLibrary : ($definition['library'] ?? $bundledLibrary),
+            'libraryFromSource' => $knownLibrary !== '',
             'label' => $definition['label'] ?? ucwords(str_replace(['-', '_'], ' ', $key)),
             'tags' => $definition['tags'] ?? [],
             'svg' => $definition['svg'] ?? '',
