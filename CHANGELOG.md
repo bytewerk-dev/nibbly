@@ -9,6 +9,10 @@ Git milestones and the gaps in publication records.
 
 ## [Unreleased]
 
+### Fixed
+
+- AI disclosure label: a site rule that stretches every image of a container (for example `.hero img { width: 100% }`) no longer enlarges the label. Its size stays adjustable with `--nb-ai-label-height`.
+
 ## [2.13.0] — 2026-11-28
 
 ### Added

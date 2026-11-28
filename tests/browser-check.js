@@ -243,6 +243,21 @@ async function checkIconMotion(page) {
         const guest = await browser.newPage({ viewport: { width: 390, height: 844 } });
         await guest.goto(base + '/services/test/');
         if (await guest.locator('#admin-bar').count()) throw Error('Guest sees admin bar');
+        // A site rule that stretches every image of a container must not enlarge the AI label.
+        const label = await guest.evaluate(async base => {
+            document.head.insertAdjacentHTML('beforeend', '<style>#label-probe.hero img { width: 100%; height: auto; min-height: 80px; }</style>');
+            document.body.insertAdjacentHTML('beforeend', '<div id="label-probe" class="hero" style="width:360px"><span class="nb-ai-label nb-ai-label--generated">'
+                + '<img class="nb-ai-label__badge" src="' + base + '/css/ai-labels/en-generated.svg" alt=""></span></div>');
+            const badge = document.querySelector('#label-probe img');
+            await badge.decode();
+            const box = badge.getBoundingClientRect();
+            const custom = (document.querySelector('#label-probe').style.setProperty('--nb-ai-label-height', '30px'), badge.getBoundingClientRect().height);
+            document.querySelector('#label-probe').remove();
+            return { width: box.width, height: box.height, custom };
+        }, base);
+        assert.equal(label.height, 22);
+        assert.ok(label.width < 200, 'AI label keeps its aspect ratio: ' + label.width);
+        assert.equal(label.custom, 30);
         // Editors get a smaller dashboard: the script must not stop at fields only admins have
         const editor = await (await browser.newContext({ viewport: { width: 1440, height: 1000 } })).newPage();
         editor.on('pageerror', error => errors.push('editor: ' + error.message));
